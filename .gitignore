@@ -1,4 +1,17 @@
+# Environments
 .venv/
+node_modules/
+.next/
+
+# Python Cache
 __pycache__/
 *.pyc
+
+# Local Data (Crucial: Keep your energy data private)
+webapp/.data/
+*.xml
+
+# Misc
+.DS_Store
+.env
 .streamlit/
