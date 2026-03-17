@@ -1,0 +1,14 @@
+services:
+  energy-dashboard:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: energy-dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - dashboard-data:/app/.data
+    restart: always
+
+volumes:
+  dashboard-data:
