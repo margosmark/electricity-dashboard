@@ -5,10 +5,5 @@ services:
       dockerfile: Dockerfile
     container_name: energy-dashboard
     ports:
-      - "3939:3000"
-    volumes:
-      - dashboard-data:/app/.data
+      - "3000:3000"
     restart: always
-
-volumes:
-  dashboard-data:

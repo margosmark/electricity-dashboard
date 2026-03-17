@@ -1,9 +1,8 @@
 /**
- * Oakville Hydro Green Button Data Dashboard
+ * Oakville Hydro Green Button Data Dashboard (Privacy-First)
  * 
- * This component provides an advanced, interactive analysis of electricity usage data.
- * It supports multiple Ontario pricing plans (TOU, Tiered, ULO), handles historical 
- * rate changes, and provides granular drill-downs from monthly trends to hourly profiles.
+ * This version handles all data parsing and storage LOCALLY in the user's browser.
+ * No energy data is ever saved to the server.
  */
 
 "use client";
@@ -17,7 +16,8 @@ import {
   startOfMonth, lastDayOfMonth, startOfYear, addMonths, 
   subMonths, setDate, isBefore, addDays, subDays 
 } from 'date-fns';
-import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X } from 'lucide-react';
+import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2 } from 'lucide-react';
+import { XMLParser } from 'fast-xml-parser';
 
 // --- Types ---
 
@@ -53,7 +53,7 @@ export default function Dashboard() {
   const [billingDay, setBillingDay] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'Chart' | 'Insights'>('Chart');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -61,59 +61,124 @@ export default function Dashboard() {
   const [drilldownDay, setDrilldownDay] = useState<string | null>(null);
   const [drilldownMonth, setDrilldownMonth] = useState<string | null>(null);
 
+  /**
+   * Browser-side XML Parser
+   */
+  const parseGreenButtonXML = (xmlText: string) => {
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      removeNSPrefix: true,
+      isArray: (name) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(name)
+    });
+    
+    const parsed = parser.parse(xmlText);
+    const readings: { timestamp: number, usage_kwh: number }[] = [];
+    
+    function traverse(obj: any) {
+      if (!obj) return;
+      if (Array.isArray(obj)) {
+        obj.forEach(traverse);
+      } else if (typeof obj === 'object') {
+        if (obj.IntervalReading) {
+           const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
+           arr.forEach((ir: any) => {
+             const start = parseInt(ir.timePeriod?.start || "0", 10);
+             const value = parseInt(ir.value || "0", 10);
+             if (start > 0) readings.push({ timestamp: start, usage_kwh: value / 1000.0 });
+           });
+        }
+        for (const key in obj) if (key !== 'IntervalReading') traverse(obj[key]);
+      }
+    }
+    traverse(parsed);
+    readings.sort((a, b) => a.timestamp - b.timestamp);
+    return readings;
+  };
+
+  // --- Initial Load ---
+  useEffect(() => {
+    async function init() {
+      // 1. Fetch global rates from server
+      try {
+        const res = await fetch('/api/rates');
+        const json = await res.json();
+        setRateHistory(json.historicalRates || []);
+      } catch (e) { console.error("Rate fetch error", e); }
+
+      // 2. Load energy data from Browser LocalStorage (Isolated to this user)
+      const savedData = localStorage.getItem('energy_data');
+      const savedBillingDay = localStorage.getItem('billing_day');
+      if (savedBillingDay) setBillingDay(parseInt(savedBillingDay));
+
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          setRawData(parsedData);
+          
+          if (parsedData.length > 0) {
+            const last = new Date(parsedData[parsedData.length - 1].timestamp * 1000);
+            const period = getBillingPeriod(last, savedBillingDay ? parseInt(savedBillingDay) : 1);
+            setStartDate(format(period.start, 'yyyy-MM-dd'));
+            setEndDate(format(period.end, 'yyyy-MM-dd'));
+          }
+        } catch (e) { console.error("Local storage parse error", e); }
+      } else {
+        setShowUploadModal(true);
+      }
+      setLoading(false);
+    }
+    init();
+  }, []);
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setParsing(true);
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const xmlText = event.target?.result as string;
+      try {
+        const readings = parseGreenButtonXML(xmlText);
+        if (readings.length > 0) {
+          setRawData(readings);
+          localStorage.setItem('energy_data', JSON.stringify(readings));
+          
+          const last = new Date(readings[readings.length - 1].timestamp * 1000);
+          const period = getBillingPeriod(last, billingDay);
+          setStartDate(format(period.start, 'yyyy-MM-dd'));
+          setEndDate(format(period.end, 'yyyy-MM-dd'));
+          setShowUploadModal(false);
+        } else {
+          alert("No valid energy readings found in this XML.");
+        }
+      } catch (err) {
+        alert("Error parsing XML file locally.");
+      } finally {
+        setParsing(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const clearData = () => {
+    if (confirm("Clear all your energy data from this browser? It will not affect the server.")) {
+      localStorage.removeItem('energy_data');
+      setRawData([]);
+      setShowUploadModal(true);
+    }
+  };
+
+  const updateBillingDay = (day: number) => {
+    setBillingDay(day);
+    localStorage.setItem('billing_day', day.toString());
+  };
+
   const getBillingPeriod = (refDate: Date, bDay: number) => {
     let start = setDate(startOfMonth(refDate), bDay);
     if (isBefore(refDate, start)) start = subMonths(start, 1);
     const end = subDays(addMonths(start, 1), 1);
     return { start, end };
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [elecRes, ratesRes] = await Promise.all([ fetch('/api/electricity'), fetch('/api/rates') ]);
-      const elecJson = await elecRes.json();
-      const ratesJson = await ratesRes.json();
-      
-      setRawData(elecJson.data || []);
-      setRateHistory(ratesJson.historicalRates || []);
-      
-      if (elecJson.data && elecJson.data.length > 0) {
-         const last = new Date(elecJson.data[elecJson.data.length - 1].timestamp * 1000);
-         const period = getBillingPeriod(last, billingDay);
-         setStartDate(format(period.start, 'yyyy-MM-dd'));
-         setEndDate(format(period.end, 'yyyy-MM-dd'));
-      } else {
-        // If no data, force show the upload modal
-        setShowUploadModal(true);
-      }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchData(); }, [billingDay]);
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setUploading(true);
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/electricity', { method: 'POST', body: formData });
-      if (res.ok) {
-        setShowUploadModal(false);
-        await fetchData(); // Reload everything
-      } else {
-        alert("Upload failed. Please ensure it's a valid Green Button XML file.");
-      }
-    } catch (err) {
-      alert("Error uploading file.");
-    } finally {
-      setUploading(false);
-      // Reset file input
-      e.target.value = '';
-    }
   };
 
   const setRange = (type: 'billing' | 'ytd') => {
@@ -212,60 +277,34 @@ export default function Dashboard() {
     })).sort((a,b) => a.key.localeCompare(b.key));
   }, [filteredData, granularity, drilldownDay, drilldownMonth]);
 
-  // Heatmap Data (24x7 grid based on current selection)
   const heatmapData = useMemo(() => {
-    // 7 days (0=Sunday), 24 hours
     const grid = Array.from({length: 7}, () => Array.from({length: 24}, () => ({ sum: 0, count: 0, avg: 0 })));
     let maxAvg = 0;
-    
     filteredData.forEach(d => {
-      const day = d.dateObj.getDay();
-      const hour = d.dateObj.getHours();
-      grid[day][hour].sum += d.usage_kwh;
-      grid[day][hour].count += 1;
+      const day = d.dateObj.getDay(); const hour = d.dateObj.getHours();
+      grid[day][hour].sum += d.usage_kwh; grid[day][hour].count += 1;
     });
-
     grid.forEach(day => day.forEach(hour => {
       if (hour.count > 0) hour.avg = hour.sum / hour.count;
       if (hour.avg > maxAvg) maxAvg = hour.avg;
     }));
-
     return { grid, maxAvg };
   }, [filteredData]);
 
-  // Anomaly Detection (Spike Alerts)
   const anomalies = useMemo(() => {
-    // Calculate expected usage per day of week
     const dayStats = Array.from({length: 7}, () => ({ sum: 0, days: new Set<string>() }));
-    processedData.forEach(d => {
-       const dayOfWeek = d.dateObj.getDay();
-       dayStats[dayOfWeek].sum += d.usage_kwh;
-       dayStats[dayOfWeek].days.add(d.dayStr);
-    });
-    const expectedAverages = dayStats.map(stat => stat.days.size > 0 ? stat.sum / stat.days.size : 0);
-
-    // Find anomalies in the filtered dataset
+    processedData.forEach(d => { const dOW = d.dateObj.getDay(); dayStats[dOW].sum += d.usage_kwh; dayStats[dOW].days.add(d.dayStr); });
+    const expectedAvgs = dayStats.map(stat => stat.days.size > 0 ? stat.sum / stat.days.size : 0);
     const dailyTotals = new Map<string, { dateObj: Date, usage: number }>();
-    filteredData.forEach(d => {
-      if (!dailyTotals.has(d.dayStr)) dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0 });
-      dailyTotals.get(d.dayStr)!.usage += d.usage_kwh;
-    });
-
+    filteredData.forEach(d => { if (!dailyTotals.has(d.dayStr)) dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0 }); dailyTotals.get(d.dayStr)!.usage += d.usage_kwh; });
     const spikes: { date: Date, usage: number, expected: number, diffPct: number }[] = [];
-    dailyTotals.forEach((val, dayStr) => {
-      const expected = expectedAverages[val.dateObj.getDay()];
-      // If usage is 50% higher than expected average AND at least 5kWh over (to ignore noise)
-      if (expected > 0 && val.usage > expected * 1.5 && (val.usage - expected) > 5) {
-        spikes.push({
-          date: val.dateObj,
-          usage: val.usage,
-          expected,
-          diffPct: ((val.usage - expected) / expected) * 100
-        });
+    dailyTotals.forEach((val) => {
+      const exp = expectedAvgs[val.dateObj.getDay()];
+      if (exp > 0 && val.usage > exp * 1.5 && (val.usage - exp) > 5) {
+        spikes.push({ date: val.dateObj, usage: val.usage, expected: exp, diffPct: ((val.usage - exp) / exp) * 100 });
       }
     });
-
-    return spikes.sort((a,b) => b.date.getTime() - a.date.getTime()).slice(0, 5); // Top 5 most recent
+    return spikes.sort((a,b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
   }, [processedData, filteredData]);
 
   const comparison = useMemo(() => {
@@ -320,7 +359,7 @@ export default function Dashboard() {
     }
   };
 
-  if (loading && rawData.length === 0) return <div className="p-20 text-center font-black text-black text-4xl italic animate-bounce">LOADING POWER GRID...</div>;
+  if (loading) return <div className="p-20 text-center font-black text-black text-4xl italic animate-bounce uppercase">Preparing Dashboard...</div>;
 
   return (
     <div className="space-y-10 text-black relative">
@@ -329,19 +368,18 @@ export default function Dashboard() {
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
           <div className="bg-white p-10 rounded-[2.5rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] max-w-xl w-full relative transform -rotate-1">
-             <button onClick={() => setShowUploadModal(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full border-4 border-black hover:bg-yellow-400 transition-colors"><X size={24} strokeWidth={4} /></button>
-             <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 flex items-center gap-4"><Upload size={36} className="text-blue-600" strokeWidth={4} /> Data Link</h2>
-             <p className="font-bold text-slate-500 mb-8 leading-relaxed">Upload your official Green Button XML export from Oakville Hydro (or any standard Ontario provider) to instantly analyze your energy profile.</p>
+             <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 flex items-center gap-4"><Upload size={36} className="text-blue-600" strokeWidth={4} /> Private Data Link</h2>
+             <p className="font-bold text-slate-500 mb-8 leading-relaxed italic">Processing happens locally in your browser. Your data is never saved to our server.</p>
              
              <div className="relative">
-                <input type="file" accept=".xml" onChange={handleFileUpload} disabled={uploading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-12 border-8 border-dashed ${uploading ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50 hover:bg-yellow-50'} rounded-3xl text-center transition-colors`}>
-                   {uploading ? (
-                     <div className="text-2xl font-black italic animate-pulse">PROCESSING DATA...</div>
+                <input type="file" accept=".xml" onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                <div className={`p-12 border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50 hover:bg-yellow-50'} rounded-3xl text-center transition-colors`}>
+                   {parsing ? (
+                     <div className="text-2xl font-black italic animate-pulse">PARSING DATA LOCALLY...</div>
                    ) : (
                      <div>
-                       <div className="text-xl font-black uppercase mb-2">Drag & Drop XML Here</div>
-                       <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Or click to browse files</div>
+                       <div className="text-xl font-black uppercase mb-2 text-black">Drop Green Button XML Here</div>
+                       <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Or click to browse</div>
                      </div>
                    )}
                 </div>
@@ -350,12 +388,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Controls Bar - HIGHER Z-INDEX */}
+      {/* Controls Bar */}
       <div className="relative z-[100] bg-white p-6 rounded-3xl shadow-xl border-4 border-black flex flex-col xl:flex-row gap-6 items-center">
         
         <div className="flex w-full xl:w-auto justify-between xl:justify-start items-center gap-4">
            <button onClick={() => setShowUploadModal(true)} className="p-4 bg-black text-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 hover:shadow-none transition-all" title="Upload New Data">
              <Upload size={20} strokeWidth={4} />
+           </button>
+           <button onClick={clearData} className="p-4 bg-white text-red-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 hover:shadow-none transition-all" title="Clear Private Data">
+             <Trash2 size={20} strokeWidth={4} />
            </button>
            <div className="h-10 w-1 bg-slate-200 rounded-full hidden xl:block"></div>
            <div className="flex items-center gap-2">
@@ -375,6 +416,16 @@ export default function Dashboard() {
         </div>
 
         <div className="ml-auto flex w-full xl:w-auto items-center justify-between xl:justify-end gap-4">
+           {/* Billing Settings */}
+           <div className="bg-slate-100 p-3 rounded-2xl border-4 border-black flex items-center gap-3">
+              <Settings2 size={20} className="text-slate-500" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase text-slate-500">Billing Day</span>
+                <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} 
+                       className="w-12 bg-transparent font-black text-sm outline-none text-black" title="Billing Cycle Start Day" />
+              </div>
+           </div>
+           
            {/* Plan Selection */}
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
               {(['TOU', 'Tiered', 'ULO'] as const).map(p => (
@@ -424,8 +475,8 @@ export default function Dashboard() {
                    </div>
                  )}
                  <div className="text-right">
-                    <div className="text-xs font-black uppercase text-slate-400 tracking-widest">Period Cost ({userPlan})</div>
-                    <div className="text-5xl font-black text-black italic leading-none block mt-2">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
+                    <div className="text-xs font-black uppercase text-slate-400 tracking-widest text-black">Period Cost ({userPlan})</div>
+                    <div className="text-5xl font-black text-black italic leading-none block mt-2 text-black">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
                  </div>
               </div>
             </div>
@@ -438,7 +489,7 @@ export default function Dashboard() {
                   <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
                   <Tooltip cursor={{fill: '#000', opacity: 0.05}} 
                     contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF'}} 
-                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px', padding: '2px 0'}} 
+                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '16px', padding: '2px 0'}} 
                     labelStyle={{fontWeight: 900, color: '#000', marginBottom: '12px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '8px'}} 
                     formatter={(v: any, name: any) => {
                        if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'TOTAL POWER'];
@@ -474,7 +525,7 @@ export default function Dashboard() {
             ].map((plan, i) => (
               <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-10 rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden transition-all cursor-pointer ${userPlan === plan.id ? 'ring-8 ring-yellow-400 ring-inset scale-[1.02]' : 'hover:scale-[1.01]'}`}>
                 {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-3 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase flex items-center gap-1 shadow-sm"><CheckCircle2 size={12} /> YOUR PLAN</div>}
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-center gap-3 mb-8 text-black">
                   <div className="p-3 bg-slate-50 border-4 border-black rounded-xl">{React.cloneElement(plan.icon as any, { strokeWidth: 4 })}</div>
                   <h3 className="text-2xl font-black uppercase tracking-tighter text-black">{plan.name}</h3>
                 </div>
@@ -524,16 +575,16 @@ export default function Dashboard() {
           
           {/* Anomaly Detection */}
           <div className="bg-yellow-400 p-8 rounded-[2.5rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] transform rotate-1">
-             <div className="flex items-center gap-4 mb-8">
+             <div className="flex items-center gap-4 mb-8 text-black">
                <AlertTriangle size={40} strokeWidth={3} className="text-black" />
-               <h3 className="text-4xl font-black uppercase tracking-tighter">Usage Anomalies</h3>
+               <h3 className="text-4xl font-black uppercase tracking-tighter text-black">Usage Anomalies</h3>
              </div>
              {anomalies.length > 0 ? (
                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                  {anomalies.map((anom, i) => (
                    <div key={i} className="bg-white p-6 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                      <div className="text-xs font-black uppercase tracking-widest text-red-600 mb-2">{format(anom.date, 'EEEE, MMM do')}</div>
-                     <div className="text-3xl font-black italic mb-4">{anom.usage.toFixed(1)} kWh</div>
+                     <div className="text-3xl font-black italic mb-4 text-black">{anom.usage.toFixed(1)} kWh</div>
                      <div className="text-sm font-bold text-slate-600">
                        This is <span className="text-black font-black bg-yellow-200 px-2 rounded-sm">+{anom.diffPct.toFixed(0)}% higher</span> than your historical average for a {format(anom.date, 'EEEE')} ({anom.expected.toFixed(1)} kWh).
                      </div>
@@ -541,13 +592,13 @@ export default function Dashboard() {
                  ))}
                </div>
              ) : (
-               <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl">No significant spikes detected in this period! Great job.</div>
+               <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl text-black">No significant spikes detected in this period! Great job.</div>
              )}
           </div>
 
           {/* 24x7 Heatmap */}
           <div className="bg-white p-10 rounded-[2.5rem] border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto">
-             <h3 className="text-4xl font-black uppercase tracking-tighter mb-8 italic">Weekly Routine Heatmap</h3>
+             <h3 className="text-4xl font-black uppercase tracking-tighter mb-8 italic text-black">Weekly Routine Heatmap</h3>
              <div className="min-w-[800px]">
                <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2">
                  <div className="w-16"></div>
@@ -557,10 +608,9 @@ export default function Dashboard() {
                </div>
                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dIdx) => (
                  <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1">
-                   <div className="w-16 text-xs font-black uppercase flex items-center">{day}</div>
+                   <div className="w-16 text-xs font-black uppercase flex items-center text-black">{day}</div>
                    {heatmapData.grid[dIdx].map((hour, hIdx) => {
                       const intensity = hour.avg / heatmapData.maxAvg;
-                      // Color scale: slate-100 -> yellow-400 -> red-600
                       let bgClass = 'bg-slate-100';
                       if (intensity > 0.8) bgClass = 'bg-red-600 border-red-800';
                       else if (intensity > 0.6) bgClass = 'bg-orange-500 border-orange-700';
