@@ -316,7 +316,7 @@ export default function Dashboard() {
               <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-12 bg-transparent text-sm outline-none text-black font-black" />
            </div>
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
-              {['TOU', 'Tiered', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>)}
+              {['Tiered', 'TOU', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
            <div className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black text-center font-black relative">
               <div className="text-[10px] uppercase">Vampire Load</div>
