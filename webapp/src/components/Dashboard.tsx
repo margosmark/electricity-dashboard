@@ -1,8 +1,8 @@
 /**
- * Oakville Hydro Green Button Data Dashboard (Privacy-First)
+ * Ontario Energy Optimizer - FULL FEATURE VERSION
  * 
- * This version handles all data parsing and storage LOCALLY in the user's browser.
- * No energy data is ever saved to the server.
+ * Privacy-First: All energy data parsing and storage happens 100% in your browser.
+ * Features: TOU/Tiered/ULO comparisons, Billing Cycles, Heatmaps, Anomaly Detection.
  */
 
 "use client";
@@ -16,30 +16,21 @@ import {
   startOfMonth, lastDayOfMonth, startOfYear, addMonths, 
   subMonths, setDate, isBefore, addDays, subDays 
 } from 'date-fns';
-import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2 } from 'lucide-react';
+import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
 import { XMLParser } from 'fast-xml-parser';
 
 // --- Types ---
-
 type DataPoint = { timestamp: number, usage_kwh: number };
-
 type RateSet = {
   effectiveDate: string,
   tou: { offPeak: number, midPeak: number, onPeak: number },
   tiered: { tier1: number, tier2: number, thresholdWinter: number, thresholdSummer: number },
   ulo: { overnight: number, weekendOffPeak: number, midPeak: number, onPeak: number }
 };
-
 type ProcessedPoint = DataPoint & {
-  dateObj: Date,
-  dayStr: string,
-  hourStr: string,
-  touCategory: 'Off-Peak' | 'Mid-Peak' | 'On-Peak',
-  uloCategory: 'Overnight' | 'Weekend Off-Peak' | 'Mid-Peak' | 'On-Peak',
-  isWinter: boolean,
-  costTOU: number,
-  costTiered: number,
-  costULO: number,
+  dateObj: Date, dayStr: string, hourStr: string,
+  touCategory: string, uloCategory: string,
+  isWinter: boolean, costTOU: number, costTiered: number, costULO: number,
   activeRateSet: RateSet
 };
 
@@ -48,6 +39,7 @@ export default function Dashboard() {
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stuck, setStuck] = useState(false);
   const [showVampireHelp, setShowVampireHelp] = useState(false);
   const [userPlan, setUserPlan] = useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
   const [billingDay, setBillingDay] = useState<number>(1);
@@ -61,115 +53,104 @@ export default function Dashboard() {
   const [drilldownDay, setDrilldownDay] = useState<string | null>(null);
   const [drilldownMonth, setDrilldownMonth] = useState<string | null>(null);
 
-  /**
-   * Browser-side XML Parser (Hardened)
-   * Uses an iterative approach to prevent stack overflows on deep XML structures.
-   */
-  const parseGreenButtonXML = (xmlText: string) => {
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      removeNSPrefix: true,
-      isArray: (name) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(name)
-    });
-    
-    const parsed = parser.parse(xmlText);
-    const readings: { timestamp: number, usage_kwh: number }[] = [];
-    
-    // Iterative traversal using a stack to prevent stack overflows
-    const stack = [parsed];
-    while (stack.length > 0) {
-      const obj = stack.pop();
-      if (!obj || typeof obj !== 'object') continue;
-
-      if (Array.isArray(obj)) {
-        for (let i = obj.length - 1; i >= 0; i--) stack.push(obj[i]);
-      } else {
-        if (obj.IntervalReading) {
-          const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
-          for (const ir of arr) {
-            const start = parseInt(ir.timePeriod?.start || "0", 10);
-            const value = parseInt(ir.value || "0", 10);
-            if (start > 0) readings.push({ timestamp: start, usage_kwh: value / 1000.0 });
-          }
-        }
-        for (const key in obj) {
-          if (key !== 'IntervalReading' && typeof obj[key] === 'object') {
-            stack.push(obj[key]);
-          }
-        }
-      }
-    }
-    
-    readings.sort((a, b) => a.timestamp - b.timestamp);
-    return readings;
-  };
-
-  // ... (inside handleFileUpload)
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    const file = e.target.files[0];
-    
-    // Robustness: Limit file size to 10MB to prevent browser hang
-    if (file.size > 10 * 1024 * 1024) {
-      alert("File is too large (>10MB). Please upload a smaller date range.");
-      return;
-    }
-
-    setParsing(true);
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      const xmlText = event.target?.result as string;
-      try {
-        const readings = parseGreenButtonXML(xmlText);
-        if (readings.length > 0) {
-          setRawData(readings);
-          
-          // Robustness: Handle LocalStorage quota limits
-          try {
-            localStorage.setItem('energy_data', JSON.stringify(readings));
-          } catch (storageErr) {
-            console.warn("LocalStorage full, data will only persist for this session.");
-            alert("Browser storage is full. The data will work now, but you may need to re-upload next time.");
-          }
-          
-          const last = new Date(readings[readings.length - 1].timestamp * 1000);
-          const period = getBillingPeriod(last, billingDay);
-          setStartDate(format(period.start, 'yyyy-MM-dd'));
-          setEndDate(format(period.end, 'yyyy-MM-dd'));
-          setShowUploadModal(false);
-        } else {
-          alert("No valid energy readings found in this XML.");
-        }
-      } catch (err) {
-        console.error("Local parse error:", err);
-        alert("Error parsing XML file locally.");
-      } finally {
-        setParsing(false);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const clearData = () => {
-    if (confirm("Clear all your energy data from this browser? It will not affect the server.")) {
-      localStorage.removeItem('energy_data');
-      setRawData([]);
-      setShowUploadModal(true);
-    }
-  };
-
-  const updateBillingDay = (day: number) => {
-    setBillingDay(day);
-    localStorage.setItem('billing_day', day.toString());
-  };
+  // --- Logic Helpers ---
 
   const getBillingPeriod = (refDate: Date, bDay: number) => {
     let start = setDate(startOfMonth(refDate), bDay);
     if (isBefore(refDate, start)) start = subMonths(start, 1);
     const end = subDays(addMonths(start, 1), 1);
     return { start, end };
+  };
+
+  /**
+   * Hardened Browser-side XML Parser
+   */
+  const parseGreenButtonXML = (xmlText: string) => {
+    const parser = new XMLParser({ 
+      ignoreAttributes: false, 
+      removeNSPrefix: true, 
+      isArray: (name) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(name)
+    });
+    const parsed = parser.parse(xmlText);
+    const readings: any[] = [];
+    const stack = [parsed];
+    while (stack.length > 0) {
+      const obj = stack.pop();
+      if (!obj || typeof obj !== 'object') continue;
+      if (Array.isArray(obj)) obj.forEach(i => stack.push(i));
+      else {
+        if (obj.IntervalReading) {
+          const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
+          for (const ir of arr) {
+            const s = parseInt(ir.timePeriod?.start || "0", 10);
+            const v = parseInt(ir.value || "0", 10);
+            if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
+          }
+        }
+        for (const k in obj) if (k !== 'IntervalReading' && typeof obj[k] === 'object') stack.push(obj[k]);
+      }
+    }
+    return readings.sort((a, b) => a.timestamp - b.timestamp);
+  };
+
+  // --- Start Sequence ---
+  useEffect(() => {
+    let mounted = true;
+    async function init() {
+      try {
+        const res = await fetch('/api/rates');
+        const json = await res.json();
+        if (mounted) setRateHistory(json.historicalRates || []);
+      } catch (e) { console.error("Rate fetch failed"); }
+
+      try {
+        const savedBDay = localStorage.getItem('billing_day');
+        if (savedBDay && mounted) setBillingDay(parseInt(savedBDay));
+
+        const savedData = localStorage.getItem('energy_data');
+        if (savedData) {
+          const parsed = JSON.parse(savedData);
+          if (mounted && parsed.length > 0) {
+            setRawData(parsed);
+            const last = new Date(parsed[parsed.length - 1].timestamp * 1000);
+            const period = getBillingPeriod(last, savedBDay ? parseInt(savedBDay) : 1);
+            setStartDate(format(period.start, 'yyyy-MM-dd'));
+            setEndDate(format(period.end, 'yyyy-MM-dd'));
+          }
+        } else if (mounted) {
+          setShowUploadModal(true);
+        }
+      } catch (e) { console.error("Local load failed"); }
+      if (mounted) setLoading(false);
+    }
+    init();
+    const timeout = setTimeout(() => { if (mounted) setStuck(true); }, 5000);
+    return () => { mounted = false; clearTimeout(timeout); };
+  }, []);
+
+  // --- Handlers ---
+
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setParsing(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = parseGreenButtonXML(ev.target?.result as string);
+        if (data.length > 0) {
+          setRawData(data);
+          localStorage.setItem('energy_data', JSON.stringify(data));
+          const last = new Date(data[data.length-1].timestamp * 1000);
+          const period = getBillingPeriod(last, billingDay);
+          setStartDate(format(period.start, 'yyyy-MM-dd'));
+          setEndDate(format(period.end, 'yyyy-MM-dd'));
+          setShowUploadModal(false);
+        }
+      } catch (err) { alert("Parse Error"); }
+      finally { setParsing(false); }
+    };
+    reader.readAsText(file);
   };
 
   const setRange = (type: 'billing' | 'ytd') => {
@@ -186,40 +167,54 @@ export default function Dashboard() {
     setDrilldownDay(null); setDrilldownMonth(null);
   };
 
+  const updateBillingDay = (day: number) => {
+    setBillingDay(day);
+    localStorage.setItem('billing_day', day.toString());
+  };
+
+  const navigatePeriod = (dir: 'prev' | 'next') => {
+    if (drilldownDay || drilldownMonth) {
+       const cur = new Date((drilldownDay || drilldownMonth + "-01") + "T00:00:00");
+       cur.setMonth(cur.getMonth() + (dir === 'next' ? 1 : -1));
+       const next = format(cur, drilldownDay ? 'yyyy-MM-dd' : 'yyyy-MM');
+       if (drilldownDay) setDrilldownDay(next); else setDrilldownMonth(next);
+       if (next < startDate) setStartDate(next + (drilldownDay ? "" : "-01"));
+    } else {
+      const s = new Date(startDate + "T00:00:00"); s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
+      const p = getBillingPeriod(s, billingDay);
+      setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
+    }
+  };
+
+  const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
+
+  // --- Logic Memos ---
+
   const processedData = useMemo(() => {
     if (rateHistory.length === 0) return [];
-    const sortedRates = [...rateHistory].sort((a,b) => b.effectiveDate.localeCompare(a.effectiveDate));
-
+    const sorted = [...rateHistory].sort((a,b) => b.effectiveDate.localeCompare(a.effectiveDate));
     return rawData.map(d => {
-      const dateObj = new Date(d.timestamp * 1000);
-      const m = getMonth(dateObj); const h = getHours(dateObj);
-      const isWkend = isWeekend(dateObj); const isWinter = m >= 10 || m <= 3;
-      const dayStr = format(dateObj, 'yyyy-MM-dd');
-      const activeRateSet = sortedRates.find(r => dayStr >= r.effectiveDate) || sortedRates[sortedRates.length - 1];
-
-      let touCat: 'Off-Peak' | 'Mid-Peak' | 'On-Peak' = 'Off-Peak';
-      if (!isWkend) {
-        if (h >= 19 || h < 7) touCat = 'Off-Peak';
-        else if (isWinter) {
-          if ((h >= 7 && h < 11) || (h >= 17 && h < 19)) touCat = 'On-Peak';
-          else touCat = 'Mid-Peak';
-        } else {
-          if (h >= 11 && h < 17) touCat = 'On-Peak';
-          else touCat = 'Mid-Peak';
-        }
+      const dt = new Date(d.timestamp * 1000);
+      const h = dt.getHours(); const isW = isWeekend(dt); const isWin = dt.getMonth() >= 10 || dt.getMonth() <= 3;
+      const dayStr = format(dt, 'yyyy-MM-dd');
+      const rates = sorted.find(r => dayStr >= r.effectiveDate) || sorted[sorted.length-1];
+      
+      let tCat = 'Off-Peak';
+      if (!isW) {
+        if (h >= 19 || h < 7) tCat = 'Off-Peak';
+        else if (isWin) tCat = (h >= 7 && h < 11) || (h >= 17 && h < 19) ? 'On-Peak' : 'Mid-Peak';
+        else tCat = (h >= 11 && h < 17) ? 'On-Peak' : 'Mid-Peak';
       }
       
-      let uloCat: 'Overnight' | 'Weekend Off-Peak' | 'Mid-Peak' | 'On-Peak' = 'Mid-Peak';
-      if (h >= 23 || h < 7) uloCat = 'Overnight';
-      else if (isWkend) uloCat = 'Weekend Off-Peak';
-      else if (h >= 16 && h < 21) uloCat = 'On-Peak';
-      else uloCat = 'Mid-Peak';
+      let uCat = 'Mid-Peak';
+      if (h >= 23 || h < 7) uCat = 'Overnight';
+      else if (isW) uCat = 'Weekend Off-Peak';
+      else if (h >= 16 && h < 21) uCat = 'On-Peak';
 
-      const costTOU = d.usage_kwh * (activeRateSet.tou[touCat === 'Off-Peak' ? 'offPeak' : touCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
-      const costULO = d.usage_kwh * (activeRateSet.ulo[uloCat === 'Overnight' ? 'overnight' : uloCat === 'Weekend Off-Peak' ? 'weekendOffPeak' : uloCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
-      const costTiered = d.usage_kwh * (activeRateSet.tiered.tier1 / 100);
-
-      return { ...d, dateObj, dayStr, hourStr: format(dateObj, 'HH:mm'), touCategory: touCat, uloCategory: uloCat, isWinter, costTOU, costULO, costTiered, activeRateSet } as ProcessedPoint;
+      const cT = d.usage_kwh * (rates.tou[tCat === 'Off-Peak' ? 'offPeak' : tCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
+      const cU = d.usage_kwh * (rates.ulo[uCat === 'Overnight' ? 'overnight' : uCat === 'Weekend Off-Peak' ? 'weekendOffPeak' : uCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
+      
+      return { ...d, dateObj: dt, dayStr, hourStr: format(dt, 'HH:mm'), touCategory: tCat, uloCategory: uCat, isWinter: isWin, costTOU: cT, costULO: cU, costTiered: d.usage_kwh * (rates.tiered.tier1/100), activeRateSet: rates } as ProcessedPoint;
     });
   }, [rawData, rateHistory]);
 
@@ -230,55 +225,42 @@ export default function Dashboard() {
   }, [processedData, startDate, endDate]);
 
   const activeChartData = useMemo(() => {
-    const getActualTieredCost = (usage: number, readings: ProcessedPoint[]) => {
-      if (readings.length === 0) return 0;
-      const first = readings[0];
-      const days = new Set(readings.map(r => r.dayStr)).size;
-      const thresh = (first.isWinter ? first.activeRateSet.tiered.thresholdWinter : first.activeRateSet.tiered.thresholdSummer) * (days / 30.4);
-      return usage <= thresh ? usage * (first.activeRateSet.tiered.tier1 / 100) : (thresh * (first.activeRateSet.tiered.tier1 / 100)) + ((usage - thresh) * (first.activeRateSet.tiered.tier2 / 100));
-    };
-
-    if (drilldownDay) {
-       return filteredData.filter(d => d.dayStr === drilldownDay).map(d => ({ 
-         label: d.hourStr, usage: d.usage_kwh, key: d.hourStr, 
-         costTOU: d.costTOU, costULO: d.costULO, costTiered: d.costTiered 
-       })).sort((a,b) => a.key.localeCompare(b.key));
-    }
-    
-    const map = new Map<string, { label: string, usage: number, key: string, costTOU: number, costULO: number, readings: ProcessedPoint[] }>();
+    if (drilldownDay) return filteredData.filter(d => d.dayStr === drilldownDay).map(d => ({ label: d.hourStr, usage: d.usage_kwh, key: d.hourStr, costTOU: d.costTOU, costULO: d.costULO, costTiered: d.costTiered }));
+    const map = new Map<string, any>();
     filteredData.forEach(d => {
-      let label = d.dayStr; let key = d.dayStr;
-      if (drilldownMonth) { 
-        if (format(d.dateObj, 'yyyy-MM') !== drilldownMonth) return;
-        label = format(d.dateObj, 'MMM dd'); key = d.dayStr; 
-      }
-      else if (granularity === 'Monthly') { label = format(d.dateObj, 'MMM yyyy'); key = format(d.dateObj, 'yyyy-MM'); }
-      else if (granularity === 'Weekly') { const monday = startOfWeek(d.dateObj, { weekStartsOn: 1 }); label = "Week of " + format(monday, 'MMM dd'); key = format(monday, 'yyyy-MM-dd'); }
-      
-      if (!map.has(key)) map.set(key, { label, usage: 0, key, costTOU: 0, costULO: 0, readings: [] });
-      const obj = map.get(key)!;
-      obj.usage += d.usage_kwh;
-      obj.costTOU += d.costTOU;
-      obj.costULO += d.costULO;
-      obj.readings.push(d);
+      let l = d.dayStr; let k = d.dayStr;
+      if (drilldownMonth) { if (format(d.dateObj, 'yyyy-MM') !== drilldownMonth) return; l = format(d.dateObj, 'MMM dd'); k = d.dayStr; }
+      else if (granularity === 'Monthly') { l = format(d.dateObj, 'MMM yyyy'); k = format(d.dateObj, 'yyyy-MM'); }
+      else if (granularity === 'Weekly') { const mon = startOfWeek(d.dateObj, { weekStartsOn: 1 }); l = "Week of " + format(mon, 'MMM dd'); k = format(mon, 'yyyy-MM-dd'); }
+      if (!map.has(k)) map.set(k, { label: l, usage: 0, key: k, costTOU: 0, costULO: 0, readings: [] });
+      const o = map.get(k); o.usage += d.usage_kwh; o.costTOU += d.costTOU; o.costULO += d.costULO; o.readings.push(d);
     });
-
-    return Array.from(map.values()).map(val => ({
-      ...val, costTiered: getActualTieredCost(val.usage, val.readings)
-    })).sort((a,b) => a.key.localeCompare(b.key));
+    return Array.from(map.values()).map(v => {
+      const r = v.readings[0]; const days = new Set(v.readings.map((x:any)=>x.dayStr)).size;
+      const th = (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) * (days/30.4);
+      const cTier = v.usage <= th ? v.usage * (r.activeRateSet.tiered.tier1/100) : (th * (r.activeRateSet.tiered.tier1/100)) + ((v.usage-th)*(r.activeRateSet.tiered.tier2/100));
+      return { ...v, costTiered: cTier };
+    }).sort((a,b) => a.key.localeCompare(b.key));
   }, [filteredData, granularity, drilldownDay, drilldownMonth]);
+
+  const comparison = useMemo(() => {
+    if (filteredData.length === 0) return null;
+    const c = activeChartData.reduce((acc, curr) => ({ TOU: acc.TOU + curr.costTOU, Tiered: acc.Tiered + curr.costTiered, ULO: acc.ULO + curr.costULO }), { TOU: 0, Tiered: 0, ULO: 0 });
+    return c;
+  }, [activeChartData]);
+
+  const vampire = useMemo(() => {
+     if (filteredData.length === 0) return { cost: 0, watts: 0 };
+     const sorted = filteredData.map(d => d.usage_kwh).sort((a, b) => a - b);
+     const base = sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
+     return { cost: base * 24 * 30 * (filteredData[0].activeRateSet.tou.offPeak / 100), watts: base * 1000 };
+  }, [filteredData]);
 
   const heatmapData = useMemo(() => {
     const grid = Array.from({length: 7}, () => Array.from({length: 24}, () => ({ sum: 0, count: 0, avg: 0 })));
     let maxAvg = 0;
-    filteredData.forEach(d => {
-      const day = d.dateObj.getDay(); const hour = d.dateObj.getHours();
-      grid[day][hour].sum += d.usage_kwh; grid[day][hour].count += 1;
-    });
-    grid.forEach(day => day.forEach(hour => {
-      if (hour.count > 0) hour.avg = hour.sum / hour.count;
-      if (hour.avg > maxAvg) maxAvg = hour.avg;
-    }));
+    filteredData.forEach(d => { const day = d.dateObj.getDay(); const hour = d.dateObj.getHours(); grid[day][hour].sum += d.usage_kwh; grid[day][hour].count += 1; });
+    grid.forEach(day => day.forEach(hour => { if (hour.count > 0) hour.avg = hour.sum / hour.count; if (hour.avg > maxAvg) maxAvg = hour.avg; }));
     return { grid, maxAvg };
   }, [filteredData]);
 
@@ -288,7 +270,7 @@ export default function Dashboard() {
     const expectedAvgs = dayStats.map(stat => stat.days.size > 0 ? stat.sum / stat.days.size : 0);
     const dailyTotals = new Map<string, { dateObj: Date, usage: number }>();
     filteredData.forEach(d => { if (!dailyTotals.has(d.dayStr)) dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0 }); dailyTotals.get(d.dayStr)!.usage += d.usage_kwh; });
-    const spikes: { date: Date, usage: number, expected: number, diffPct: number }[] = [];
+    const spikes: any[] = [];
     dailyTotals.forEach((val) => {
       const exp = expectedAvgs[val.dateObj.getDay()];
       if (exp > 0 && val.usage > exp * 1.5 && (val.usage - exp) > 5) {
@@ -298,142 +280,82 @@ export default function Dashboard() {
     return spikes.sort((a,b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
   }, [processedData, filteredData]);
 
-  const comparison = useMemo(() => {
-    if (filteredData.length === 0) return null;
-    const totalTOU = filteredData.reduce((a, b) => a + b.costTOU, 0);
-    const totalULO = filteredData.reduce((a, b) => a + b.costULO, 0);
-    let totalTiered = 0;
-    const dailyData = new Map<string, { usage: number, rateSet: RateSet, isWinter: boolean }>();
-    filteredData.forEach(d => { if (!dailyData.has(d.dayStr)) dailyData.set(d.dayStr, { usage: 0, rateSet: d.activeRateSet, isWinter: d.isWinter }); dailyData.get(d.dayStr)!.usage += d.usage_kwh; });
-    dailyData.forEach((val) => {
-      const thresh = (val.isWinter ? val.rateSet.tiered.thresholdWinter : val.rateSet.tiered.thresholdSummer) / 30.4;
-      if (val.usage <= thresh) totalTiered += val.usage * (val.rateSet.tiered.tier1 / 100);
-      else totalTiered += (thresh * (val.rateSet.tiered.tier1 / 100)) + ((val.usage - thresh) * (val.rateSet.tiered.tier2 / 100));
-    });
-    return { TOU: totalTOU, Tiered: totalTiered, ULO: totalULO };
-  }, [filteredData]);
+  // --- Components ---
 
-  const vampire = useMemo(() => {
-     if (filteredData.length === 0) return { cost: 0, watts: 0 };
-     const sortedUsage = filteredData.map(d => d.usage_kwh).sort((a, b) => a - b);
-     const baselineKwh = sortedUsage[Math.floor(sortedUsage.length * 0.05)] || sortedUsage[0];
-     const lastRate = filteredData[filteredData.length - 1].activeRateSet.tou.offPeak;
-     return { cost: baselineKwh * 24 * 30 * (lastRate / 100), watts: baselineKwh * 1000 };
-  }, [filteredData]);
-
-  const navigatePeriod = (direction: 'prev' | 'next') => {
-    if (drilldownDay) {
-      const current = new Date(drilldownDay + "T00:00:00"); current.setDate(current.getDate() + (direction === 'next' ? 1 : -1));
-      const nextStr = format(current, 'yyyy-MM-dd');
-      if (processedData.some(d => d.dayStr === nextStr)) { setDrilldownDay(nextStr); if (nextStr < startDate) setStartDate(nextStr); if (nextStr > endDate) setEndDate(nextStr); }
-    } else if (drilldownMonth) {
-      const [y, m] = drilldownMonth.split('-').map(Number); const current = new Date(y, m - 1, 1); current.setMonth(current.getMonth() + (direction === 'next' ? 1 : -1));
-      const nextStr = format(current, 'yyyy-MM');
-      if (processedData.some(d => format(d.dateObj, 'yyyy-MM') === nextStr)) { setDrilldownMonth(nextStr); if (nextStr + "-01" < startDate) setStartDate(nextStr + "-01"); }
-    } else {
-      const currentStart = new Date(startDate + "T00:00:00");
-      const newStart = direction === 'next' ? addMonths(currentStart, 1) : subMonths(currentStart, 1);
-      const period = getBillingPeriod(newStart, billingDay);
-      if (processedData.some(d => d.dateObj >= period.start && d.dateObj <= period.end)) {
-        setStartDate(format(period.start, 'yyyy-MM-dd'));
-        setEndDate(format(period.end, 'yyyy-MM-dd'));
-      }
-    }
-  };
-
-  const handleBarClick = (item: any) => {
-    if (!item || !item.key) return;
-    if (drilldownMonth) { setDrilldownDay(item.key); } 
-    else if (!drilldownDay) {
-      if (granularity === 'Monthly') setDrilldownMonth(item.key);
-      else setDrilldownDay(item.key);
-    }
-  };
-
-  if (loading) return <div className="p-20 text-center font-black text-black text-4xl italic animate-bounce uppercase">Preparing Dashboard...</div>;
+  if (loading) return (
+    <div className="p-20 text-center flex flex-col items-center justify-center space-y-8 bg-slate-50 min-h-screen">
+      <div className="w-24 h-24 border-8 border-black border-t-yellow-400 rounded-full animate-spin shadow-2xl"></div>
+      <div className="font-black text-black text-5xl uppercase italic tracking-tighter">Preparing Optimizer...</div>
+      {stuck && (
+        <button onClick={emergencyReset} className="p-6 bg-red-600 text-white border-4 border-black rounded-3xl font-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 transition-all flex items-center gap-4 animate-in fade-in zoom-in">
+          <RefreshCw size={24} strokeWidth={4} /> DATA EMERGENCY RESET
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-10 text-black relative">
       
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-          <div className="bg-white p-10 rounded-[2.5rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] max-w-xl w-full relative transform -rotate-1">
-             <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 flex items-center gap-4"><Upload size={36} className="text-blue-600" strokeWidth={4} /> Private Data Link</h2>
-             <p className="font-bold text-slate-500 mb-8 leading-relaxed italic">Processing happens locally in your browser. Your data is never saved to our server.</p>
-             
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white p-12 rounded-[3rem] border-8 border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black">
+             <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 flex items-center gap-4 text-black"><Upload size={48} className="text-blue-600" strokeWidth={4} /> Link Data</h2>
+             <p className="font-bold text-slate-600 text-lg mb-10 text-black text-left leading-relaxed">Optimize your energy with a Green Button XML export. <span className="underline decoration-blue-500 font-black">Processing is 100% local and private.</span></p>
              <div className="relative">
                 <input type="file" accept=".xml" onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-12 border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50 hover:bg-yellow-50'} rounded-3xl text-center transition-colors`}>
-                   {parsing ? (
-                     <div className="text-2xl font-black italic animate-pulse">PARSING DATA LOCALLY...</div>
-                   ) : (
-                     <div>
-                       <div className="text-xl font-black uppercase mb-2 text-black">Drop Green Button XML Here</div>
-                       <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">Or click to browse</div>
-                     </div>
-                   )}
+                <div className={`p-16 border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-[2rem] text-center`}>
+                   <div className="text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div>
                 </div>
              </div>
           </div>
         </div>
       )}
 
-      {/* Controls Bar */}
-      <div className="relative z-[100] bg-white p-6 rounded-3xl shadow-xl border-4 border-black flex flex-col xl:flex-row gap-6 items-center">
-        
-        <div className="flex w-full xl:w-auto justify-between xl:justify-start items-center gap-4">
-           <button onClick={() => setShowUploadModal(true)} className="p-4 bg-black text-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 hover:shadow-none transition-all" title="Upload New Data">
-             <Upload size={20} strokeWidth={4} />
-           </button>
-           <button onClick={clearData} className="p-4 bg-white text-red-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 hover:shadow-none transition-all" title="Clear Private Data">
-             <Trash2 size={20} strokeWidth={4} />
-           </button>
-           <div className="h-10 w-1 bg-slate-200 rounded-full hidden xl:block"></div>
-           <div className="flex items-center gap-2">
-             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white w-36" />
-             <span className="font-black">TO</span>
-             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white w-36" />
+      {/* Nav Controls */}
+      <div className="relative z-[100] bg-white p-6 rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-6 items-center text-black">
+        <div className="flex gap-4 items-center">
+           <button onClick={() => setShowUploadModal(true)} className="p-4 bg-black text-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={20} strokeWidth={4} /></button>
+           <button onClick={() => {if(confirm("Wipe all data?")) emergencyReset();}} className="p-4 bg-white text-red-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={20} strokeWidth={4} /></button>
+           <div className="flex items-center gap-2 ml-4 text-black">
+             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
+             <span className="font-black text-black text-xs opacity-40">TO</span>
+             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
              <div className="flex gap-2 ml-2">
-               <button onClick={() => setRange('billing')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-300 active:translate-y-1 active:shadow-none transition-all text-[10px]">BILLING PERIOD</button>
-               <button onClick={() => setRange('ytd')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-300 active:translate-y-1 active:shadow-none transition-all text-[10px]">YTD</button>
+               <button onClick={() => setRange('billing')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">Billing Period</button>
+               <button onClick={() => setRange('ytd')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">YTD</button>
              </div>
            </div>
         </div>
 
-        <div className="flex bg-black p-1.5 rounded-2xl gap-1 w-full xl:w-auto justify-center">
-          <button onClick={() => setViewMode('Chart')} className={`px-6 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${viewMode === 'Chart' ? 'bg-white text-black' : 'text-slate-400 hover:text-white'}`}><TrendingUp size={16} strokeWidth={3}/> CHART</button>
-          <button onClick={() => setViewMode('Insights')} className={`px-6 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${viewMode === 'Insights' ? 'bg-yellow-400 text-black' : 'text-slate-400 hover:text-white'}`}><Activity size={16} strokeWidth={3}/> INSIGHTS</button>
+        <div className="flex bg-black p-1.5 rounded-2xl gap-1 ml-auto">
+          <button onClick={() => setViewMode('Chart')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${viewMode === 'Chart' ? 'bg-white text-black' : 'text-slate-400'}`}>CHART</button>
+          <button onClick={() => setViewMode('Insights')} className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${viewMode === 'Insights' ? 'bg-yellow-400 text-black' : 'text-slate-400'}`}>INSIGHTS</button>
         </div>
 
-        <div className="ml-auto flex w-full xl:w-auto items-center justify-between xl:justify-end gap-4">
-           {/* Billing Settings */}
+        <div className="ml-auto flex items-center gap-4">
            <div className="bg-slate-100 p-3 rounded-2xl border-4 border-black flex items-center gap-3">
               <Settings2 size={20} className="text-slate-500" />
               <div className="flex flex-col">
                 <span className="text-[8px] font-black uppercase text-slate-500">Billing Day</span>
                 <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} 
-                       className="w-12 bg-transparent font-black text-sm outline-none text-black" title="Billing Cycle Start Day" />
+                       className="w-12 bg-transparent font-black text-sm outline-none text-black" />
               </div>
            </div>
            
-           {/* Plan Selection */}
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
-              {(['TOU', 'Tiered', 'ULO'] as const).map(p => (
+              {['TOU', 'Tiered', 'ULO'].map((p:any) => (
                 <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>
               ))}
            </div>
            
-           {/* Vampire Load Display */}
-           <button onClick={() => setShowVampireHelp(!showVampireHelp)} className="bg-blue-600 text-white p-4 lg:p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black relative transition-transform hover:scale-105 active:rotate-1">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1 text-white">Vampire Load <HelpCircle size={10} /></div>
-              <div className="text-3xl lg:text-4xl font-black italic tracking-tighter text-white">${vampire.cost.toFixed(2)}<span className="text-xs not-italic opacity-80 ml-1">/mo</span></div>
+           <button onClick={() => setShowVampireHelp(!showVampireHelp)} className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black relative transition-transform hover:scale-105">
+              <div className="text-[10px] font-black uppercase mb-1 flex items-center gap-1 text-white text-left">Vampire Load <HelpCircle size={10} /></div>
+              <div className="text-4xl font-black italic tracking-tighter text-white">${vampire.cost.toFixed(2)}<span className="text-xs not-italic opacity-60 ml-1">/mo</span></div>
               {showVampireHelp && (
-                <div className="absolute top-full right-0 mt-4 w-72 p-6 bg-white border-4 border-black rounded-2xl shadow-2xl z-[200] text-black text-[11px] font-black leading-relaxed text-left cursor-default" onClick={e => e.stopPropagation()}>
-                  <p className="mb-3 text-blue-600 uppercase border-b-2 border-slate-100 pb-2">How we calculate this:</p>
-                  <p className="mb-2">We analyze your entire selected period and find your **sustained minimum usage** (the 5th percentile).</p>
-                  <p className="mb-2">Your home pulls approx. <span className="text-blue-600 underline font-black">{vampire.watts.toFixed(0)} Watts</span> even when you aren't using anything.</p>
-                  <p>This is the cost of fridges, standby TVs, internet routers, and clocks running 24/7.</p>
+                <div className="absolute top-full right-0 mt-4 w-72 p-6 bg-white border-4 border-black rounded-2xl shadow-2xl z-[200] text-black text-[11px] font-black leading-relaxed text-left cursor-default">
+                  Your home pulls <span className="text-blue-600 underline font-black">{vampire.watts.toFixed(0)} Watts</span> 24/7. Appliances that never sleep.
                 </div>
               )}
            </button>
@@ -441,22 +363,20 @@ export default function Dashboard() {
       </div>
 
       {viewMode === 'Chart' && (
-        <>
-          {/* Main Chart Section */}
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10">
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-              <div className="flex items-center gap-6">
-                {(drilldownDay || drilldownMonth) && (
-                  <button onClick={() => {setDrilldownDay(null); setDrilldownMonth(null);}} className="p-4 bg-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all text-black" title="Back to main view"><ArrowLeft size={32} strokeWidth={4} /></button>
-                )}
-                <div className="flex items-center gap-4">
-                  <button onClick={() => navigatePeriod('prev')} className="p-2 border-4 border-black rounded-xl hover:bg-yellow-400 transition-all text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none" title="Previous period"><ChevronLeft size={24} strokeWidth={4} /></button>
-                  <h2 className="text-5xl lg:text-6xl font-black text-black tracking-tighter uppercase leading-none italic">{drilldownDay ? drilldownDay : drilldownMonth ? format(new Date(drilldownMonth + "-01T00:00:00"), 'MMMM yyyy') : granularity === 'Monthly' ? 'Monthly Trend' : `${startDate} to ${endDate}`}</h2>
-                  <button onClick={() => navigatePeriod('next')} className="p-2 border-4 border-black rounded-xl hover:bg-yellow-400 transition-all text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none" title="Next period"><ChevronRight size={24} strokeWidth={4} /></button>
+        <div className="space-y-10">
+          
+          {/* Main Graph Card */}
+          <div className="bg-white p-8 rounded-[3rem] shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black">
+            <div className="flex flex-col lg:flex-row justify-between items-center mb-12 gap-6 text-black">
+              <div className="flex items-center gap-6 text-black">
+                {(drilldownDay || drilldownMonth) && <button onClick={() => {setDrilldownDay(null); setDrilldownMonth(null);}} className="p-4 bg-white border-4 border-black rounded-2xl text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={32} strokeWidth={4} /></button>}
+                <div className="flex items-center gap-4 text-black">
+                  <button onClick={() => navigatePeriod('prev')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all"><ChevronLeft size={24} strokeWidth={4} /></button>
+                  <h2 className="text-6xl font-black text-black tracking-tighter uppercase leading-none italic">{drilldownDay || (drilldownMonth ? format(new Date(drilldownMonth + "-01T00:00:00"), 'MMMM yyyy') : "Usage Overview")}</h2>
+                  <button onClick={() => navigatePeriod('next')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all"><ChevronRight size={24} strokeWidth={4} /></button>
                 </div>
               </div>
-
+              
               <div className="flex items-center gap-6">
                  {!drilldownDay && (
                    <div className="flex p-1 bg-slate-100 rounded-xl border-4 border-black h-fit">
@@ -465,9 +385,9 @@ export default function Dashboard() {
                      ))}
                    </div>
                  )}
-                 <div className="text-right">
-                    <div className="text-xs font-black uppercase text-slate-400 tracking-widest text-black">Period Cost ({userPlan})</div>
-                    <div className="text-5xl font-black text-black italic leading-none block mt-2 text-black">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
+                 <div className="text-right text-black">
+                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selection Cost ({userPlan})</div>
+                    <div className="text-5xl font-black text-black italic leading-none block mt-2">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
                  </div>
               </div>
             </div>
@@ -480,75 +400,62 @@ export default function Dashboard() {
                   <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
                   <Tooltip cursor={{fill: '#000', opacity: 0.05}} 
                     contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF'}} 
-                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '16px', padding: '2px 0'}} 
+                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px', padding: '2px 0'}} 
                     labelStyle={{fontWeight: 900, color: '#000', marginBottom: '12px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '8px'}} 
                     formatter={(v: any, name: any) => {
-                       if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'TOTAL POWER'];
-                       if (name === 'costTOU') return [`$${Number(v).toFixed(2)}`, 'TIME-OF-USE COST'];
-                       if (name === 'costTiered') return [`$${Number(v).toFixed(2)}`, 'TIERED COST'];
-                       if (name === 'costULO') return [`$${Number(v).toFixed(2)}`, 'ULO COST'];
-                       return [`$${Number(v).toFixed(2)}`, name];
+                       if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power Usage'];
+                       return [`$${Number(v).toFixed(2)}`, name.replace('cost', '') + ' Cost'];
                     }}
                   />
-                  <Bar dataKey="usage" fill="#2563EB" stroke="#000" strokeWidth={3} radius={0} activeBar={{ fill: '#FFD600' }} onClick={(d: any) => handleBarClick(d)} className="cursor-pointer">
-                    {activeChartData.map((entry, index) => <Cell key={`cell-${index}`} />)}
+                  <Bar dataKey="usage" fill="#2563EB" stroke="#000" strokeWidth={3} radius={0} activeBar={{ fill: '#FFD600' }} onClick={(d: any) => { if(d?.activePayload?.[0]) { const i = d.activePayload[0].payload; if(drilldownMonth) setDrilldownDay(i.key); else if(!drilldownDay) { if(granularity==='Monthly') setDrilldownMonth(i.key); else setDrilldownDay(i.key); } } }} className="cursor-pointer">
+                    {activeChartData.map((_, index) => <Cell key={`cell-${index}`} />)}
                   </Bar>
-                  <Bar dataKey="costTOU" hide />
-                  <Bar dataKey="costTiered" hide />
-                  <Bar dataKey="costULO" hide />
+                  <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Pricing Comparison */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+          {/* Three Detail Cards */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 text-black font-black uppercase">
             {[
-              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, icon: <Zap className="text-emerald-600" />, rates: [
-                { label: 'Tier 1 (Up to 1000kWh)', val: '12.0¢' }, { label: 'Tier 2 (Over Limit)', val: '14.2¢' }
-              ]},
-              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, icon: <Zap className="text-blue-600" />, rates: [
-                { label: 'Off-Peak', val: '9.8¢', color: 'text-emerald-600' }, { label: 'Mid-Peak', val: '15.7¢', color: 'text-yellow-600' }, { label: 'On-Peak', val: '20.3¢', color: 'text-red-600' }
-              ]},
-              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, icon: <Zap className="text-purple-600" />, rates: [
-                { label: 'Overnight (11pm-7am)', val: '3.9¢', color: 'text-purple-600' }, { label: 'Weekend Off-Peak', val: '9.8¢', color: 'text-emerald-600' }, { label: 'Mid-Peak', val: '15.7¢', color: 'text-yellow-600' }, { label: 'On-Peak', val: '39.1¢', color: 'text-red-600' }
-              ]}
+              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, icon: <Zap className="text-emerald-600" />, rates: [{ l: 'Tier 1 (Up to 1000kWh)', v: '12.0¢' }, { l: 'Tier 2 (Over Limit)', v: '14.2¢' }] },
+              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, icon: <Zap className="text-blue-600" />, rates: [{ l: 'Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '20.3¢', c: 'text-red-600' }] },
+              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, icon: <Zap className="text-purple-600" />, rates: [{ l: 'Overnight (11pm-7am)', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
             ].map((plan, i) => (
-              <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-10 rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden transition-all cursor-pointer ${userPlan === plan.id ? 'ring-8 ring-yellow-400 ring-inset scale-[1.02]' : 'hover:scale-[1.01]'}`}>
-                {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-3 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase flex items-center gap-1 shadow-sm"><CheckCircle2 size={12} /> YOUR PLAN</div>}
+              <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-10 rounded-[2.5rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-8 ring-yellow-400 ring-inset scale-[1.02]' : 'hover:scale-[1.01]'}`}>
+                {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-3 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase flex items-center gap-1 text-black shadow-sm"><CheckCircle2 size={12} /> CURRENT</div>}
                 <div className="flex items-center gap-3 mb-8 text-black">
                   <div className="p-3 bg-slate-50 border-4 border-black rounded-xl">{React.cloneElement(plan.icon as any, { strokeWidth: 4 })}</div>
-                  <h3 className="text-2xl font-black uppercase tracking-tighter text-black">{plan.name}</h3>
+                  <h3 className="text-2xl font-black uppercase text-black">{plan.name}</h3>
                 </div>
                 <div className="text-6xl font-black italic mb-10 text-black">${plan.cost?.toFixed(2)}</div>
-                <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs font-black uppercase tracking-widest text-black">
-                  {plan.rates.map((r, j) => (
-                    <div key={j} className={`flex justify-between ${(r as any).color || ''}`}><span>{r.label}</span> <span>{r.val}</span></div>
-                  ))}
+                <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs font-black text-black">
+                  {plan.rates.map((r, j) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Financial Verdict */}
+          {/* FINANCIAL VERDICT BANNER */}
           {comparison && (
             <div className="bg-black text-white p-12 rounded-[3.5rem] border-8 border-yellow-400 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-10 transform -rotate-1 hover:rotate-0 transition-transform">
-               <div className="space-y-4 text-center lg:text-left">
-                  <div className="text-xs font-black uppercase tracking-[0.5em] text-yellow-400">Winning Economic Plan</div>
-                  <h4 className="text-5xl font-black italic leading-tight text-white uppercase tracking-tighter">
+               <div className="space-y-4 text-center lg:text-left text-white font-black uppercase">
+                  <div className="text-xs tracking-[0.5em] text-yellow-400 font-black">Winning Economic Plan</div>
+                  <h4 className="text-5xl italic leading-tight text-white font-black">
                     THE BEST CHOICE IS <br/>
-                    <span className="text-8xl text-yellow-400 not-italic uppercase block mt-2">
+                    <span className="text-8xl text-yellow-400 not-italic block mt-2 font-black">
                       {comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'Time-of-Use' : 
                        comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered Pricing' : 'Ultra-Low Overnight'}
                     </span>
                   </h4>
                </div>
                <div className="bg-white text-black p-10 rounded-[2.5rem] border-4 border-black shadow-2xl rotate-3 flex flex-col items-center">
-                  <div className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 text-center font-black">Plan Impact</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 text-center">Plan Impact</div>
                   <div className="text-8xl font-black leading-none italic text-black">
                     {userPlan === (comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'TOU' : 
                        comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered' : 'ULO') ? (
-                         <span className="text-emerald-600 text-4xl uppercase not-italic font-black leading-none block text-center">Optimum<br/>Choice!</span>
+                         <span className="text-emerald-600 text-4xl uppercase not-italic font-black text-center block">Optimum<br/>Choice!</span>
                        ) : (
                          <span className="text-red-600 font-black">-${Math.abs((comparison as any)[userPlan] - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span>
                        )}
@@ -557,67 +464,41 @@ export default function Dashboard() {
                </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* --- Advanced Insights View --- */}
       {viewMode === 'Insights' && (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
-          {/* Anomaly Detection */}
-          <div className="bg-yellow-400 p-8 rounded-[2.5rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] transform rotate-1">
-             <div className="flex items-center gap-4 mb-8 text-black">
-               <AlertTriangle size={40} strokeWidth={3} className="text-black" />
-               <h3 className="text-4xl font-black uppercase tracking-tighter text-black">Usage Anomalies</h3>
-             </div>
+        <div className="space-y-10 animate-in fade-in duration-500 font-black text-black uppercase">
+          <div className="bg-yellow-400 p-8 rounded-[3rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
+             <div className="flex items-center gap-4 mb-8 text-black font-black uppercase"><AlertTriangle size={40} strokeWidth={3} className="text-black" /><h3 className="text-4xl">Usage Anomalies</h3></div>
              {anomalies.length > 0 ? (
-               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {anomalies.map((anom, i) => (
-                   <div key={i} className="bg-white p-6 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                     <div className="text-xs font-black uppercase tracking-widest text-red-600 mb-2">{format(anom.date, 'EEEE, MMM do')}</div>
-                     <div className="text-3xl font-black italic mb-4 text-black">{anom.usage.toFixed(1)} kWh</div>
-                     <div className="text-sm font-bold text-slate-600">
-                       This is <span className="text-black font-black bg-yellow-200 px-2 rounded-sm">+{anom.diffPct.toFixed(0)}% higher</span> than your historical average for a {format(anom.date, 'EEEE')} ({anom.expected.toFixed(1)} kWh).
-                     </div>
+                   <div key={i} className="bg-white p-6 rounded-2xl border-4 border-black text-black">
+                     <div className="text-red-600 uppercase text-[10px] mb-2 font-black">{format(anom.date, 'EEEE, MMM do')}</div>
+                     <div className="text-3xl italic font-black">{anom.usage.toFixed(1)} kWh</div>
+                     <div className="text-[10px] text-slate-500 uppercase mt-2 font-black">+{anom.diffPct.toFixed(0)}% vs average</div>
                    </div>
                  ))}
                </div>
-             ) : (
-               <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl text-black">No significant spikes detected in this period! Great job.</div>
-             )}
+             ) : <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl text-black">No significant spikes detected in this period!</div>}
           </div>
 
-          {/* 24x7 Heatmap */}
-          <div className="bg-white p-10 rounded-[2.5rem] border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto">
-             <h3 className="text-4xl font-black uppercase tracking-tighter mb-8 italic text-black">Weekly Routine Heatmap</h3>
-             <div className="min-w-[800px]">
-               <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2">
+          <div className="bg-white p-10 rounded-[3rem] border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto text-black font-black">
+             <h3 className="text-4xl uppercase mb-8 italic text-black">Weekly Routine Heatmap</h3>
+             <div className="min-w-[800px] text-black">
+               <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2 text-black">
                  <div className="w-16"></div>
-                 {Array.from({length:24}).map((_, i) => (
-                   <div key={i} className="text-center text-[10px] font-black uppercase text-slate-400">{i}h</div>
-                 ))}
+                 {Array.from({length:24}).map((_, i) => <div key={i} className="text-center text-[10px] text-black font-black">{i}h</div>)}
                </div>
                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dIdx) => (
-                 <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1">
-                   <div className="w-16 text-xs font-black uppercase flex items-center text-black">{day}</div>
+                 <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black">
+                   <div className="w-16 text-xs text-black flex items-center font-black">{day}</div>
                    {heatmapData.grid[dIdx].map((hour, hIdx) => {
-                      const intensity = hour.avg / heatmapData.maxAvg;
-                      let bgClass = 'bg-slate-100';
-                      if (intensity > 0.8) bgClass = 'bg-red-600 border-red-800';
-                      else if (intensity > 0.6) bgClass = 'bg-orange-500 border-orange-700';
-                      else if (intensity > 0.4) bgClass = 'bg-yellow-400 border-yellow-600';
-                      else if (intensity > 0.2) bgClass = 'bg-blue-300 border-blue-500';
-                      
-                      return (
-                        <div 
-                          key={hIdx} 
-                          className={`h-12 rounded-md border-b-4 transition-all hover:scale-110 relative group ${bgClass}`}
-                        >
-                           <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-xs font-black p-2 rounded-lg pointer-events-none z-50 whitespace-nowrap">
-                             {hour.avg.toFixed(2)} kWh avg
-                           </div>
-                        </div>
-                      )
+                      const int = hour.avg / heatmapData.maxAvg;
+                      let bg = 'bg-slate-100';
+                      if (int > 0.8) bg = 'bg-red-600 border-red-800'; else if (int > 0.6) bg = 'bg-orange-500 border-orange-700'; else if (int > 0.4) bg = 'bg-yellow-400 border-yellow-600'; else if (int > 0.2) bg = 'bg-blue-300 border-blue-500';
+                      return <div key={hIdx} className={`h-12 rounded-md border-b-4 ${bg} hover:scale-110 relative group transition-all`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh avg</div></div>
                    })}
                  </div>
                ))}
@@ -625,7 +506,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
