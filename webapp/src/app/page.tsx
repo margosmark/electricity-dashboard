@@ -5,8 +5,8 @@ export default function Home() {
     <main className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">⚡ Home Electricity Insights</h1>
-          <p className="text-slate-600">Advanced analysis of your Oakville Hydro Green Button data.</p>
+          <h1 className="text-3xl font-black text-black uppercase tracking-tighter italic border-b-8 border-black w-fit pr-8 pb-2">Ontario Energy Optimizer</h1>
+          <p className="text-slate-600 font-bold mt-2">Advanced analysis of your Oakville Hydro Green Button data.</p>
         </header>
         <Dashboard />
       </div>
