@@ -450,12 +450,12 @@ export default function Dashboard() {
                     </span>
                   </h4>
                </div>
-               <div className="bg-white text-black p-10 rounded-[2.5rem] border-4 border-black shadow-2xl rotate-3 flex flex-col items-center">
+               <div className="bg-white text-black p-8 lg:p-10 rounded-[2.5rem] border-4 border-black shadow-2xl rotate-3 flex flex-col items-center min-w-[300px]">
                   <div className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 text-center">Plan Impact</div>
-                  <div className="text-8xl font-black leading-none italic text-black">
+                  <div className="text-6xl lg:text-7xl font-black leading-none italic text-black whitespace-nowrap text-center">
                     {userPlan === (comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'TOU' : 
                        comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered' : 'ULO') ? (
-                         <span className="text-emerald-600 text-4xl uppercase not-italic font-black text-center block">Optimum<br/>Choice!</span>
+                         <span className="text-emerald-600 text-4xl lg:text-5xl uppercase not-italic font-black text-center block leading-none">Optimum<br/>Choice!</span>
                        ) : (
                          <span className="text-red-600 font-black">-${Math.abs((comparison as any)[userPlan] - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span>
                        )}
