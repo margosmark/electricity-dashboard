@@ -398,7 +398,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-6xl italic mb-10 text-black font-black">${plan.cost?.toFixed(2)}</div>
                 <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs text-black font-black uppercase">
-                  {plan.rates.map((r, j) => <div key={j} className={`flex justify-between ${(r as any).c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
+                  {plan.rates.map((r: any, j: number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
                 </div>
               </div>
             ))}
