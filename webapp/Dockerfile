@@ -16,13 +16,19 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Security: Run as non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
 # Automatically leverage output: 'standalone' feature
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Ensure the data directory exists for volume mounting
-RUN mkdir -p .data
+# Permissions
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
 
 EXPOSE 3000
 
