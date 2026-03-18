@@ -316,7 +316,7 @@ export default function Dashboard() {
               <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-12 bg-transparent text-sm outline-none text-black font-black" />
            </div>
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
-              {['Tiered', 'TOU', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>)}
+              {['Tiered', 'TOU', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-8 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
            <div className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black text-center font-black relative">
               <div className="text-[10px] uppercase">Vampire Load</div>
@@ -388,7 +388,7 @@ export default function Dashboard() {
               { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
             ].map((plan, i) => (
               <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-10 rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
-                {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-3 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase text-black shadow-sm"><CheckCircle2 size={12} /> CURRENT</div>}
+                {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-6 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase text-black shadow-sm flex items-center gap-2"><CheckCircle2 size={12} /> YOUR PLAN</div>}
                 <h3 className="text-2xl mb-4 font-black">{plan.name}</h3>
                 <div className="text-6xl italic mb-10 font-black text-black">${plan.cost?.toFixed(2)}</div>
                 <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs font-black text-black">
