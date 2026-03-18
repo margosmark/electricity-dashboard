@@ -35,7 +35,7 @@ type ProcessedPoint = DataPoint & {
 };
 
 export default function Dashboard() {
-  console.log("🚀 HARDENED DASHBOARD BOOTED");
+
 
   // --- State ---
   const [rawData, setRawData] = useState<DataPoint[]>([]);
@@ -240,7 +240,7 @@ export default function Dashboard() {
   // --- Handlers ---
 
   const handleBarClick = (item: any) => {
-    console.log("🖱️ BAR COMPONENT CLICKED:", item);
+
     if (!item || !item.key) return;
     if (zoomLevel === 'monthly') { setZoomLevel('weekly'); setZoomTarget(item.key); }
     else if (zoomLevel === 'weekly') { setZoomLevel('daily'); setZoomTarget(item.key); }
