@@ -1,8 +1,7 @@
 /**
- * Ontario Energy Optimizer - FULL FEATURE VERSION
+ * Ontario Energy Optimizer - Advanced Drill-Down Version
  * 
- * Privacy-First: All energy data parsing and storage happens 100% in your browser.
- * Features: TOU/Tiered/ULO comparisons, Billing Cycles, Heatmaps, Anomaly Detection.
+ * Supports: Monthly -> Weekly -> Daily -> Hourly navigation.
  */
 
 "use client";
@@ -12,9 +11,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell
 } from 'recharts';
 import { 
-  format, isWeekend, getMonth, getHours, startOfWeek, 
+  format, isWeekend, getMonth, getHours, startOfWeek, endOfWeek,
   startOfMonth, lastDayOfMonth, startOfYear, addMonths, 
-  subMonths, setDate, isBefore, addDays, subDays 
+  subMonths, setDate, isBefore, subDays, eachDayOfInterval, eachWeekOfInterval
 } from 'date-fns';
 import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
 import { XMLParser } from 'fast-xml-parser';
@@ -49,9 +48,11 @@ export default function Dashboard() {
   
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [granularity, setGranularity] = useState<'Daily' | 'Weekly' | 'Monthly'>('Monthly');
-  const [drilldownDay, setDrilldownDay] = useState<string | null>(null);
-  const [drilldownMonth, setDrilldownMonth] = useState<string | null>(null);
+  
+  // Drill-down stack
+  // level: 'monthly' | 'weekly' | 'daily' | 'hourly'
+  const [zoomLevel, setZoomLevel] = useState<'monthly' | 'weekly' | 'daily' | 'hourly'>('monthly');
+  const [zoomTarget, setZoomTarget] = useState<string | null>(null); // e.g. '2024-01' or '2024-01-01'
 
   // --- Logic Helpers ---
 
@@ -62,15 +63,8 @@ export default function Dashboard() {
     return { start, end };
   };
 
-  /**
-   * Hardened Browser-side XML Parser
-   */
   const parseGreenButtonXML = (xmlText: string) => {
-    const parser = new XMLParser({ 
-      ignoreAttributes: false, 
-      removeNSPrefix: true, 
-      isArray: (name) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(name)
-    });
+    const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, isArray: (n) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(n)});
     const parsed = parser.parse(xmlText);
     const readings: any[] = [];
     const stack = [parsed];
@@ -81,19 +75,19 @@ export default function Dashboard() {
       else {
         if (obj.IntervalReading) {
           const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
-          for (const ir of arr) {
+          arr.forEach((ir: any) => {
             const s = parseInt(ir.timePeriod?.start || "0", 10);
             const v = parseInt(ir.value || "0", 10);
             if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
-          }
+          });
         }
         for (const k in obj) if (k !== 'IntervalReading' && typeof obj[k] === 'object') stack.push(obj[k]);
       }
     }
-    return readings.sort((a, b) => a.timestamp - b.timestamp);
+    return readings.sort((a,b) => a.timestamp - b.timestamp);
   };
 
-  // --- Start Sequence ---
+  // --- Initialization ---
   useEffect(() => {
     let mounted = true;
     async function init() {
@@ -101,7 +95,7 @@ export default function Dashboard() {
         const res = await fetch('/api/rates');
         const json = await res.json();
         if (mounted) setRateHistory(json.historicalRates || []);
-      } catch (e) { console.error("Rate fetch failed"); }
+      } catch (e) { console.error("Rate fail"); }
 
       try {
         const savedBDay = localStorage.getItem('billing_day');
@@ -117,9 +111,7 @@ export default function Dashboard() {
             setStartDate(format(period.start, 'yyyy-MM-dd'));
             setEndDate(format(period.end, 'yyyy-MM-dd'));
           }
-        } else if (mounted) {
-          setShowUploadModal(true);
-        }
+        } else if (mounted) { setShowUploadModal(true); }
       } catch (e) { console.error("Local load failed"); }
       if (mounted) setLoading(false);
     }
@@ -127,8 +119,6 @@ export default function Dashboard() {
     const timeout = setTimeout(() => { if (mounted) setStuck(true); }, 5000);
     return () => { mounted = false; clearTimeout(timeout); };
   }, []);
-
-  // --- Handlers ---
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -153,43 +143,6 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
-  const setRange = (type: 'billing' | 'ytd') => {
-    if (rawData.length === 0) return;
-    const lastDate = new Date(rawData[rawData.length - 1].timestamp * 1000);
-    if (type === 'billing') {
-      const period = getBillingPeriod(lastDate, billingDay);
-      setStartDate(format(period.start, 'yyyy-MM-dd'));
-      setEndDate(format(period.end, 'yyyy-MM-dd'));
-    } else {
-      setStartDate(format(startOfYear(lastDate), 'yyyy-MM-dd'));
-      setEndDate(format(lastDate, 'yyyy-MM-dd'));
-    }
-    setDrilldownDay(null); setDrilldownMonth(null);
-  };
-
-  const updateBillingDay = (day: number) => {
-    setBillingDay(day);
-    localStorage.setItem('billing_day', day.toString());
-  };
-
-  const navigatePeriod = (dir: 'prev' | 'next') => {
-    if (drilldownDay || drilldownMonth) {
-       const cur = new Date((drilldownDay || drilldownMonth + "-01") + "T00:00:00");
-       cur.setMonth(cur.getMonth() + (dir === 'next' ? 1 : -1));
-       const next = format(cur, drilldownDay ? 'yyyy-MM-dd' : 'yyyy-MM');
-       if (drilldownDay) setDrilldownDay(next); else setDrilldownMonth(next);
-       if (next < startDate) setStartDate(next + (drilldownDay ? "" : "-01"));
-    } else {
-      const s = new Date(startDate + "T00:00:00"); s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
-      const p = getBillingPeriod(s, billingDay);
-      setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
-    }
-  };
-
-  const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
-
-  // --- Logic Memos ---
-
   const processedData = useMemo(() => {
     if (rateHistory.length === 0) return [];
     const sorted = [...rateHistory].sort((a,b) => b.effectiveDate.localeCompare(a.effectiveDate));
@@ -198,22 +151,18 @@ export default function Dashboard() {
       const h = dt.getHours(); const isW = isWeekend(dt); const isWin = dt.getMonth() >= 10 || dt.getMonth() <= 3;
       const dayStr = format(dt, 'yyyy-MM-dd');
       const rates = sorted.find(r => dayStr >= r.effectiveDate) || sorted[sorted.length-1];
-      
       let tCat = 'Off-Peak';
       if (!isW) {
         if (h >= 19 || h < 7) tCat = 'Off-Peak';
         else if (isWin) tCat = (h >= 7 && h < 11) || (h >= 17 && h < 19) ? 'On-Peak' : 'Mid-Peak';
         else tCat = (h >= 11 && h < 17) ? 'On-Peak' : 'Mid-Peak';
       }
-      
       let uCat = 'Mid-Peak';
       if (h >= 23 || h < 7) uCat = 'Overnight';
       else if (isW) uCat = 'Weekend Off-Peak';
       else if (h >= 16 && h < 21) uCat = 'On-Peak';
-
       const cT = d.usage_kwh * (rates.tou[tCat === 'Off-Peak' ? 'offPeak' : tCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
       const cU = d.usage_kwh * (rates.ulo[uCat === 'Overnight' ? 'overnight' : uCat === 'Weekend Off-Peak' ? 'weekendOffPeak' : uCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
-      
       return { ...d, dateObj: dt, dayStr, hourStr: format(dt, 'HH:mm'), touCategory: tCat, uloCategory: uCat, isWinter: isWin, costTOU: cT, costULO: cU, costTiered: d.usage_kwh * (rates.tiered.tier1/100), activeRateSet: rates } as ProcessedPoint;
     });
   }, [rawData, rateHistory]);
@@ -224,24 +173,43 @@ export default function Dashboard() {
     return processedData.filter(d => d.dateObj >= s && d.dateObj <= e);
   }, [processedData, startDate, endDate]);
 
+  /**
+   * ADVANCED AGGREGATION LOGIC
+   * Handles dynamic grouping for the 4-level drill-down.
+   */
   const activeChartData = useMemo(() => {
-    if (drilldownDay) return filteredData.filter(d => d.dayStr === drilldownDay).map(d => ({ label: d.hourStr, usage: d.usage_kwh, key: d.hourStr, costTOU: d.costTOU, costULO: d.costULO, costTiered: d.costTiered }));
+    // 1. Filter data based on zoom target
+    let workingSet = filteredData;
+    if (zoomLevel === 'weekly' && zoomTarget) {
+       workingSet = filteredData.filter(d => format(d.dateObj, 'yyyy-MM') === zoomTarget);
+    } else if (zoomLevel === 'daily' && zoomTarget) {
+       workingSet = filteredData.filter(d => format(startOfWeek(d.dateObj, {weekStartsOn:1}), 'yyyy-MM-dd') === zoomTarget);
+    } else if (zoomLevel === 'hourly' && zoomTarget) {
+       workingSet = filteredData.filter(d => d.dayStr === zoomTarget);
+    }
+
+    if (zoomLevel === 'hourly') {
+       return workingSet.map(d => ({ label: d.hourStr, usage: d.usage_kwh, key: d.hourStr, costTOU: d.costTOU, costULO: d.costULO, costTiered: d.costTiered })).sort((a,b) => a.key.localeCompare(b.key));
+    }
+
     const map = new Map<string, any>();
-    filteredData.forEach(d => {
-      let l = d.dayStr; let k = d.dayStr;
-      if (drilldownMonth) { if (format(d.dateObj, 'yyyy-MM') !== drilldownMonth) return; l = format(d.dateObj, 'MMM dd'); k = d.dayStr; }
-      else if (granularity === 'Monthly') { l = format(d.dateObj, 'MMM yyyy'); k = format(d.dateObj, 'yyyy-MM'); }
-      else if (granularity === 'Weekly') { const mon = startOfWeek(d.dateObj, { weekStartsOn: 1 }); l = "Week of " + format(mon, 'MMM dd'); k = format(mon, 'yyyy-MM-dd'); }
+    workingSet.forEach(d => {
+      let l = ''; let k = '';
+      if (zoomLevel === 'monthly') { l = format(d.dateObj, 'MMM yyyy'); k = format(d.dateObj, 'yyyy-MM'); }
+      else if (zoomLevel === 'weekly') { const mon = startOfWeek(d.dateObj, { weekStartsOn: 1 }); l = "Week of " + format(mon, 'MMM dd'); k = format(mon, 'yyyy-MM-dd'); }
+      else if (zoomLevel === 'daily') { l = format(d.dateObj, 'MMM dd'); k = d.dayStr; }
+      
       if (!map.has(k)) map.set(k, { label: l, usage: 0, key: k, costTOU: 0, costULO: 0, readings: [] });
       const o = map.get(k); o.usage += d.usage_kwh; o.costTOU += d.costTOU; o.costULO += d.costULO; o.readings.push(d);
     });
+
     return Array.from(map.values()).map(v => {
       const r = v.readings[0]; const days = new Set(v.readings.map((x:any)=>x.dayStr)).size;
-      const th = (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) * (days/30.4);
+      const th = (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) * (days / 30.4);
       const cTier = v.usage <= th ? v.usage * (r.activeRateSet.tiered.tier1/100) : (th * (r.activeRateSet.tiered.tier1/100)) + ((v.usage-th)*(r.activeRateSet.tiered.tier2/100));
       return { ...v, costTiered: cTier };
     }).sort((a,b) => a.key.localeCompare(b.key));
-  }, [filteredData, granularity, drilldownDay, drilldownMonth]);
+  }, [filteredData, zoomLevel, zoomTarget]);
 
   const comparison = useMemo(() => {
     if (filteredData.length === 0) return null;
@@ -273,40 +241,55 @@ export default function Dashboard() {
     const spikes: any[] = [];
     dailyTotals.forEach((val) => {
       const exp = expectedAvgs[val.dateObj.getDay()];
-      if (exp > 0 && val.usage > exp * 1.5 && (val.usage - exp) > 5) {
-        spikes.push({ date: val.dateObj, usage: val.usage, expected: exp, diffPct: ((val.usage - exp) / exp) * 100 });
-      }
+      if (exp > 0 && val.usage > exp * 1.5 && (val.usage - exp) > 5) { spikes.push({ date: val.dateObj, usage: val.usage, expected: exp, diffPct: ((val.usage - exp) / exp) * 100 }); }
     });
     return spikes.sort((a,b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
   }, [processedData, filteredData]);
 
-  // --- Components ---
+  const navigatePeriod = (dir: 'prev' | 'next') => {
+    const s = new Date(startDate + "T00:00:00"); s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
+    const p = getBillingPeriod(s, billingDay);
+    setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
+    setZoomLevel('monthly'); setZoomTarget(null);
+  };
+
+  const handleBarClick = (item: any) => {
+    if (!item || !item.key) return;
+    if (zoomLevel === 'monthly') { setZoomLevel('weekly'); setZoomTarget(item.key); }
+    else if (zoomLevel === 'weekly') { setZoomLevel('daily'); setZoomTarget(item.key); }
+    else if (zoomLevel === 'daily') { setZoomLevel('hourly'); setZoomTarget(item.key); }
+  };
+
+  const goBack = () => {
+    if (zoomLevel === 'hourly') setZoomLevel('daily');
+    else if (zoomLevel === 'daily') setZoomLevel('weekly');
+    else if (zoomLevel === 'weekly') setZoomLevel('monthly');
+    setZoomTarget(null);
+  };
+
+  const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
+  const updateBillingDay = (day: number) => { setBillingDay(day); localStorage.setItem('billing_day', day.toString()); };
 
   if (loading) return (
-    <div className="p-20 text-center flex flex-col items-center justify-center space-y-8 bg-slate-50 min-h-screen">
+    <div className="p-20 text-center flex flex-col items-center justify-center space-y-8 bg-slate-50 min-h-screen uppercase">
       <div className="w-24 h-24 border-8 border-black border-t-yellow-400 rounded-full animate-spin shadow-2xl"></div>
-      <div className="font-black text-black text-5xl uppercase italic tracking-tighter">Preparing Optimizer...</div>
-      {stuck && (
-        <button onClick={emergencyReset} className="p-6 bg-red-600 text-white border-4 border-black rounded-3xl font-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 transition-all flex items-center gap-4 animate-in fade-in zoom-in">
-          <RefreshCw size={24} strokeWidth={4} /> DATA EMERGENCY RESET
-        </button>
-      )}
+      <div className="font-black text-black text-5xl italic tracking-tighter">Preparing Optimizer...</div>
+      {stuck && <button onClick={emergencyReset} className="p-6 bg-red-600 text-white border-4 border-black rounded-3xl font-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-1 transition-all flex items-center gap-4 animate-in fade-in zoom-in"><RefreshCw size={24} strokeWidth={4} /> DATA EMERGENCY RESET</button>}
     </div>
   );
 
   return (
     <div className="space-y-10 text-black relative">
       
-      {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
           <div className="bg-white p-12 rounded-[3rem] border-8 border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black">
-             <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 flex items-center gap-4 text-black"><Upload size={48} className="text-blue-600" strokeWidth={4} /> Link Data</h2>
-             <p className="font-bold text-slate-600 text-lg mb-10 text-black text-left leading-relaxed">Optimize your energy with a Green Button XML export. <span className="underline decoration-blue-500 font-black">Processing is 100% local and private.</span></p>
+             <h2 className="text-5xl font-black uppercase mb-6 flex items-center gap-4 text-black"><Upload size={48} className="text-blue-600" strokeWidth={4} /> Link Data</h2>
+             <p className="font-bold text-slate-600 text-lg mb-10 text-black text-left leading-relaxed">Local & Private energy analysis. <span className="underline decoration-blue-500 font-black text-black">Upload your XML to begin.</span></p>
              <div className="relative">
                 <input type="file" accept=".xml" onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`p-16 border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-[2rem] text-center`}>
-                   <div className="text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div>
+                   <div className="text-2xl font-black uppercase text-black">{parsing ? "PARSING..." : "Drop XML Here"}</div>
                 </div>
              </div>
           </div>
@@ -314,17 +297,17 @@ export default function Dashboard() {
       )}
 
       {/* Nav Controls */}
-      <div className="relative z-[100] bg-white p-6 rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-6 items-center text-black">
+      <div className="relative z-[100] bg-white p-6 rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-6 items-center text-black font-black">
         <div className="flex gap-4 items-center">
            <button onClick={() => setShowUploadModal(true)} className="p-4 bg-black text-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={20} strokeWidth={4} /></button>
            <button onClick={() => {if(confirm("Wipe all data?")) emergencyReset();}} className="p-4 bg-white text-red-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={20} strokeWidth={4} /></button>
-           <div className="flex items-center gap-2 ml-4 text-black">
+           <div className="flex items-center gap-2 ml-4">
              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
-             <span className="font-black text-black text-xs opacity-40">TO</span>
+             <span className="font-black opacity-40">TO</span>
              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
              <div className="flex gap-2 ml-2">
-               <button onClick={() => setRange('billing')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">Billing Period</button>
-               <button onClick={() => setRange('ytd')} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">YTD</button>
+               <button onClick={() => { const p = getBillingPeriod(new Date(), billingDay); setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd')); setZoomLevel('monthly'); }} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">Current Month</button>
+               <button onClick={() => { setStartDate(format(startOfYear(new Date()), 'yyyy-MM-dd')); setEndDate(format(new Date(), 'yyyy-MM-dd')); setZoomLevel('monthly'); }} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">YTD</button>
              </div>
            </div>
         </div>
@@ -339,23 +322,18 @@ export default function Dashboard() {
               <Settings2 size={20} className="text-slate-500" />
               <div className="flex flex-col">
                 <span className="text-[8px] font-black uppercase text-slate-500">Billing Day</span>
-                <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} 
-                       className="w-12 bg-transparent font-black text-sm outline-none text-black" />
+                <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-12 bg-transparent font-black text-sm outline-none text-black" />
               </div>
            </div>
-           
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
-              {['TOU', 'Tiered', 'ULO'].map((p:any) => (
-                <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>
-              ))}
+              {['TOU', 'Tiered', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
-           
            <button onClick={() => setShowVampireHelp(!showVampireHelp)} className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black relative transition-transform hover:scale-105">
-              <div className="text-[10px] font-black uppercase mb-1 flex items-center gap-1 text-white text-left">Vampire Load <HelpCircle size={10} /></div>
+              <div className="text-[10px] font-black uppercase mb-1 flex items-center gap-1 text-white text-left font-black">Vampire Load <HelpCircle size={10} /></div>
               <div className="text-4xl font-black italic tracking-tighter text-white">${vampire.cost.toFixed(2)}<span className="text-xs not-italic opacity-60 ml-1">/mo</span></div>
               {showVampireHelp && (
                 <div className="absolute top-full right-0 mt-4 w-72 p-6 bg-white border-4 border-black rounded-2xl shadow-2xl z-[200] text-black text-[11px] font-black leading-relaxed text-left cursor-default">
-                  Your home pulls <span className="text-blue-600 underline font-black">{vampire.watts.toFixed(0)} Watts</span> 24/7. Appliances that never sleep.
+                  Sustained pull: <span className="text-blue-600 underline font-black">{vampire.watts.toFixed(0)} Watts</span>. This captures appliances that never sleep.
                 </div>
               )}
            </button>
@@ -365,30 +343,20 @@ export default function Dashboard() {
       {viewMode === 'Chart' && (
         <div className="space-y-10">
           
-          {/* Main Graph Card */}
-          <div className="bg-white p-8 rounded-[3rem] shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-12 gap-6 text-black">
-              <div className="flex items-center gap-6 text-black">
-                {(drilldownDay || drilldownMonth) && <button onClick={() => {setDrilldownDay(null); setDrilldownMonth(null);}} className="p-4 bg-white border-4 border-black rounded-2xl text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={32} strokeWidth={4} /></button>}
+          <div className="bg-white p-8 rounded-[3rem] shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
+            <div className="flex flex-col lg:flex-row justify-between items-center mb-12 gap-6 text-black font-black">
+              <div className="flex items-center gap-6 text-black font-black">
+                {zoomLevel !== 'monthly' && <button onClick={goBack} className="p-4 bg-white border-4 border-black rounded-2xl text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={32} strokeWidth={4} /></button>}
                 <div className="flex items-center gap-4 text-black">
-                  <button onClick={() => navigatePeriod('prev')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all"><ChevronLeft size={24} strokeWidth={4} /></button>
-                  <h2 className="text-6xl font-black text-black tracking-tighter uppercase leading-none italic">{drilldownDay || (drilldownMonth ? format(new Date(drilldownMonth + "-01T00:00:00"), 'MMMM yyyy') : "Usage Overview")}</h2>
-                  <button onClick={() => navigatePeriod('next')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all"><ChevronRight size={24} strokeWidth={4} /></button>
+                  <button onClick={() => navigatePeriod('prev')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={24} strokeWidth={4} /></button>
+                  <h2 className="text-6xl font-black text-black tracking-tighter italic leading-none">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Trend" : "Current Usage")}</h2>
+                  <button onClick={() => navigatePeriod('next')} className="p-2 border-4 border-black rounded-xl text-black hover:bg-yellow-400 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={24} strokeWidth={4} /></button>
                 </div>
               </div>
               
-              <div className="flex items-center gap-6">
-                 {!drilldownDay && (
-                   <div className="flex p-1 bg-slate-100 rounded-xl border-4 border-black h-fit">
-                     {['Daily', 'Weekly', 'Monthly'].map(g => (
-                        <button key={g} onClick={() => {setGranularity(g as any); setDrilldownMonth(null);}} className={`px-4 py-1 rounded-lg text-xs font-black transition-all ${granularity === g && !drilldownMonth ? 'bg-black text-white' : 'text-slate-500 hover:text-black'}`}>{g}</button>
-                     ))}
-                   </div>
-                 )}
-                 <div className="text-right text-black">
-                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selection Cost ({userPlan})</div>
-                    <div className="text-5xl font-black text-black italic leading-none block mt-2">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
-                 </div>
+              <div className="text-right text-black font-black">
+                 <div className="text-[10px] tracking-widest text-slate-400">Total selection cost ({userPlan})</div>
+                 <div className="text-5xl italic leading-none block mt-2">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
               </div>
             </div>
 
@@ -400,14 +368,14 @@ export default function Dashboard() {
                   <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
                   <Tooltip cursor={{fill: '#000', opacity: 0.05}} 
                     contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF'}} 
-                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px', padding: '2px 0'}} 
-                    labelStyle={{fontWeight: 900, color: '#000', marginBottom: '12px', textTransform: 'uppercase', borderBottom: '2px solid #000', paddingBottom: '8px'}} 
+                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}} 
+                    labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px'}} 
                     formatter={(v: any, name: any) => {
                        if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power Usage'];
-                       return [`$${Number(v).toFixed(2)}`, name.replace('cost', '') + ' Cost'];
+                       return [`$${Number(v).toFixed(2)}`, name.replace('cost', '') + ' Plan Cost'];
                     }}
                   />
-                  <Bar dataKey="usage" fill="#2563EB" stroke="#000" strokeWidth={3} radius={0} activeBar={{ fill: '#FFD600' }} onClick={(d: any) => { if(d?.activePayload?.[0]) { const i = d.activePayload[0].payload; if(drilldownMonth) setDrilldownDay(i.key); else if(!drilldownDay) { if(granularity==='Monthly') setDrilldownMonth(i.key); else setDrilldownDay(i.key); } } }} className="cursor-pointer">
+                  <Bar dataKey="usage" fill="#2563EB" stroke="#000" strokeWidth={3} radius={0} activeBar={{ fill: '#FFD600' }} onClick={(d: any) => { if(d?.activePayload?.[0]) handleBarClick(d.activePayload[0].payload); }} className="cursor-pointer">
                     {activeChartData.map((_, index) => <Cell key={`cell-${index}`} />)}
                   </Bar>
                   <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
@@ -416,31 +384,29 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Three Detail Cards */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 text-black font-black uppercase">
             {[
-              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, icon: <Zap className="text-emerald-600" />, rates: [{ l: 'Tier 1 (Up to 1000kWh)', v: '12.0¢' }, { l: 'Tier 2 (Over Limit)', v: '14.2¢' }] },
+              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, icon: <Zap className="text-emerald-600" />, rates: [{ l: 'Tier 1', v: '12.0¢' }, { l: 'Tier 2', v: '14.2¢' }] },
               { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, icon: <Zap className="text-blue-600" />, rates: [{ l: 'Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '20.3¢', c: 'text-red-600' }] },
-              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, icon: <Zap className="text-purple-600" />, rates: [{ l: 'Overnight (11pm-7am)', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
+              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, icon: <Zap className="text-purple-600" />, rates: [{ l: 'Overnight', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
             ].map((plan, i) => (
               <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-10 rounded-[2.5rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-8 ring-yellow-400 ring-inset scale-[1.02]' : 'hover:scale-[1.01]'}`}>
                 {userPlan === plan.id && <div className="absolute top-4 right-4 bg-yellow-400 px-3 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase flex items-center gap-1 text-black shadow-sm"><CheckCircle2 size={12} /> CURRENT</div>}
-                <div className="flex items-center gap-3 mb-8 text-black">
+                <div className="flex items-center gap-3 mb-8 text-black font-black">
                   <div className="p-3 bg-slate-50 border-4 border-black rounded-xl">{React.cloneElement(plan.icon as any, { strokeWidth: 4 })}</div>
-                  <h3 className="text-2xl font-black uppercase text-black">{plan.name}</h3>
+                  <h3 className="text-2xl font-black">{plan.name}</h3>
                 </div>
-                <div className="text-6xl font-black italic mb-10 text-black">${plan.cost?.toFixed(2)}</div>
-                <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs font-black text-black">
-                  {plan.rates.map((r, j) => <div key={j} className={`flex justify-between ${(r as any).c || ''}`}><span>{(r as any).l}</span> <span>{(r as any).v}</span></div>)}
+                <div className="text-6xl italic mb-10 text-black font-black">${plan.cost?.toFixed(2)}</div>
+                <div className="space-y-4 bg-slate-50 p-6 rounded-2xl border-4 border-black text-xs text-black font-black uppercase">
+                  {plan.rates.map((r, j) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* FINANCIAL VERDICT BANNER */}
           {comparison && (
-            <div className="bg-black text-white p-12 rounded-[3.5rem] border-8 border-yellow-400 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-10 transform -rotate-1 hover:rotate-0 transition-transform">
-               <div className="space-y-4 text-center lg:text-left text-white font-black uppercase">
+            <div className="bg-black text-white p-12 rounded-[3.5rem] border-8 border-yellow-400 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-10 transform -rotate-1 hover:rotate-0 transition-transform font-black uppercase">
+               <div className="space-y-4 text-center lg:text-left text-white font-black">
                   <div className="text-xs tracking-[0.5em] text-yellow-400 font-black">Winning Economic Plan</div>
                   <h4 className="text-5xl italic leading-tight text-white font-black">
                     THE BEST CHOICE IS <br/>
@@ -451,16 +417,16 @@ export default function Dashboard() {
                   </h4>
                </div>
                <div className="bg-white text-black p-8 lg:p-10 rounded-[2.5rem] border-4 border-black shadow-2xl rotate-3 flex flex-col items-center min-w-[300px]">
-                  <div className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2 text-center">Plan Impact</div>
-                  <div className="text-6xl lg:text-7xl font-black leading-none italic text-black whitespace-nowrap text-center">
+                  <div className="text-xs tracking-widest text-slate-400 mb-2 text-center font-black">Plan Impact</div>
+                  <div className="text-6xl lg:text-7xl italic text-black whitespace-nowrap text-center font-black leading-none">
                     {userPlan === (comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'TOU' : 
                        comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered' : 'ULO') ? (
-                         <span className="text-emerald-600 text-4xl lg:text-5xl uppercase not-italic font-black text-center block leading-none">Optimum<br/>Choice!</span>
+                         <span className="text-emerald-600 text-4xl lg:text-5xl not-italic font-black text-center block leading-none">Optimum<br/>Choice!</span>
                        ) : (
                          <span className="text-red-600 font-black">-${Math.abs((comparison as any)[userPlan] - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span>
                        )}
                   </div>
-                  <div className="text-[10px] font-black uppercase mt-4 text-center text-black">vs. your current {userPlan} plan</div>
+                  <div className="text-[10px] mt-4 text-center text-black font-black">vs. your current {userPlan} plan</div>
                </div>
             </div>
           )}
@@ -470,35 +436,35 @@ export default function Dashboard() {
       {viewMode === 'Insights' && (
         <div className="space-y-10 animate-in fade-in duration-500 font-black text-black uppercase">
           <div className="bg-yellow-400 p-8 rounded-[3rem] border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
-             <div className="flex items-center gap-4 mb-8 text-black font-black uppercase"><AlertTriangle size={40} strokeWidth={3} className="text-black" /><h3 className="text-4xl">Usage Anomalies</h3></div>
+             <div className="flex items-center gap-4 mb-8 text-black"><AlertTriangle size={40} strokeWidth={3} className="text-black" /><h3 className="text-4xl">Usage Anomalies</h3></div>
              {anomalies.length > 0 ? (
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {anomalies.map((anom, i) => (
                    <div key={i} className="bg-white p-6 rounded-2xl border-4 border-black text-black">
-                     <div className="text-red-600 uppercase text-[10px] mb-2 font-black">{format(anom.date, 'EEEE, MMM do')}</div>
-                     <div className="text-3xl italic font-black">{anom.usage.toFixed(1)} kWh</div>
-                     <div className="text-[10px] text-slate-500 uppercase mt-2 font-black">+{anom.diffPct.toFixed(0)}% vs average</div>
+                     <div className="text-red-600 text-[10px] mb-2 font-black">{format(anom.date, 'EEEE, MMM do')}</div>
+                     <div className="text-3xl italic font-black text-black">{anom.usage.toFixed(1)} kWh</div>
+                     <div className="text-[10px] text-slate-500 mt-2 font-black">+{anom.diffPct.toFixed(0)}% vs average</div>
                    </div>
                  ))}
                </div>
-             ) : <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl text-black">No significant spikes detected in this period!</div>}
+             ) : <div className="bg-white p-8 rounded-2xl border-4 border-black font-black text-xl text-black">No significant spikes detected!</div>}
           </div>
 
-          <div className="bg-white p-10 rounded-[3rem] border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto text-black font-black">
-             <h3 className="text-4xl uppercase mb-8 italic text-black">Weekly Routine Heatmap</h3>
+          <div className="bg-white p-10 rounded-[3rem] border-4 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto text-black">
+             <h3 className="text-4xl mb-8 italic text-black font-black">Weekly Routine Heatmap</h3>
              <div className="min-w-[800px] text-black">
                <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2 text-black">
-                 <div className="w-16"></div>
-                 {Array.from({length:24}).map((_, i) => <div key={i} className="text-center text-[10px] text-black font-black">{i}h</div>)}
+                 <div className="w-16 font-black"></div>
+                 {Array.from({length:24}).map((_, i) => <div key={i} className="text-center text-[10px] font-black">{i}h</div>)}
                </div>
                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dIdx) => (
                  <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black">
-                   <div className="w-16 text-xs text-black flex items-center font-black">{day}</div>
+                   <div className="w-16 text-xs flex items-center font-black">{day}</div>
                    {heatmapData.grid[dIdx].map((hour, hIdx) => {
                       const int = hour.avg / heatmapData.maxAvg;
                       let bg = 'bg-slate-100';
                       if (int > 0.8) bg = 'bg-red-600 border-red-800'; else if (int > 0.6) bg = 'bg-orange-500 border-orange-700'; else if (int > 0.4) bg = 'bg-yellow-400 border-yellow-600'; else if (int > 0.2) bg = 'bg-blue-300 border-blue-500';
-                      return <div key={hIdx} className={`h-12 rounded-md border-b-4 ${bg} hover:scale-110 relative group transition-all`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh avg</div></div>
+                      return <div key={hIdx} className={`h-12 rounded-md border-b-4 ${bg} hover:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
                    })}
                  </div>
                ))}
