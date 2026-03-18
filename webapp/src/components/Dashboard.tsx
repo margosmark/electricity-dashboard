@@ -62,7 +62,8 @@ export default function Dashboard() {
   const [drilldownMonth, setDrilldownMonth] = useState<string | null>(null);
 
   /**
-   * Browser-side XML Parser
+   * Browser-side XML Parser (Hardened)
+   * Uses an iterative approach to prevent stack overflows on deep XML structures.
    */
   const parseGreenButtonXML = (xmlText: string) => {
     const parser = new XMLParser({
@@ -74,66 +75,48 @@ export default function Dashboard() {
     const parsed = parser.parse(xmlText);
     const readings: { timestamp: number, usage_kwh: number }[] = [];
     
-    function traverse(obj: any) {
-      if (!obj) return;
+    // Iterative traversal using a stack to prevent stack overflows
+    const stack = [parsed];
+    while (stack.length > 0) {
+      const obj = stack.pop();
+      if (!obj || typeof obj !== 'object') continue;
+
       if (Array.isArray(obj)) {
-        obj.forEach(traverse);
-      } else if (typeof obj === 'object') {
+        for (let i = obj.length - 1; i >= 0; i--) stack.push(obj[i]);
+      } else {
         if (obj.IntervalReading) {
-           const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
-           arr.forEach((ir: any) => {
-             const start = parseInt(ir.timePeriod?.start || "0", 10);
-             const value = parseInt(ir.value || "0", 10);
-             if (start > 0) readings.push({ timestamp: start, usage_kwh: value / 1000.0 });
-           });
+          const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
+          for (const ir of arr) {
+            const start = parseInt(ir.timePeriod?.start || "0", 10);
+            const value = parseInt(ir.value || "0", 10);
+            if (start > 0) readings.push({ timestamp: start, usage_kwh: value / 1000.0 });
+          }
         }
-        for (const key in obj) if (key !== 'IntervalReading') traverse(obj[key]);
+        for (const key in obj) {
+          if (key !== 'IntervalReading' && typeof obj[key] === 'object') {
+            stack.push(obj[key]);
+          }
+        }
       }
     }
-    traverse(parsed);
+    
     readings.sort((a, b) => a.timestamp - b.timestamp);
     return readings;
   };
 
-  // --- Initial Load ---
-  useEffect(() => {
-    async function init() {
-      // 1. Fetch global rates from server
-      try {
-        const res = await fetch('/api/rates');
-        const json = await res.json();
-        setRateHistory(json.historicalRates || []);
-      } catch (e) { console.error("Rate fetch error", e); }
-
-      // 2. Load energy data from Browser LocalStorage (Isolated to this user)
-      const savedData = localStorage.getItem('energy_data');
-      const savedBillingDay = localStorage.getItem('billing_day');
-      if (savedBillingDay) setBillingDay(parseInt(savedBillingDay));
-
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          setRawData(parsedData);
-          
-          if (parsedData.length > 0) {
-            const last = new Date(parsedData[parsedData.length - 1].timestamp * 1000);
-            const period = getBillingPeriod(last, savedBillingDay ? parseInt(savedBillingDay) : 1);
-            setStartDate(format(period.start, 'yyyy-MM-dd'));
-            setEndDate(format(period.end, 'yyyy-MM-dd'));
-          }
-        } catch (e) { console.error("Local storage parse error", e); }
-      } else {
-        setShowUploadModal(true);
-      }
-      setLoading(false);
-    }
-    init();
-  }, []);
-
+  // ... (inside handleFileUpload)
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    setParsing(true);
+    
     const file = e.target.files[0];
+    
+    // Robustness: Limit file size to 10MB to prevent browser hang
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large (>10MB). Please upload a smaller date range.");
+      return;
+    }
+
+    setParsing(true);
     const reader = new FileReader();
 
     reader.onload = (event) => {
@@ -142,7 +125,14 @@ export default function Dashboard() {
         const readings = parseGreenButtonXML(xmlText);
         if (readings.length > 0) {
           setRawData(readings);
-          localStorage.setItem('energy_data', JSON.stringify(readings));
+          
+          // Robustness: Handle LocalStorage quota limits
+          try {
+            localStorage.setItem('energy_data', JSON.stringify(readings));
+          } catch (storageErr) {
+            console.warn("LocalStorage full, data will only persist for this session.");
+            alert("Browser storage is full. The data will work now, but you may need to re-upload next time.");
+          }
           
           const last = new Date(readings[readings.length - 1].timestamp * 1000);
           const period = getBillingPeriod(last, billingDay);
@@ -153,6 +143,7 @@ export default function Dashboard() {
           alert("No valid energy readings found in this XML.");
         }
       } catch (err) {
+        console.error("Local parse error:", err);
         alert("Error parsing XML file locally.");
       } finally {
         setParsing(false);
