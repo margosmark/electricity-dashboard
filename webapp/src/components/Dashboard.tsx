@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [userPlan, setUserPlan] = useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
   const [billingDay, setBillingDay] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'Chart' | 'Insights'>('Chart');
+  const [viewScope, setViewScope] = useState<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [parsing, setParsing] = useState(false);
   
@@ -264,14 +265,37 @@ export default function Dashboard() {
        setZoomTarget(next);
        if (next < startDate) setStartDate(next + (zoomLevel === 'weekly' ? "-01" : ""));
     } else {
-      const s = new Date(startDate + "T00:00:00"); s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
-      const p = getBillingPeriod(s, billingDay);
-      setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
+      const s = new Date(startDate + "T00:00:00");
+      if (viewScope === 'BillingPeriod') {
+        // Move to middle of next/prev month to handle edge cases in getBillingPeriod
+        const target = dir === 'next' ? addMonths(s, 1) : subMonths(s, 1);
+        const p = getBillingPeriod(target, billingDay);
+        setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
+      } else if (viewScope === 'Month') {
+        const target = dir === 'next' ? addMonths(s, 1) : subMonths(s, 1);
+        setStartDate(format(startOfMonth(target), 'yyyy-MM-dd'));
+        setEndDate(format(lastDayOfMonth(target), 'yyyy-MM-dd'));
+      } else {
+        s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
+        const p = getBillingPeriod(s, billingDay);
+        setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
+      }
     }
   };
 
   const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
-  const updateBillingDay = (day: number) => { setBillingDay(day); localStorage.setItem('billing_day', day.toString()); };
+  const updateBillingDay = (day: number) => { 
+    setBillingDay(day); 
+    localStorage.setItem('billing_day', day.toString()); 
+    if (viewScope === 'BillingPeriod') {
+      const s = new Date(startDate + "T00:00:00");
+      // Use the middle of the current period to re-anchor
+      const anchor = addDays(s, 15);
+      const p = getBillingPeriod(anchor, day);
+      setStartDate(format(p.start, 'yyyy-MM-dd'));
+      setEndDate(format(p.end, 'yyyy-MM-dd'));
+    }
+  };
 
   if (loading) return <div className="p-20 text-center font-black text-black text-4xl animate-pulse bg-slate-50 min-screen h-screen flex items-center justify-center">PREPARING OPTIMIZER...</div>;
 
@@ -297,11 +321,33 @@ export default function Dashboard() {
            <button onClick={() => setShowUploadModal(true)} className="p-4 bg-black text-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={20} strokeWidth={4} /></button>
            <button onClick={emergencyReset} className="p-4 bg-white text-red-600 border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={20} strokeWidth={4} /></button>
            <div className="flex items-center gap-2 ml-4">
-             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
+             <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
              <span className="opacity-40 font-black">TO</span>
-             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
-             <button onClick={() => { const p = getBillingPeriod(new Date(), billingDay); setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd')); setZoomLevel('monthly'); }} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">Current Month</button>
-             <button onClick={() => { setStartDate(format(startOfYear(new Date()), 'yyyy-MM-dd')); setEndDate(format(new Date(), 'yyyy-MM-dd')); setZoomLevel('monthly'); }} className="p-3 bg-yellow-400 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase">YTD</button>
+             <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="p-3 border-4 border-black rounded-xl font-black text-black bg-white" />
+             
+             <button onClick={() => { 
+               setViewScope('BillingPeriod');
+               const p = getBillingPeriod(new Date(), billingDay); 
+               setStartDate(format(p.start, 'yyyy-MM-dd')); 
+               setEndDate(format(p.end, 'yyyy-MM-dd')); 
+               setZoomLevel('monthly'); 
+             }} className={`p-3 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
+             
+             <button onClick={() => { 
+               setViewScope('Month');
+               const s = startOfMonth(new Date());
+               const e = lastDayOfMonth(new Date());
+               setStartDate(format(s, 'yyyy-MM-dd')); 
+               setEndDate(format(e, 'yyyy-MM-dd')); 
+               setZoomLevel('monthly'); 
+             }} className={`p-3 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Current Month</button>
+             
+             <button onClick={() => { 
+               setViewScope('YTD');
+               setStartDate(format(startOfYear(new Date()), 'yyyy-MM-dd')); 
+               setEndDate(format(new Date(), 'yyyy-MM-dd')); 
+               setZoomLevel('monthly'); 
+             }} className={`p-3 border-4 border-black rounded-xl font-black text-[10px] text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
            </div>
         </div>
 
@@ -318,12 +364,35 @@ export default function Dashboard() {
            <div className="bg-slate-100 p-2 rounded-2xl border-4 border-black flex gap-1">
               {['Tiered', 'TOU', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-8 py-2 rounded-xl text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
-           <div className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black text-center font-black relative">
-              <div className="text-[10px] uppercase">Vampire Load</div>
+           <button onClick={() => setShowVampireHelp(true)} className="bg-blue-600 text-white p-6 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-4 border-black text-center font-black relative hover:scale-105 transition-all group">
+              <div className="text-[10px] uppercase flex items-center justify-center gap-1">Vampire Load <HelpCircle size={10} className="opacity-50 group-hover:opacity-100" /></div>
               <div className="text-4xl italic">${vampire.cost.toFixed(2)}</div>
-           </div>
+           </button>
         </div>
       </div>
+
+      {/* Vampire Load Help Modal */}
+      {showVampireHelp && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[400] flex items-center justify-center p-4">
+          <div className="bg-white p-10 rounded-[3rem] border-8 border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-xl w-full text-black relative">
+             <button onClick={() => setShowVampireHelp(false)} className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-all"><X size={32} strokeWidth={4} /></button>
+             <h2 className="text-4xl uppercase tracking-tighter mb-6 flex items-center gap-4 font-black"><Zap size={40} className="text-blue-600" strokeWidth={4} /> What is Vampire Load?</h2>
+             <div className="space-y-6 font-bold text-slate-700">
+                <p>Vampire load (or standby power) is the electricity consumed by appliances and electronics while they are switched off or in standby mode.</p>
+                <div className="bg-blue-50 p-6 rounded-2xl border-4 border-blue-200 text-blue-900">
+                   <h4 className="font-black uppercase text-sm mb-2">How we calculate it:</h4>
+                   <ul className="list-disc ml-5 space-y-2 text-sm">
+                      <li>We analyze your entire dataset to find your <strong>"Baseline"</strong> usage (the lowest 5% of your hourly readings).</li>
+                      <li>This baseline represents the constant power draw that never turns off (fridges, clocks, chargers, smart devices).</li>
+                      <li>Your current baseline is approximately <span className="font-black text-blue-600">{vampire.watts.toFixed(0)} Watts</span>.</li>
+                   </ul>
+                </div>
+                <p className="text-sm">The cost is estimated by multiplying this constant draw by 24 hours a day for 30 days, using your current <strong>Off-Peak</strong> rate.</p>
+                <button onClick={() => setShowVampireHelp(false)} className="w-full py-4 bg-black text-white rounded-2xl font-black uppercase hover:bg-blue-600 transition-colors mt-4">Got it</button>
+             </div>
+          </div>
+        </div>
+      )}
 
       {viewMode === 'Chart' && (
         <div className="space-y-10">
