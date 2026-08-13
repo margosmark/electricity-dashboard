@@ -446,7 +446,14 @@ export default function Dashboard() {
                     onClick={(d: any) => handleBarClick(d)} 
                     className="cursor-pointer"
                   >
-                    {activeChartData.map((_, index) => <Cell key={`cell-${index}`} style={{ cursor: 'pointer', pointerEvents: 'auto' }} />)}
+                    {activeChartData.map((entry, index) => {
+                      const isWeekendDay = zoomLevel === 'daily' && entry.key && isWeekend(new Date(entry.key + 'T00:00:00'));
+                      return <Cell 
+                        key={`cell-${index}`} 
+                        fill={isWeekendDay ? '#F97316' : '#2563EB'}
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }} 
+                      />;
+                    })}
                   </Bar>
                   <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
                 </BarChart>
