@@ -12,12 +12,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { 
-  format, startOfWeek, startOfMonth, lastDayOfMonth, startOfYear,
+  format, startOfMonth, lastDayOfMonth, startOfYear,
   addMonths, subMonths, addDays
 } from 'date-fns';
 import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
 import {
-  type DataPoint, type RateSet, type ProcessedPoint, type ChartDataItem,
+  type DataPoint, type RateSet,
   getBillingPeriod, parseGreenButtonXML, processRawData, filterByDateRange,
   buildActiveChartData, calculateComparison, calculateVampire,
   detectAnomalies, buildHeatmapData, getBarColor,

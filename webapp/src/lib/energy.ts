@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import {
-  format, isWeekend, startOfWeek, startOfMonth, lastDayOfMonth,
+  format, isWeekend, startOfWeek, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
 } from 'date-fns';
 
@@ -109,11 +109,6 @@ export function getUloRateKey(category: string): 'overnight' | 'weekendOffPeak' 
   if (category === 'Weekend Off-Peak') return 'weekendOffPeak';
   if (category === 'Mid-Peak') return 'midPeak';
   return 'onPeak';
-}
-
-export function findActiveRate(dayStr: string, rateHistory: RateSet[]): RateSet {
-  const sorted = [...rateHistory].sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate));
-  return sorted.find((r) => dayStr >= r.effectiveDate) || sorted[sorted.length - 1];
 }
 
 export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): ProcessedPoint[] {
