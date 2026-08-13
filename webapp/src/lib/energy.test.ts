@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { format } from 'date-fns';
 import {
   getBillingPeriod,
   parseGreenButtonXML,
@@ -33,8 +34,8 @@ function makeProcessedPoint(overrides: Partial<ProcessedPoint> & { timestamp: nu
   return {
     usage_kwh: 1.0,
     dateObj,
-    dayStr: dateObj.toISOString().split('T')[0],
-    hourStr: dateObj.toISOString().split('T')[1]?.slice(0, 5) || '00:00',
+    dayStr: format(dateObj, 'yyyy-MM-dd'),
+    hourStr: format(dateObj, 'HH:mm'),
     touCategory: 'Off-Peak',
     uloCategory: 'Overnight',
     isWinter: false,
@@ -325,7 +326,8 @@ describe('detectAnomalies', () => {
     const spikePoint = makeProcessedPoint({ timestamp: 1704960000, usage_kwh: 50.0 });
     const allPoints = [...normalPoints, spikePoint];
     const anomalies = detectAnomalies(allPoints, allPoints);
-    expect(anomalies.length).toBeGreaterThanOrEqual(0);
+    expect(anomalies.length).toBeGreaterThan(0);
+    expect(anomalies[0].usage).toBe(50.0);
   });
 });
 
