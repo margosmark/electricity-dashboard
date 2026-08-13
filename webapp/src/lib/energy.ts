@@ -58,23 +58,26 @@ export function parseGreenButtonXML(xmlText: string): DataPoint[] {
   });
   const parsed = parser.parse(xmlText);
   const readings: DataPoint[] = [];
-  const stack: any[] = [parsed];
+  const stack: unknown[] = [parsed];
   while (stack.length > 0) {
     const obj = stack.pop();
     if (!obj || typeof obj !== 'object') continue;
     if (Array.isArray(obj)) {
       obj.forEach((i) => stack.push(i));
     } else {
-      if (obj.IntervalReading) {
-        const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
-        arr.forEach((ir: any) => {
-          const s = parseInt(ir.timePeriod?.start || '0', 10);
-          const v = parseInt(ir.value || '0', 10);
+      const objAny = obj as Record<string, unknown>;
+      if (objAny.IntervalReading) {
+        const arr = Array.isArray(objAny.IntervalReading) ? objAny.IntervalReading : [objAny.IntervalReading];
+        arr.forEach((ir) => {
+          const irObj = ir as Record<string, unknown>;
+          const timePeriod = irObj.timePeriod as Record<string, unknown> | undefined;
+          const s = parseInt((timePeriod?.start as string) || '0', 10);
+          const v = parseInt((irObj.value as string) || '0', 10);
           if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
         });
       }
-      for (const k in obj) {
-        if (k !== 'IntervalReading' && typeof obj[k] === 'object') stack.push(obj[k]);
+      for (const k in objAny) {
+        if (k !== 'IntervalReading' && typeof objAny[k] === 'object') stack.push(objAny[k]);
       }
     }
   }
