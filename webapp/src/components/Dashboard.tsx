@@ -246,7 +246,7 @@ export default function Dashboard() {
               <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-8 md:w-12 bg-transparent text-xs md:text-sm outline-none text-black font-black" />
            </div>
            <div className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
-               {['Tiered', 'TOU', 'ULO'].map((p: 'Tiered' | 'TOU' | 'ULO') => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
+               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
            <button onClick={() => setShowVampireHelp(true)} className="bg-blue-600 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 transition-all group min-w-[120px]">
               <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">Vampire Load <HelpCircle size={8} className="opacity-50 md:size-10 group-hover:opacity-100" /></div>
@@ -292,7 +292,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black">
-                 {['monthly', 'weekly', 'daily'].map((l: 'monthly' | 'weekly' | 'daily') => <button key={l} onClick={() => {setZoomLevel(l); setZoomTarget(null);}} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+                 {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => {setZoomLevel(l); setZoomTarget(null);}} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
               </div>
               <div className="text-center lg:text-right text-black font-black">
                  <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
@@ -314,9 +314,9 @@ export default function Dashboard() {
                     contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}} 
                     itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}} 
                     labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}} 
-                    formatter={(v: number | string, name: string) => {
+                    formatter={(v, name) => {
                        if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-                       return [`$${Number(v).toFixed(2)}`, name.replace('cost', '') + ' Cost'];
+                       return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
                     }}
                   />
                   <Bar 
@@ -326,7 +326,7 @@ export default function Dashboard() {
                     strokeWidth={3} 
                     radius={0} 
                     activeBar={{ fill: '#FFD600' }} 
-                    onClick={(d: { key?: string } | null) => handleBarClick(d)} 
+                    onClick={(d) => handleBarClick(d as { key?: string } | null)} 
                     className="cursor-pointer"
                   >
                     {activeChartData.map((entry, index) => (
