@@ -12,27 +12,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { 
-  format, isWeekend, getMonth, getHours, startOfWeek, 
-  startOfMonth, lastDayOfMonth, startOfYear, addMonths, 
-  subMonths, setDate, isBefore, subDays, addDays 
+  format, startOfMonth, lastDayOfMonth, startOfYear,
+  addMonths, subMonths, addDays
 } from 'date-fns';
 import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
-import { XMLParser } from 'fast-xml-parser';
-
-// --- Types ---
-type DataPoint = { timestamp: number, usage_kwh: number };
-type RateSet = {
-  effectiveDate: string,
-  tou: { offPeak: number, midPeak: number, onPeak: number },
-  tiered: { tier1: number, tier2: number, thresholdWinter: number, thresholdSummer: number },
-  ulo: { overnight: number, weekendOffPeak: number, midPeak: number, onPeak: number }
-};
-type ProcessedPoint = DataPoint & {
-  dateObj: Date, dayStr: string, hourStr: string,
-  touCategory: string, uloCategory: string,
-  isWinter: boolean, costTOU: number, costTiered: number, costULO: number,
-  activeRateSet: RateSet
-};
+import {
+  type DataPoint, type RateSet, type ChartDataItem,
+  getBillingPeriod, parseGreenButtonXML, processRawData, filterByDateRange,
+  buildActiveChartData, calculateComparison, calculateVampire,
+  detectAnomalies, buildHeatmapData, getBarColor,
+} from '@/lib/energy';
 
 export default function Dashboard() {
 
@@ -59,41 +48,9 @@ export default function Dashboard() {
 
   // --- Helpers ---
 
-  const getBillingPeriod = (refDate: Date, bDay: number) => {
-    let start = setDate(startOfMonth(refDate), bDay);
-    if (isBefore(refDate, start)) start = subMonths(start, 1);
-    const end = subDays(addMonths(start, 1), 1);
-    return { start, end };
-  };
-
-  const parseGreenButtonXML = (xmlText: string) => {
-    const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, isArray: (n) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(n)});
-    const parsed = parser.parse(xmlText);
-    const readings: any[] = [];
-    const stack = [parsed];
-    while (stack.length > 0) {
-      const obj = stack.pop();
-      if (!obj || typeof obj !== 'object') continue;
-      if (Array.isArray(obj)) obj.forEach(i => stack.push(i));
-      else {
-        if (obj.IntervalReading) {
-          const arr = Array.isArray(obj.IntervalReading) ? obj.IntervalReading : [obj.IntervalReading];
-          arr.forEach((ir: any) => {
-            const s = parseInt(ir.timePeriod?.start || "0", 10);
-            const v = parseInt(ir.value || "0", 10);
-            if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
-          });
-        }
-        for (const k in obj) if (k !== 'IntervalReading' && typeof obj[k] === 'object') stack.push(obj[k]);
-      }
-    }
-    return readings.sort((a,b) => a.timestamp - b.timestamp);
-  };
-
   // --- Start Sequence ---
   useEffect(() => {
     let mounted = true;
-    let stuckTimer: NodeJS.Timeout;
 
     async function init() {
       try {
@@ -119,7 +76,7 @@ export default function Dashboard() {
       if (mounted) setLoading(false);
     }
     init();
-    stuckTimer = setTimeout(() => { if (loading && mounted) setStuck(true); }, 5000);
+    const stuckTimer = setTimeout(() => { if (loading && mounted) setStuck(true); }, 5000);
     return () => { mounted = false; if (stuckTimer) clearTimeout(stuckTimer); };
   }, []);
 
@@ -147,100 +104,23 @@ export default function Dashboard() {
 
   // --- Calculations ---
 
-  const processedData = useMemo(() => {
-    if (rateHistory.length === 0) return [];
-    const sorted = [...rateHistory].sort((a,b) => b.effectiveDate.localeCompare(a.effectiveDate));
-    return rawData.map(d => {
-      const dt = new Date(d.timestamp * 1000);
-      const h = dt.getHours(); const isW = isWeekend(dt); const isWin = dt.getMonth() >= 10 || dt.getMonth() <= 3;
-      const dayStr = format(dt, 'yyyy-MM-dd');
-      const rates = sorted.find(r => dayStr >= r.effectiveDate) || sorted[sorted.length-1];
-      let tCat = 'Off-Peak';
-      if (!isW) {
-        if (h >= 19 || h < 7) tCat = 'Off-Peak';
-        else if (isWin) tCat = (h >= 7 && h < 11) || (h >= 17 && h < 19) ? 'On-Peak' : 'Mid-Peak';
-        else tCat = (h >= 11 && h < 17) ? 'On-Peak' : 'Mid-Peak';
-      }
-      let uCat = 'Mid-Peak';
-      if (h >= 23 || h < 7) uCat = 'Overnight';
-      else if (isW) uCat = 'Weekend Off-Peak';
-      else if (h >= 16 && h < 21) uCat = 'On-Peak';
-      const cT = d.usage_kwh * (rates.tou[tCat === 'Off-Peak' ? 'offPeak' : tCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
-      const cU = d.usage_kwh * (rates.ulo[uCat === 'Overnight' ? 'overnight' : uCat === 'Weekend Off-Peak' ? 'weekendOffPeak' : uCat === 'Mid-Peak' ? 'midPeak' : 'onPeak'] / 100);
-      return { ...d, dateObj: dt, dayStr, hourStr: format(dt, 'HH:mm'), touCategory: tCat, uloCategory: uCat, isWinter: isWin, costTOU: cT, costULO: cU, costTiered: d.usage_kwh * (rates.tiered.tier1/100), activeRateSet: rates } as ProcessedPoint;
-    });
-  }, [rawData, rateHistory]);
+  const processedData = useMemo(() => processRawData(rawData, rateHistory), [rawData, rateHistory]);
 
-  const filteredData = useMemo(() => {
-    if (!startDate || !endDate) return processedData;
-    const s = new Date(startDate + "T00:00:00"); const e = new Date(endDate + "T23:59:59");
-    return processedData.filter(d => d.dateObj >= s && d.dateObj <= e);
-  }, [processedData, startDate, endDate]);
+  const filteredData = useMemo(() => filterByDateRange(processedData, startDate, endDate), [processedData, startDate, endDate]);
 
-  const activeChartData = useMemo(() => {
-    let set = filteredData;
-    if (zoomTarget) {
-      if (zoomLevel === 'weekly') set = filteredData.filter(d => format(d.dateObj, 'yyyy-MM') === zoomTarget);
-      else if (zoomLevel === 'daily') set = filteredData.filter(d => format(startOfWeek(d.dateObj, {weekStartsOn:1}), 'yyyy-MM-dd') === zoomTarget);
-      else if (zoomLevel === 'hourly') set = filteredData.filter(d => d.dayStr === zoomTarget);
-    }
+  const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget]);
 
-    if (zoomLevel === 'hourly') return set.map(d => ({ label: d.hourStr, usage: d.usage_kwh, key: d.hourStr, costTOU: d.costTOU, costULO: d.costULO, costTiered: d.costTiered }));
+  const comparison = useMemo(() => calculateComparison(activeChartData), [activeChartData]);
 
-    const map = new Map<string, any>();
-    set.forEach(d => {
-      let l = ''; let k = '';
-      if (zoomLevel === 'monthly') { l = format(d.dateObj, 'MMM yyyy'); k = format(d.dateObj, 'yyyy-MM'); }
-      else if (zoomLevel === 'weekly') { const mon = startOfWeek(d.dateObj, { weekStartsOn: 1 }); l = "Week of " + format(mon, 'MMM dd'); k = format(mon, 'yyyy-MM-dd'); }
-      else if (zoomLevel === 'daily') { l = format(d.dateObj, 'MMM dd'); k = d.dayStr; }
-      if (!map.has(k)) map.set(k, { label: l, usage: 0, key: k, costTOU: 0, costULO: 0, readings: [] });
-      const o = map.get(k); o.usage += d.usage_kwh; o.costTOU += d.costTOU; o.costULO += d.costULO; o.readings.push(d);
-    });
-    return Array.from(map.values()).map(v => {
-      const r = v.readings[0]; const days = new Set(v.readings.map((x:any)=>x.dayStr)).size;
-      const th = (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) * (days / 30.4);
-      const cT = v.usage <= th ? v.usage * (r.activeRateSet.tiered.tier1/100) : (th * (r.activeRateSet.tiered.tier1/100)) + ((v.usage-th)*(r.activeRateSet.tiered.tier2/100));
-      return { ...v, costTiered: cT };
-    }).sort((a,b) => a.key.localeCompare(b.key));
-  }, [filteredData, zoomLevel, zoomTarget]);
+  const vampire = useMemo(() => calculateVampire(filteredData), [filteredData]);
 
-  const comparison = useMemo(() => {
-    if (filteredData.length === 0) return null;
-    return activeChartData.reduce((acc, curr) => ({ TOU: acc.TOU + curr.costTOU, Tiered: acc.Tiered + curr.costTiered, ULO: acc.ULO + curr.costULO }), { TOU: 0, Tiered: 0, ULO: 0 });
-  }, [activeChartData]);
+  const anomalies = useMemo(() => detectAnomalies(processedData, filteredData), [processedData, filteredData]);
 
-  const vampire = useMemo(() => {
-     if (filteredData.length === 0) return { cost: 0, watts: 0 };
-     const sorted = filteredData.map(d => d.usage_kwh).sort((a, b) => a - b);
-     const base = sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
-     return { cost: base * 24 * 30 * (filteredData[0].activeRateSet.tou.offPeak / 100), watts: base * 1000 };
-  }, [filteredData]);
-
-  const anomalies = useMemo(() => {
-    const dayStats = Array.from({length: 7}, () => ({ sum: 0, days: new Set<string>() }));
-    processedData.forEach(d => { const dOW = d.dateObj.getDay(); dayStats[dOW].sum += d.usage_kwh; dayStats[dOW].days.add(d.dayStr); });
-    const expectedAvgs = dayStats.map(stat => stat.days.size > 0 ? stat.sum / stat.days.size : 0);
-    const dailyTotals = new Map<string, { dateObj: Date, usage: number }>();
-    filteredData.forEach(d => { if (!dailyTotals.has(d.dayStr)) dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0 }); dailyTotals.get(d.dayStr)!.usage += d.usage_kwh; });
-    const spikes: any[] = [];
-    dailyTotals.forEach((val) => {
-      const exp = expectedAvgs[val.dateObj.getDay()];
-      if (exp > 0 && val.usage > exp * 1.5 && (val.usage - exp) > 5) spikes.push({ date: val.dateObj, usage: val.usage, expected: exp, diffPct: ((val.usage - exp) / exp) * 100 });
-    });
-    return spikes.sort((a,b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
-  }, [processedData, filteredData]);
-
-  const heatmapData = useMemo(() => {
-    const grid = Array.from({length: 7}, () => Array.from({length: 24}, () => ({ sum: 0, count: 0, avg: 0 })));
-    let maxAvg = 0;
-    filteredData.forEach(d => { const day = d.dateObj.getDay(); const hour = d.dateObj.getHours(); grid[day][hour].sum += d.usage_kwh; grid[day][hour].count += 1; });
-    grid.forEach(day => day.forEach(hour => { if (hour.count > 0) hour.avg = hour.sum / hour.count; if (hour.avg > maxAvg) maxAvg = hour.avg; }));
-    return { grid, maxAvg };
-  }, [filteredData]);
+  const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
 
   // --- Handlers ---
 
-  const handleBarClick = (item: any) => {
+  const handleBarClick = (item: { key?: string } | null) => {
 
     if (!item || !item.key) return;
     if (zoomLevel === 'monthly') { setZoomLevel('weekly'); setZoomTarget(item.key); }
@@ -366,7 +246,7 @@ export default function Dashboard() {
               <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-8 md:w-12 bg-transparent text-xs md:text-sm outline-none text-black font-black" />
            </div>
            <div className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
-              {['Tiered', 'TOU', 'ULO'].map((p:any) => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
+               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
            <button onClick={() => setShowVampireHelp(true)} className="bg-blue-600 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 transition-all group min-w-[120px]">
               <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">Vampire Load <HelpCircle size={8} className="opacity-50 md:size-10 group-hover:opacity-100" /></div>
@@ -386,7 +266,7 @@ export default function Dashboard() {
                 <div className="bg-blue-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-blue-200 text-blue-900">
                    <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">How we calculate it:</h4>
                    <ul className="list-disc ml-4 md:ml-5 space-y-1 md:space-y-2 text-[10px] md:text-sm">
-                      <li>We analyze your entire dataset to find your <strong>"Baseline"</strong> usage (the lowest 5% of your hourly readings).</li>
+                       <li>We analyze your entire dataset to find your <strong>&quot;Baseline&quot;</strong> usage (the lowest 5% of your hourly readings).</li>
                       <li>This baseline represents the constant power draw that never turns off (fridges, clocks, chargers, smart devices).</li>
                       <li>Your current baseline is approximately <span className="font-black text-blue-600">{vampire.watts.toFixed(0)} Watts</span>.</li>
                    </ul>
@@ -412,17 +292,20 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black">
-                {['monthly', 'weekly', 'daily'].map((l:any) => <button key={l} onClick={() => {setZoomLevel(l); setZoomTarget(null);}} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+                 {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => {setZoomLevel(l); setZoomTarget(null);}} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
               </div>
               <div className="text-center lg:text-right text-black font-black">
                  <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
-                 <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">${activeChartData.reduce((acc, curr) => acc + (curr as any)[`cost${userPlan}`], 0).toFixed(2)}</div>
+                  <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">${activeChartData.reduce((acc, curr) => {
+                    const costKey = `cost${userPlan}` as keyof ChartDataItem;
+                    return acc + (curr[costKey] as number);
+                  }, 0).toFixed(2)}</div>
               </div>
             </div>
 
             <div className="h-[300px] md:h-[500px] -ml-4 md:-ml-6">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activeChartData as any[]}>
+                <BarChart data={activeChartData}>
                   <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
                   <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
                   <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
@@ -431,9 +314,9 @@ export default function Dashboard() {
                     contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}} 
                     itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}} 
                     labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}} 
-                    formatter={(v: any, name: any) => {
+                    formatter={(v, name) => {
                        if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-                       return [`$${Number(v).toFixed(2)}`, name.replace('cost', '') + ' Cost'];
+                       return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
                     }}
                   />
                   <Bar 
@@ -443,17 +326,16 @@ export default function Dashboard() {
                     strokeWidth={3} 
                     radius={0} 
                     activeBar={{ fill: '#FFD600' }} 
-                    onClick={(d: any) => handleBarClick(d)} 
+                    onClick={(d) => handleBarClick(d as { key?: string } | null)} 
                     className="cursor-pointer"
                   >
-                    {activeChartData.map((entry, index) => {
-                      const isWeekendDay = zoomLevel === 'daily' && entry.key && isWeekend(new Date(entry.key + 'T00:00:00'));
-                      return <Cell 
+                    {activeChartData.map((entry, index) => (
+                      <Cell 
                         key={`cell-${index}`} 
-                        fill={isWeekendDay ? '#F97316' : '#2563EB'}
+                        fill={getBarColor(zoomLevel, entry.key)}
                         style={{ cursor: 'pointer', pointerEvents: 'auto' }} 
-                      />;
-                    })}
+                      />
+                    ))}
                   </Bar>
                   <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
                 </BarChart>
@@ -467,12 +349,12 @@ export default function Dashboard() {
               { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '20.3¢', c: 'text-red-600' }] },
               { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
             ].map((plan, i) => (
-              <div key={i} onClick={() => setUserPlan(plan.id as any)} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
+              <div key={i} onClick={() => setUserPlan(plan.id as 'Tiered' | 'TOU' | 'ULO')} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
                 {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
                 <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
                 <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">${plan.cost?.toFixed(2)}</div>
                 <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
-                  {plan.rates.map((r:any, j:number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
+                  {plan.rates.map((r: { l: string; v: string; c?: string }, j: number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
                 </div>
               </div>
             ))}
@@ -489,7 +371,7 @@ export default function Dashboard() {
                   <div className="text-4xl md:text-7xl italic text-black whitespace-nowrap leading-none text-center font-black">
                     {userPlan === (comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'TOU' : comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered' : 'ULO') ? (
                          <span className="text-emerald-600 text-2xl md:text-5xl not-italic block">Optimum<br/>Choice!</span>
-                       ) : ( <span className="text-red-600">-${Math.abs((comparison as any)[userPlan] - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span> )}
+                        ) : ( <span className="text-red-600">-${Math.abs((comparison[userPlan as keyof typeof comparison] as number) - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span> )}
                   </div>
                   <div className="text-[8px] md:text-[10px] mt-2 md:mt-4 font-black text-center text-black">vs. your current {userPlan} plan</div>
                </div>
