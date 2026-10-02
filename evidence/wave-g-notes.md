@@ -115,10 +115,23 @@ boundary itself is covered by `webapp/src/lib/season.test.ts` (synthetic
 Apr 28 – May 3 and Oct 31 – Nov 2 runs, plus the hourly/monthly cases) and by
 the browser check above on a dataset that does cross the boundary.
 
-## Privacy
+## Privacy — including one thing that went wrong
 
-The backup export contains the owner's real meter readings, so it is written as
-`evidence/wave-g-backup-export.local.json` and `evidence/*.local.json` is
-gitignored. Nothing under `evidence/` reintroduces meter XML: the root
-`.gitignore` rule `*.xml` (with the narrow `webapp/tests/fixtures/*.xml`
-exception) still stands.
+The backup export contains the owner's real meter readings, so the harness now
+writes it as `evidence/wave-g-backup-export.local.json` and
+`evidence/*.local.json` is gitignored.
+
+**It did not start that way.** The first version of the harness wrote
+`evidence/wave-g-backup-export.json`, and a later `git add -A` picked it up: the
+166 KB export was committed in `88d0e4e` and `d95a66e` and pushed. It is
+removed from the tree in `da3b9f1`. The repository is **private**, the data is
+this repo owner's own readings, and the same containment pattern already
+exists in this repo's history (`a265c48` "Remove sensitive energy data" for
+`electricit2024-now.xml`, which likewise survives only in history). I did not
+rewrite history: that would force-push behind the sibling worktrees and the
+`.110` clone that the deploy script resets. Say the word and the blob gets
+purged from history instead.
+
+No meter XML was ever committed by this wave: `git log --all -- '*.xml'`
+shows only the five public `webapp/tests/fixtures/*.xml` samples plus the
+pre-existing `electricit2024-now.xml` from the initial commit.
