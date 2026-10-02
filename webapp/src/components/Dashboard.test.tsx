@@ -71,9 +71,9 @@ describe('Dashboard', () => {
     expect(screen.getByText('daily')).toBeInTheDocument();
   });
 
-  it('renders vampire load section', async () => {
+  it('renders always-on floor section', async () => {
     await renderLoaded();
-    expect(screen.getByText(/Vampire Load/i)).toBeInTheDocument();
+    expect(screen.getByText(/Always-on floor/i)).toBeInTheDocument();
   });
 
   it('renders billing day input', async () => {
@@ -106,12 +106,12 @@ describe('Dashboard', () => {
     expect(screen.getByText(/Weekly Routine Heatmap/i)).toBeInTheDocument();
   });
 
-  it('shows vampire load help modal', async () => {
+  it('shows always-on floor help modal', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    await user.click(screen.getByText(/Vampire Load/i));
+    await user.click(screen.getByText(/Always-on floor/i));
     await waitFor(() => {
-      expect(screen.getByText(/What is Vampire Load/i)).toBeInTheDocument();
+      expect(screen.getByText(/What is the always-on floor/i)).toBeInTheDocument();
     });
   });
 

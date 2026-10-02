@@ -10,11 +10,14 @@
 
 import { format } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
-import { type Anomaly, type HeatmapData, type ProcessedPoint } from '@/lib/energy';
+import { type Anomaly, type HeatmapData, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import YearOverYearPanel from '@/components/YearOverYearPanel';
 import ShiftOptimizer from '@/components/ShiftOptimizer';
+import ShiftVerificationCard from '@/components/ShiftVerificationCard';
+import EvScenarioCard from '@/components/EvScenarioCard';
 import type { TouShiftAnalysis } from '@/lib/touShift';
+import type { ShiftVerification } from '@/lib/shiftVerification';
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
@@ -29,6 +32,10 @@ export type InsightsViewProps = {
   processedData: ProcessedPoint[];
   /** Ranked ToU-shift recommendations over the full loaded dataset. */
   shiftAnalysis: TouShiftAnalysis;
+  /** Weekly before/after of the shift, over the full loaded dataset. */
+  verification: ShiftVerification;
+  /** Rate schedule in force — the EV card prices three plans with it. */
+  rates: RateSet | null;
 };
 
 export default function InsightsView({
@@ -37,6 +44,8 @@ export default function InsightsView({
   filteredData,
   processedData,
   shiftAnalysis,
+  verification,
+  rates,
 }: InsightsViewProps) {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
@@ -47,6 +56,12 @@ export default function InsightsView({
       {/* Ranked ToU-shift recommendations (recurring On-Peak blocks) */}
       <ShiftOptimizer analysis={shiftAnalysis} />
 
+      {/* Did the last week's shift actually show up? */}
+      <ShiftVerificationCard verification={verification} />
+
+      {/* EV charging scenario — the household's own kWh, priced three ways. */}
+      <EvScenarioCard rows={processedData} rates={rates} />
+
       <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
          <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase"><AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} /><h3 className="text-2xl md:text-4xl">Usage Anomalies</h3></div>
          {anomalies.length > 0 ? (
@@ -56,6 +71,17 @@ export default function InsightsView({
                  <div className="text-red-600 text-[8px] md:text-[10px] mb-1 md:mb-2 font-black">{format(anom.date, 'EEEE, MMM do')}</div>
                  <div className="text-2xl md:text-3xl italic font-black text-black">{anom.usage.toFixed(1)} kWh</div>
                  <div className="text-[8px] md:text-[10px] text-slate-500 mt-1 md:mt-2 font-black">+{anom.diffPct.toFixed(0)}% vs average</div>
+                 {/* The SHAPE of the day, not just the size of the bill. */}
+                 <div
+                   data-testid={`anomaly-signature-${i}`}
+                   data-signature={anom.signature.id}
+                   className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-black"
+                 >
+                   <div className="text-[8px] md:text-[10px] font-black">{anom.signature.label}</div>
+                   <div className="text-[8px] font-bold text-slate-500 normal-case mt-0.5">
+                     {anom.signature.detail}
+                   </div>
+                 </div>
                </div>
              ))}
            </div>

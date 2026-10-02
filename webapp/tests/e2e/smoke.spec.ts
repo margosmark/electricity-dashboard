@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
+import fs from 'node:fs';
+import os from 'node:os';
 
 /**
  * E2E smoke against a freshly booted production build (CI: docker image;
@@ -54,6 +56,14 @@ test.describe('smoke', () => {
     // Plan card heading (Wave A's totals strip also says "Time-of-Use" — scope to the role)
     await expect(page.getByRole('heading', { name: 'Time-of-Use' })).toBeVisible();
 
+    // Bill projection banner is always on screen — either with a number or
+    // saying exactly why it will not give one yet.
+    const projection = page.getByTestId('bill-projection');
+    await expect(projection).toBeVisible();
+    await expect(projection).toHaveAttribute('data-state', /^(ready|gated)$/);
+    // WFH context annotation is computed from the visible window.
+    await expect(page.getByTestId('wfh-annotation')).toBeVisible();
+
     // Readings persisted to localStorage (all 68)
     const stored = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('energy_data') || '[]'),
@@ -98,6 +108,64 @@ test.describe('smoke', () => {
     await expect(page.getByTestId('shift-optimizer')).not.toContainText(/Sun |Sat /);
     // Ranked total is a real number
     await expect(optimizer.getByText(/\$\d+\.\d{2}/).first()).toBeVisible();
+
+    // Wave E's weekly before/after and the EV scenario render from the same
+    // fixture — the household sees whether the shift showed up, and what a
+    // charge costs three ways, without leaving Insights.
+    await expect(page.getByTestId('shift-verification')).toBeVisible();
+    const ev = page.getByTestId('ev-scenario');
+    await expect(ev).toBeVisible();
+    // If we found nothing overnight, the card must say so — never imply a car.
+    if ((await ev.getAttribute('data-source')) !== 'detected') {
+      await expect(page.getByTestId('ev-scenario-empty')).toBeVisible();
+      await expect(ev).not.toContainText(/Prefilled from your data/);
+    }
+  });
+
+  test('multi-file merge: 2 exports are reviewed on screen before anything lands', async ({ page }) => {
+    // A second export with the same name-shape but its own path, so the file
+    // input really does receive two files.
+    const second = path.join(os.tmpdir(), 'synthetic-second.xml');
+    fs.copyFileSync(FIXTURE, second);
+
+    await page.goto('/');
+    await expect(page.getByText('Drop XML Here')).toBeVisible();
+    await page.locator('input[type="file"]').setInputFiles([FIXTURE, second]);
+
+    // The review screen appears BEFORE any reading is written.
+    const review = page.getByTestId('merge-review');
+    await expect(review).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('merge-rows')).toHaveText('68');
+    await expect(page.getByTestId('merge-duplicates')).toHaveText('68 of 136');
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+    ).toHaveLength(0);
+
+    await page.getByTestId('merge-confirm').click();
+    await expect(review).toBeHidden();
+    await expect(page.getByText('Monthly Overview')).toBeVisible();
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+    ).toHaveLength(68);
+  });
+
+  test('multi-file merge: cancelling imports nothing at all', async ({ page }) => {
+    const second = path.join(os.tmpdir(), 'synthetic-second-cancel.xml');
+    fs.copyFileSync(FIXTURE, second);
+
+    await page.goto('/');
+    await expect(page.getByText('Drop XML Here')).toBeVisible();
+    await page.locator('input[type="file"]').setInputFiles([FIXTURE, second]);
+
+    const review = page.getByTestId('merge-review');
+    await expect(review).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('merge-cancel').click();
+    await expect(review).toBeHidden();
+    // Back to the upload prompt, and still nothing stored.
+    await expect(page.getByText('Drop XML Here')).toBeVisible();
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+    ).toHaveLength(0);
   });
 
   test('PWA: manifest is installable, service worker registers and caches the shell', async ({ page, context }) => {

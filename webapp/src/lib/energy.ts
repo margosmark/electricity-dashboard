@@ -42,7 +42,147 @@ export type Anomaly = {
   usage: number;
   expected: number;
   diffPct: number;
+  /** What the DAY ITSELF looks like, not just that it was expensive. */
+  signature: ApplianceSignature;
 };
+
+/* ==========================================================================
+ * Appliance-signature labelling for anomaly days
+ *
+ * detectAnomalies already knows WHICH day was expensive. These functions say
+ * WHAT SHAPE the excess took — hedged, evidence-first, with an honest
+ * "we can't tell" fallback. Readings are treated as one per hour (the same
+ * assumption calculateVampire makes), summed into an hourly kW curve.
+ * ========================================================================== */
+
+export type ApplianceSignatureId =
+  | 'sustained-high'
+  | 'short-spike'
+  | 'overnight-flat-tail'
+  | 'unclassified';
+
+export type ApplianceSignature = {
+  id: ApplianceSignatureId;
+  /** What we dare to put on the card. */
+  label: string;
+  /** The numbers that earned the label. */
+  detail: string;
+};
+
+/** A run has to hold this much power before we name an appliance. */
+export const SIGNATURE_SUSTAINED_KW = 3;
+/** ...for at least this many consecutive hours to be "sustained". */
+export const SIGNATURE_SUSTAINED_HOURS = 4;
+/** A run this short (at the same power) is a spike, not a heater. */
+export const SIGNATURE_SPIKE_MAX_HOURS = 2;
+/** Hours of the 23:00–07:00 window that must be recorded to judge the tail. */
+export const SIGNATURE_TAIL_MIN_HOURS = 5;
+/** Overnight power at or above this is a load that never switched off. */
+export const SIGNATURE_TAIL_MIN_KW = 1.0;
+/** ...and it has to be FLAT (stddev/mean) to call it "left on". */
+export const SIGNATURE_TAIL_MAX_CV = 0.35;
+
+const SIGNATURE_TAIL_HOURS = [23, 0, 1, 2, 3, 4, 5, 6];
+
+type DayCurve = (number | null)[];
+
+/** Sum each hour's readings into one kWh (= kW for an hourly feed) curve. */
+function hourlyCurve(rows: { dateObj: Date; usage_kwh: number }[]): DayCurve {
+  const curve: DayCurve = new Array<number | null>(24).fill(null);
+  for (const r of rows) {
+    const h = r.dateObj.getHours();
+    curve[h] = (curve[h] ?? 0) + r.usage_kwh;
+  }
+  return curve;
+}
+
+/** Longest run of consecutive RECORDED hours at or above `kw`. */
+function longestRunAbove(
+  curve: DayCurve,
+  kw: number,
+): { start: number; hours: number; avg: number; peak: number } {
+  let best = { start: -1, hours: 0, avg: 0, peak: 0 };
+  let i = 0;
+  while (i < 24) {
+    if (curve[i] === null || (curve[i] as number) < kw) {
+      i += 1;
+      continue;
+    }
+    let sum = 0;
+    let peak = 0;
+    let j = i;
+    while (j < 24 && curve[j] !== null && (curve[j] as number) >= kw) {
+      sum += curve[j] as number;
+      peak = Math.max(peak, curve[j] as number);
+      j += 1;
+    }
+    const hours = j - i;
+    if (hours > best.hours) best = { start: i, hours, avg: sum / hours, peak };
+    i = j;
+  }
+  return best;
+}
+
+function hourRange(start: number, hours: number): string {
+  const end = start + hours;
+  return `${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`;
+}
+
+/**
+ * Classify the SHAPE of one day's hourly curve.
+ *
+ * Order follows how specific each signature is:
+ *   1. sustained >=3 kW for >=4 h      -> water heater / EV / space heater
+ *   2. a brief 1–2 h spike at >=3 kW   -> motor / kettle
+ *   3. a flat, elevated 23:00–07:00    -> something left on
+ *   4. anything else                   -> "unclassified", says what we checked
+ *
+ * Pure: same day, same label, always.
+ */
+export function classifyDayShape(
+  rows: { dateObj: Date; usage_kwh: number }[],
+): ApplianceSignature {
+  const curve = hourlyCurve(rows);
+
+  const sustained = longestRunAbove(curve, SIGNATURE_SUSTAINED_KW);
+  if (sustained.hours >= SIGNATURE_SUSTAINED_HOURS) {
+    return {
+      id: 'sustained-high',
+      label: 'Looks like a water heater / EV / space heater',
+      detail: `${sustained.hours} h straight at ${SIGNATURE_SUSTAINED_KW} kW or more (${sustained.avg.toFixed(1)} kW average, ${hourRange(sustained.start, sustained.hours)})`,
+    };
+  }
+
+  if (sustained.hours >= 1 && sustained.hours <= SIGNATURE_SPIKE_MAX_HOURS) {
+    return {
+      id: 'short-spike',
+      label: 'Looks like a motor / kettle',
+      detail: `Brief ${sustained.hours} h spike to ${sustained.peak.toFixed(1)} kW (${hourRange(sustained.start, sustained.hours)}) — sharp and short, like a well pump, kettle or power tool`,
+    };
+  }
+
+  const tailValues: number[] = [];
+  for (const h of SIGNATURE_TAIL_HOURS) if (curve[h] !== null) tailValues.push(curve[h] as number);
+  if (tailValues.length >= SIGNATURE_TAIL_MIN_HOURS) {
+    const mean = tailValues.reduce((a, b) => a + b, 0) / tailValues.length;
+    const variance =
+      tailValues.reduce((acc, v) => acc + (v - mean) * (v - mean), 0) / tailValues.length;
+    const cv = mean > 0 ? Math.sqrt(variance) / mean : 0;
+    if (mean >= SIGNATURE_TAIL_MIN_KW && cv <= SIGNATURE_TAIL_MAX_CV) {
+      return {
+        id: 'overnight-flat-tail',
+        label: 'Looks like a left-on load',
+        detail: `${tailValues.length} hours from 23:00 to 07:00 held ${mean.toFixed(1)} kW and never dipped (${Math.round(cv * 100)}% spread) — something ran all night instead of switching off`,
+      };
+    }
+  }
+
+  return {
+    id: 'unclassified',
+    label: 'Unclassified — nothing we can name',
+    detail: `No ${SIGNATURE_SUSTAINED_KW} kW run lasting ${SIGNATURE_SUSTAINED_HOURS} h, no sharp short spike and no flat 23:00–07:00 block in this day's readings`,
+  };
+}
 
 export function getBillingPeriod(refDate: Date, bDay: number): { start: Date; end: Date } {
   let start = setDate(startOfMonth(refDate), bDay);
@@ -555,15 +695,88 @@ export function calculateFullDataTotals(processedData: ProcessedPoint[]): FullDa
   };
 }
 
+/** The lowest 5% of hourly readings — the draw that never turns off. */
+function bottomFivePercentKwh(rows: ProcessedPoint[]): number {
+  if (rows.length === 0) return 0;
+  const sorted = rows.map((d) => d.usage_kwh).sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
+}
+
 export function calculateVampire(
   filteredData: ProcessedPoint[],
 ): { cost: number; watts: number } {
   if (filteredData.length === 0) return { cost: 0, watts: 0 };
-  const sorted = filteredData.map((d) => d.usage_kwh).sort((a, b) => a - b);
-  const base = sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
+  const base = bottomFivePercentKwh(filteredData);
   return {
     cost: base * 24 * 30 * (filteredData[0].activeRateSet.tou.offPeak / 100),
     watts: base * 1000,
+  };
+}
+
+/* --------------------------------------------------------------------------
+ * Always-on floor — the same measurement, phrased the way a household talks
+ * about it, and checked against the community benchmark instead of left as a
+ * bare number.
+ * -------------------------------------------------------------------------- */
+
+/** Community rule of thumb: always-on load is about 10% of the bill. */
+export const ALWAYS_ON_BENCHMARK_SHARE = 0.1;
+/** How far either side of the benchmark still counts as "about 10%". */
+export const ALWAYS_ON_TOLERANCE = 0.02;
+
+export type AlwaysOnFloor = {
+  /** Typical never-off draw, in watts. */
+  watts: number;
+  /** Same thing as energy: watts/1000 × 24. */
+  kwhPerDay: number;
+  /** kwhPerDay priced at this household's own blended commodity rate. */
+  annualCost: number;
+  /** The blended $/kWh the household actually pays across the window. */
+  blendedRateCents: number;
+  /** Floor cost as a share of the window's total commodity cost. */
+  billShare: number;
+  benchmarkShare: number;
+  verdict: 'below' | 'near' | 'above';
+  /** "Always-on floor ≈ 8.4 kWh/day ≈ $312/yr" */
+  label: string;
+  /** The benchmark sentence under it. */
+  detail: string;
+};
+
+export function calculateAlwaysOnFloor(
+  rows: ProcessedPoint[],
+  plan: 'TOU' | 'Tiered' | 'ULO',
+): AlwaysOnFloor | null {
+  if (rows.length === 0) return null;
+  const base = bottomFivePercentKwh(rows);
+
+  let cost = 0;
+  let kwh = 0;
+  for (const r of rows) {
+    cost += plan === 'TOU' ? r.costTOU : plan === 'ULO' ? r.costULO : r.costTiered;
+    kwh += r.usage_kwh;
+  }
+  // The rate this household really pays, across the hours it really used.
+  const blendedRateCents = kwh > 0 ? (cost / kwh) * 100 : rows[0].activeRateSet.tou.offPeak;
+
+  const kwhPerDay = base * 24;
+  const annualCost = kwhPerDay * 365 * (blendedRateCents / 100);
+  const floorCost = base * rows.length * (blendedRateCents / 100);
+  const billShare = cost > 0 ? floorCost / cost : 0;
+  const drift = Math.abs(billShare - ALWAYS_ON_BENCHMARK_SHARE);
+  const verdict: AlwaysOnFloor['verdict'] =
+    drift <= ALWAYS_ON_TOLERANCE ? 'near' : billShare < ALWAYS_ON_BENCHMARK_SHARE ? 'below' : 'above';
+
+  return {
+    watts: base * 1000,
+    kwhPerDay,
+    annualCost,
+    blendedRateCents,
+    billShare,
+    benchmarkShare: ALWAYS_ON_BENCHMARK_SHARE,
+    verdict,
+    label: `Always-on floor ≈ ${kwhPerDay.toFixed(1)} kWh/day ≈ $${annualCost.toFixed(0)}/yr`,
+    detail: `Community benchmark is about ${Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100)}% of the bill — yours works out at ${(billShare * 100).toFixed(0)}% (${verdict === 'near' ? 'in line with it' : verdict === 'below' ? 'below it, nicely low' : 'above it, worth a plug-hunt'}).`,
   };
 }
 
@@ -579,17 +792,29 @@ export function detectAnomalies(
   });
   const expectedAvgs = dayStats.map((stat) => (stat.days.size > 0 ? stat.sum / stat.days.size : 0));
 
-  const dailyTotals = new Map<string, { dateObj: Date; usage: number }>();
+  const dailyTotals = new Map<string, { dateObj: Date; usage: number; rows: ProcessedPoint[] }>();
   filteredData.forEach((d) => {
-    if (!dailyTotals.has(d.dayStr)) dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0 });
-    dailyTotals.get(d.dayStr)!.usage += d.usage_kwh;
+    const existing = dailyTotals.get(d.dayStr);
+    if (!existing) {
+      dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0, rows: [] });
+    }
+    const bucket = dailyTotals.get(d.dayStr)!;
+    bucket.usage += d.usage_kwh;
+    bucket.rows.push(d);
   });
 
   const spikes: Anomaly[] = [];
   dailyTotals.forEach((val) => {
     const exp = expectedAvgs[val.dateObj.getDay()];
     if (exp > 0 && val.usage > exp * 1.5 && val.usage - exp > 5) {
-      spikes.push({ date: val.dateObj, usage: val.usage, expected: exp, diffPct: ((val.usage - exp) / exp) * 100 });
+      spikes.push({
+        date: val.dateObj,
+        usage: val.usage,
+        expected: exp,
+        diffPct: ((val.usage - exp) / exp) * 100,
+        // Why was it expensive — the SHAPE of that day, not just its total.
+        signature: classifyDayShape(val.rows),
+      });
     }
   });
   return spikes.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
@@ -820,5 +1045,137 @@ export function calculateTrueBill(input: {
     totalKwh,
     included,
     caption: `Includes: ${included.join(' + ')}.`,
+  };
+}
+
+/* ==========================================================================
+ * Multi-export merge — 2+ Green Button files into one reading set
+ *
+ * A single export usually covers one billing period, so extending the date
+ * range means uploading several. Rows are deduped on their unix timestamp and
+ * the FIRST file that claims a timestamp wins, so an overlap never silently
+ * rewrites a value the user already had.
+ * ========================================================================== */
+
+export type MergeSource = { name: string; readings: DataPoint[] };
+
+export type MergeFileSummary = {
+  name: string;
+  /** Rows this file contributed to the merged set. */
+  rows: number;
+  /** Rows the file carried before dedupe. */
+  rawRows: number;
+  duplicates: number;
+  /** yyyy-MM-dd, '' when the file carried no readable rows. */
+  firstDate: string;
+  lastDate: string;
+};
+
+export type MergeResult = {
+  /** Sorted ascending by timestamp, one row per distinct timestamp. */
+  readings: DataPoint[];
+  /** Raw rows across every file, before dedupe. */
+  totalRows: number;
+  duplicateRows: number;
+  mergedRows: number;
+  firstDate: string;
+  lastDate: string;
+  files: MergeFileSummary[];
+};
+
+function dayOfTimestamp(ts: number): string {
+  return format(new Date(ts * 1000), 'yyyy-MM-dd');
+}
+
+export function mergeReadings(sources: MergeSource[]): MergeResult {
+  const seen = new Set<number>();
+  const kept: DataPoint[] = [];
+  const files: MergeFileSummary[] = [];
+  let totalRows = 0;
+  let duplicateRows = 0;
+
+  for (const source of sources) {
+    const sorted = [...source.readings].sort((a, b) => a.timestamp - b.timestamp);
+    let rows = 0;
+    let duplicates = 0;
+    let first = 0;
+    let last = 0;
+
+    for (const r of sorted) {
+      totalRows += 1;
+      if (first === 0 || r.timestamp < first) first = r.timestamp;
+      if (r.timestamp > last) last = r.timestamp;
+      if (seen.has(r.timestamp)) {
+        duplicates += 1;
+        duplicateRows += 1;
+        continue;
+      }
+      seen.add(r.timestamp);
+      kept.push(r);
+      rows += 1;
+    }
+
+    files.push({
+      name: source.name,
+      rows,
+      rawRows: sorted.length,
+      duplicates,
+      firstDate: sorted.length > 0 ? dayOfTimestamp(first) : '',
+      lastDate: sorted.length > 0 ? dayOfTimestamp(last) : '',
+    });
+  }
+
+  kept.sort((a, b) => a.timestamp - b.timestamp);
+
+  return {
+    readings: kept,
+    totalRows,
+    duplicateRows,
+    mergedRows: kept.length,
+    firstDate: kept.length > 0 ? dayOfTimestamp(kept[0].timestamp) : '',
+    lastDate: kept.length > 0 ? dayOfTimestamp(kept[kept.length - 1].timestamp) : '',
+    files,
+  };
+}
+
+/* ==========================================================================
+ * Work-from-home window — what share of the visible energy lands on a
+ * weekday between 07:00 and 19:00. One line on the Chart that explains WHY
+ * a tiered plan wins or loses for this household.
+ * ========================================================================== */
+
+export const WFH_START_HOUR = 7;
+export const WFH_END_HOUR = 19;
+
+export type WfhShare = {
+  share: number;
+  kwh: number;
+  totalKwh: number;
+  /** Distinct weekdays inside the window. */
+  weekdays: number;
+  label: string;
+};
+
+export function calculateWfhShare(rows: ProcessedPoint[]): WfhShare | null {
+  if (rows.length === 0) return null;
+  let kwh = 0;
+  let totalKwh = 0;
+  const weekdays = new Set<string>();
+  for (const r of rows) {
+    totalKwh += r.usage_kwh;
+    const dow = r.dateObj.getDay();
+    const h = r.dateObj.getHours();
+    if (dow >= 1 && dow <= 5 && h >= WFH_START_HOUR && h < WFH_END_HOUR) {
+      kwh += r.usage_kwh;
+      weekdays.add(r.dayStr);
+    }
+  }
+  if (totalKwh <= 0) return null;
+  return {
+    share: kwh / totalKwh,
+    kwh,
+    totalKwh,
+    weekdays: weekdays.size,
+    label: `Work-from-home window (07:00–19:00 weekdays)`,
   };
 }

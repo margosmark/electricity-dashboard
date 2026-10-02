@@ -30,6 +30,10 @@ import {
   BASELINE_ESTIMATE_CAPTION,
   selectInitialWindow,
   calculateFullDataTotals,
+  mergeReadings,
+  classifyDayShape,
+  calculateWfhShare,
+  calculateAlwaysOnFloor,
   type RateSet,
   type ProcessedPoint,
   type DataPoint,
@@ -850,5 +854,293 @@ describe('calculateFullDataTotals', () => {
     const t = calculateFullDataTotals(points)!;
     expect(t.costTiered).toBeCloseTo(expectedTiered, 6);
     expect(t.costTiered).not.toBeCloseTo(30 * 0.12, 3); // flat tier1 would be wrong
+  });
+});
+
+/* ========================================================================== *
+ * Wave F — multi-export merge
+ * ========================================================================== */
+
+const localTs = (y: number, m: number, d: number, h: number) =>
+  Math.floor(new Date(y, m, d, h).getTime() / 1000);
+
+function rowSeq(startTs: number, hours: number, usage: number): DataPoint[] {
+  return Array.from({ length: hours }, (_, i) => ({
+    timestamp: startTs + i * 3600,
+    usage_kwh: usage,
+  }));
+}
+
+describe('mergeReadings', () => {
+  it('returns an empty result for no sources at all', () => {
+    const r = mergeReadings([]);
+    expect(r.readings).toEqual([]);
+    expect(r.totalRows).toBe(0);
+    expect(r.duplicateRows).toBe(0);
+    expect(r.mergedRows).toBe(0);
+    expect(r.firstDate).toBe('');
+    expect(r.lastDate).toBe('');
+    expect(r.files).toEqual([]);
+  });
+
+  it('joins two disjoint exports into one ascending range', () => {
+    const jan = rowSeq(localTs(2026, 0, 1, 0), 4, 1.5);
+    const feb = rowSeq(localTs(2026, 1, 1, 0), 6, 2.5);
+    const r = mergeReadings([
+      { name: 'january.xml', readings: jan },
+      { name: 'february.xml', readings: feb },
+    ]);
+
+    expect(r.mergedRows).toBe(10);
+    expect(r.totalRows).toBe(10);
+    expect(r.duplicateRows).toBe(0);
+    expect(r.firstDate).toBe('2026-01-01');
+    expect(r.lastDate).toBe('2026-02-01');
+    for (let i = 1; i < r.readings.length; i++) {
+      expect(r.readings[i].timestamp).toBeGreaterThan(r.readings[i - 1].timestamp);
+    }
+    expect(r.files).toHaveLength(2);
+    expect(r.files[0]).toMatchObject({ name: 'january.xml', rows: 4, rawRows: 4, duplicates: 0 });
+    expect(r.files[1]).toMatchObject({ name: 'february.xml', rows: 6, rawRows: 6, duplicates: 0 });
+  });
+
+  it('drops overlapping timestamps and keeps the FIRST file’s value', () => {
+    const t0 = localTs(2026, 0, 1, 0);
+    const a = [
+      { timestamp: t0, usage_kwh: 1.0 },
+      { timestamp: t0 + 3600, usage_kwh: 2.0 },
+    ];
+    const b = [
+      { timestamp: t0 + 3600, usage_kwh: 9.9 },
+      { timestamp: t0 + 7200, usage_kwh: 3.0 },
+    ];
+    const r = mergeReadings([
+      { name: 'first.xml', readings: a },
+      { name: 'second.xml', readings: b },
+    ]);
+
+    expect(r.mergedRows).toBe(3);
+    expect(r.totalRows).toBe(4);
+    expect(r.duplicateRows).toBe(1);
+    expect(r.readings.map((x) => x.usage_kwh)).toEqual([1.0, 2.0, 3.0]);
+    expect(r.files[0]).toMatchObject({ rows: 2, duplicates: 0 });
+    expect(r.files[1]).toMatchObject({ rows: 1, rawRows: 2, duplicates: 1 });
+  });
+
+  it('dedupes duplicate timestamps inside one file too', () => {
+    const t0 = localTs(2026, 0, 1, 0);
+    const r = mergeReadings([
+      {
+        name: 'messy.xml',
+        readings: [
+          { timestamp: t0, usage_kwh: 1 },
+          { timestamp: t0, usage_kwh: 7 },
+          { timestamp: t0 + 3600, usage_kwh: 2 },
+        ],
+      },
+    ]);
+    expect(r.mergedRows).toBe(2);
+    expect(r.duplicateRows).toBe(1);
+    expect(r.readings[0].usage_kwh).toBe(1);
+    expect(r.files[0]).toMatchObject({ rows: 2, rawRows: 3, duplicates: 1 });
+  });
+
+  it('still reports a fully duplicated file’s own date range', () => {
+    const jan = rowSeq(localTs(2026, 0, 1, 0), 4, 1);
+    const r = mergeReadings([
+      { name: 'original.xml', readings: jan },
+      { name: 'copy.xml', readings: jan },
+    ]);
+    expect(r.mergedRows).toBe(4);
+    expect(r.duplicateRows).toBe(4);
+    expect(r.files[1]).toMatchObject({ rows: 0, rawRows: 4, duplicates: 4 });
+    expect(r.files[1].firstDate).toBe('2026-01-01');
+    expect(r.files[1].lastDate).toBe('2026-01-01');
+  });
+
+  it('handles an empty file alongside a real one', () => {
+    const jan = rowSeq(localTs(2026, 0, 1, 0), 4, 1);
+    const r = mergeReadings([
+      { name: 'empty.xml', readings: [] },
+      { name: 'january.xml', readings: jan },
+    ]);
+    expect(r.mergedRows).toBe(4);
+    expect(r.files[0]).toMatchObject({ rows: 0, rawRows: 0, firstDate: '', lastDate: '' });
+    expect(r.firstDate).toBe('2026-01-01');
+  });
+});
+
+/* ========================================================================== *
+ * Wave F — appliance-signature labels
+ * ========================================================================== */
+
+function dayRows(hourly: Record<number, number>) {
+  return Object.entries(hourly).map(([h, usage_kwh]) => ({
+    dateObj: new Date(2026, 5, 1, Number(h), 0, 0),
+    usage_kwh,
+  }));
+}
+
+describe('classifyDayShape', () => {
+  it('names a sustained >=3 kW run after the appliances that make one', () => {
+    const s = classifyDayShape(dayRows({ 0: 0.5, 1: 4, 2: 4, 3: 4, 4: 4, 5: 0.5, 6: 0.5 }));
+    expect(s.id).toBe('sustained-high');
+    expect(s.label).toContain('water heater / EV / space heater');
+    expect(s.detail).toContain('4 h straight at 3 kW or more');
+    expect(s.detail).toContain('01:00–05:00');
+  });
+
+  it('names a brief high-kW run as a motor / kettle spike', () => {
+    const s = classifyDayShape(dayRows({ 9: 0.5, 10: 5.5, 11: 4.5, 12: 0.5 }));
+    expect(s.id).toBe('short-spike');
+    expect(s.label).toContain('motor / kettle');
+    expect(s.detail).toContain('Brief 2 h spike to 5.5 kW');
+    expect(s.detail).toContain('10:00–12:00');
+  });
+
+  it('names a flat elevated overnight tail as something left on', () => {
+    const s = classifyDayShape(
+      dayRows({ 23: 2, 0: 2, 1: 2, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 0.4 }),
+    );
+    expect(s.id).toBe('overnight-flat-tail');
+    expect(s.label).toContain('left-on load');
+    expect(s.detail).toContain('8 hours from 23:00 to 07:00 held 2.0 kW');
+    expect(s.detail).toContain('never dipped');
+  });
+
+  it('falls back to an honest unclassified label that lists what it checked', () => {
+    const s = classifyDayShape(dayRows({ 0: 0.5, 1: 0.5, 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.5, 6: 0.5 }));
+    expect(s.id).toBe('unclassified');
+    expect(s.label).toContain('nothing we can name');
+    expect(s.detail).toContain('No 3 kW run lasting 4 h');
+    expect(s.detail).toContain('no flat 23:00–07:00 block');
+  });
+
+  it('does not call a 3-hour run sustained, and a cool night is not a tail', () => {
+    const s = classifyDayShape(dayRows({ 1: 4, 2: 4, 3: 4 }));
+    expect(s.id).toBe('unclassified');
+  });
+
+  it('returns unclassified for a day with no recorded hours', () => {
+    expect(classifyDayShape([]).id).toBe('unclassified');
+  });
+
+  it('labels anomalies it reports, not just the ones handed to it directly', () => {
+    const normal: ProcessedPoint[] = Array.from({ length: 10 }, (_, i) =>
+      makeProcessedPoint({ timestamp: 1704067200 + i * 86400, usage_kwh: 5.0 }),
+    );
+    const spike = makeProcessedPoint({ timestamp: 1704960000, usage_kwh: 50.0 });
+    const anomalies = detectAnomalies([...normal, spike], [...normal, spike]);
+    expect(anomalies.length).toBeGreaterThan(0);
+    expect(anomalies[0].signature).toBeDefined();
+    expect(anomalies[0].signature.id).toBe('short-spike');
+    expect(anomalies[0].signature.label.length).toBeGreaterThan(0);
+  });
+});
+
+/* ========================================================================== *
+ * Wave F — work-from-home window annotation
+ * ========================================================================== */
+
+describe('calculateWfhShare', () => {
+  it('returns null for empty data and for a zero-energy window', () => {
+    expect(calculateWfhShare([])).toBeNull();
+    const zeros = [makeProcessedPoint({ timestamp: 1704067200, usage_kwh: 0 })];
+    expect(calculateWfhShare(zeros)).toBeNull();
+  });
+
+  it('counts weekday 07:00–19:00 energy against the whole window', () => {
+    const monday = Array.from({ length: 24 }, (_, h) =>
+      makeProcessedPoint({ timestamp: localTs(2026, 5, 1, h), usage_kwh: 1 }),
+    );
+    const saturday = Array.from({ length: 24 }, (_, h) =>
+      makeProcessedPoint({ timestamp: localTs(2026, 5, 6, h), usage_kwh: 1 }),
+    );
+    const w = calculateWfhShare([...monday, ...saturday])!;
+    expect(w).not.toBeNull();
+    expect(w.totalKwh).toBe(48);
+    expect(w.kwh).toBe(12); // 07:00–18:00 inclusive on the Monday only
+    expect(w.share).toBeCloseTo(0.25, 6);
+    expect(w.weekdays).toBe(1);
+    expect(w.label).toContain('07:00–19:00 weekdays');
+  });
+
+  it('excludes the edges: 06:00 and 19:00 are outside the window', () => {
+    const rows = [
+      makeProcessedPoint({ timestamp: localTs(2026, 5, 1, 6), usage_kwh: 10 }),
+      makeProcessedPoint({ timestamp: localTs(2026, 5, 1, 19), usage_kwh: 10 }),
+      makeProcessedPoint({ timestamp: localTs(2026, 5, 1, 7), usage_kwh: 10 }),
+    ];
+    const w = calculateWfhShare(rows)!;
+    expect(w.kwh).toBe(10);
+    expect(w.share).toBeCloseTo(1 / 3, 6);
+  });
+});
+
+/* ========================================================================== *
+ * Wave F — always-on floor phrasing + community benchmark
+ * ========================================================================== */
+
+function floorRows(counts: { low: number; lowKwh: number; high: number; highKwh: number }) {
+  const total = counts.low + counts.high;
+  return Array.from({ length: total }, (_, i) => {
+    const usage_kwh = i < counts.low ? counts.lowKwh : counts.highKwh;
+    return makeProcessedPoint({
+      timestamp: 1704067200 + i * 3600,
+      usage_kwh,
+      costTOU: usage_kwh * 0.098,
+      costTiered: usage_kwh * 0.12,
+      costULO: usage_kwh * 0.039,
+    });
+  });
+}
+
+describe('calculateAlwaysOnFloor', () => {
+  it('returns null for empty data', () => {
+    expect(calculateAlwaysOnFloor([], 'TOU')).toBeNull();
+  });
+
+  it('phrases the floor as kWh/day and $/yr at the household’s own blended rate', () => {
+    // 5th percentile index 5 lands on 0.5 kWh -> 12 kWh/day.
+    const rows = floorRows({ low: 6, lowKwh: 0.5, high: 94, highKwh: 3.0 });
+    const f = calculateAlwaysOnFloor(rows, 'TOU')!;
+    expect(f).not.toBeNull();
+    expect(f.kwhPerDay).toBeCloseTo(12, 6);
+    expect(f.watts).toBeCloseTo(500, 6);
+    expect(f.blendedRateCents).toBeCloseTo(9.8, 4);
+    expect(f.annualCost).toBeCloseTo(12 * 365 * 0.098, 4);
+    expect(f.label).toContain('Always-on floor ≈ 12.0 kWh/day');
+    expect(f.label).toContain('≈ $429/yr');
+    expect(f.benchmarkShare).toBeCloseTo(0.1, 6);
+    expect(f.verdict).toBe('above');
+    expect(f.detail).toContain('Community benchmark is about 10% of the bill');
+    expect(f.detail).toContain('worth a plug-hunt');
+  });
+
+  it('calls a floor right on the benchmark "near"', () => {
+    // 100 h at avg 10 kWh, floor 1 kWh/h -> exactly 10% of the bill.
+    const rows = floorRows({ low: 10, lowKwh: 1.0, high: 90, highKwh: 11.0 });
+    const f = calculateAlwaysOnFloor(rows, 'TOU')!;
+    expect(f.billShare).toBeCloseTo(0.1, 6);
+    expect(f.verdict).toBe('near');
+    expect(f.detail).toContain('yours works out at 10%');
+    expect(f.detail).toContain('in line with it');
+  });
+
+  it('calls a floor well under the benchmark "below"', () => {
+    const rows = floorRows({ low: 6, lowKwh: 0.5, high: 94, highKwh: 8.0 });
+    const f = calculateAlwaysOnFloor(rows, 'TOU')!;
+    expect(f.billShare).toBeLessThan(0.08);
+    expect(f.verdict).toBe('below');
+    expect(f.detail).toContain('below it, nicely low');
+  });
+
+  it('prices against the selected plan, not a hard-coded rate', () => {
+    const rows = floorRows({ low: 10, lowKwh: 1.0, high: 90, highKwh: 11.0 });
+    for (const plan of ['TOU', 'Tiered', 'ULO'] as const) {
+      const f = calculateAlwaysOnFloor(rows, plan)!;
+      expect(f.blendedRateCents).toBeGreaterThan(0);
+      expect(f.kwhPerDay).toBeCloseTo(24, 6);
+    }
   });
 });
