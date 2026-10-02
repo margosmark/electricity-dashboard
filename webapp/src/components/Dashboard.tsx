@@ -23,6 +23,7 @@ import {
 import { UsagePointPicker } from '@/components/UsagePointPicker';
 import ChartView, { type PlanId } from '@/components/ChartView';
 import InsightsView from '@/components/InsightsView';
+import { analyzeTouShifts } from '@/lib/touShift';
 
 export default function Dashboard() {
   const {
@@ -73,6 +74,14 @@ export default function Dashboard() {
 
   // Rate schedule in force for the plan cards — read live, never hardcoded.
   const activeRateSet = useActiveRateSet(processedData);
+
+  // Ranked ToU-shift recommendations. Analyzes the FULL loaded dataset (not
+  // the view-filtered window): recurrence is a property of recent history,
+  // independent of which slice the chart currently shows.
+  const shiftAnalysis = useMemo(
+    () => analyzeTouShifts(processedData, userPlan, activeRateSet),
+    [processedData, userPlan, activeRateSet],
+  );
 
   const selectionCost = useMemo(() => {
     const costKey = `cost${userPlan}` as keyof ChartDataItem;
@@ -226,7 +235,12 @@ export default function Dashboard() {
       )}
 
       {viewMode === 'Insights' && (
-        <InsightsView anomalies={anomalies} heatmapData={heatmapData} filteredData={filteredData} />
+        <InsightsView
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          filteredData={filteredData}
+          shiftAnalysis={shiftAnalysis}
+        />
       )}
     </div>
   );
