@@ -15,13 +15,24 @@ import {
   format, startOfMonth, lastDayOfMonth, startOfYear,
   addMonths, subMonths, addDays
 } from 'date-fns';
-import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, CheckCircle2, Settings2, Upload, AlertTriangle, X, Trash2 } from 'lucide-react';
 import {
   type DataPoint, type RateSet, type ChartDataItem,
   getBillingPeriod, parseGreenButtonXML, processRawData, filterByDateRange,
   buildActiveChartData, calculateComparison, calculateVampire,
   detectAnomalies, buildHeatmapData, getBarColor,
 } from '@/lib/energy';
+
+/**
+ * Render one rate from the active RateSet as displayed cents (e.g. 9.75 -> '9.75¢',
+ * 10 -> '10.0¢'). Formatting only — never a source of rate values.
+ */
+function formatRate(centsPerKwh: number): string {
+  return `${centsPerKwh.toFixed(2).replace(/0$/, '')}¢`;
+}
+
+type PlanRate = { l: string; v: string; c?: string };
+type PlanCard = { id: 'Tiered' | 'TOU' | 'ULO'; name: string; cost?: number; rates: PlanRate[] };
 
 export default function Dashboard() {
 
@@ -30,7 +41,6 @@ export default function Dashboard() {
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stuck, setStuck] = useState(false);
   const [showVampireHelp, setShowVampireHelp] = useState(false);
   const [userPlan, setUserPlan] = useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
   const [billingDay, setBillingDay] = useState<number>(1);
@@ -57,7 +67,7 @@ export default function Dashboard() {
         const res = await fetch('/api/rates');
         const json = await res.json();
         if (mounted) setRateHistory(json.historicalRates || []);
-      } catch (e) {}
+      } catch {}
       try {
         const savedBDay = localStorage.getItem('billing_day');
         if (savedBDay && mounted) setBillingDay(parseInt(savedBDay));
@@ -72,12 +82,11 @@ export default function Dashboard() {
             setEndDate(format(period.end, 'yyyy-MM-dd'));
           }
         } else if (mounted) { setShowUploadModal(true); }
-      } catch (e) {}
+      } catch {}
       if (mounted) setLoading(false);
     }
     init();
-    const stuckTimer = setTimeout(() => { if (loading && mounted) setStuck(true); }, 5000);
-    return () => { mounted = false; if (stuckTimer) clearTimeout(stuckTimer); };
+    return () => { mounted = false; };
   }, []);
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +105,7 @@ export default function Dashboard() {
           setEndDate(format(period.end, 'yyyy-MM-dd'));
           setShowUploadModal(false);
         }
-      } catch (err) { alert("Parse Error"); }
+      } catch { alert("Parse Error"); }
       finally { setParsing(false); }
     };
     reader.readAsText(file);
@@ -117,6 +126,38 @@ export default function Dashboard() {
   const anomalies = useMemo(() => detectAnomalies(processedData, filteredData), [processedData, filteredData]);
 
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
+
+  // Single source of truth for displayed rates: the active per-point RateSet that priced
+  // activeChartData (the math behind each plan card's cost). Latest point in view wins
+  // when a view spans a rate-set boundary.
+  const displayRateSet = filteredData.length > 0 ? filteredData[filteredData.length - 1].activeRateSet : null;
+
+  const planCards: PlanCard[] = [
+    {
+      id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered,
+      rates: displayRateSet ? [
+        { l: 'Tier 1', v: formatRate(displayRateSet.tiered.tier1) },
+        { l: 'Tier 2', v: formatRate(displayRateSet.tiered.tier2) },
+      ] : [],
+    },
+    {
+      id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU,
+      rates: displayRateSet ? [
+        { l: 'Off-Peak', v: formatRate(displayRateSet.tou.offPeak), c: 'text-emerald-600' },
+        { l: 'Mid-Peak', v: formatRate(displayRateSet.tou.midPeak), c: 'text-yellow-600' },
+        { l: 'On-Peak', v: formatRate(displayRateSet.tou.onPeak), c: 'text-red-600' },
+      ] : [],
+    },
+    {
+      id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO,
+      rates: displayRateSet ? [
+        { l: 'Overnight', v: formatRate(displayRateSet.ulo.overnight), c: 'text-purple-600' },
+        { l: 'Weekend Off', v: formatRate(displayRateSet.ulo.weekendOffPeak), c: 'text-emerald-600' },
+        { l: 'Mid-Peak', v: formatRate(displayRateSet.ulo.midPeak), c: 'text-yellow-600' },
+        { l: 'On-Peak', v: formatRate(displayRateSet.ulo.onPeak), c: 'text-red-600' },
+      ] : [],
+    },
+  ];
 
   // --- Handlers ---
 
@@ -344,17 +385,13 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
-            {[
-              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: '12.0¢' }, { l: 'Tier 2', v: '14.2¢' }] },
-              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '20.3¢', c: 'text-red-600' }] },
-              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
-            ].map((plan, i) => (
+            {planCards.map((plan, i) => (
               <div key={i} onClick={() => setUserPlan(plan.id as 'Tiered' | 'TOU' | 'ULO')} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
                 {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
                 <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
                 <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">${plan.cost?.toFixed(2)}</div>
                 <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
-                  {plan.rates.map((r: { l: string; v: string; c?: string }, j: number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
+                  {plan.rates.map((r, j) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
                 </div>
               </div>
             ))}
