@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   analyzeTouShifts,
+  classifyBlock,
+  confidenceBadge,
+  collapseHeadline,
+  worstConfidence,
   LOOKBACK_WEEKS,
+  type ShiftBlock,
 } from './touShift';
 import { processRawData, type DataPoint, type RateSet } from './energy';
 
@@ -264,3 +269,306 @@ describe('analyzeTouShifts', () => {
     expect(result.emptyReason).toBe('no-recurring-onpeak');
   });
 });
+
+/**
+ * Wave E — user-centric rewrite. Every heuristic ships as a pure function
+ * with a synthesized fixture per branch BEFORE the implementation lands.
+ */
+describe('classifyBlock', () => {
+  const base = { weeksSeen: 5, intraBlockCv: 0.05, consistencyCv: 0.1 };
+
+  it('calls a steady, bounded, same-window block a fixed-schedule load', () => {
+    const c = classifyBlock({ ...base, startHour: 1, endHour: 4 });
+    expect(c.signature).toBe('fixed-schedule');
+    expect(c.label).toContain('fixed-schedule load');
+    expect(c.label).toContain('EV timer / appliance cycle');
+    expect(c.detail.length).toBeGreaterThan(10);
+  });
+
+  it('calls a broad daytime block that swings week to week HVAC-like', () => {
+    // Real Oakville shape: flat hourly curve (intraCV 0.14) but the weekly
+    // total moves with the weather (consistencyCv 0.34).
+    const c = classifyBlock({ startHour: 11, endHour: 17, weeksSeen: 4, intraBlockCv: 0.14, consistencyCv: 0.34 });
+    expect(c.signature).toBe('hvac-like');
+    expect(c.label).toContain('HVAC-like whole-house load');
+  });
+
+  it('calls a broad daytime block with a ramping intra-day curve HVAC-like', () => {
+    const c = classifyBlock({ startHour: 11, endHour: 16, weeksSeen: 5, intraBlockCv: 0.45, consistencyCv: 0.12 });
+    expect(c.signature).toBe('hvac-like');
+  });
+
+  it('falls back to the honest "unidentified" label for a single-hour block', () => {
+    const c = classifyBlock({ startHour: 13, endHour: 14, weeksSeen: 5, intraBlockCv: 0, consistencyCv: 0.34 });
+    expect(c.signature).toBe('unidentified');
+    expect(c.label).toBe('Unidentified weekday routine');
+  });
+
+  it('never claims a fixed schedule for a block seen in fewer than 4 of 5 weeks', () => {
+    const c = classifyBlock({ startHour: 1, endHour: 4, weeksSeen: 3, intraBlockCv: 0.02, consistencyCv: 0.05 });
+    expect(c.signature).toBe('unidentified');
+  });
+
+  it('never claims a fixed schedule for a block whose weekly volume swings', () => {
+    // Steady hour-to-hour, but the weekly total varies 45% → not a timer.
+    const c = classifyBlock({ startHour: 1, endHour: 4, weeksSeen: 5, intraBlockCv: 0.05, consistencyCv: 0.45 });
+    expect(c.signature).not.toBe('fixed-schedule');
+    expect(c.signature).toBe('unidentified');
+  });
+
+  it('does not guess at a broad block that sits outside daytime hours', () => {
+    const c = classifyBlock({ startHour: 18, endHour: 23, weeksSeen: 5, intraBlockCv: 0.5, consistencyCv: 0.5 });
+    expect(c.signature).toBe('unidentified');
+    expect(c.label).toBe('Unidentified weekday routine');
+  });
+});
+
+describe('confidenceBadge', () => {
+  it('is "Very consistent" only when cv < 0.15 AND the block is in all 5 weeks', () => {
+    expect(confidenceBadge(0.1, 5).level).toBe('very-consistent');
+    expect(confidenceBadge(0.1, 5).label).toBe('Very consistent');
+    expect(confidenceBadge(0.149, 5).level).toBe('very-consistent');
+    // cv at the threshold drops a level
+    expect(confidenceBadge(0.15, 5).level).toBe('somewhat');
+    // 4 of 5 weeks drops a level even with a rock-steady volume
+    expect(confidenceBadge(0.1, 4).level).toBe('somewhat');
+  });
+
+  it('is "Somewhat" for cv < 0.4', () => {
+    expect(confidenceBadge(0.39, 4).level).toBe('somewhat');
+    expect(confidenceBadge(0.39, 4).label).toBe('Somewhat');
+  });
+
+  it('is "Irregular" at or above cv 0.4', () => {
+    expect(confidenceBadge(0.4, 5).level).toBe('irregular');
+    expect(confidenceBadge(0.9, 3).level).toBe('irregular');
+    expect(confidenceBadge(0.9, 3).label).toBe('Irregular');
+  });
+
+  it('worstConfidence takes the least confident badge of the group', () => {
+    const badges = [confidenceBadge(0.05, 5), confidenceBadge(0.3, 5), confidenceBadge(0.5, 5)];
+    expect(worstConfidence(badges).level).toBe('irregular');
+    expect(worstConfidence([confidenceBadge(0.05, 5)]).level).toBe('very-consistent');
+  });
+});
+
+function mkBlock(overrides: Partial<ShiftBlock> = {}): ShiftBlock {
+  const classification = classifyBlock({ startHour: 11, endHour: 17, weeksSeen: 5, intraBlockCv: 0.14, consistencyCv: 0.34 });
+  return {
+    id: 'fri-11-17',
+    weekday: 5,
+    startHour: 11,
+    endHour: 17,
+    label: 'Fri 11:00–17:00',
+    avgWeeklyKwh: 17.06,
+    weeksSeen: 4,
+    consistencyCv: 0.34,
+    intraBlockCv: 0.14,
+    baselineRateCents: 20.3,
+    tier: 'on-peak',
+    classification,
+    confidence: confidenceBadge(0.34, 4),
+    options: [
+      {
+        target: 'overnight_ulo',
+        label: 'Overnight (ULO 23:00–07:00)',
+        destRateCents: 3.9,
+        savingsCentsPerKwh: 16.4,
+        monthlySavings: 12.12,
+        effort: 'plan-switch-required',
+        assumption: 'Requires switching to the ULO plan and moving the load into 23:00–07:00.',
+      },
+      {
+        target: 'weekend',
+        label: 'Weekend off-peak',
+        destRateCents: 9.8,
+        savingsCentsPerKwh: 10.5,
+        monthlySavings: 8.4,
+        effort: 'no-plan-switch',
+        assumption: 'Move the activity to any weekend hour — off-peak on TOU, no plan switch.',
+      },
+    ],
+    bestMonthlySavings: 12.12,
+    ...overrides,
+  };
+}
+
+describe('collapseHeadline', () => {
+  it('collapses when one target carries >50% of the savings, with the routine phrasing', () => {
+    const blocks = [
+      mkBlock({ id: 'fri-11-17', label: 'Fri 11:00–17:00', bestMonthlySavings: 12.12 }),
+      mkBlock({ id: 'thu-12-17', label: 'Thu 12:00–17:00', bestMonthlySavings: 10.93 }),
+      mkBlock({ id: 'tue-11-16', label: 'Tue 11:00–16:00', bestMonthlySavings: 8.71 }),
+    ];
+    const total = blocks.reduce((a, b) => a + b.bestMonthlySavings, 0);
+    const h = collapseHeadline(blocks, total);
+    expect(h).not.toBeNull();
+    expect(h!.target).toBe('overnight_ulo');
+    expect(h!.routine).toBe('weekday daytime routine');
+    expect(h!.savings).toBeCloseTo(total, 6);
+    expect(h!.blockCount).toBe(3);
+    expect(h!.totalCount).toBe(3);
+    expect(h!.share).toBeCloseTo(1, 6);
+    expect(h!.headline).toBe(`Switch to ULO and move your weekday daytime routine → ~$${total.toFixed(2)}/mo`);
+    expect(h!.effort).toBe('plan-switch-required');
+  });
+
+  it('collapses on a majority, carrying only the dominant target’s dollars', () => {
+    const blocks = [
+      mkBlock({ id: 'a', bestMonthlySavings: 10 }),
+      mkBlock({ id: 'b', bestMonthlySavings: 8 }),
+      mkBlock({ id: 'c', bestMonthlySavings: 4, options: [{ ...mkBlock().options[1], monthlySavings: 4 }] }),
+      mkBlock({ id: 'd', bestMonthlySavings: 4 }),
+    ];
+    const overnight = blocks.filter((b) => b.options[0].target === 'overnight_ulo');
+    const total = blocks.reduce((a, b) => a + b.bestMonthlySavings, 0);
+    const groupTotal = overnight.reduce((a, b) => a + b.bestMonthlySavings, 0);
+    const h = collapseHeadline(blocks, total);
+    expect(h).not.toBeNull();
+    expect(groupTotal / total).toBeGreaterThan(0.5);
+    expect(h!.savings).toBeCloseTo(groupTotal, 6);
+    expect(h!.blockCount).toBe(overnight.length);
+    expect(h!.totalCount).toBe(4);
+  });
+
+  it('does NOT collapse at exactly 50% (a tie is not a consensus)', () => {
+    const blocks = [
+      mkBlock({ id: 'a', bestMonthlySavings: 10 }),
+      mkBlock({ id: 'b', bestMonthlySavings: 10, options: [{ ...mkBlock().options[1], monthlySavings: 10 }], }),
+    ];
+    const h = collapseHeadline(blocks, 20);
+    expect(h).toBeNull();
+  });
+
+  it('returns null when there is nothing to collapse', () => {
+    expect(collapseHeadline([], 0)).toBeNull();
+    expect(collapseHeadline([mkBlock()], 0)).toBeNull();
+  });
+
+  it('takes the WORST confidence badge of the supporting blocks', () => {
+    const blocks = [
+      mkBlock({ id: 'a', confidence: confidenceBadge(0.05, 5) }),
+      mkBlock({ id: 'b', confidence: confidenceBadge(0.9, 4) }),
+    ];
+    const h = collapseHeadline(blocks, 24.24);
+    expect(h!.confidence.level).toBe('irregular');
+  });
+
+  it('describes a weekend-only group as a weekend routine', () => {
+    const blocks = [mkBlock({ id: 'sat-11-17', weekday: 6, bestMonthlySavings: 10 })];
+    const h = collapseHeadline(blocks, 10);
+    expect(h!.routine).toBe('weekend routine');
+    expect(h!.headline).toContain('weekend routine');
+  });
+
+  it('keeps the option’s assumption and effort so the headline stays actionable', () => {
+    const h = collapseHeadline([mkBlock()], 12.12);
+    expect(h!.assumption.length).toBeGreaterThan(10);
+    expect(h!.optionLabel).toContain('Overnight');
+  });
+});
+
+describe('analyzeTouShifts — Wave E tiers, effort and classification', () => {
+  it('prices recurring TOU Mid-Peak hours as a lower tier (baseline = tou.midPeak), ranked behind On-Peak blocks', () => {
+    // Summer weekday: 12:00 is On-Peak, 07:00-10:00 is Mid-Peak.
+    const raw = buildData(
+      LOOKBACK_WEEKS,
+      [
+        { weekday: 2, hours: [12], kwh: () => 1.0 },
+        { weekday: 2, hours: [7, 8, 9, 10], kwh: () => 2.0 },
+      ],
+      { year: 2026, month: 7, day: 15 },
+    );
+    const result = run(raw);
+    expect(result.blocks).toHaveLength(2);
+
+    const onPeak = result.blocks.filter((b) => b.tier === 'on-peak');
+    const midPeak = result.blocks.filter((b) => b.tier === 'mid-peak');
+    expect(onPeak).toHaveLength(1);
+    expect(midPeak).toHaveLength(1);
+
+    // The Mid-Peak block is the bigger prize in this fixture (8 kWh/wk), yet
+    // the primary tier always ranks first.
+    expect(midPeak[0].bestMonthlySavings).toBeGreaterThan(onPeak[0].bestMonthlySavings);
+    expect(result.blocks[0].tier).toBe('on-peak');
+    expect(result.blocks[1].tier).toBe('mid-peak');
+
+    expect(midPeak[0].id).toBe('tue-7-11');
+    expect(midPeak[0].baselineRateCents).toBe(15.7); // rates.tou.midPeak
+    expect(midPeak[0].options.map((o) => o.target)).toEqual(['overnight_ulo', 'weekend', 'offpeak_tou']);
+    expect(result.totalMonthlySavings).toBeCloseTo(
+      result.blocks.reduce((a, b) => a + b.bestMonthlySavings, 0),
+      6,
+    );
+  });
+
+  it('keeps Off-Peak hours out of both tiers (weekends and 22:00 stay excluded)', () => {
+    const raw = buildData(
+      LOOKBACK_WEEKS,
+      [
+        { weekday: 6, hours: [12], kwh: () => 2.5 },
+        { weekday: 2, hours: [22], kwh: () => 2.5 },
+      ],
+      { year: 2026, month: 7, day: 15 },
+    );
+    const result = run(raw);
+    expect(result.blocks).toEqual([]);
+    expect(result.emptyReason).toBe('no-recurring-onpeak');
+  });
+
+  it('labels every option with a first-class effort (plan switch or not) and keeps the assumption in sync', () => {
+    const raw = buildData(LOOKBACK_WEEKS, [{ weekday: 3, hours: [12], kwh: () => 2.0 }], { year: 2026, month: 7, day: 15 });
+
+    const byTarget = (plan: 'TOU' | 'Tiered' | 'ULO') =>
+      Object.fromEntries(run(raw, plan).blocks[0].options.map((o) => [o.target, o]));
+
+    const tou = byTarget('TOU');
+    expect(tou.overnight_ulo.effort).toBe('plan-switch-required');
+    expect(tou.weekend.effort).toBe('no-plan-switch');
+    expect(tou.offpeak_tou.effort).toBe('no-plan-switch');
+    expect(tou.overnight_ulo.assumption).toMatch(/requires switching to the ulo plan/i);
+
+    const ulo = byTarget('ULO');
+    expect(ulo.overnight_ulo.effort).toBe('no-plan-switch');
+    expect(ulo.overnight_ulo.assumption).toMatch(/already on ulo/i);
+    expect(ulo.offpeak_tou.effort).toBe('plan-switch-required');
+    expect(ulo.offpeak_tou.assumption).toMatch(/requires switching to tou/i);
+
+    const tiered = byTarget('Tiered');
+    expect(tiered.weekend.effort).toBe('plan-switch-required'); // Tiered has no off-peak window
+    expect(tiered.weekend.assumption).toMatch(/requires switching/i);
+    expect(tiered.overnight_ulo.effort).toBe('plan-switch-required');
+
+    for (const opt of [...Object.values(tou), ...Object.values(ulo), ...Object.values(tiered)]) {
+      expect(opt.assumption.length).toBeGreaterThan(10);
+      expect(['no-plan-switch', 'plan-switch-required']).toContain(opt.effort);
+    }
+  });
+
+  it('attaches a classification and a confidence badge to every block', () => {
+    // Steady 07:00-10:00 every week for 5 weeks → fixed-schedule signature.
+    const steady = buildData(LOOKBACK_WEEKS, [{ weekday: 3, hours: [7, 8, 9], kwh: () => 2.0 }], { year: 2026, month: 7, day: 15 });
+    const fixed = run(steady);
+    expect(fixed.blocks).toHaveLength(1);
+    expect(fixed.blocks[0].classification.signature).toBe('fixed-schedule');
+    expect(fixed.blocks[0].confidence.level).toBe('very-consistent'); // cv 0, 5/5 weeks
+    expect(fixed.blocks[0].intraBlockCv).toBeCloseTo(0, 5);
+
+    // 4 of 5 weeks only → same evidence, one confidence level down.
+    const fourWeeks = buildData(LOOKBACK_WEEKS, [{ weekday: 3, hours: [7, 8, 9], kwh: (w) => (w < 4 ? 2.0 : 0) }], {
+      year: 2026,
+      month: 7,
+      day: 15,
+    }).filter((d) => d.usage_kwh > 0);
+    const partial = run(fourWeeks);
+    expect(partial.blocks[0].weeksSeen).toBe(4);
+    expect(partial.blocks[0].confidence.level).toBe('somewhat');
+
+    // A single-hour block can never be identified — the label says so.
+    const single = run(buildData(LOOKBACK_WEEKS, [{ weekday: 3, hours: [13], kwh: () => 2.5 }], { year: 2026, month: 7, day: 15 }));
+    expect(single.blocks[0].classification.signature).toBe('unidentified');
+    expect(single.blocks[0].classification.label).toBe('Unidentified weekday routine');
+  });
+});
+
+
