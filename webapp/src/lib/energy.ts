@@ -50,15 +50,52 @@ export function getBillingPeriod(refDate: Date, bDay: number): { start: Date; en
   return { start, end };
 }
 
+/**
+ * Legacy single-bucket parse: every reading in the document, merged.
+ * Identical to the pre-UsagePoint behavior for single-meter feeds (which is
+ * what a one-group document produces); the UI now routes through
+ * {@link parseGreenButtonUsagePoints} so multi-meter feeds are never merged
+ * silently.
+ */
 export function parseGreenButtonXML(xmlText: string): DataPoint[] {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    removeNSPrefix: true,
-    isArray: (n) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(n),
-  });
-  const parsed = parser.parse(xmlText);
+  return combineUsagePointGroups(parseGreenButtonUsagePoints(xmlText));
+}
+
+/** The rows you get when the user explicitly picks "combine every meter". */
+export function combineUsagePointGroups(groups: UsagePointGroup[]): DataPoint[] {
+  return groups
+    .flatMap((g) => g.readings)
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+
+/**
+ * --- Multi-UsagePoint Green Button feeds -----------------------------------
+ *
+ * A Green Button feed can carry several UsagePoints (one per meter / rate
+ * class). Every IntervalReading lives inside an <entry>, and that entry links
+ * back to its UsagePoint through an href like
+ *   .../UsagePoint/<uuid>/MeterReading/<uuid>/IntervalBlock/<uuid>
+ * so readings can be attributed per meter instead of silently merged.
+ */
+export type UsagePointGroup = {
+  /** UsagePoint id from the feed links; '' when the feed does not identify one. */
+  id: string;
+  /** Short human label for the picker. */
+  label: string;
+  readings: DataPoint[];
+  /** Number of IntervalBlock elements the readings came from. */
+  blocks: number;
+};
+
+function asArray<T>(v: T | T[] | undefined | null): T[] {
+  if (v === undefined || v === null) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
+/** Depth-first collection of every IntervalReading below `node`, sorted later. */
+function collectReadings(node: unknown, skipKeys: string[] = []): DataPoint[] {
   const readings: DataPoint[] = [];
-  const stack: unknown[] = [parsed];
+  const stack: unknown[] = [node];
   while (stack.length > 0) {
     const obj = stack.pop();
     if (!obj || typeof obj !== 'object') continue;
@@ -67,21 +104,133 @@ export function parseGreenButtonXML(xmlText: string): DataPoint[] {
     } else {
       const objAny = obj as Record<string, unknown>;
       if (objAny.IntervalReading) {
-        const arr = Array.isArray(objAny.IntervalReading) ? objAny.IntervalReading : [objAny.IntervalReading];
+        const arr = asArray<Record<string, unknown>>(objAny.IntervalReading as Record<string, unknown>);
         arr.forEach((ir) => {
-          const irObj = ir as Record<string, unknown>;
-          const timePeriod = irObj.timePeriod as Record<string, unknown> | undefined;
+          const timePeriod = ir.timePeriod as Record<string, unknown> | undefined;
           const s = parseInt((timePeriod?.start as string) || '0', 10);
-          const v = parseInt((irObj.value as string) || '0', 10);
+          const v = parseInt((ir.value as string) || '0', 10);
           if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
         });
       }
       for (const k in objAny) {
-        if (k !== 'IntervalReading' && typeof objAny[k] === 'object') stack.push(objAny[k]);
+        if (k !== 'IntervalReading' && !skipKeys.includes(k) && typeof objAny[k] === 'object') stack.push(objAny[k]);
       }
     }
   }
-  return readings.sort((a, b) => a.timestamp - b.timestamp);
+  return readings;
+}
+
+/** Every <entry> anywhere in the parsed document (feeds nest them differently). */
+function collectEntries(node: unknown): Record<string, unknown>[] {
+  const entries: Record<string, unknown>[] = [];
+  const stack: unknown[] = [node];
+  while (stack.length > 0) {
+    const obj = stack.pop();
+    if (!obj || typeof obj !== 'object') continue;
+    if (Array.isArray(obj)) {
+      obj.forEach((i) => stack.push(i));
+    } else {
+      const objAny = obj as Record<string, unknown>;
+      for (const k in objAny) {
+        if (k === 'entry') asArray<Record<string, unknown>>(objAny.entry as Record<string, unknown>).forEach((e) => entries.push(e));
+        else if (typeof objAny[k] === 'object') stack.push(objAny[k]);
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * UsagePoint id that owns `entry`.
+ *
+ * Href shapes seen in ESPI 1.x feeds:
+ *   rel="self"    .../UsagePoint/<up>                                  (UsagePoint entry)
+ *   rel="self"    .../UsagePoint/<up>/MeterReading/<mr>/IntervalBlock/<ib>
+ *   rel="up"      .../UsagePoint                                       (no id — the feed)
+ *   rel="related" .../UsagePoint/<up>                                  (may be another point)
+ * so `self` wins, then `up`, then any other href that names a point.
+ */
+function pickUsagePointId(entry: Record<string, unknown>): string | null {
+  const links = asArray<Record<string, unknown>>(entry.link as Record<string, unknown>);
+  const relRank = (rel: string) => (rel === 'self' ? 0 : rel === 'up' ? 1 : 2);
+  const ordered = links
+    .map((l) => ({ href: String((l && l['@_href']) || ''), rel: String((l && l['@_rel']) || '') }))
+    .filter((l) => l.href.includes('/UsagePoint/'))
+    .sort((a, b) => relRank(a.rel) - relRank(b.rel));
+  for (const l of ordered) {
+    const m = l.href.match(/\/UsagePoint\/([^/?#"']+)/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/**
+ * Parse a Green Button document into per-UsagePoint groups.
+ * Returns [] when the document carries no readings at all.
+ * Documents that never identify a UsagePoint (plain fixtures, single-meter
+ * exports without links) collapse into exactly one group with id '' — the
+ * historical behavior.
+ */
+export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    removeNSPrefix: true,
+    isArray: (n) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(n),
+  });
+  const parsed = parser.parse(xmlText) as Record<string, unknown>;
+
+  const groups = new Map<string, UsagePointGroup>();
+  const ensure = (id: string): UsagePointGroup => {
+    let g = groups.get(id);
+    if (!g) {
+      g = { id, label: id ? `UsagePoint ${id.slice(0, 8)}` : 'Meter', readings: [], blocks: 0 };
+      groups.set(id, g);
+    }
+    return g;
+  };
+
+  const entries = collectEntries(parsed);
+  for (const entry of entries) {
+    const readings = collectReadings(entry);
+    if (readings.length === 0) continue;
+    const id = pickUsagePointId(entry) || '';
+    const g = ensure(id);
+    g.readings.push(...readings);
+    g.blocks += countIntervalBlocks(entry);
+  }
+
+  // Readings that sit outside any <entry> (non-Atom fixtures) still belong to
+  // one unnamed meter, exactly as the pre-grouping parser treated them.
+  const orphans = collectReadings(parsed, ['entry']);
+  if (orphans.length > 0) ensure('').readings.push(...orphans);
+
+  const out = Array.from(groups.values());
+  for (const g of out) g.readings.sort((a, b) => a.timestamp - b.timestamp);
+  return out.sort((a, b) => {
+    const at = a.readings[0]?.timestamp ?? 0;
+    const bt = b.readings[0]?.timestamp ?? 0;
+    if (at !== bt) return at - bt;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function countIntervalBlocks(node: unknown): number {
+  let n = 0;
+  const stack: unknown[] = [node];
+  while (stack.length > 0) {
+    const obj = stack.pop();
+    if (!obj || typeof obj !== 'object') continue;
+    if (Array.isArray(obj)) {
+      obj.forEach((i) => stack.push(i));
+    } else {
+      const objAny = obj as Record<string, unknown>;
+      if (objAny.IntervalBlock) n += asArray(objAny.IntervalBlock).length;
+      for (const k in objAny) {
+        if (k !== 'IntervalBlock' && typeof objAny[k] === 'object') stack.push(objAny[k]);
+      }
+    }
+  }
+  return n;
 }
 
 export function categorizeTOU(date: Date): string {
@@ -317,4 +466,199 @@ export function isWeekendBar(zoomLevel: string, key: string | undefined): boolea
 
 export function getBarColor(zoomLevel: string, key: string | undefined): string {
   return isWeekendBar(zoomLevel, key) ? '#F97316' : '#2563EB';
+}
+
+/* ==========================================================================
+ * CSV export of the processed per-interval table
+ * ========================================================================== */
+
+export const CSV_COLUMNS = [
+  'datetime',
+  'usage_kwh',
+  'tou_category',
+  'ulo_category',
+  'costTOU',
+  'costTiered',
+  'costULO',
+  'activeRateSet.effectiveDate',
+] as const;
+
+/** Round away binary-float noise without changing meaningful precision. */
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+function csvCell(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/**
+ * Serialize the processed per-interval table to CSV: header row + one row per
+ * reading, in the order given. Costs are rounded to 4 decimals, kWh to 3
+ * (Wh resolution), datetime is ISO-8601 UTC.
+ */
+export function processedDataToCSV(rows: ProcessedPoint[]): string {
+  const lines: string[] = [CSV_COLUMNS.join(',')];
+  for (const d of rows) {
+    lines.push(
+      [
+        d.dateObj.toISOString(),
+        String(roundTo(d.usage_kwh, 3)),
+        d.touCategory,
+        d.uloCategory,
+        String(roundTo(d.costTOU, 4)),
+        String(roundTo(d.costTiered, 4)),
+        String(roundTo(d.costULO, 4)),
+        d.activeRateSet.effectiveDate,
+      ]
+        .map(csvCell)
+        .join(','),
+    );
+  }
+  return lines.join('\n') + '\n';
+}
+
+/** `energy_export_<start>_<end>.csv` — dates are `yyyy-MM-dd`, ISO order. */
+export function csvExportFilename(startDate: string, endDate: string): string {
+  const start = startDate || 'no-data';
+  const end = endDate || 'no-data';
+  return `energy_export_${start}_${end}.csv`;
+}
+
+/** Filename derived from the rows actually being exported (min/max day). */
+export function csvFilenameForRows(rows: ProcessedPoint[]): string {
+  if (rows.length === 0) return csvExportFilename('', '');
+  let start = rows[0].dayStr;
+  let end = rows[0].dayStr;
+  for (const r of rows) {
+    if (r.dayStr < start) start = r.dayStr;
+    if (r.dayStr > end) end = r.dayStr;
+  }
+  return csvExportFilename(start, end);
+}
+
+/* ==========================================================================
+ * True-bill estimate — LOCAL user inputs, never derived from /api/rates
+ * (the API only carries commodity rates; delivery/regulatory/HST differ by
+ * utility and are supplied by the user here).
+ * ========================================================================== */
+
+export type ExtraCharges = {
+  /** Delivery, $/kWh. */
+  deliveryPerKwh: string;
+  /** Delivery, flat $/month. */
+  deliveryFlat: string;
+  /** Regulatory, $/kWh. */
+  regulatoryPerKwh: string;
+  /** HST percentage (Ontario default hint: 13). */
+  hstPct: string;
+};
+
+/** Every field starts empty: with nothing set the estimate stays variable-only. */
+export const EMPTY_EXTRA_CHARGES: ExtraCharges = {
+  deliveryPerKwh: '',
+  deliveryFlat: '',
+  regulatoryPerKwh: '',
+  hstPct: '',
+};
+
+export const BASELINE_ESTIMATE_CAPTION =
+  'Estimate covers variable energy charges only — it does not include fixed delivery charges, regulatory charges, or HST.';
+
+/** Raw field text → a non-negative number, or null when unset/unusable. */
+export function parseChargeInput(raw: string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  const text = String(raw).trim();
+  if (text === '') return null;
+  const value = Number(text);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return value;
+}
+
+export function hasExtraCharges(charges: ExtraCharges): boolean {
+  return (
+    parseChargeInput(charges.deliveryPerKwh) !== null ||
+    parseChargeInput(charges.deliveryFlat) !== null ||
+    parseChargeInput(charges.regulatoryPerKwh) !== null ||
+    parseChargeInput(charges.hstPct) !== null
+  );
+}
+
+/** Distinct calendar months covered by the window (flat $/month is charged per month). */
+export function countMonthsInView(rows: ProcessedPoint[]): number {
+  const months = new Set(rows.map((r) => r.dayStr.slice(0, 7)));
+  return months.size;
+}
+
+export type TrueBill = {
+  variable: number;
+  delivery: number;
+  regulatory: number;
+  hst: number;
+  total: number;
+  /** Each applied input, resolved to a number (null = not supplied). */
+  deliveryPerKwh: number | null;
+  deliveryFlat: number | null;
+  regulatoryPerKwh: number | null;
+  hstPct: number | null;
+  months: number;
+  totalKwh: number;
+  /** Human labels for exactly what the figure includes. */
+  included: string[];
+  caption: string;
+};
+
+/**
+ * variable + delivery + regulatory + HST.
+ * Returns null when every input is empty — that is the "behave exactly like
+ * today" path (estimate = variable charges only).
+ */
+export function calculateTrueBill(input: {
+  variableCost: number;
+  totalKwh: number;
+  months: number;
+  charges: ExtraCharges;
+}): TrueBill | null {
+  const { variableCost, totalKwh, months, charges } = input;
+  const deliveryPerKwh = parseChargeInput(charges.deliveryPerKwh);
+  const deliveryFlat = parseChargeInput(charges.deliveryFlat);
+  const regulatoryPerKwh = parseChargeInput(charges.regulatoryPerKwh);
+  const hstPct = parseChargeInput(charges.hstPct);
+  if (
+    deliveryPerKwh === null &&
+    deliveryFlat === null &&
+    regulatoryPerKwh === null &&
+    hstPct === null
+  ) {
+    return null;
+  }
+
+  const delivery = (deliveryPerKwh ?? 0) * totalKwh + (deliveryFlat ?? 0) * months;
+  const regulatory = (regulatoryPerKwh ?? 0) * totalKwh;
+  const preTax = variableCost + delivery + regulatory;
+  const hst = hstPct === null ? 0 : preTax * (hstPct / 100);
+  const total = preTax + hst;
+
+  const included: string[] = ['variable energy charges'];
+  if (deliveryPerKwh !== null) included.push(`delivery ($${deliveryPerKwh.toFixed(4)}/kWh)`);
+  if (deliveryFlat !== null) included.push(`delivery ($${deliveryFlat.toFixed(2)}/month)`);
+  if (regulatoryPerKwh !== null) included.push(`regulatory ($${regulatoryPerKwh.toFixed(4)}/kWh)`);
+  if (hstPct !== null) included.push(`HST (${hstPct}%)`);
+
+  return {
+    variable: variableCost,
+    delivery,
+    regulatory,
+    hst,
+    total,
+    deliveryPerKwh,
+    deliveryFlat,
+    regulatoryPerKwh,
+    hstPct,
+    months,
+    totalKwh,
+    included,
+    caption: `Includes: ${included.join(' + ')}.`,
+  };
 }

@@ -22,6 +22,9 @@ import {
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation,
 } from '@/hooks/useDashboard';
+import { ExportCsvButton } from '@/components/ExportCsvButton';
+import { UsagePointPicker } from '@/components/UsagePointPicker';
+import { TrueBillEstimate } from '@/components/TrueBillEstimate';
 
 export default function Dashboard() {
   const {
@@ -29,6 +32,7 @@ export default function Dashboard() {
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
+    pendingUpload, chooseUsagePoint, cancelUsagePoint,
   } = useEnergyData();
 
   const [showVampireHelp, setShowVampireHelp] = React.useState(false);
@@ -90,6 +94,16 @@ export default function Dashboard() {
              {!parsing && <button onClick={() => setShowUploadModal(false)} className="mt-4 w-full py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-xs md:hidden">Cancel</button>}
           </div>
         </div>
+      )}
+
+      {/* Multi-UsagePoint picker: only when the feed carried more than one meter */}
+      {pendingUpload && (
+        <UsagePointPicker
+          fileName={pendingUpload.fileName}
+          groups={pendingUpload.groups}
+          onChoose={chooseUsagePoint}
+          onCancel={cancelUsagePoint}
+        />
       )}
 
       {/* Nav Controls */}
@@ -216,6 +230,10 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
+            <div className="mt-4 md:mt-6 flex justify-end">
+              <ExportCsvButton rows={filteredData} />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
@@ -234,6 +252,13 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+
+          <TrueBillEstimate
+            plan={userPlan}
+            startDate={startDate}
+            endDate={endDate}
+            windowData={filteredData}
+          />
 
           {comparison && (
             <div className="bg-black text-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-yellow-400 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase">
@@ -257,6 +282,10 @@ export default function Dashboard() {
 
       {viewMode === 'Insights' && (
         <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase">
+          <div className="flex justify-end">
+            <ExportCsvButton rows={filteredData} />
+          </div>
+
           <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
              <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase"><AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} /><h3 className="text-2xl md:text-4xl">Usage Anomalies</h3></div>
              {anomalies.length > 0 ? (

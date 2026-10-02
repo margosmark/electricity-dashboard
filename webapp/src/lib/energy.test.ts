@@ -17,6 +17,17 @@ import {
   getBarColor,
   getTouRateKey,
   getUloRateKey,
+  parseGreenButtonUsagePoints,
+  processedDataToCSV,
+  csvExportFilename,
+  csvFilenameForRows,
+  CSV_COLUMNS,
+  calculateTrueBill,
+  parseChargeInput,
+  hasExtraCharges,
+  countMonthsInView,
+  EMPTY_EXTRA_CHARGES,
+  BASELINE_ESTIMATE_CAPTION,
   type RateSet,
   type ProcessedPoint,
   type DataPoint,
@@ -384,6 +395,342 @@ describe('getBarColor', () => {
 
   it('returns blue for non-daily views', () => {
     expect(getBarColor('weekly', '2024-01-06')).toBe('#2563EB');
-    expect(getBarColor('monthly', '2024-01-06')).toBe('#2563EB');
+    expect(getBarColor('hourly', '2024-01-08')).toBe('#2563EB');
+  });
+});
+
+/* ========================================================================== *
+ * Wave B — CSV export of the processed per-interval table
+ * ========================================================================== */
+
+describe('processedDataToCSV', () => {
+  const rows: ProcessedPoint[] = [
+    makeProcessedPoint({
+      timestamp: 1704067200, usage_kwh: 1.5,
+      costTOU: 0.123456, costTiered: 0.18, costULO: 0.0585,
+    }),
+    makeProcessedPoint({
+      timestamp: 1704070800, usage_kwh: 2,
+      costTOU: 0.2, costTiered: 0.24, costULO: 0.078,
+    }),
+  ];
+
+  it('emits exactly the documented columns as the header row', () => {
+    expect(CSV_COLUMNS).toEqual([
+      'datetime', 'usage_kwh', 'tou_category', 'ulo_category',
+      'costTOU', 'costTiered', 'costULO', 'activeRateSet.effectiveDate',
+    ]);
+    const csv = processedDataToCSV(rows);
+    expect(csv.split('\n')[0]).toBe(CSV_COLUMNS.join(','));
+  });
+
+  it('serializes one row per interval with ISO datetime, rounded costs and rate date', () => {
+    const lines = processedDataToCSV(rows).trim().split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe(
+      '2024-01-01T00:00:00.000Z,1.5,Off-Peak,Overnight,0.1235,0.18,0.0585,2023-01-01',
+    );
+    expect(lines[2]).toBe(
+      '2024-01-01T01:00:00.000Z,2,Off-Peak,Overnight,0.2,0.24,0.078,2023-01-01',
+    );
+  });
+
+  it('follows the input order rather than re-sorting', () => {
+    const reversed = [...rows].reverse();
+    const lines = processedDataToCSV(reversed).trim().split('\n');
+    expect(lines[1].startsWith('2024-01-01T01:00:00.000Z')).toBe(true);
+  });
+
+  it('quotes cells containing commas or quotes (RFC 4180)', () => {
+    const tricky = makeProcessedPoint({
+      timestamp: 1704067200,
+      touCategory: 'Weird, "quoted"',
+    });
+    const csv = processedDataToCSV([tricky]);
+    expect(csv).toContain('"Weird, ""quoted"""');
+    // Plain cells must not gain stray quotes.
+    expect(csv).toContain(',Overnight,');
+  });
+
+  it('returns only the header for an empty table', () => {
+    expect(processedDataToCSV([])).toBe(CSV_COLUMNS.join(',') + '\n');
+  });
+});
+
+describe('csv export filename', () => {
+  it('follows the energy_export_<start>_<end>.csv pattern', () => {
+    expect(csvExportFilename('2024-01-01', '2024-01-31')).toBe(
+      'energy_export_2024-01-01_2024-01-31.csv',
+    );
+  });
+
+  it('derives start/end from the exported rows', () => {
+    const d1 = new Date(1704153600 * 1000);
+    const d2 = new Date(1704240000 * 1000);
+    const spanning = [
+      makeProcessedPoint({ timestamp: 1704240000 }),
+      makeProcessedPoint({ timestamp: 1704153600 }),
+    ];
+    const start = format(d1, 'yyyy-MM-dd');
+    const end = format(d2, 'yyyy-MM-dd');
+    expect(csvFilenameForRows(spanning)).toBe(`energy_export_${start}_${end}.csv`);
+  });
+
+  it('is still deterministic with no rows', () => {
+    expect(csvFilenameForRows([])).toBe('energy_export_no-data_no-data.csv');
+  });
+});
+
+/* ========================================================================== *
+ * Wave B — multi-UsagePoint Green Button feeds
+ * ========================================================================== */
+
+const SINGLE_POINT_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">
+  <entry>
+    <id>urn:uuid:entry-block-a</id>
+    <link href="https://utility.example/espi/UsagePoint/aaaaaaaa-1111-2222-3333-444444444444/MeterReading/mr-a/IntervalBlock/ib-a" rel="self" type="espi-entry/IntervalBlock"/>
+    <content>
+      <espi:IntervalBlock>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704067200</espi:start></espi:timePeriod><espi:value>1500</espi:value></espi:IntervalReading>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704070800</espi:start></espi:timePeriod><espi:value>2000</espi:value></espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+</feed>`;
+
+const TWO_POINT_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">
+  <entry>
+    <id>urn:uuid:ltp</id>
+    <link href="https://utility.example/espi/UsagePoint" rel="up" type="espi-feed/LocalTimeParameters"/>
+    <content><espi:LocalTimeParameters><espi:tzOffset>-18000</espi:tzOffset></espi:LocalTimeParameters></content>
+  </entry>
+  <entry>
+    <id>urn:uuid:block-a</id>
+    <link href="https://utility.example/espi/UsagePoint/aaaaaaaa-1111-2222-3333-444444444444" rel="up" type="espi-feed/MeterReading"/>
+    <link href="https://utility.example/espi/UsagePoint/aaaaaaaa-1111-2222-3333-444444444444/MeterReading/mr-a/IntervalBlock/ib-a" rel="self" type="espi-entry/IntervalBlock"/>
+    <link href="https://utility.example/espi/UsagePoint/bbbbbbbb-1111-2222-3333-444444444444" rel="related" type="espi-entry/UsagePoint"/>
+    <content>
+      <espi:IntervalBlock>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704067200</espi:start></espi:timePeriod><espi:value>1500</espi:value></espi:IntervalReading>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704070800</espi:start></espi:timePeriod><espi:value>2000</espi:value></espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:block-b</id>
+    <link href="https://utility.example/espi/UsagePoint/bbbbbbbb-1111-2222-3333-444444444444/MeterReading/mr-b/IntervalBlock/ib-b" rel="self" type="espi-entry/IntervalBlock"/>
+    <content>
+      <espi:IntervalBlock>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704067200</espi:start></espi:timePeriod><espi:value>9000</espi:value></espi:IntervalReading>
+        <espi:IntervalReading><espi:timePeriod><espi:start>1704070800</espi:start></espi:timePeriod><espi:value>4000</espi:value></espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+</feed>`;
+
+describe('parseGreenButtonUsagePoints', () => {
+  it('single UsagePoint → exactly one group, readings identical to the legacy parse', () => {
+    const groups = parseGreenButtonUsagePoints(SINGLE_POINT_XML);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].id).toBe('aaaaaaaa-1111-2222-3333-444444444444');
+    expect(groups[0].label).toContain('aaaaaaaa');
+    expect(groups[0].blocks).toBe(1);
+    expect(groups[0].readings).toEqual(parseGreenButtonXML(SINGLE_POINT_XML));
+    expect(groups[0].readings).toHaveLength(2);
+  });
+
+  it('two UsagePoints → two groups holding only their own rows', () => {
+    const groups = parseGreenButtonUsagePoints(TWO_POINT_XML);
+    expect(groups).toHaveLength(2);
+    const [a, b] = groups;
+    expect(a.id).toBe('aaaaaaaa-1111-2222-3333-444444444444');
+    expect(b.id).toBe('bbbbbbbb-1111-2222-3333-444444444444');
+    expect(a.readings.map((r) => r.usage_kwh)).toEqual([1.5, 2.0]);
+    expect(b.readings.map((r) => r.usage_kwh)).toEqual([9.0, 4.0]);
+    // The entry that merely links to the other point must not donate rows to it.
+    expect(a.readings).toHaveLength(2);
+    expect(b.readings).toHaveLength(2);
+  });
+
+  it('combining every group reproduces the legacy merged read', () => {
+    const groups = parseGreenButtonUsagePoints(TWO_POINT_XML);
+    const combined = groups
+      .flatMap((g) => g.readings)
+      .sort((x, y) => x.timestamp - y.timestamp);
+    expect(combined).toEqual(parseGreenButtonXML(TWO_POINT_XML));
+    expect(combined).toHaveLength(4);
+  });
+
+  it('groups with no UsagePoint link collapse into one unnamed meter', () => {
+    const xml = `<?xml version="1.0"?><feed><entry><IntervalBlock>
+      <IntervalReading><timePeriod><start>1704067200</start></timePeriod><value>1500</value></IntervalReading>
+    </IntervalBlock></entry></feed>`;
+    const groups = parseGreenButtonUsagePoints(xml);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].id).toBe('');
+    expect(groups[0].readings).toHaveLength(1);
+  });
+
+  it('readings outside any entry stay in the unnamed meter (legacy behavior)', () => {
+    const xml = `<?xml version="1.0"?><feed>
+      <IntervalReading><timePeriod><start>1704067200</start></timePeriod><value>1500</value></IntervalReading>
+      <entry><IntervalBlock>
+        <IntervalReading><timePeriod><start>1704070800</start></timePeriod><value>2000</value></IntervalReading>
+      </IntervalBlock></entry>
+    </feed>`;
+    const groups = parseGreenButtonUsagePoints(xml);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].readings).toHaveLength(2);
+    expect(parseGreenButtonXML(xml)).toHaveLength(2);
+  });
+
+  it('a feed with no readings yields no groups at all', () => {
+    expect(parseGreenButtonUsagePoints('<?xml version="1.0"?><feed><entry></entry></feed>')).toEqual([]);
+    expect(parseGreenButtonXML('<?xml version="1.0"?><feed><entry></entry></feed>')).toEqual([]);
+  });
+
+  it('groups are ordered by their first reading (stable for the picker)', () => {
+    const groups = parseGreenButtonUsagePoints(TWO_POINT_XML);
+    const expected = [...groups].sort(
+      (x, y) => (x.readings[0].timestamp - y.readings[0].timestamp) || x.id.localeCompare(y.id),
+    );
+    expect(groups.map((g) => g.id)).toEqual(expected.map((g) => g.id));
+  });
+});
+
+/* ========================================================================== *
+ * Wave B — true-bill estimate from local user inputs
+ * ========================================================================== */
+
+describe('parseChargeInput', () => {
+  it('treats empty / whitespace as unset', () => {
+    expect(parseChargeInput('')).toBeNull();
+    expect(parseChargeInput('   ')).toBeNull();
+    expect(parseChargeInput(null)).toBeNull();
+    expect(parseChargeInput(undefined)).toBeNull();
+  });
+
+  it('rejects garbage and negatives instead of coercing them to zero', () => {
+    expect(parseChargeInput('abc')).toBeNull();
+    expect(parseChargeInput('-2')).toBeNull();
+    expect(parseChargeInput('Infinity')).toBeNull();
+  });
+
+  it('parses plain and padded numbers, and accepts an explicit zero', () => {
+    expect(parseChargeInput('13')).toBe(13);
+    expect(parseChargeInput(' 0.0125 ')).toBe(0.0125);
+    expect(parseChargeInput('0')).toBe(0);
+  });
+});
+
+describe('hasExtraCharges', () => {
+  it('is false for the seeded-empty state', () => {
+    expect(hasExtraCharges(EMPTY_EXTRA_CHARGES)).toBe(false);
+  });
+
+  it('is true as soon as any single field holds a number', () => {
+    expect(hasExtraCharges({ ...EMPTY_EXTRA_CHARGES, hstPct: '13' })).toBe(true);
+    expect(hasExtraCharges({ ...EMPTY_EXTRA_CHARGES, deliveryFlat: '15' })).toBe(true);
+    expect(hasExtraCharges({ ...EMPTY_EXTRA_CHARGES, deliveryPerKwh: '0.01' })).toBe(true);
+    expect(hasExtraCharges({ ...EMPTY_EXTRA_CHARGES, regulatoryPerKwh: '0.0005' })).toBe(true);
+  });
+
+  it('stays false when the fields only hold unusable text', () => {
+    expect(hasExtraCharges({ ...EMPTY_EXTRA_CHARGES, hstPct: 'abc' })).toBe(false);
+  });
+});
+
+describe('countMonthsInView', () => {
+  it('counts distinct calendar months in the window', () => {
+    const rows = [
+      makeProcessedPoint({ timestamp: 1704153600 }),
+      makeProcessedPoint({ timestamp: 1704240000 }),
+      makeProcessedPoint({ timestamp: 1707998400 }), // 2024-02-15 12:00Z — safely February in any TZ
+    ];
+    expect(countMonthsInView(rows)).toBe(2);
+  });
+
+  it('is zero for an empty window', () => {
+    expect(countMonthsInView([])).toBe(0);
+  });
+});
+
+describe('calculateTrueBill', () => {
+  const base = { variableCost: 10, totalKwh: 100, months: 1 };
+
+  it('returns null while every input is empty, so today behavior is untouched', () => {
+    expect(calculateTrueBill({ ...base, charges: EMPTY_EXTRA_CHARGES })).toBeNull();
+  });
+
+  it('returns null when the fields hold only unusable text', () => {
+    expect(
+      calculateTrueBill({ ...base, charges: { ...EMPTY_EXTRA_CHARGES, hstPct: 'abc', deliveryPerKwh: '-1' } }),
+    ).toBeNull();
+  });
+
+  it('stacks delivery $/kWh + regulatory $/kWh + HST on top of the variable cost', () => {
+    const bill = calculateTrueBill({
+      ...base,
+      charges: { deliveryPerKwh: '0.01', deliveryFlat: '', regulatoryPerKwh: '0.0005', hstPct: '13' },
+    });
+    expect(bill).not.toBeNull();
+    expect(bill!.variable).toBe(10);
+    expect(bill!.delivery).toBeCloseTo(1, 10); // 0.01 * 100 kWh
+    expect(bill!.regulatory).toBeCloseTo(0.05, 10); // 0.0005 * 100 kWh
+    expect(bill!.hst).toBeCloseTo(0.13 * (10 + 1 + 0.05), 10);
+    expect(bill!.total).toBeCloseTo(12.4865, 10);
+    expect(bill!.caption).toContain('variable energy charges');
+    expect(bill!.caption).toContain('delivery ($0.0100/kWh)');
+    expect(bill!.caption).toContain('regulatory ($0.0005/kWh)');
+    expect(bill!.caption).toContain('HST (13%)');
+  });
+
+  it('charges flat delivery once per month present in the window', () => {
+    const bill = calculateTrueBill({
+      ...base,
+      months: 3,
+      charges: { ...EMPTY_EXTRA_CHARGES, deliveryFlat: '15' },
+    });
+    expect(bill!.delivery).toBe(45);
+    expect(bill!.regulatory).toBe(0);
+    expect(bill!.hst).toBe(0); // HST left empty → not applied
+    expect(bill!.total).toBeCloseTo(55, 10);
+    expect(bill!.caption).toContain('delivery ($15.00/month)');
+  });
+
+  it('allows both delivery modes at the same time', () => {
+    const bill = calculateTrueBill({
+      ...base,
+      charges: { ...EMPTY_EXTRA_CHARGES, deliveryPerKwh: '0.01', deliveryFlat: '15' },
+    });
+    expect(bill!.delivery).toBeCloseTo(16, 10);
+  });
+
+  it('applies HST to variable + delivery + regulatory (not just variable)', () => {
+    const bill = calculateTrueBill({
+      ...base,
+      charges: { ...EMPTY_EXTRA_CHARGES, deliveryPerKwh: '0.01', hstPct: '13' },
+    });
+    expect(bill!.hst).toBeCloseTo(0.13 * (10 + 1), 10);
+    expect(bill!.total).toBeCloseTo(11 + 1.43, 10);
+    expect(bill!.included).toEqual(['variable energy charges', 'delivery ($0.0100/kWh)', 'HST (13%)']);
+  });
+
+  it('does not invent HST when the HST field is empty', () => {
+    const bill = calculateTrueBill({
+      ...base,
+      charges: { ...EMPTY_EXTRA_CHARGES, deliveryPerKwh: '0.01' },
+    });
+    expect(bill!.hst).toBe(0);
+    expect(bill!.caption).not.toContain('HST');
+    expect(bill!.total).toBeCloseTo(11, 10);
+  });
+
+  it('keeps the baseline caption free of any "included" claim', () => {
+    expect(BASELINE_ESTIMATE_CAPTION).toContain(
+      'does not include fixed delivery charges, regulatory charges, or HST',
+    );
   });
 });

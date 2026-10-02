@@ -11,9 +11,12 @@
 import { useState, useEffect, useMemo, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
-  type DataPoint, type RateSet,
-  getBillingPeriod, parseGreenButtonXML,
+  type DataPoint, type RateSet, type UsagePointGroup,
+  getBillingPeriod, parseGreenButtonUsagePoints,
+  EMPTY_EXTRA_CHARGES, type ExtraCharges,
 } from "@/lib/energy";
+
+export type { ExtraCharges };
 
 /**
  * The RateSet in force on the newest processed reading — plan cards and any
@@ -45,6 +48,22 @@ export function useEnergyData() {
   const [billingDay, setBillingDayState] = useState<number>(1);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  /** Multi-meter upload waiting for the user to pick which point to load. */
+  const [pendingUpload, setPendingUpload] = useState<{
+    fileName: string;
+    groups: UsagePointGroup[];
+  } | null>(null);
+
+  /** Import rows: persist, anchor the billing window, close the upload modal. */
+  const commitReadings = (data: DataPoint[]) => {
+    setRawData(data);
+    localStorage.setItem("energy_data", JSON.stringify(data));
+    const last = new Date(data[data.length - 1].timestamp * 1000);
+    const period = getBillingPeriod(last, billingDay);
+    setStartDate(format(period.start, "yyyy-MM-dd"));
+    setEndDate(format(period.end, "yyyy-MM-dd"));
+    setShowUploadModal(false);
+  };
 
   // --- Start sequence ---
   useEffect(() => {
@@ -86,16 +105,16 @@ export function useEnergyData() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const data = parseGreenButtonXML(ev.target?.result as string);
-        if (data.length > 0) {
-          setRawData(data);
-          localStorage.setItem("energy_data", JSON.stringify(data));
-          const last = new Date(data[data.length - 1].timestamp * 1000);
-          const period = getBillingPeriod(last, billingDay);
-          setStartDate(format(period.start, "yyyy-MM-dd"));
-          setEndDate(format(period.end, "yyyy-MM-dd"));
+        const groups = parseGreenButtonUsagePoints(ev.target?.result as string);
+        const total = groups.reduce((n, g) => n + g.readings.length, 0);
+        if (total === 0) return; // nothing readable: leave the modal open, as before
+        if (groups.length > 1) {
+          // More than one meter/rate class in the file: never merge silently.
+          setPendingUpload({ fileName: file.name, groups });
           setShowUploadModal(false);
+          return;
         }
+        commitReadings(groups[0].readings);
       } catch {
         alert("Parse Error");
       } finally {
@@ -103,6 +122,18 @@ export function useEnergyData() {
       }
     };
     reader.readAsText(file);
+  };
+
+  /** Load exactly the rows the user picked (one UsagePoint, or all of them). */
+  const chooseUsagePoint = (readings: DataPoint[]) => {
+    setPendingUpload(null);
+    if (readings.length > 0) commitReadings(readings);
+  };
+
+  /** Back out of the picker without importing anything. */
+  const cancelUsagePoint = () => {
+    setPendingUpload(null);
+    setShowUploadModal(true);
   };
 
   const emergencyReset = () => {
@@ -143,6 +174,7 @@ export function useEnergyData() {
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
+    pendingUpload, chooseUsagePoint, cancelUsagePoint,
   };
 }
 
@@ -236,4 +268,59 @@ export function useZoomNavigation(
   };
 
   return { zoomLevel, setZoomLevel, zoomTarget, handleBarClick, goBack, setZoomLevelAndClear, navigatePeriod };
+}
+
+/* --------------------------------------------------------------------------
+ * Local bill add-ons (delivery / regulatory / HST).
+ *
+ * These are user-owned inputs, never fetched: /api/rates only carries OEB
+ * commodity rates, which are a different (and much smaller) part of the bill.
+ * Every field seeds empty and stays empty until the user types something, so
+ * the estimate behaves exactly as it did before this feature existed.
+ * -------------------------------------------------------------------------- */
+
+export const EXTRA_CHARGES_KEY = "extra_charges";
+
+function readStoredCharges(raw: string): ExtraCharges {
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" ? v : "");
+  return {
+    deliveryPerKwh: text(parsed.deliveryPerKwh),
+    deliveryFlat: text(parsed.deliveryFlat),
+    regulatoryPerKwh: text(parsed.regulatoryPerKwh),
+    hstPct: text(parsed.hstPct),
+  };
+}
+
+export function useExtraCharges() {
+  // Lazy init (not an effect): this only ever mounts client-side — Dashboard
+  // still shows its loading screen on the server — so reading storage here
+  // cannot cause a hydration mismatch, and it avoids a cascading render.
+  const [charges, setCharges] = useState<ExtraCharges>(() => {
+    if (typeof window === "undefined") return EMPTY_EXTRA_CHARGES;
+    try {
+      const raw = window.localStorage.getItem(EXTRA_CHARGES_KEY);
+      if (raw) return readStoredCharges(raw);
+    } catch { /* unreadable storage = behave like a first-time user */ }
+    return EMPTY_EXTRA_CHARGES;
+  });
+
+  const setCharge = (field: keyof ExtraCharges, value: string) => {
+    setCharges((prev) => {
+      const next: ExtraCharges = { ...prev, [field]: value };
+      try {
+        localStorage.setItem(EXTRA_CHARGES_KEY, JSON.stringify(next));
+      } catch { /* quota exceeded: keep the in-memory value */ }
+      return next;
+    });
+  };
+
+  const resetCharges = () => {
+    setCharges(EMPTY_EXTRA_CHARGES);
+    try {
+      localStorage.removeItem(EXTRA_CHARGES_KEY);
+    } catch { /* nothing to remove */ }
+  };
+
+  return { charges, setCharge, resetCharges };
 }
