@@ -19,6 +19,17 @@ import {
 export type { ExtraCharges };
 
 /**
+ * One file inside a 2+ file upload, waiting on the merge review screen.
+ * `chosen` stays null for a multi-meter file until the user picks — a meter
+ * is never merged silently.
+ */
+export type MergeFileChoice = {
+  name: string;
+  groups: UsagePointGroup[];
+  chosen: number | "combine" | null;
+};
+
+/**
  * Which scope button the current startDate/endDate window belongs to.
  * `Custom` = a window that is neither a billing period nor a calendar month
  * (either the user typed dates, or first load picked a data-anchored window).
@@ -62,6 +73,9 @@ export function useEnergyData() {
     fileName: string;
     groups: UsagePointGroup[];
   } | null>(null);
+
+  /** 2+ files waiting on the merge review screen (range + rows before import). */
+  const [pendingMerge, setPendingMerge] = useState<MergeFileChoice[] | null>(null);
 
   /**
    * Open a freshly loaded dataset in a window that is actually full of data.
@@ -121,30 +135,71 @@ export function useEnergyData() {
     return () => { mounted = false; };
   }, []);
 
+  /**
+   * Accept ONE file (the historical path, unchanged) or 2+ files at once.
+   *
+   * Multi-file never merges on the spot: the readings go to the merge review
+   * screen first, which shows the merged range, the row count and how many
+   * timestamps were dropped before anything touches localStorage.
+   */
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
     setParsing(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const groups = parseGreenButtonUsagePoints(ev.target?.result as string);
-        const total = groups.reduce((n, g) => n + g.readings.length, 0);
+
+    const parseOne = (file: File): Promise<MergeFileChoice> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
+        reader.onload = (ev) => {
+          try {
+            const groups = parseGreenButtonUsagePoints(ev.target?.result as string);
+            // A single-meter file is pre-picked; a multi-meter one stays null
+            // until the review screen asks.
+            resolve({ name: file.name, groups, chosen: groups.length === 1 ? 0 : null });
+          } catch {
+            reject(new Error(`Parse Error in ${file.name}`));
+          }
+        };
+        reader.readAsText(file);
+      });
+
+    Promise.all(files.map(parseOne))
+      .then((results) => {
+        const total = results.reduce(
+          (n, r) => n + r.groups.reduce((m, g) => m + g.readings.length, 0),
+          0,
+        );
         if (total === 0) return; // nothing readable: leave the modal open, as before
-        if (groups.length > 1) {
-          // More than one meter/rate class in the file: never merge silently.
-          setPendingUpload({ fileName: file.name, groups });
-          setShowUploadModal(false);
+
+        if (results.length === 1) {
+          const only = results[0];
+          if (only.groups.length > 1) {
+            setPendingUpload({ fileName: only.name, groups: only.groups });
+            setShowUploadModal(false);
+            return;
+          }
+          commitReadings(only.groups[0].readings);
           return;
         }
-        commitReadings(groups[0].readings);
-      } catch {
-        alert("Parse Error");
-      } finally {
-        setParsing(false);
-      }
-    };
-    reader.readAsText(file);
+        setPendingMerge(results);
+        setShowUploadModal(false);
+      })
+      .catch(() => alert("Parse Error"))
+      .finally(() => setParsing(false));
+  };
+
+  /** Import the rows the merge review screen computed. */
+  const chooseMerge = (readings: DataPoint[]) => {
+    setPendingMerge(null);
+    if (readings.length > 0) commitReadings(readings);
+  };
+
+  /** Back out of the merge review without importing anything. */
+  const cancelMerge = () => {
+    setPendingMerge(null);
+    setShowUploadModal(true);
   };
 
   /** Load exactly the rows the user picked (one UsagePoint, or all of them). */
@@ -200,6 +255,7 @@ export function useEnergyData() {
     viewScope, setViewScope,
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
+    pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
   };
 }
 

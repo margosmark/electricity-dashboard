@@ -17,6 +17,9 @@ import { type ChartDataItem, type ProcessedPoint, type RateSet, getBarColor } fr
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
+import BillProjectionBanner from '@/components/BillProjectionBanner';
+import type { BillProjection } from '@/lib/billProjection';
+import type { WfhShare } from '@/lib/energy';
 
 export type PlanId = 'TOU' | 'Tiered' | 'ULO';
 export type Comparison = { TOU: number; Tiered: number; ULO: number };
@@ -38,16 +41,38 @@ export type ChartViewProps = {
   filteredData: ProcessedPoint[];
   startDate: string;
   endDate: string;
+  /** "This month's bill" projection (gated — see lib/billProjection). */
+  projection: BillProjection;
+  /** Share of the visible window that lands in the 07–19 weekday window. */
+  wfh: WfhShare | null;
 };
 
 export default function ChartView({
   zoomLevel, zoomTarget, goBack, navigatePeriod, setZoomLevelAndClear,
   activeChartData, handleBarClick, selectionCost,
   userPlan, setUserPlan, comparison, activeRateSet,
-  filteredData, startDate, endDate,
+  filteredData, startDate, endDate, projection, wfh,
 }: ChartViewProps) {
   return (
     <div className="space-y-6 md:space-y-10" data-testid="chart-view">
+      {/* This month's bill — month-to-date + recent average, gated on day 5. */}
+      <BillProjectionBanner projection={projection} />
+
+      {/* Context on WHY a plan wins in this window. */}
+      {wfh && (
+        <div
+          data-testid="wfh-annotation"
+          className="bg-purple-200 border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-black font-black uppercase"
+        >
+          <span className="text-base md:text-2xl italic">{(wfh.share * 100).toFixed(0)}%</span>
+          <span className="text-[10px] md:text-xs">{wfh.label}</span>
+          <span className="text-[9px] md:text-[11px] font-bold text-slate-600 normal-case">
+            {wfh.kwh.toFixed(1)} of {wfh.totalKwh.toFixed(1)} kWh in view fall on {wfh.weekdays}{' '}
+            weekday{wfh.weekdays === 1 ? '' : 's'} — the hours a daytime-heavy home spends either
+            working or not. Context for the plan cards below, not a forecast.
+          </span>
+        </div>
+      )}
       {/* Main Graph */}
       <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
