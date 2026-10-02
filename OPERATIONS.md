@@ -126,3 +126,8 @@ container. The `husky` pre-commit hook runs on every local commit.
   bar boundaries.
 - **Next.js version:** pin bumps must come with the advisory they fix (the
   16.3.0 bump was security-driven, see DECISIONS.md).
+- **Disk full on .110 during a rebuild:** docker there runs the `vfs` storage
+  driver, so every build layer is a full file copy and `no space left on device`
+  surfaces deep inside `RUN npm run build`. Check `df -h /` first; if it is at
+  100%, `docker builder prune -f` (build cache only — never touches running
+  containers) reclaimed ~26 GB on 2026-10-02.
