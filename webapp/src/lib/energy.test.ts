@@ -28,6 +28,8 @@ import {
   countMonthsInView,
   EMPTY_EXTRA_CHARGES,
   BASELINE_ESTIMATE_CAPTION,
+  selectInitialWindow,
+  calculateFullDataTotals,
   type RateSet,
   type ProcessedPoint,
   type DataPoint,
@@ -732,5 +734,121 @@ describe('calculateTrueBill', () => {
     expect(BASELINE_ESTIMATE_CAPTION).toContain(
       'does not include fixed delivery charges, regulatory charges, or HST',
     );
+  });
+});
+
+/** One reading per day at local noon (noon keeps the local calendar day stable in any TZ). */
+function dailySeries(fromISO: string, toISO: string): DataPoint[] {
+  const out: DataPoint[] = [];
+  let d = new Date(`${fromISO}T12:00:00`);
+  const end = new Date(`${toISO}T12:00:00`);
+  while (d.getTime() <= end.getTime()) {
+    out.push({ timestamp: Math.floor(d.getTime() / 1000), usage_kwh: 1 });
+    d = new Date(d.getTime() + 86400000);
+  }
+  return out;
+}
+
+describe('selectInitialWindow', () => {
+  it('returns null when there is no data', () => {
+    expect(selectInitialWindow([], 1, new Date('2026-10-02T12:00:00'))).toBeNull();
+  });
+
+  // The proven first-load defect: data ends 2026-10-01, billing_day=1 opens
+  // Oct 1-31 = ~12h of data in a 31-day window.
+  it('regression: never opens a mostly-future window after upload (E2E 2026-10-02)', () => {
+    const data = dailySeries('2026-07-01', '2026-10-01');
+    const w = selectInitialWindow(data, 1, new Date('2026-10-02T12:00:00'));
+    expect(w).toEqual({ start: '2026-09-01', end: '2026-10-01', scope: 'Custom' });
+    // the window must be fully covered by data, not 1 day out of 31
+    const days = new Set(data.map((d) => format(new Date(d.timestamp * 1000), 'yyyy-MM-dd')));
+    let covered = 0;
+    for (let d = new Date('2026-09-01T12:00:00'); d <= new Date('2026-10-01T12:00:00'); d = new Date(d.getTime() + 86400000)) {
+      if (days.has(format(d, 'yyyy-MM-dd'))) covered++;
+    }
+    expect(covered).toBe(31);
+  });
+
+  it('keeps BillingPeriod scope when the billing window is at least half covered', () => {
+    const data = dailySeries('2026-07-01', '2026-10-02');
+    const w = selectInitialWindow(data, 15, new Date('2026-10-02T12:00:00'));
+    expect(w).toEqual({ start: '2026-09-15', end: '2026-10-14', scope: 'BillingPeriod' });
+  });
+
+  it('clamps the anchor to min(last data day, today) — never anchors past today', () => {
+    // Readings are timestamped 28 days ahead of today; the anchor must stay on
+    // today, so the window must NOT run into November.
+    const data = dailySeries('2026-07-01', '2026-10-30');
+    const w = selectInitialWindow(data, 15, new Date('2026-10-02T12:00:00'));
+    expect(w).toEqual({ start: '2026-09-15', end: '2026-10-14', scope: 'BillingPeriod' });
+    expect(w!.end < '2026-11-01').toBe(true);
+  });
+
+  it('falls back to Month scope when the billing window is mostly empty', () => {
+    // billing_day=20 anchors Sep 20 - Oct 19 (only 2 of 30 days have data);
+    // the calendar month of the anchor (Sep 1-30) is 21/30 covered.
+    const data = dailySeries('2026-07-01', '2026-09-21');
+    const w = selectInitialWindow(data, 20, new Date('2026-09-21T12:00:00'));
+    expect(w).toEqual({ start: '2026-09-01', end: '2026-09-30', scope: 'Month' });
+  });
+
+  it('falls back to the trailing data-anchored window when both are mostly empty', () => {
+    const data = dailySeries('2026-07-01', '2026-07-05');
+    const w = selectInitialWindow(data, 1, new Date('2026-10-02T12:00:00'));
+    expect(w).toEqual({ start: '2026-07-01', end: '2026-07-05', scope: 'Custom' });
+  });
+
+  it('never starts before the first reading (clamped to the data range)', () => {
+    const data = dailySeries('2026-07-01', '2026-07-05');
+    const w = selectInitialWindow(data, 1, new Date('2026-07-10T12:00:00'));
+    expect(w!.start).toBe('2026-07-01');
+  });
+});
+
+describe('calculateFullDataTotals', () => {
+  it('returns null for empty data', () => {
+    expect(calculateFullDataTotals([])).toBeNull();
+  });
+
+  it('sums kWh and per-plan cost over ALL data, with best/worst plan and the delta', () => {
+    const points: ProcessedPoint[] = [
+      makeProcessedPoint({ timestamp: 1705327200, usage_kwh: 10, costTOU: 0.5, costULO: 0.2 }), // 2024-01-15 12:00 local-ish
+    ];
+    const t = calculateFullDataTotals(points)!;
+    expect(t.totalKwh).toBeCloseTo(10, 6);
+    expect(t.costTOU).toBeCloseTo(0.5, 6);
+    expect(t.costULO).toBeCloseTo(0.2, 6);
+    // tier1 only: usage 10 <= monthly tiered threshold
+    expect(t.costTiered).toBeCloseTo(1.2, 6);
+    expect(t.bestPlan).toBe('ULO');
+    expect(t.worstPlan).toBe('Tiered');
+    expect(t.planDelta).toBeCloseTo(1.0, 6);
+    expect(t.firstDate).toBe(format(new Date(1705327200 * 1000), 'yyyy-MM-dd'));
+    expect(t.lastDate).toBe(format(new Date(1705327200 * 1000), 'yyyy-MM-dd'));
+  });
+
+  it('spans the whole dataset (first to last reading), not the visible window', () => {
+    const points: ProcessedPoint[] = [
+      makeProcessedPoint({ timestamp: 1705327200, usage_kwh: 5, costTOU: 0.25, costULO: 0.1 }), // Jan 2024
+      makeProcessedPoint({ timestamp: 1709946000, usage_kwh: 5, costTOU: 0.25, costULO: 0.1 }), // Mar 2024
+    ];
+    const t = calculateFullDataTotals(points)!;
+    expect(t.totalKwh).toBeCloseTo(10, 6);
+    expect(t.costTOU).toBeCloseTo(0.5, 6);
+    expect(t.firstDate).toBe(format(new Date(1705327200 * 1000), 'yyyy-MM-dd'));
+    expect(t.lastDate).toBe(format(new Date(1709946000 * 1000), 'yyyy-MM-dd'));
+  });
+
+  it('applies the tiered tier-2 threshold per month instead of flat tier1', () => {
+    // 30 kWh in a single winter-ish day against thresholdSummer 600 kWh/month
+    // scaled to the month's covered days: th = 600 * (1 / 30.4).
+    const th = 600 * (1 / 30.4);
+    const expectedTiered = th * 0.12 + (30 - th) * 0.142;
+    const points: ProcessedPoint[] = [
+      makeProcessedPoint({ timestamp: 1705327200, usage_kwh: 30, costTOU: 0, costULO: 0 }),
+    ];
+    const t = calculateFullDataTotals(points)!;
+    expect(t.costTiered).toBeCloseTo(expectedTiered, 6);
+    expect(t.costTiered).not.toBeCloseTo(30 * 0.12, 3); // flat tier1 would be wrong
   });
 });

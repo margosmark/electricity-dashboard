@@ -24,6 +24,8 @@ Button XML file from Oakville Hydro. Done.
 | Feature | Where |
 | --- | --- |
 | Three-plan cost comparison (TOU vs Tiered vs ULO) per period | top cards |
+| Whole-dataset totals: kWh + per-plan cost + best-vs-worst $ gap, *since your first reading* | totals strip |
+| First load opens a data-full window (never a mostly-future billing period) | date range |
 | Usage chart with weekend bars highlighted (daily view) | Chart tab |
 | Zoom: monthly → weekly → daily → hourly (click a bar) | Chart tab |
 | Billing-period anchoring to *your* billing day (persisted) | scope buttons |
