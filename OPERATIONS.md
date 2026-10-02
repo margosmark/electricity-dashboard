@@ -3,6 +3,9 @@
 Daily-driver operations for the deploy at `~/electricity-dashboard`
 (container `energy-dashboard`, host port **3939** → container 3000).
 
+**Public URL:** https://electricity.markarslan.ca/ (Let's Encrypt TLS, edge
+proxy fronting the container; localhost health checks still work at :3939).
+
 ## Start / stop / update
 
 ```bash
