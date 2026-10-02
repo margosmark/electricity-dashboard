@@ -75,8 +75,19 @@ into components.
    borders, hard offset shadows, yellow-400 highlights); weekend daily bars
    are highlighted orange (`getBarColor`).
 
-All pure math lives in `lib/energy.ts` and is unit-tested
-(`energy.test.ts`). State and effects live in `hooks/useDashboard.ts`;
+7. **Recommend** — `analyzeTouShifts` (`lib/touShift.ts`) ranks recurring
+   ToU-shift blocks over the loaded history: On-Peak as the primary tier and
+   TOU Mid-Peak as a lower tier, every block priced against a rate the user
+   actually pays. The user-facing layer on top of those numbers is pure too:
+   `classifyBlock` (fixed-schedule / HVAC-like / honest "unidentified"),
+   `confidenceBadge` (Very consistent / Somewhat / Irregular),
+   `collapseHeadline` (one headline when a single destination owns >50% of the
+   savings, blocks demoted to supporting rows) and a per-option `effort`
+   (plan switch required or not). `ShiftOptimizer.tsx` only renders verdicts.
+
+All pure math lives in `lib/energy.ts` and `lib/touShift.ts`, unit-tested in
+`energy.test.ts` / `touShift.test.ts` / `ShiftOptimizer.test.tsx`. State and
+effects live in `hooks/useDashboard.ts`;
 `Dashboard.tsx`/`ChartView.tsx`/`InsightsView.tsx` are markup wired to it
 (`Dashboard.test.tsx`). Keep the boundary: adding an analytic means a pure
 function + test first, then wiring.

@@ -9,9 +9,10 @@ import path from 'node:path';
  *
  * Fixture design (America/Toronto, Sep 4 – Oct 1 2026):
  *   weekdays 12:00/13:00 -> summer On-Peak @ 2.4 kWh (the shiftable pattern)
- *   weekdays 08:00       -> Mid-Peak (must NOT be recommended)
+ *   weekdays 08:00       -> Mid-Peak (Wave E: shipped as the LOWER tier)
  *   weekends 12:00       -> Off-Peak (must NOT be recommended)
- * so the Shift Optimizer must find exactly 5 weekday blocks and nothing else.
+ * so the Shift Optimizer must find exactly 5 weekday On-Peak blocks plus 5
+ * weekday Mid-Peak blocks — and no weekend/Off-Peak recommendation at all.
  */
 
 const FIXTURE = path.resolve(__dirname, '../fixtures/synthetic.xml');
@@ -59,18 +60,41 @@ test.describe('smoke', () => {
     );
     expect(stored).toHaveLength(68);
 
-    // Insights: Shift Optimizer found exactly the 5 weekday On-Peak blocks
+    // Insights: Shift Optimizer found the 5 weekday On-Peak blocks PLUS the
+    // 5 weekday Mid-Peak (08:00) blocks as a labelled lower tier (Wave E).
     await page.getByRole('button', { name: 'INSIGHTS' }).click();
     const optimizer = page.getByTestId('shift-optimizer');
     await expect(optimizer).toBeVisible();
-    await expect(optimizer.getByText(/5 recurring On-Peak blocks found/i)).toBeVisible();
-    // Each block is a weekday 12:00–14:00 with recurrence evidence
+    await expect(
+      optimizer.getByText(/5 On-Peak \+ 5 Mid-Peak recurring blocks found/i),
+    ).toBeVisible();
+
+    // Every block (both tiers) is a weekday 12:00–14:00 / 08:00–09:00 with recurrence evidence
     const blocks = page.locator('[data-testid^="shift-block-"]');
-    await expect(blocks).toHaveCount(5);
+    await expect(blocks).toHaveCount(10);
     await expect(blocks.first()).toContainText('12:00–14:00');
     await expect(blocks.first()).toContainText('seen in 4 of 5 weeks');
-    // No Mid-Peak (08:00) or weekend recommendation may leak in
-    await expect(page.getByTestId('shift-optimizer')).not.toContainText('08:00');
+
+    // Wave E: Mid-Peak hours are included, but ONLY as an explicitly marked
+    // lower tier ranked behind the On-Peak blocks.
+    const midPeakRows = page.locator('[data-testid^="shift-block-"][data-tier="mid-peak"]');
+    await expect(midPeakRows).toHaveCount(5);
+    await expect(midPeakRows.first()).toContainText('08:00');
+    await expect(page.getByTestId('shift-tier-chip').first()).toBeVisible();
+
+    // One destination owns every block → one headline, blocks demoted to rows
+    const headline = page.getByTestId('shift-headline');
+    await expect(headline).toBeVisible();
+    await expect(headline).toContainText('Switch to ULO');
+    await expect(page.getByTestId('shift-headline-share')).toContainText('% of the savings');
+
+    // Confidence + effort chips are visible, and the honest fallback label is
+    // on screen (a 2h block can never be identified, so it says so).
+    await expect(page.getByTestId('confidence-badge').first()).toBeVisible();
+    await expect(page.getByTestId('effort-chip').first()).toBeVisible();
+    await expect(page.getByText('Unidentified weekday routine').first()).toBeVisible();
+
+    // Off-Peak (weekend) hours still never get recommended
     await expect(page.getByTestId('shift-optimizer')).not.toContainText(/Sun |Sat /);
     // Ranked total is a real number
     await expect(optimizer.getByText(/\$\d+\.\d{2}/).first()).toBeVisible();
