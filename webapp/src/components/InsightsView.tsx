@@ -12,20 +12,27 @@ import { format } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
 import { type Anomaly, type HeatmapData, type ProcessedPoint } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
+import ShiftOptimizer from '@/components/ShiftOptimizer';
+import type { TouShiftAnalysis } from '@/lib/touShift';
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
   heatmapData: HeatmapData;
   /** Current window rows: the CSV export downloads these. */
   filteredData: ProcessedPoint[];
+  /** Ranked ToU-shift recommendations over the full loaded dataset. */
+  shiftAnalysis: TouShiftAnalysis;
 };
 
-export default function InsightsView({ anomalies, heatmapData, filteredData }: InsightsViewProps) {
+export default function InsightsView({ anomalies, heatmapData, filteredData, shiftAnalysis }: InsightsViewProps) {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
       <div className="flex justify-end">
         <ExportCsvButton rows={filteredData} />
       </div>
+
+      {/* Ranked ToU-shift recommendations (recurring On-Peak blocks) */}
+      <ShiftOptimizer analysis={shiftAnalysis} />
 
       <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
          <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase"><AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} /><h3 className="text-2xl md:text-4xl">Usage Anomalies</h3></div>
