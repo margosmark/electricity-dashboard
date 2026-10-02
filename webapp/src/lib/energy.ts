@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import {
   format, isWeekend, startOfWeek, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
+  startOfDay, isAfter, addDays, endOfMonth, differenceInCalendarDays,
 } from 'date-fns';
 
 export type DataPoint = { timestamp: number; usage_kwh: number };
@@ -393,6 +394,165 @@ export function calculateComparison(
     }),
     { TOU: 0, Tiered: 0, ULO: 0 },
   );
+}
+
+// ---------------------------------------------------------------------------
+// First-load window selection
+// ---------------------------------------------------------------------------
+
+export type InitialWindowScope = 'Month' | 'BillingPeriod' | 'Custom';
+
+export type InitialWindow = {
+  start: string; // yyyy-MM-dd
+  end: string; // yyyy-MM-dd
+  scope: InitialWindowScope;
+};
+
+/** A window is "mostly empty" below this share of its calendar days carrying a reading. */
+const MIN_WINDOW_COVERAGE = 0.5;
+
+/**
+ * Pick the window a freshly loaded dataset should open in.
+ *
+ * The old behavior (anchor the billing period on the LAST data day) opens a
+ * mostly-future window whenever the data stops at the start of a period: data
+ * ending 2026-10-01 with billing_day=1 opened Oct 1-31 for ~12h of data.
+ *
+ * Candidates are tried in order and the first one that is at least
+ * MIN_WINDOW_COVERAGE covered by readings wins:
+ *
+ *   1. Billing period anchored on min(last data day, today) — the clamp keeps
+ *      the anchor itself out of the future, so a feed timestamped ahead of the
+ *      clock can never open a window that runs past today.      [BillingPeriod]
+ *   2. Calendar month of that anchor.                                      [Month]
+ *   3. The last `billing period length` days ending on the last data day,
+ *      never starting before the first reading. Data-anchored, so it is
+ *      covered by construction when the other two are mostly future/empty. [Custom]
+ *
+ * Returns null when there is no data to anchor on.
+ */
+export function selectInitialWindow(
+  rawData: DataPoint[],
+  billingDay: number,
+  today: Date,
+): InitialWindow | null {
+  if (rawData.length === 0) return null;
+
+  let minTs = rawData[0].timestamp;
+  let maxTs = rawData[0].timestamp;
+  for (const d of rawData) {
+    if (d.timestamp < minTs) minTs = d.timestamp;
+    if (d.timestamp > maxTs) maxTs = d.timestamp;
+  }
+  const firstDay = startOfDay(new Date(minTs * 1000));
+  const lastDay = startOfDay(new Date(maxTs * 1000));
+
+  // Anchor = min(last data day, today) — never anchor into the future.
+  const anchor = isAfter(lastDay, today) ? startOfDay(today) : lastDay;
+
+  const daysWithReadings = new Set(
+    rawData.map((d) => format(new Date(d.timestamp * 1000), 'yyyy-MM-dd')),
+  );
+  const coverage = (s: Date, e: Date): number => {
+    const total = differenceInCalendarDays(e, s) + 1;
+    if (total <= 0) return 0;
+    let withData = 0;
+    for (let d = s; !isAfter(d, e); d = addDays(d, 1)) {
+      if (daysWithReadings.has(format(d, 'yyyy-MM-dd'))) withData += 1;
+    }
+    return withData / total;
+  };
+
+  const billing = getBillingPeriod(anchor, billingDay);
+  const spanDays = differenceInCalendarDays(billing.end, billing.start) + 1;
+  const trailEnd = addDays(lastDay, -(spanDays - 1));
+  const trailStart = isAfter(firstDay, trailEnd) ? firstDay : trailEnd;
+
+  const candidates: { window: { start: Date; end: Date }; scope: InitialWindowScope }[] = [
+    { window: billing, scope: 'BillingPeriod' },
+    { window: { start: startOfMonth(anchor), end: endOfMonth(anchor) }, scope: 'Month' },
+    { window: { start: trailStart, end: lastDay }, scope: 'Custom' },
+  ];
+
+  for (const c of candidates) {
+    if (coverage(c.window.start, c.window.end) >= MIN_WINDOW_COVERAGE) {
+      return {
+        start: format(c.window.start, 'yyyy-MM-dd'),
+        end: format(c.window.end, 'yyyy-MM-dd'),
+        scope: c.scope,
+      };
+    }
+  }
+
+  // Unreachable in practice (the trailing window is data-anchored); if the
+  // dataset's own days are mostly missing, show the raw data range instead.
+  return {
+    start: format(firstDay, 'yyyy-MM-dd'),
+    end: format(lastDay, 'yyyy-MM-dd'),
+    scope: 'Custom',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Full-data totals (the "since {first data date}" strip)
+// ---------------------------------------------------------------------------
+
+export type FullDataTotals = {
+  firstDate: string; // yyyy-MM-dd of the oldest reading
+  lastDate: string; // yyyy-MM-dd of the newest reading
+  totalKwh: number;
+  costTOU: number;
+  costTiered: number;
+  costULO: number;
+  bestPlan: 'TOU' | 'Tiered' | 'ULO';
+  worstPlan: 'TOU' | 'Tiered' | 'ULO';
+  /** worst plan − best plan: what the wrong plan would cost over the whole dataset. */
+  planDelta: number;
+};
+
+/**
+ * Cost of EVERY reading in the dataset under each of the three plans.
+ *
+ * The per-plan sums reuse the monthly buckets the chart's monthly zoom uses
+ * (aggregateChartData + calculateComparison), so tiered tier-2 thresholds stay
+ * month-scoped and this strip always agrees with the plan cards. Independent
+ * of the visible date window — that is the point of the strip.
+ */
+export function calculateFullDataTotals(processedData: ProcessedPoint[]): FullDataTotals | null {
+  if (processedData.length === 0) return null;
+  const monthly = aggregateChartData(processedData, 'monthly');
+  const costs = calculateComparison(monthly);
+  if (!costs) return null;
+
+  let totalKwh = 0;
+  let oldest = processedData[0];
+  let newest = processedData[0];
+  for (const d of processedData) {
+    totalKwh += d.usage_kwh;
+    if (d.timestamp < oldest.timestamp) oldest = d;
+    if (d.timestamp > newest.timestamp) newest = d;
+  }
+
+  // Deterministic tie-break: strict comparison keeps the first of this order.
+  const order = ['TOU', 'Tiered', 'ULO'] as const;
+  let bestPlan: FullDataTotals['bestPlan'] = 'TOU';
+  let worstPlan: FullDataTotals['worstPlan'] = 'TOU';
+  for (const p of order) {
+    if (costs[p] < costs[bestPlan]) bestPlan = p;
+    if (costs[p] > costs[worstPlan]) worstPlan = p;
+  }
+
+  return {
+    firstDate: format(oldest.dateObj, 'yyyy-MM-dd'),
+    lastDate: format(newest.dateObj, 'yyyy-MM-dd'),
+    totalKwh,
+    costTOU: costs.TOU,
+    costTiered: costs.Tiered,
+    costULO: costs.ULO,
+    bestPlan,
+    worstPlan,
+    planDelta: costs[worstPlan] - costs[bestPlan],
+  };
 }
 
 export function calculateVampire(
