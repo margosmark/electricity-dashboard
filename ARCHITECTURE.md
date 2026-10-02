@@ -11,7 +11,7 @@ flowchart TB
     GB["Oakville Hydro<br/>Green Button XML export"] -->|upload / localStorage| WEB
     subgraph WEB["Next.js webapp (Docker: energy-dashboard, port 3939→3000)"]
         API["/api/rates<br/>historical ON rate sets"] --> DASH
-        DASH["Dashboard.tsx<br/>single client component"] --> LIB["lib/energy.ts<br/>pure functions: parse, categorize, cost, aggregate"]
+        DASH["Dashboard.tsx (shell)<br/>+ ChartView / InsightsView<br/>state in hooks/useDashboard.ts"] --> LIB["lib/energy.ts<br/>pure functions: parse, categorize, cost, aggregate"]
         UPLOAD["upload modal<br/>FileReader → fast-xml-parser"] --> LIB
         LIB --> LS[("localStorage<br/>energy_data + billing_day")]
         LS --> DASH
@@ -56,19 +56,28 @@ into components.
    `(days/30.4)` per aggregation bucket).
 4. **View filter** — scope = Billing period (anchored to a persisted
    `billing_day`, `getBillingPeriod`), Month, YTD, or custom range; zoom
-   monthly → weekly → daily → hourly (`getFilteredForZoom`).
+   monthly → weekly → daily → hourly (`getFilteredForZoom`). First load picks
+   the window with `selectInitialWindow`: anchor `min(last data day, today)`,
+   then the first of billing period → calendar month → trailing data-anchored
+   window that is at least half covered by readings, so a fresh upload never
+   opens a mostly-future window.
 5. **Aggregate & analyze** — `aggregateChartData` per bucket, plus
    `calculateComparison` (totals across the three plans),
    `calculateVampire` (5th-percentile hourly draw × 24h × 30d at off-peak —
    the "always-on" base-load estimate), `detectAnomalies` (per-weekday
    expected average; a spike is >1.5× expected AND >5 kWh, top 5 reported),
-   `buildHeatmapData` (7×24 weekday/hour average grid).
-6. **Render** — `Dashboard.tsx` (Recharts) with a neobrutalist design language
-   (thick black borders, hard offset shadows, yellow-400 highlights); weekend
-   daily bars are highlighted orange (`getBarColor`).
+   `buildHeatmapData` (7×24 weekday/hour average grid),
+   `calculateFullDataTotals` (whole-dataset kWh + per-plan cost + best-vs-worst
+   dollar delta behind the "since {first date}" strip — deliberately not
+   filtered by the visible window).
+6. **Render** — `ChartView.tsx` / `InsightsView.tsx` (Recharts) inside the
+   `Dashboard.tsx` shell, with a neobrutalist design language (thick black
+   borders, hard offset shadows, yellow-400 highlights); weekend daily bars
+   are highlighted orange (`getBarColor`).
 
 All pure math lives in `lib/energy.ts` and is unit-tested
-(`energy.test.ts`); `Dashboard.tsx` owns only state, effects, and markup
+(`energy.test.ts`). State and effects live in `hooks/useDashboard.ts`;
+`Dashboard.tsx`/`ChartView.tsx`/`InsightsView.tsx` are markup wired to it
 (`Dashboard.test.tsx`). Keep the boundary: adding an analytic means a pure
 function + test first, then wiring.
 
