@@ -18,7 +18,11 @@
  * IMPORTANT: self.* is used for ALL serviceworker globals so eslint's plain
  * browser env (no `serviceworker` globals declared) stays green.
  */
-const VERSION = 'oeo-v1';
+// CACHE VERSION — stamped by scripts/bump-sw-version.mjs from the `prebuild`
+// npm lifecycle, so every `npm run build` (CI, Docker, deploy) serves a
+// byte-different /sw.js and installed PWAs re-install + drop old caches.
+// 'oeo-v1-local' is the committed placeholder a fresh clone builds with.
+const VERSION = 'oeo-v1-local';
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

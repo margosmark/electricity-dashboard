@@ -49,7 +49,8 @@ code=$(curl -s -D /tmp/smoke_sw.headers -o /tmp/smoke_sw.js -w '%{http_code}' "$
 [ "$code" = "200" ] || fail "GET /sw.js returned ${code}, expected 200"
 grep -qi "cache-control: no-cache" /tmp/smoke_sw.headers \
   || fail "sw.js missing Cache-Control: no-cache (stale-escape hazard)"
-grep -q "oeo-v1" /tmp/smoke_sw.js || fail "sw.js body missing cache version marker"
+grep -qE "oeo-v1-[a-z0-9]+" /tmp/smoke_sw.js \
+  || fail "sw.js body missing a per-build cache version marker (oeo-v1-<build>)"
 
 code=$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/icons/icon-192.png")
 [ "$code" = "200" ] || fail "GET /icons/icon-192.png returned ${code}, expected 200"

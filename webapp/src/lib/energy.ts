@@ -233,8 +233,100 @@ function asArray<T>(v: T | T[] | undefined | null): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
+/**
+ * First `powerOfTenMultiplier` inside `node`, depth-first. Raw scan — used
+ * only for values already known to sit under a ReadingType.
+ */
+function findMultiplierIn(node: unknown): number | null {
+  const stack: unknown[] = [node];
+  while (stack.length > 0) {
+    const obj = stack.pop();
+    if (!obj || typeof obj !== 'object') continue;
+    if (Array.isArray(obj)) {
+      obj.forEach((i) => stack.push(i));
+      continue;
+    }
+    const objAny = obj as Record<string, unknown>;
+    const raw = objAny.powerOfTenMultiplier;
+    if (raw !== undefined && raw !== null && raw !== '') {
+      const n = Number(Array.isArray(raw) ? raw[0] : raw);
+      if (Number.isFinite(n)) return n;
+    }
+    for (const k in objAny) {
+      if (typeof objAny[k] === 'object') stack.push(objAny[k]);
+    }
+  }
+  return null;
+}
+
+/**
+ * The multiplier that scales IntervalReading values: the one declared on a
+ * **ReadingType**, and nothing else.
+ *
+ * Summary blocks carry their own `powerOfTenMultiplier` too — Oakville Hydro's
+ * export stamps `-6` on `<measurement>` entries inside
+ * ElectricPowerUsageSummary. Applying THAT to interval readings would turn a
+ * 3.5 kWh hour into 0.0000035 kWh, so only ReadingType scalers are honoured.
+ */
+function findReadingTypeMultiplier(node: unknown): number | null {
+  const stack: unknown[] = [node];
+  while (stack.length > 0) {
+    const obj = stack.pop();
+    if (!obj || typeof obj !== 'object') continue;
+    if (Array.isArray(obj)) {
+      obj.forEach((i) => stack.push(i));
+      continue;
+    }
+    const objAny = obj as Record<string, unknown>;
+    if (objAny.ReadingType !== undefined && objAny.ReadingType !== null) {
+      for (const rt of asArray<Record<string, unknown>>(objAny.ReadingType as Record<string, unknown>)) {
+        const m = findMultiplierIn(rt);
+        if (m !== null) return m;
+      }
+    }
+    for (const k in objAny) {
+      if (k !== 'ReadingType' && typeof objAny[k] === 'object') stack.push(objAny[k]);
+    }
+  }
+  return null;
+}
+
+/** Resource id from the first href containing `/<resource>/<id>` (e.g. ReadingType/3). */
+function pickHrefId(entry: Record<string, unknown>, resource: string): string | null {
+  const links = asArray<Record<string, unknown>>(entry.link as Record<string, unknown>);
+  const re = new RegExp(`/${resource}/([^/?#\"']+)`);
+  for (const l of links) {
+    const href = String((l && l['@_href']) || '');
+    const m = href.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/**
+ * Scale a raw IntervalReading value to kWh.
+ *
+ * ESPI stores `value` as an integer in the ReadingType's unit scaled by
+ * 10^powerOfTenMultiplier — and the multiplier lives on a SEPARATE
+ * ReadingType entry, linked by href, not inside the IntervalBlock. Getting
+ * this wrong is a silent 1000x error: Hydro One exports
+ * `powerOfTenMultiplier -3` with Wh values, so ignoring it turns a 3.95 kWh
+ * hour into 3954 kWh.
+ *
+ * Resolution order (each step is exercised by utilitySamples.test.ts):
+ *   1. a ReadingType linked from this entry (href → exponent map)
+ *   2. an inline multiplier inside the entry itself
+ *   3. a single distinct exponent used everywhere in the document
+ *   4. no scaling (multiplier 0)
+ */
+function scaleReadingValue(raw: number, multiplier: number): number {
+  if (!Number.isFinite(raw) || raw < 0) return Number.NaN;
+  if (!Number.isFinite(multiplier) || multiplier === 0) return raw / 1000;
+  return (raw * 10 ** multiplier) / 1000;
+}
+
 /** Depth-first collection of every IntervalReading below `node`, sorted later. */
-function collectReadings(node: unknown, skipKeys: string[] = []): DataPoint[] {
+function collectReadings(node: unknown, skipKeys: string[] = [], multiplier = 0): DataPoint[] {
   const readings: DataPoint[] = [];
   const stack: unknown[] = [node];
   while (stack.length > 0) {
@@ -248,9 +340,13 @@ function collectReadings(node: unknown, skipKeys: string[] = []): DataPoint[] {
         const arr = asArray<Record<string, unknown>>(objAny.IntervalReading as Record<string, unknown>);
         arr.forEach((ir) => {
           const timePeriod = ir.timePeriod as Record<string, unknown> | undefined;
-          const s = parseInt((timePeriod?.start as string) || '0', 10);
-          const v = parseInt((ir.value as string) || '0', 10);
-          if (s > 0) readings.push({ timestamp: s, usage_kwh: v / 1000.0 });
+          const s = parseInt(String(timePeriod?.start ?? '0'), 10);
+          const v = parseInt(String(ir.value ?? '0'), 10);
+          // Untrusted input: a value that is not a number (markup, an object,
+          // a unit suffix) must not become NaN and poison every total it
+          // touches — drop that one reading instead of trusting it.
+          const kwh = scaleReadingValue(v, multiplier);
+          if (s > 0 && Number.isFinite(kwh) && kwh >= 0) readings.push({ timestamp: s, usage_kwh: kwh });
         });
       }
       for (const k in objAny) {
@@ -331,8 +427,32 @@ export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] 
   };
 
   const entries = collectEntries(parsed);
+
+  // ReadingType exponents declared in this document, keyed by resource id
+  // (the multiplier lives on its own entry, linked by href). Plus every
+  // exponent seen anywhere, for the single-value fallback.
+  const multipliersById = new Map<string, number>();
+  const declared = new Set<number>();
   for (const entry of entries) {
-    const readings = collectReadings(entry);
+    const mult = findReadingTypeMultiplier(entry);
+    if (mult === null) continue;
+    declared.add(mult);
+    const rtId = pickHrefId(entry, 'ReadingType');
+    if (rtId !== null) multipliersById.set(rtId, mult);
+  }
+  const singleDeclared = declared.size === 1 ? [...declared][0] : null;
+
+  const multiplierFor = (entry: Record<string, unknown>): number => {
+    const rtId = pickHrefId(entry, 'ReadingType');
+    if (rtId !== null && multipliersById.has(rtId)) return multipliersById.get(rtId)!;
+    const inline = findReadingTypeMultiplier(entry);
+    if (inline !== null) return inline;
+    if (singleDeclared !== null) return singleDeclared;
+    return 0;
+  };
+
+  for (const entry of entries) {
+    const readings = collectReadings(entry, [], multiplierFor(entry));
     if (readings.length === 0) continue;
     const id = pickUsagePointId(entry) || '';
     const g = ensure(id);
@@ -342,7 +462,7 @@ export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] 
 
   // Readings that sit outside any <entry> (non-Atom fixtures) still belong to
   // one unnamed meter, exactly as the pre-grouping parser treated them.
-  const orphans = collectReadings(parsed, ['entry']);
+  const orphans = collectReadings(parsed, ['entry'], singleDeclared ?? 0);
   if (orphans.length > 0) ensure('').readings.push(...orphans);
 
   const out = Array.from(groups.values());
