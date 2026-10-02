@@ -5,6 +5,10 @@ import plotly.graph_objects as go
 from parser import parse_green_button_xml
 from datetime import datetime, date, timedelta
 
+from recovery import EXPECTED_XML_FILENAME, render_recovery_screen
+from sample_data import load_sample_dataframe
+from vampire import estimate_base_load_kw, monthly_vampire_cost
+
 # Set page config
 st.set_page_config(page_title="Electricity Usage Dashboard", layout="wide")
 
@@ -13,15 +17,51 @@ st.markdown("Understanding your Oakville Hydro energy data.")
 
 @st.cache_data
 def load_data():
-    file_path = "electricit2024-now.xml"
+    file_path = EXPECTED_XML_FILENAME
     df = parse_green_button_xml(file_path)
     return df
 
-try:
-    df = load_data()
-except Exception as e:
-    st.error(f"Error loading data: {e}")
+@st.cache_data
+def load_sample_data():
+    return load_sample_dataframe()
+
+# --- Data loading, with a friendly recovery path when the XML is missing ---
+# The real export is gitignored (size + personal energy data), so a fresh clone
+# has no file: explain the situation and offer the bundled sample data instead of
+# a dead-end "Error loading data: [Errno 2] ..." box.
+load_error = None
+df = None
+
+if st.session_state.get("use_sample_data", False):
+    # User already opted into the bundled sample data this session.
+    df = load_sample_data()
+else:
+    try:
+        df = load_data()
+    except Exception as exc:
+        load_error = exc
+        df = None
+
+    if df is not None and df.empty:
+        load_error = ValueError(f"{EXPECTED_XML_FILENAME} contains no IntervalReading rows")
+        df = None
+
+if df is None:
+    if render_recovery_screen(load_error):
+        # Set the flag and re-run so the recovery screen itself is not shown
+        # above the dashboard that the sample data just unlocked.
+        st.session_state["use_sample_data"] = True
+        st.rerun()
     st.stop()
+
+if st.session_state.get("use_sample_data", False):
+    sample_banner, real_file_button = st.columns([5, 1])
+    sample_banner.info(
+        "🧛 **Bundled sample data in use** - synthetic 5-day readings, not your household."
+    )
+    if real_file_button.button("↩️ Use my real file", key="back_to_real_data"):
+        st.session_state["use_sample_data"] = False
+        st.rerun()
 
 # Sidebar: TOU Rates & Vacation
 st.sidebar.header("Configuration")
@@ -84,14 +124,16 @@ total_cost = df['cost'].sum()
 avg_daily_usage = df.groupby('date')['usage_kwh'].sum().mean()
 
 # Base Load Calculation
-# We look for the minimum hourly usage to estimate 'Always-On' devices
-base_load_kw = df['usage_kwh'].min() 
-monthly_vampire_cost = base_load_kw * 24 * 30 * (off_peak_rate / 100.0) # Conservative estimate at off-peak
+# Robust proxy: P05 of hourly kWh over the trailing 90 days (vampire.py).
+# The old argmin latched onto a single outage dip / lucky quiet hour and treated
+# it as the 24/7 floor; a trailing percentile shrugs those outliers off.
+base_load_kw = estimate_base_load_kw(df)
+vampire_monthly_cost = monthly_vampire_cost(base_load_kw, off_peak_rate) # Conservative estimate at off-peak
 
 col1.metric("Total Usage", f"{total_usage:,.1f} kWh")
 col2.metric("Total Est. Cost", f"${total_cost:,.2f}")
 col3.metric("Avg Daily Usage", f"{avg_daily_usage:.1f} kWh")
-col4.metric("Vampire Draw Cost", f"${monthly_vampire_cost:.2f}/mo", help="Estimated cost of always-on devices based on your lowest hourly usage.")
+col4.metric("Vampire Draw Cost", f"${vampire_monthly_cost:.2f}/mo", help="Estimated always-on cost: 5th-percentile hourly usage over the trailing 90 days x 24 h x 30.4 days, at your off-peak rate.")
 
 st.markdown("---")
 
