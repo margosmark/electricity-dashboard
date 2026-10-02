@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "out": [
+    {
+      "name": "Export CSV button in Chart view",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Export CSV button in Insights view",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "CSV download from Insights view",
+      "ok": true,
+      "detail": "energy_export_2026-07-02_2026-10-01.csv"
+    },
+    {
+      "name": "True Bill figure rendered",
+      "ok": true,
+      "detail": "$1298.74"
+    }
+  ]
+}

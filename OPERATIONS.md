@@ -35,6 +35,16 @@ Nothing is stored server-side. The browser holds:
   (`{timestamp, usage_kwh}` sorted ascending; from the last uploaded XML).
 - `localStorage.billing_day` — billing anchor day of month, drives the
   Billing-period view scope.
+- `localStorage.extra_charges` — optional bill add-ons typed by the user
+  (delivery $/kWh, delivery $/month, regulatory $/kWh, HST %). Seeded empty;
+  while every field is empty the estimate stays variable-only. Deliberately
+  **local**: `/api/rates` carries OEB commodity rates only, never delivery,
+  regulatory, or tax.
+
+**Multi-meter uploads:** a Green Button file with more than one UsagePoint
+(multiple meters / rate classes) no longer merges silently — a picker asks for
+one point or "Combine all", and only the chosen rows are written to
+`energy_data`.
 
 User recovery: re-upload the Oakville Hydro Green Button XML. There is nothing
 else to back up.
