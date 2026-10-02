@@ -1,46 +1,46 @@
 {
   "baseUrl": "https://electricity.markarslan.ca/",
-  "generatedAt": "2026-10-02T22:01:54.063Z",
+  "generatedAt": "2026-10-02T22:10:47.743Z",
   "checks": [
     {
       "name": "deployed /sw.js carries a per-build cache version",
       "ok": true,
-      "detail": "VERSION=oeo-v1-muri3l79"
+      "detail": "VERSION=oeo-v1-murij9oo"
     },
     {
       "name": "installed service worker serves the current version",
       "ok": true,
-      "detail": "oeo-v1-muri3l79 controller=true"
+      "detail": "oeo-v1-murij9oo controller=true"
     },
     {
       "name": "shell/runtime caches are keyed by that version",
       "ok": true,
-      "detail": "oeo-v1-muri3l79-shell"
+      "detail": "oeo-v1-murij9oo-shell"
     },
     {
       "name": "a redeploy after a source change serves a DIFFERENT version",
-      "ok": false,
-      "detail": "oeo-v1-muri3l79 -> oeo-v1-muri3l79"
+      "ok": true,
+      "detail": "oeo-v1-murij9oo -> oeo-v1-murioyfb"
     },
     {
       "name": "deploy script reports the pushed commit",
       "ok": true,
-      "detail": "Image electricity-dashboard-energy-dashboard Built "
+      "detail": "Container energy-dashboard Starting "
     },
     {
       "name": "installed client installed a new worker after the deploy",
-      "ok": false,
-      "detail": "signal=timeout"
+      "ok": true,
+      "detail": "signal=updatefound"
     },
     {
       "name": "new caches are keyed by the new version",
       "ok": true,
-      "detail": "oeo-v1-muri3l79-shell,oeo-v1-muri3l79-runtime -> oeo-v1-muri3l79-shell,oeo-v1-muri3l79-runtime"
+      "detail": "oeo-v1-murij9oo-shell,oeo-v1-murij9oo-runtime -> oeo-v1-murioyfb-shell,oeo-v1-murioyfb-runtime"
     },
     {
       "name": "old-version caches were dropped on activate",
       "ok": true,
-      "detail": "oeo-v1-muri3l79-shell, oeo-v1-muri3l79-runtime"
+      "detail": "oeo-v1-murioyfb-shell, oeo-v1-murioyfb-runtime"
     },
     {
       "name": "real Oakville export loads on the deployed stack",
@@ -58,9 +58,19 @@
       "detail": "rows=2184"
     },
     {
+      "name": "import restores the identical snapshot",
+      "ok": true,
+      "detail": "rows=2184"
+    },
+    {
+      "name": "app is usable after the import (upload modal not shown)",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "name": "backup round-trip",
       "ok": false,
-      "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByTestId('backup-toggle')\n    - locator resolved to <button type=\"button\" aria-expanded=\"false\" title=\"Backup & restore\" data-testid=\"backup-toggle\" class=\"p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    57 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+      "detail": "page.setInputFiles: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=\"backup-import-input\"]')\n"
     },
     {
       "name": "spring-forward: 2026-03-08 loaded with 23 hourly readings",
@@ -153,9 +163,9 @@
       "detail": "reference-areas=2"
     }
   ],
-  "deployTail": "Image electricity-dashboard-energy-dashboard Built \n Container energy-dashboard Running \nDEPLOY_OK at ed7f1b5 evidence(wave-g): deployed-stack verification harness + pre-deploy sw.js snapshot",
-  "total": 30,
-  "passed": 27,
-  "failed": 3,
+  "deployTail": "Container energy-dashboard Starting \n Container energy-dashboard Started \nDEPLOY_OK at 962e879 docs(sw): state the cache-version update contract in the worker header",
+  "total": 32,
+  "passed": 31,
+  "failed": 1,
   "ok": false
 }
