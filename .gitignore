@@ -11,6 +11,9 @@ __pycache__/
 webapp/.data/
 *.xml
 
+# Kanban worktree isolation (one worktree per card)
+.worktrees/
+
 # Misc
 .DS_Store
 .env
