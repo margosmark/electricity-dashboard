@@ -50,7 +50,8 @@ test.describe('smoke', () => {
 
     // Dashboard is live: chart header + plan cards visible
     await expect(page.getByText('Monthly Overview')).toBeVisible();
-    await expect(page.getByText('Time-of-Use')).toBeVisible();
+    // Plan card heading (Wave A's totals strip also says "Time-of-Use" — scope to the role)
+    await expect(page.getByRole('heading', { name: 'Time-of-Use' })).toBeVisible();
 
     // Readings persisted to localStorage (all 68)
     const stored = await page.evaluate(() =>
@@ -129,5 +130,49 @@ test.describe('smoke', () => {
     expect(offlineRates.ok).toBe(true);
     expect(offlineRates.count).toBe(3);
     await context.setOffline(false);
+  });
+
+  test('PWA: Chrome audit reports the app installable (no installability errors)', async ({ page }) => {
+    await page.goto('/');
+    // Give the SW a moment to activate so the audit sees a controlling worker
+    await page.evaluate(() => navigator.serviceWorker.ready);
+
+    // Chrome's own installability verdict — the same signal the
+    // "Install app" menu item / beforeinstallprompt is gated on.
+    const cdp = await page.context().newCDPSession(page);
+    const { installabilityErrors } = (await cdp.send(
+      'Page.getInstallabilityErrors',
+    )) as unknown as { installabilityErrors: { errorId: string }[] };
+    // Playwright's default context is incognito, where Chrome always reports
+    // 'in-incognito' regardless of the app — harness artifact, not a defect.
+    // Everything else must be empty.
+    const real = installabilityErrors.filter((e) => e.errorId !== 'in-incognito');
+    expect(
+      real,
+      `Chrome installability errors: ${JSON.stringify(real, null, 2)}`,
+    ).toEqual([]);
+
+    // And the parsed manifest Chrome sees carries the install requirements
+    const { data, errors } = (await cdp.send('Page.getAppManifest')) as unknown as {
+      data: string;
+      errors: { message: string }[];
+    };
+    expect(errors).toEqual([]);
+    const manifest = JSON.parse(data) as {
+      name: string;
+      icons: { src: string; sizes: string }[];
+      start_url: string;
+      display: string;
+    };
+    expect(manifest.name).toBe('Ontario Energy Optimizer');
+    expect(manifest.display).toBe('standalone');
+    expect(manifest.start_url).toBe('/');
+    // Chrome requires at least one icon >= 144px; we ship 192 + 512 + maskable
+    const big = manifest.icons.filter((i) => parseInt(i.sizes, 10) >= 144);
+    expect(big.length).toBeGreaterThanOrEqual(2);
+    for (const icon of big) {
+      const resp = await page.request.get(icon.src);
+      expect(resp.status(), `icon ${icon.src}`).toBe(200);
+    }
   });
 });
