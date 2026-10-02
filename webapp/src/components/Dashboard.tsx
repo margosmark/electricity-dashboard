@@ -25,6 +25,7 @@ import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
 import ChartView, { type PlanId } from '@/components/ChartView';
 import InsightsView from '@/components/InsightsView';
+import { analyzeTouShifts } from '@/lib/touShift';
 
 export default function Dashboard() {
   const {
@@ -78,6 +79,14 @@ export default function Dashboard() {
 
   // Once-per-session OEB staleness check (client-side, degrades silently).
   const staleness = useRateStaleness(rateHistory, processedData);
+
+  // Ranked ToU-shift recommendations. Analyzes the FULL loaded dataset (not
+  // the view-filtered window): recurrence is a property of recent history,
+  // independent of which slice the chart currently shows.
+  const shiftAnalysis = useMemo(
+    () => analyzeTouShifts(processedData, userPlan, activeRateSet),
+    [processedData, userPlan, activeRateSet],
+  );
 
   const selectionCost = useMemo(() => {
     const costKey = `cost${userPlan}` as keyof ChartDataItem;
@@ -240,6 +249,7 @@ export default function Dashboard() {
           heatmapData={heatmapData}
           filteredData={filteredData}
           processedData={processedData}
+          shiftAnalysis={shiftAnalysis}
         />
       )}
     </div>
