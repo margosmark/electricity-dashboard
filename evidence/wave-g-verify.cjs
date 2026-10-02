@@ -271,7 +271,9 @@ const isoLocalHour = (iso) => pad(new Date(iso).getHours());
     const download = page.waitForEvent('download');
     await page.getByTestId('backup-export').click();
     const file = await download;
-    const jsonPath = path.join(OUT, 'wave-g-backup-export.json');
+    // Real meter data: written as *.local.json so the repo's privacy guard
+    // (evidence/*.local.json is gitignored) keeps it out of git.
+    const jsonPath = path.join(OUT, 'wave-g-backup-export.local.json');
     await file.saveAs(jsonPath);
     const backup = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     check('exported backup declares a schema version', typeof backup.schema === 'string' && typeof backup.version === 'number', `${backup.schema} v${backup.version}`);
