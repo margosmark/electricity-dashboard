@@ -15,6 +15,13 @@
  *      immutable    -> cache first: /_next/static, icons, manifest, favicon
  *      anything else same-origin -> untouched (browser default)
  *
+ * UPDATE CONTRACT: scripts/bump-sw-version.mjs rewrites `VERSION` from the
+ * `prebuild` npm lifecycle, so every `npm run build` (CI, Docker, deploy)
+ * serves a byte-different /sw.js — the browser installs the new worker, and
+ * the activate handler below then drops every cache whose name does not start
+ * with the new VERSION. An unchanged rebuild keeps the same VERSION on purpose:
+ * identical sources are an identical artifact and need no re-install.
+ *
  * IMPORTANT: self.* is used for ALL serviceworker globals so eslint's plain
  * browser env (no `serviceworker` globals declared) stays green.
  */

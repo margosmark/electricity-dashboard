@@ -127,6 +127,24 @@ const parseCsv = (text) => {
   });
 };
 
+/** After a deploy the container restarts; poll until /sw.js serves again. */
+async function fetchSwWhenUp(timeoutMs = 120_000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = 'no attempt';
+  for (;;) {
+    try {
+      const r = await fetch(new URL('sw.js', BASE), { cache: 'no-store' });
+      const text = await r.text();
+      if (r.ok && /const VERSION = 'oeo-v\d+-[a-z0-9]+'/.test(text)) return text;
+      last = `status=${r.status}`;
+    } catch (e) {
+      last = e && e.message;
+    }
+    if (Date.now() > deadline) throw new Error(`site did not serve /sw.js after deploy (${last})`);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
 const pad = (n) => String(n).padStart(2, '0');
 /** Local (America/Toronto) day / hour for a unix epoch. */
 const localDayOf = (epoch) => {
@@ -184,7 +202,7 @@ const isoLocalHour = (iso) => pad(new Date(iso).getHours());
       }).trim();
       console.log(deployTail);
 
-      const servedAfter = await (await fetch(new URL('sw.js', BASE), { cache: 'no-store' })).text();
+      const servedAfter = await fetchSwWhenUp();
       const afterMatch = servedAfter.match(/const VERSION = '([^']+)'/);
       fs.writeFileSync(path.join(OUT, 'wave-g-sw-after.js'), servedAfter);
       // Docker reuses the builder layer when the source is byte-identical, so
@@ -210,7 +228,10 @@ const isoLocalHour = (iso) => pad(new Date(iso).getHours());
             if (!w) return;
             w.addEventListener('statechange', () => { if (w.state === 'activated') finish('updatefound'); });
           });
-          reg.update().catch(() => finish('update-error'));
+          // first update() can race the container restart — retry once
+          reg.update().catch(() => {
+            setTimeout(() => reg.update().catch(() => finish('update-error')), 3000);
+          });
         });
         // activate -> clients.claim -> drop caches from the old VERSION
         const deadline = Date.now() + 20000;
