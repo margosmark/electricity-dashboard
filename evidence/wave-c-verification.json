@@ -1,0 +1,43 @@
+{
+  "wave": "C",
+  "date": "2026-10-02",
+  "commit": "a99617e",
+  "deployed": "DEPLOY_OK at a99617e via ~/bin/deploy-energy-dashboard.sh (hermescomputer)",
+  "gates": {
+    "lint": "pass (eslint clean)",
+    "typecheck": "pass (tsc --noEmit)",
+    "vitest": "pass — 8 files, 201 tests (trend 15, oebRates 26, WaveC 15 added)",
+    "pytest": "pass — 16 tests (8 new test_oeb_staleness.py, 8 pre-existing)",
+    "build": "pass (next build, Turbopack)",
+    "ci": "gh run: docs push + merge push both completed success"
+  },
+  "deployed_endpoints": {
+    "GET /api/rates": "200 — ratesSourceVersion=e8089c21, lastChecked=2026-10-02, source=oeb.ca, 3 sets",
+    "GET /oeb-rates-page": "200 — 88800B proxied OEB HTML, date sentence 'prices set by the OEB for November 1, 2025'"
+  },
+  "browser_checks": {
+    "tooling": "browserbase browser + independent Playwright/Chromium (verify-wave-c.js). NOTE: browserbase full-page capture dropped SVG bar rasterization (even the pre-existing ChartView rendered blank there while DOM hit-tests passed) — pixel evidence below is from Playwright element screenshots.",
+    "trend_empty_state": "4-month dataset → 'Need 12+ months of data — you have 4 months (Jul 2026 – Oct 2026)'; no chart",
+    "trend_ready_state": "22-month dataset → chart 1192x360, 21 bars (12x 2025 #2563EB + 9x 2026 #F97316), legend 2025/2026, Δ vs 2025 row (Jan–Sep 0%, Oct–Dec —), boundary note '2025-11-01 … 1 rate-set change'",
+    "trend_pixels": "evidence/wave-c-trend-chart.png: 19% blue + 13% orange pixels",
+    "staleness_check_live": "fresh session ran the real check → sessionStorage {\"stale\":null} (OEB date == shipped), no banner",
+    "banner_stale_state": "seeded newer effectiveDate → banner with headline, both dates, deltas Off-Peak 9.8→10.5 / On-Peak 20.3→22.5 / Tier 1 12→12.8, sample impact $251.29→$270.72 (+$19.43, 576 kWh/30d, TOU +$10.37 · Tiered +$4.61 · ULO +$4.45), edit deep-link https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts",
+    "banner_pixels": "evidence/wave-c-staleness-banner.png: 81% orange",
+    "banner_clears": "session cleared → fresh check re-set {\"stale\":null}, banner gone"
+  },
+  "cron": {
+    "job_id": "47a3720dc33f",
+    "name": "OEB rate staleness check",
+    "schedule": "0 9 * * 1 (Mondays 09:00 America/Toronto)",
+    "no_agent": true,
+    "script": "~/.hermes/profiles/soft-dev/scripts/check_oeb_staleness.py (copy of scripts/check_oeb_staleness.py)",
+    "deliver": "whatsapp:32890876391493@lid",
+    "manual_fire": "cronjob run → last_status=ok, execution_success=true, empty stdout (rates current → silent)",
+    "stale_path_verified": "synthetic older /api/rates → full WhatsApp bullet report with 9 changed periods"
+  },
+  "artifacts": [
+    "evidence/wave-c-trend-chart.png",
+    "evidence/wave-c-trend-panel.png",
+    "evidence/wave-c-staleness-banner.png"
+  ]
+}
