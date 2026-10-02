@@ -22,6 +22,7 @@ import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
 } from '@/hooks/useDashboard';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
+import { BackupControls } from '@/components/BackupControls';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
@@ -40,7 +41,11 @@ export default function Dashboard() {
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
     pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
-  } = useEnergyData();
+    exportBackup, importBackupFile,
+    parseIssue, setParseIssue,
+    // A restored backup must reach every hook that seeds itself from
+    // localStorage (bill add-ons in particular), so reload once written.
+  } = useEnergyData({ onBackupApplied: () => window.location.reload() });
 
   const [showFloorHelp, setShowFloorHelp] = React.useState(false);
   const [userPlan, setUserPlan] = React.useState<PlanId>('TOU');
@@ -137,7 +142,20 @@ export default function Dashboard() {
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
              </div>
-             {!parsing && <button onClick={() => setShowUploadModal(false)} className="mt-4 w-full py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-xs md:hidden">Cancel</button>}
+             {/* Why the last upload loaded nothing: names what was missing,
+                 instead of a bare "invalid XML" (Wave G item 4). */}
+             {parseIssue && !parseIssue.ok && (
+               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-black bg-red-50 rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
+                 <div className="text-sm md:text-lg font-black uppercase text-red-700 mb-2">{parseIssue.headline}</div>
+                 <p className="text-[11px] md:text-sm font-bold text-slate-700 normal-case mb-3">{parseIssue.detail}</p>
+                 {parseIssue.hints.length > 0 && (
+                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
+                     {parseIssue.hints.map((h) => <li key={h}>{h}</li>)}
+                   </ul>
+                 )}
+               </div>
+             )}
+             {!parsing && <button onClick={() => { setParseIssue(null); setShowUploadModal(false); }} className="mt-4 w-full py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-xs md:hidden">Cancel</button>}
           </div>
         </div>
       )}
@@ -166,8 +184,9 @@ export default function Dashboard() {
       {/* Nav Controls */}
       <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black">
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
-           <button onClick={() => setShowUploadModal(true)} title="Upload XML" className="p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={18} strokeWidth={4} /></button>
+           <button onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" className="p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button onClick={emergencyReset} title="Reset Data" className="p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
 
            <div className="flex items-center gap-1 md:gap-2">
              <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-sm text-black bg-white" />

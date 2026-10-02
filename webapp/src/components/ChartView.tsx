@@ -10,7 +10,7 @@
 "use client";
 
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceArea
 } from 'recharts';
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { type ChartDataItem, type ProcessedPoint, type RateSet, getBarColor } from '@/lib/energy';
@@ -20,6 +20,7 @@ import { TrueBillEstimate } from '@/components/TrueBillEstimate';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import type { BillProjection } from '@/lib/billProjection';
 import type { WfhShare } from '@/lib/energy';
+import { chartSegments, distinctSeasons, SEASON_INFO, type Season } from '@/lib/season';
 
 export type PlanId = 'TOU' | 'Tiered' | 'ULO';
 export type Comparison = { TOU: number; Tiered: number; ULO: number };
@@ -53,6 +54,31 @@ export default function ChartView({
   userPlan, setUserPlan, comparison, activeRateSet,
   filteredData, startDate, endDate, projection, wfh,
 }: ChartViewProps) {
+  /**
+   * Rate-season bands (Wave G item 6): Ontario flips its rate windows on
+   * May 1 / Nov 1, and a window that straddles a boundary would otherwise
+   * render as one undifferentiated row of bars.
+   */
+  const segments = chartSegments(zoomLevel, activeChartData, zoomTarget ?? startDate);
+  // ReferenceArea anchors on axis LABELS; they must be unique or a band would
+  // span the wrong bars, so shading degrades to the chips below when they are not.
+  const labelsUnique = new Set(activeChartData.map((d) => d.label)).size === activeChartData.length;
+  const seasonsInView = distinctSeasons(segments.map((s) => s.season));
+  const seasonOfView: Season =
+    filteredData.length > 0
+      ? filteredData[filteredData.length - 1].isWinter
+        ? 'winter'
+        : 'summer'
+      : seasonsInView[seasonsInView.length - 1] ?? 'summer';
+  const tierThreshold =
+    activeRateSet && (seasonOfView === 'winter'
+      ? activeRateSet.tiered.thresholdWinter
+      : activeRateSet.tiered.thresholdSummer);
+  const otherTierThreshold =
+    activeRateSet && (seasonOfView === 'winter'
+      ? activeRateSet.tiered.thresholdSummer
+      : activeRateSet.tiered.thresholdWinter);
+
   return (
     <div className="space-y-6 md:space-y-10" data-testid="chart-view">
       {/* This month's bill — month-to-date + recent average, gated on day 5. */}
@@ -97,6 +123,19 @@ export default function ChartView({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={activeChartData}>
               <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
+              {/* Subtle season bands: blue = winter window, amber = summer. */}
+              {labelsUnique &&
+                segments.map((s, i) => (
+                  <ReferenceArea
+                    key={`season-${s.season}-${i}`}
+                    x1={s.fromLabel}
+                    x2={s.toLabel}
+                    fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
+                    fillOpacity={0.07}
+                    stroke="none"
+                    label={{ value: s.season === 'winter' ? 'WINTER' : 'SUMMER', position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
+                  />
+                ))}
               <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
               <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
               <Tooltip
@@ -132,7 +171,21 @@ export default function ChartView({
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-4 md:mt-6 flex justify-end">
+        <div className="mt-4 md:mt-6 flex flex-wrap items-center justify-between gap-3">
+          {/* Which rate window(s) the visible bars fall in — the band above
+              shades them, this says what the shading means. */}
+          <div className="flex flex-wrap gap-2 md:gap-3" data-testid="season-band">
+            {segments.map((s, i) => (
+              <span
+                key={`chip-${s.season}-${i}`}
+                data-testid="season-chip"
+                className={`px-2 md:px-3 py-1 rounded-full border-2 border-black text-[8px] md:text-[10px] font-black ${s.season === 'winter' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}
+              >
+                {s.season === 'winter' ? '❄' : '☀'} {SEASON_INFO[s.season].label} · {SEASON_INFO[s.season].range}
+                {segments.length > 1 ? ` · ${s.bars} bars` : ''}
+              </span>
+            ))}
+          </div>
           <ExportCsvButton rows={filteredData} />
         </div>
       </div>
@@ -150,6 +203,26 @@ export default function ChartView({
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
               {plan.rates.map((r: { l: string; v: string; c?: string }, j: number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
             </div>
+            {/* Tier thresholds are season-aware (Wave A aggregation already
+                sums against the right one); say which one is in force. */}
+            {plan.id === 'Tiered' && tierThreshold != null && (
+              <div
+                data-testid="tier-threshold"
+                className="mt-3 md:mt-5 bg-yellow-50 p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[9px] md:text-xs font-black"
+              >
+                <div className="flex justify-between">
+                  <span>Tier 1 cut-off</span>
+                  <span>{tierThreshold.toLocaleString()} kWh/mo</span>
+                </div>
+                <div className="mt-1 text-slate-600 font-bold normal-case">
+                  {SEASON_INFO[seasonOfView].long}
+                  {seasonsInView.length > 1 ? ' — window spans both seasons' : ''}
+                  {otherTierThreshold != null
+                    ? ` · other window: ${otherTierThreshold.toLocaleString()} kWh/mo`
+                    : ''}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

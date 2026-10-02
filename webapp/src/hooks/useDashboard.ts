@@ -15,6 +15,21 @@ import {
   getBillingPeriod, parseGreenButtonUsagePoints, selectInitialWindow,
   EMPTY_EXTRA_CHARGES, type ExtraCharges,
 } from "@/lib/energy";
+import {
+  buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
+} from "@/lib/backup";
+import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
+
+/** Narrow a rejected FileReader promise back to a rendered failure diagnostic. */
+function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { ok: false }> {
+  return !!value && typeof value === "object" && typeof (value as { headline?: unknown }).headline === "string";
+}
+
+/** What an Export click downloads: a versioned JSON document + its filename. */
+export type BackupExport = { filename: string; text: string };
+
+/** Outcome of an Import: ok carries the filename, failure carries the reason. */
+export type BackupImportResult = { ok: boolean; filename?: string; error?: string };
 
 export type { ExtraCharges };
 
@@ -27,6 +42,8 @@ export type MergeFileChoice = {
   name: string;
   groups: UsagePointGroup[];
   chosen: number | "combine" | null;
+  /** Set when this file produced no readings: what to tell the user. */
+  issue?: ParseDiagnostic;
 };
 
 /**
@@ -55,9 +72,16 @@ export function useActiveRateSet(
 
 /**
  * Energy data lifecycle: localStorage restore, /api/rates fetch, upload,
- * emergency reset, billing-day editing, and view-scope re-anchoring.
+ * emergency reset, billing-day editing, view-scope re-anchoring, and
+ * backup/restore (Wave G: the browser profile is the only storage there is).
+ *
+ * `options.onBackupApplied` runs after a successful import writes storage.
+ * Dashboard passes `() => window.location.reload()` so every hook that seeds
+ * itself lazily from localStorage (useExtraCharges in particular) re-reads the
+ * restored values instead of keeping pre-import state.
  */
-export function useEnergyData() {
+export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
+  const { onBackupApplied } = options;
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +100,13 @@ export function useEnergyData() {
 
   /** 2+ files waiting on the merge review screen (range + rows before import). */
   const [pendingMerge, setPendingMerge] = useState<MergeFileChoice[] | null>(null);
+
+  /**
+   * Why the last upload produced nothing. Rendered inside the upload modal —
+   * "invalid XML" tells a first-time user nothing, so the diagnostic names
+   * what was missing instead (see lib/parseDiagnostic.ts).
+   */
+  const [parseIssue, setParseIssue] = useState<ParseDiagnostic | null>(null);
 
   /**
    * Open a freshly loaded dataset in a window that is actually full of data.
@@ -102,6 +133,7 @@ export function useEnergyData() {
     setRawData(data);
     localStorage.setItem("energy_data", JSON.stringify(data));
     applyInitialWindow(data, billingDay);
+    setParseIssue(null);
     setShowUploadModal(false);
   };
 
@@ -148,30 +180,69 @@ export function useEnergyData() {
     const files = Array.from(fileList);
     setParsing(true);
 
+    const countReadings = (gs: UsagePointGroup[]) =>
+      gs.reduce((n, g) => n + g.readings.length, 0);
+
     const parseOne = (file: File): Promise<MergeFileChoice> =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
+        reader.onerror = () =>
+          reject({
+            ok: false,
+            headline: `Could not read ${file.name}.`,
+            detail: 'The browser failed to open the file — it may have been moved or locked since you picked it.',
+            hints: ['Pick the file again from disk.'],
+          } satisfies ParseDiagnostic);
         reader.onload = (ev) => {
+          const text = (ev.target?.result as string) ?? "";
+          let groups: UsagePointGroup[];
           try {
-            const groups = parseGreenButtonUsagePoints(ev.target?.result as string);
-            // A single-meter file is pre-picked; a multi-meter one stays null
-            // until the review screen asks.
-            resolve({ name: file.name, groups, chosen: groups.length === 1 ? 0 : null });
-          } catch {
-            reject(new Error(`Parse Error in ${file.name}`));
+            groups = parseGreenButtonUsagePoints(text);
+          } catch (e) {
+            // Security refusals (external entities) and malformed markup land
+            // here: explain the document instead of repeating the exception.
+            const diag = diagnoseGreenButtonDocument(text, 0);
+            reject(
+              diag.ok
+                ? ({
+                    ok: false,
+                    headline: `Could not read ${file.name}.`,
+                    detail: String((e as Error)?.message ?? e),
+                    hints: ['Re-download the export and try again.'],
+                  } satisfies ParseDiagnostic)
+                : diag,
+            );
+            return;
           }
+          const readings = countReadings(groups);
+          // A single-meter file is pre-picked; a multi-meter one stays null
+          // until the review screen asks.
+          resolve({
+            name: file.name,
+            groups,
+            chosen: groups.length === 1 ? 0 : null,
+            ...(readings === 0 ? { issue: diagnoseGreenButtonDocument(text, 0) } : {}),
+          });
         };
         reader.readAsText(file);
       });
 
+    setParseIssue(null);
     Promise.all(files.map(parseOne))
       .then((results) => {
-        const total = results.reduce(
-          (n, r) => n + r.groups.reduce((m, g) => m + g.readings.length, 0),
-          0,
-        );
-        if (total === 0) return; // nothing readable: leave the modal open, as before
+        const total = results.reduce((n, r) => n + countReadings(r.groups), 0);
+        if (total === 0) {
+          // Nothing readable: keep the modal open and say exactly why.
+          setParseIssue(
+            results.map((r) => r.issue).find(Boolean) ?? {
+              ok: false,
+              headline: "No readings found in that file.",
+              detail: "The upload was read successfully but contained no interval readings to import.",
+              hints: ["Export Green Button XML with interval data from your utility portal."],
+            },
+          );
+          return;
+        }
 
         if (results.length === 1) {
           const only = results[0];
@@ -186,7 +257,18 @@ export function useEnergyData() {
         setPendingMerge(results);
         setShowUploadModal(false);
       })
-      .catch(() => alert("Parse Error"))
+      .catch((e) => {
+        setParseIssue(
+          isParseDiagnostic(e)
+            ? e
+            : {
+                ok: false,
+                headline: "That file could not be read.",
+                detail: String((e as Error)?.message ?? e),
+                hints: ["Re-download the export from your utility portal and try again."],
+              },
+        );
+      })
       .finally(() => setParsing(false));
   };
 
@@ -248,6 +330,57 @@ export function useEnergyData() {
     }
   };
 
+  /**
+   * Serialize everything this browser holds (readings, billing day, bill
+   * add-ons) into a versioned JSON document. Returns null when there is
+   * nothing to back up — the drawer reports that instead of writing an empty
+   * file that would wipe data if restored.
+   */
+  const exportBackup = (): BackupExport | null => {
+    if (rawData.length === 0) return null;
+    const now = new Date();
+    const doc = buildBackupDocument({
+      energyData: rawData,
+      billingDay,
+      extraCharges: readStoredExtraCharges(),
+      exportedAt: now,
+    });
+    return { filename: backupFilename(now), text: serializeBackup(doc) };
+  };
+
+  /**
+   * Restore a previously exported file.
+   *
+   * Validation happens BEFORE any write: a rejected file leaves the existing
+   * profile completely untouched (import is all-or-nothing, never partial).
+   */
+  const importBackupFile = async (file: File): Promise<BackupImportResult> => {
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      return { ok: false, error: `Could not read ${file.name}. Choose the JSON file produced by “Export JSON”.` };
+    }
+
+    const parsed = parseBackup(text);
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+
+    try {
+      const values = storageValuesFromBackup(parsed.value);
+      localStorage.setItem("energy_data", values.energy_data);
+      localStorage.setItem("billing_day", values.billing_day);
+      localStorage.setItem("extra_charges", values.extra_charges);
+    } catch {
+      return {
+        ok: false,
+        error: "This browser refused to save the backup (storage may be full or blocked). Nothing was changed.",
+      };
+    }
+
+    onBackupApplied?.();
+    return { ok: true, filename: file.name };
+  };
+
   return {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
@@ -256,6 +389,8 @@ export function useEnergyData() {
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
     pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
+    exportBackup, importBackupFile,
+    parseIssue, setParseIssue,
   };
 }
 
@@ -371,6 +506,15 @@ function readStoredCharges(raw: string): ExtraCharges {
     regulatoryPerKwh: text(parsed.regulatoryPerKwh),
     hstPct: text(parsed.hstPct),
   };
+}
+
+/** Whitelisted read of the stored add-ons (missing/unreadable = all empty). */
+function readStoredExtraCharges(): ExtraCharges {
+  try {
+    const raw = localStorage.getItem(EXTRA_CHARGES_KEY);
+    if (raw) return readStoredCharges(raw);
+  } catch { /* unreadable storage: export what we can, which is nothing here */ }
+  return EMPTY_EXTRA_CHARGES;
 }
 
 export function useExtraCharges() {
