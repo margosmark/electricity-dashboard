@@ -15,13 +15,43 @@ import {
   format, startOfMonth, lastDayOfMonth, startOfYear,
   addMonths, subMonths, addDays
 } from 'date-fns';
-import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
+import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw, Download, FileUp } from 'lucide-react';
 import {
   type DataPoint, type RateSet, type ChartDataItem,
   getBillingPeriod, parseGreenButtonXML, processRawData, filterByDateRange,
   buildActiveChartData, calculateComparison, calculateVampire,
   detectAnomalies, buildHeatmapData, getBarColor,
 } from '@/lib/energy';
+import {
+  type StorageResult,
+  loadEnergyData, saveEnergyData, loadBillingDay, saveBillingDay,
+  exportEnergyData, parseImport, resetStoredData, listOurStoredKeys,
+} from '@/lib/storage';
+
+/** One row per storage problem — never let a failed write look like a saved one. */
+type StorageNotice = { kind: 'quota' | 'corrupt' | 'cleanup'; detail: string };
+
+const STORAGE_MESSAGES: Record<StorageNotice['kind'], string> = {
+  quota: 'Data too large for browser storage — export and clear old data',
+  corrupt: 'Saved data could not be read — re-upload your XML or import a backup',
+  cleanup: 'Saved data could not be fully cleaned up — export a backup now',
+};
+
+/** Visible, dismissible row for any storage failure — quota / corrupt / cleanup. */
+function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDismiss: () => void }) {
+  return (
+    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] font-black uppercase">
+      <AlertTriangle size={20} strokeWidth={4} className="shrink-0 mt-1" />
+      <div className="flex-1 min-w-[200px]">
+        <div className="text-xs md:text-base">{STORAGE_MESSAGES[notice.kind]}</div>
+        <div className="text-[10px] md:text-xs opacity-90 normal-case mt-1 break-all">{notice.detail}</div>
+      </div>
+      <button onClick={onDismiss} title="Dismiss storage notice" aria-label="Dismiss storage notice" className="ml-auto p-2 bg-white text-black border-2 border-black rounded-lg hover:bg-slate-100 transition-all">
+        <X size={16} strokeWidth={4} />
+      </button>
+    </div>
+  );
+}
 
 export default function Dashboard() {
 
@@ -41,12 +71,38 @@ export default function Dashboard() {
   
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  // storage surfacing: a failed write/read is shown, never swallowed
+  const [storageNotice, setStorageNotice] = useState<StorageNotice | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetKeys, setResetKeys] = useState<string[]>([]);
   
   // monthly ➔ weekly ➔ daily ➔ hourly
   const [zoomLevel, setZoomLevel] = useState<'monthly' | 'weekly' | 'daily' | 'hourly'>('monthly');
   const [zoomTarget, setZoomTarget] = useState<string | null>(null);
 
   // --- Helpers ---
+
+  /** Surface a storage result: failures and non-clean writes become a visible row. */
+  const reportResult = <T,>(res: StorageResult<T>): T | null => {
+    if (!res.ok) {
+      setStorageNotice({ kind: res.reason, detail: res.detail });
+      return null;
+    }
+    const warning = res.warnings[0];
+    if (warning) setStorageNotice({ kind: warning.kind, detail: warning.detail });
+    return res.value;
+  };
+
+  /** Put points into UI state and anchor the billing period on the newest reading. */
+  const applyPoints = (points: DataPoint[], day: number = billingDay) => {
+    setRawData(points);
+    if (points.length === 0) { setShowUploadModal(true); return; }
+    const last = new Date(points[points.length - 1].timestamp * 1000);
+    const period = getBillingPeriod(last, day);
+    setStartDate(format(period.start, 'yyyy-MM-dd'));
+    setEndDate(format(period.end, 'yyyy-MM-dd'));
+  };
 
   // --- Start Sequence ---
   useEffect(() => {
@@ -59,21 +115,25 @@ export default function Dashboard() {
         if (mounted) setRateHistory(json.historicalRates || []);
       } catch (e) {}
       try {
-        const savedBDay = localStorage.getItem('billing_day');
-        if (savedBDay && mounted) setBillingDay(parseInt(savedBDay));
-        const savedData = localStorage.getItem('energy_data');
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          if (mounted && parsed.length > 0) {
-            setRawData(parsed);
-            const last = new Date(parsed[parsed.length - 1].timestamp * 1000);
-            const period = getBillingPeriod(last, savedBDay ? parseInt(savedBDay) : 1);
-            setStartDate(format(period.start, 'yyyy-MM-dd'));
-            setEndDate(format(period.end, 'yyyy-MM-dd'));
-          }
-        } else if (mounted) { setShowUploadModal(true); }
-      } catch (e) {}
-      if (mounted) setLoading(false);
+        const savedDay = reportResult(loadBillingDay());
+        if (savedDay !== null && mounted) setBillingDay(savedDay);
+
+        const stored = reportResult(loadEnergyData());
+        if (!mounted) return;
+        if (stored !== null && stored.points.length > 0) {
+          applyPoints(stored.points, savedDay ?? 1);
+        } else {
+          // nothing stored, or unreadable (reportResult already raised a notice)
+          setShowUploadModal(true);
+        }
+      } catch (e) {
+        if (mounted) {
+          setStorageNotice({ kind: 'corrupt', detail: `Storage read failed: ${String(e)}` });
+          setShowUploadModal(true);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
     }
     init();
     const stuckTimer = setTimeout(() => { if (loading && mounted) setStuck(true); }, 5000);
@@ -88,17 +148,51 @@ export default function Dashboard() {
       try {
         const data = parseGreenButtonXML(ev.target?.result as string);
         if (data.length > 0) {
-          setRawData(data);
-          localStorage.setItem('energy_data', JSON.stringify(data));
-          const last = new Date(data[data.length-1].timestamp * 1000);
-          const period = getBillingPeriod(last, billingDay);
-          setStartDate(format(period.start, 'yyyy-MM-dd'));
-          setEndDate(format(period.end, 'yyyy-MM-dd'));
+          // persist first: a quota failure must not look like a successful save
+          const saved = saveEnergyData(data, { source: 'xml-upload' });
+          if (saved.ok && saved.warnings.length === 0) setStorageNotice(null);
+          else reportResult(saved);
+          applyPoints(data);
           setShowUploadModal(false);
         }
       } catch (err) { alert("Parse Error"); }
       finally { setParsing(false); }
     };
+    reader.readAsText(file);
+  };
+
+  // --- Export / Import ---
+
+  const handleExport = () => {
+    const exported = exportEnergyData(rawData, 'manual-export');
+    if (!exported.ok) { reportResult(exported); return; }
+    const json = exported.value;
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `energy-optimizer-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const imported = reportResult(parseImport(String(ev.target?.result ?? '')));
+      if (!imported) return;
+      const saved = saveEnergyData(imported.points, { source: imported.source, uploadedAt: imported.uploadedAt });
+      if (saved.ok && saved.warnings.length === 0) setStorageNotice(null);
+      else reportResult(saved);
+      applyPoints(imported.points);
+      setShowUploadModal(false);
+    };
+    reader.onerror = () => setStorageNotice({ kind: 'corrupt', detail: 'Import file could not be read from disk' });
     reader.readAsText(file);
   };
 
@@ -163,10 +257,23 @@ export default function Dashboard() {
     }
   };
 
-  const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
-  const updateBillingDay = (day: number) => { 
-    setBillingDay(day); 
-    localStorage.setItem('billing_day', day.toString()); 
+  const openResetConfirm = () => {
+    const keys = listOurStoredKeys();
+    setResetKeys(keys.ok ? keys.value : []);
+    setShowResetConfirm(true);
+  };
+
+  const confirmReset = () => {
+    const removed = resetStoredData();
+    setShowResetConfirm(false);
+    if (!removed.ok) { reportResult(removed); return; }
+    window.location.reload();
+  };
+
+  const updateBillingDay = (day: number) => {
+    if (!Number.isInteger(day) || day < 1 || day > 31) return;
+    setBillingDay(day);
+    reportResult(saveBillingDay(day));
     if (viewScope === 'BillingPeriod') {
       const s = new Date(startDate + "T00:00:00");
       // Use the middle of the current period to re-anchor
@@ -187,11 +294,31 @@ export default function Dashboard() {
           <div className="bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black">
              <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-black font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> Link Data</h2>
              <p className="font-bold text-slate-600 text-sm md:text-lg mb-6 md:mb-10 text-black">Privacy-First: Data stays in your browser. <span className="underline decoration-blue-500">Upload your XML to begin.</span></p>
+             {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={() => setStorageNotice(null)} /></div>}
              <div className="relative">
-                <input type="file" accept=".xml" onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
+               <input type="file" accept=".xml" onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+               <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
              </div>
+             <label className="mt-4 block cursor-pointer">
+               <input type="file" accept="application/json,.json" onChange={handleImportFile} aria-label="Import JSON backup" className="sr-only" />
+               <span className="block w-full py-3 bg-emerald-50 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs text-black text-center">…or import a previous export (.json)</span>
+             </label>
              {!parsing && <button onClick={() => setShowUploadModal(false)} className="mt-4 w-full py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-xs md:hidden">Cancel</button>}
+          </div>
+        </div>
+      )}
+
+      {/* Reset: two-step confirm, scoped to this app's keys only */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex items-center justify-center p-4">
+          <div role="dialog" aria-modal="true" aria-label="Confirm reset" data-testid="reset-confirm" className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-lg w-full text-black">
+            <h2 className="text-xl md:text-3xl uppercase tracking-tighter mb-3 md:mb-4 flex items-center gap-2 md:gap-3 text-red-600 font-black"><AlertTriangle size={22} strokeWidth={4} /> Erase saved data?</h2>
+            <p className="font-bold text-slate-700 text-xs md:text-sm mb-2">This removes {resetKeys.length} saved {resetKeys.length === 1 ? 'item' : 'items'} from <em>this browser only</em>:</p>
+            <p className="font-black uppercase text-[10px] md:text-xs text-slate-500 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : 'nothing stored yet'} — other site data is untouched.</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button onClick={confirmReset} title="Confirm Reset" className="flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 transition-colors">Yes, erase it</button>
+              <button onClick={() => setShowResetConfirm(false)} title="Cancel Reset" className="flex-1 py-3 md:py-4 bg-slate-100 border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-slate-200 transition-colors">Cancel</button>
+            </div>
           </div>
         </div>
       )}
@@ -200,7 +327,12 @@ export default function Dashboard() {
       <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black">
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
            <button onClick={() => setShowUploadModal(true)} title="Upload XML" className="p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={18} strokeWidth={4} /></button>
-           <button onClick={emergencyReset} title="Reset Data" className="p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <button onClick={openResetConfirm} title="Reset Data" className="p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <button onClick={handleExport} title="Export Data" disabled={rawData.length === 0} className="p-3 md:p-4 bg-white text-blue-700 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
+           <label title="Import Data" className="p-3 md:p-4 bg-white text-emerald-700 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(5,150,105,1)] hover:translate-y-1 transition-all inline-flex cursor-pointer">
+             <input type="file" accept="application/json,.json" onChange={handleImportFile} aria-label="Import JSON" className="sr-only" />
+             <FileUp size={18} strokeWidth={4} />
+           </label>
            
            <div className="flex items-center gap-1 md:gap-2">
              <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-sm text-black bg-white" />
@@ -254,6 +386,11 @@ export default function Dashboard() {
            </button>
         </div>
       </div>
+
+      {/* Storage failure row (visible whenever a read/write did not land) */}
+      {storageNotice && !showUploadModal && (
+        <StorageNoticeRow notice={storageNotice} onDismiss={() => setStorageNotice(null)} />
+      )}
 
       {/* Vampire Load Help Modal */}
       {showVampireHelp && (
