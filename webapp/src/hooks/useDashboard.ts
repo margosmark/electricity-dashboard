@@ -12,11 +12,18 @@ import { useState, useEffect, useMemo, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
   type DataPoint, type RateSet, type UsagePointGroup,
-  getBillingPeriod, parseGreenButtonUsagePoints,
+  getBillingPeriod, parseGreenButtonUsagePoints, selectInitialWindow,
   EMPTY_EXTRA_CHARGES, type ExtraCharges,
 } from "@/lib/energy";
 
 export type { ExtraCharges };
+
+/**
+ * Which scope button the current startDate/endDate window belongs to.
+ * `Custom` = a window that is neither a billing period nor a calendar month
+ * (either the user typed dates, or first load picked a data-anchored window).
+ */
+export type ViewScope = "Month" | "YTD" | "BillingPeriod" | "Custom";
 
 /**
  * The RateSet in force on the newest processed reading — plan cards and any
@@ -48,20 +55,39 @@ export function useEnergyData() {
   const [billingDay, setBillingDayState] = useState<number>(1);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [viewScope, setViewScope] = useState<ViewScope>("BillingPeriod");
+
   /** Multi-meter upload waiting for the user to pick which point to load. */
   const [pendingUpload, setPendingUpload] = useState<{
     fileName: string;
     groups: UsagePointGroup[];
   } | null>(null);
 
-  /** Import rows: persist, anchor the billing window, close the upload modal. */
+  /**
+   * Open a freshly loaded dataset in a window that is actually full of data.
+   * (Anchoring the billing period straight on the last data day used to open a
+   * mostly-future window — data ending Oct 1 with billing_day=1 showed Oct 1-31
+   * for ~12h of data. selectInitialWindow clamps the anchor and falls back
+   * through Month → data-anchored trailing window, and reports which scope the
+   * resulting window belongs to.)
+   */
+  const applyInitialWindow = (points: DataPoint[], day: number) => {
+    const w = selectInitialWindow(points, day, new Date());
+    if (!w) return;
+    setStartDate(w.start);
+    setEndDate(w.end);
+    setViewScope(w.scope);
+  };
+
+  /**
+   * Import rows: persist, open a data-full window, close the upload modal.
+   * (Used by both the single-meter path and the UsagePoint picker, so the
+   * first-load fix applies to an upload however the user completed it.)
+   */
   const commitReadings = (data: DataPoint[]) => {
     setRawData(data);
     localStorage.setItem("energy_data", JSON.stringify(data));
-    const last = new Date(data[data.length - 1].timestamp * 1000);
-    const period = getBillingPeriod(last, billingDay);
-    setStartDate(format(period.start, "yyyy-MM-dd"));
-    setEndDate(format(period.end, "yyyy-MM-dd"));
+    applyInitialWindow(data, billingDay);
     setShowUploadModal(false);
   };
 
@@ -83,10 +109,7 @@ export function useEnergyData() {
           const parsed = JSON.parse(savedData) as DataPoint[];
           if (mounted && Array.isArray(parsed) && parsed.length > 0) {
             setRawData(parsed);
-            const last = new Date(parsed[parsed.length - 1].timestamp * 1000);
-            const period = getBillingPeriod(last, day);
-            setStartDate(format(period.start, "yyyy-MM-dd"));
-            setEndDate(format(period.end, "yyyy-MM-dd"));
+            applyInitialWindow(parsed, day);
           }
         } else if (mounted) {
           setShowUploadModal(true);
@@ -154,8 +177,9 @@ export function useEnergyData() {
     setEndDate(format(p.end, "yyyy-MM-dd"));
   };
 
-  /** Re-anchor startDate/endDate when a scope button is clicked. */
+  /** Re-anchor startDate/endDate when a scope button is clicked (and record the scope). */
   const applyViewScope = (scope: "BillingPeriod" | "Month" | "YTD") => {
+    setViewScope(scope);
     if (scope === "BillingPeriod") {
       const p = getBillingPeriod(new Date(), billingDay);
       setStartDate(format(p.start, "yyyy-MM-dd"));
@@ -173,6 +197,7 @@ export function useEnergyData() {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
+    viewScope, setViewScope,
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
   };
@@ -196,7 +221,7 @@ export function useZoomNavigation(
   endDate: string,
   setStartDate: (d: string) => void,
   setEndDate: (d: string) => void,
-  getViewScope: () => "Month" | "YTD" | "BillingPeriod" | "Custom",
+  getViewScope: () => ViewScope,
   getBillingDay: () => number,
 ) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("monthly");

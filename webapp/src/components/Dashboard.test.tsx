@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { format } from 'date-fns';
 import Dashboard from './Dashboard';
 
 const mockRates = {
@@ -56,9 +57,11 @@ describe('Dashboard', () => {
 
   it('renders plan selection buttons', async () => {
     await renderLoaded();
-    expect(screen.getByText('Tiered')).toBeInTheDocument();
-    expect(screen.getByText('TOU')).toBeInTheDocument();
-    expect(screen.getByText('ULO')).toBeInTheDocument();
+    // Scoped to the nav switcher: the totals strip also names the plans.
+    const switcher = within(screen.getByTestId('plan-switcher'));
+    expect(switcher.getByText('Tiered')).toBeInTheDocument();
+    expect(switcher.getByText('TOU')).toBeInTheDocument();
+    expect(switcher.getByText('ULO')).toBeInTheDocument();
   });
 
   it('renders zoom level buttons', async () => {
@@ -114,9 +117,11 @@ describe('Dashboard', () => {
 
   it('renders plan cards with costs', async () => {
     await renderLoaded();
-    expect(screen.getByText('Time-of-Use')).toBeInTheDocument();
-    expect(screen.getByText('Tiered Pricing')).toBeInTheDocument();
-    expect(screen.getByText('Ultra-Low Over')).toBeInTheDocument();
+    // Scoped to ChartView: the totals strip also names the plans.
+    const chart = within(screen.getByTestId('chart-view'));
+    expect(chart.getByText('Time-of-Use')).toBeInTheDocument();
+    expect(chart.getByText('Tiered Pricing')).toBeInTheDocument();
+    expect(chart.getByText('Ultra-Low Over')).toBeInTheDocument();
   });
 
   // --- Behavior (not shape): rate chips must come from the active RateSet ---
@@ -180,5 +185,90 @@ describe('Dashboard', () => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
     expect(screen.getByText(/CHART/i)).toBeInTheDocument();
+  });
+
+  // --- First-load window (Wave A slice 1) ---
+
+  it('first load: the default window ends on a day with data and is at least half covered', async () => {
+    await renderLoaded();
+    const [startInput, endInput] = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const days = new Set(mockRawData.map((d) => format(new Date(d.timestamp * 1000), 'yyyy-MM-dd')));
+    // The window must end on a day that actually has readings (no future tail).
+    expect(days.has(endInput.value)).toBe(true);
+    // ...and at least half of its days must carry data (the old billing-period
+    // anchor opened Jan 1-31 for 1-2 days of data = 3-6% coverage).
+    let covered = 0;
+    let total = 0;
+    for (let d = new Date(`${startInput.value}T12:00:00`); d <= new Date(`${endInput.value}T12:00:00`); d = new Date(d.getTime() + 86400000)) {
+      total += 1;
+      if (days.has(format(d, 'yyyy-MM-dd'))) covered += 1;
+    }
+    expect(total).toBeGreaterThan(0);
+    expect(covered / total).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it('E2E regression: data ending mid-January with billing_day=1 opens the data-full window, not Jan 1-31', async () => {
+    const dailyNoon = (from: string, to: string) => {
+      const out: { timestamp: number; usage_kwh: number }[] = [];
+      let d = new Date(`${from}T12:00:00`);
+      const end = new Date(`${to}T12:00:00`);
+      while (d.getTime() <= end.getTime()) {
+        out.push({ timestamp: Math.floor(d.getTime() / 1000), usage_kwh: 1 });
+        d = new Date(d.getTime() + 86400000);
+      }
+      return out;
+    };
+    Storage.prototype.getItem = vi.fn((key: string) => {
+      if (key === 'energy_data') return JSON.stringify(dailyNoon('2024-12-01', '2025-01-15'));
+      if (key === 'billing_day') return '1';
+      return null;
+    });
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    const [startInput, endInput] = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    // Old behavior: getBillingPeriod(last data day) = Jan 1-31 2025 (15/31 days
+    // of data). New: trailing data-anchored window Dec 16 - Jan 15 (31/31).
+    expect(startInput.value).toBe('2024-12-16');
+    expect(endInput.value).toBe('2025-01-15');
+  });
+
+  // --- Full-data totals strip (Wave A slice 2) ---
+
+  it('renders the full-data totals strip: since-date, kWh, per-plan costs and plan delta', async () => {
+    await renderLoaded();
+    const strip = screen.getByTestId('totals-strip');
+    const text = strip.textContent || '';
+    expect(text).toMatch(/Since [A-Z][a-z]{2} \d{1,2}, \d{4}/);
+    expect(text).toContain('4 kWh'); // 1.5 + 2.0 + 0.5 over the whole dataset
+    expect(text).toContain('Time-of-Use');
+    expect(text).toContain('Tiered');
+    expect(text).toContain('Ultra-Low Overnight');
+    expect(text).toContain('Best vs worst plan');
+    expect(text).toContain('variable charges only');
+    // Costs are real money figures, not placeholders
+    expect(text).toMatch(/\$\d+\.\d{2}/);
+  });
+
+  it('totals strip covers the WHOLE dataset, not the visible window', async () => {
+    await renderLoaded();
+    const strip = screen.getByTestId('totals-strip');
+    // The default window for this fixture is ~1 day, but the strip must still
+    // report all three readings (4 kWh), i.e. it ignores startDate/endDate.
+    expect(strip.textContent).toContain('4 kWh');
+    expect(strip.textContent).toMatch(new RegExp(format(new Date(mockRawData[0].timestamp * 1000), 'MMM d, yyyy')));
+  });
+
+  // --- Component split (Wave A slice 3) ---
+
+  it('renders the extracted ChartView/InsightsView containers', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('insights-view')).not.toBeInTheDocument();
+    await user.click(screen.getByText('INSIGHTS'));
+    expect(screen.getByTestId('insights-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
   });
 });

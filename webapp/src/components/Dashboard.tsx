@@ -2,47 +2,45 @@
  * Ontario Energy Optimizer - Interaction Fix Edition
  *
  * Flow: Monthly ➔ Weekly ➔ Daily ➔ Hourly
- * State and handlers live in src/hooks/useDashboard.ts; this file renders.
+ * State and handlers live in src/hooks/useDashboard.ts; the tab bodies live in
+ * ChartView.tsx / InsightsView.tsx; this file renders the shell around them.
  */
 
 "use client";
 
 import React, { useMemo, useRef, useEffect } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
 import { format } from 'date-fns';
-import { ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, CheckCircle2, Settings2, Upload, AlertTriangle, X, Trash2 } from 'lucide-react';
+import { HelpCircle, Zap, Upload, X, Trash2, Settings2 } from 'lucide-react';
 import {
   type ChartDataItem,
   processRawData, filterByDateRange,
   buildActiveChartData, calculateComparison, calculateVampire,
-  detectAnomalies, buildHeatmapData, getBarColor,
+  detectAnomalies, buildHeatmapData, calculateFullDataTotals,
 } from '@/lib/energy';
 import {
-  useEnergyData, useActiveRateSet, useZoomNavigation,
+  useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
 } from '@/hooks/useDashboard';
-import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
-import { TrueBillEstimate } from '@/components/TrueBillEstimate';
+import ChartView, { type PlanId } from '@/components/ChartView';
+import InsightsView from '@/components/InsightsView';
 
 export default function Dashboard() {
   const {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
+    viewScope, setViewScope,
     handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
   } = useEnergyData();
 
   const [showVampireHelp, setShowVampireHelp] = React.useState(false);
-  const [userPlan, setUserPlan] = React.useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
+  const [userPlan, setUserPlan] = React.useState<PlanId>('TOU');
   const [viewMode, setViewMode] = React.useState<'Chart' | 'Insights'>('Chart');
-  const [viewScope, setViewScope] = React.useState<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
 
   // Keep navigatePeriod free of stale closures: getters read live state via
   // refs synced after render (lint-safe, no stale closures).
-  const viewScopeRef = useRef<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
+  const viewScopeRef = useRef<ViewScope>('BillingPeriod');
   const billingDayRef = useRef<number>(1);
   useEffect(() => {
     viewScopeRef.current = viewScope;
@@ -68,6 +66,10 @@ export default function Dashboard() {
   const anomalies = useMemo(() => detectAnomalies(processedData, filteredData), [processedData, filteredData]);
 
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
+
+  // Whole-dataset totals for the strip — deliberately NOT filtered by the
+  // visible window: this row answers "what would all my data have cost?".
+  const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData]);
 
   // Rate schedule in force for the plan cards — read live, never hardcoded.
   const activeRateSet = useActiveRateSet(processedData);
@@ -119,11 +121,11 @@ export default function Dashboard() {
            </div>
 
            <div className="flex gap-1">
-             <button onClick={() => { setViewScope('BillingPeriod'); applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
+             <button onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
 
-             <button onClick={() => { setViewScope('Month'); applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
+             <button onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
 
-             <button onClick={() => { setViewScope('YTD'); applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
+             <button onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
            </div>
         </div>
 
@@ -137,7 +139,7 @@ export default function Dashboard() {
               <Settings2 size={16} className="text-slate-500" />
               <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-8 md:w-12 bg-transparent text-xs md:text-sm outline-none text-black font-black" />
            </div>
-           <div className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
+           <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
                {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
            </div>
            <button onClick={() => setShowVampireHelp(true)} className="bg-blue-600 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 transition-all group min-w-[120px]">
@@ -146,6 +148,39 @@ export default function Dashboard() {
            </button>
         </div>
       </div>
+
+      {/* Full-data totals strip: every reading ever loaded, not just the window above. */}
+      {totals && (
+        <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip">
+          <div className="bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
+            <div className="text-[8px] md:text-[10px] text-yellow-400">Since {format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
+            <div className="text-xl md:text-3xl italic font-black">{totals.totalKwh.toFixed(0)} kWh</div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 md:gap-4">
+            {([
+              { id: 'TOU', label: 'Time-of-Use', cost: totals.costTOU },
+              { id: 'Tiered', label: 'Tiered', cost: totals.costTiered },
+              { id: 'ULO', label: 'Ultra-Low Overnight', cost: totals.costULO },
+            ] as const).map((p) => (
+              <div key={p.id} className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-black ${p.id === totals.bestPlan ? 'bg-emerald-400' : p.id === totals.worstPlan ? 'bg-red-400' : 'bg-slate-100'}`}>
+                <div className="text-[8px] md:text-[10px]">{p.label}</div>
+                <div className="text-lg md:text-2xl italic font-black">${p.cost.toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
+            <div className="text-[8px] md:text-[10px]">Best vs worst plan</div>
+            <div className="text-lg md:text-2xl italic font-black">${totals.planDelta.toFixed(2)}</div>
+            <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>
+          </div>
+
+          <div className="text-[8px] md:text-[10px] text-slate-500 max-w-[240px] md:max-w-none">
+            Whole dataset ({format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d')} – {format(new Date(totals.lastDate + 'T00:00:00'), 'MMM d, yyyy')}), variable charges only.
+          </div>
+        </div>
+      )}
 
       {/* Vampire Load Help Modal */}
       {showVampireHelp && (
@@ -171,158 +206,27 @@ export default function Dashboard() {
       )}
 
       {viewMode === 'Chart' && (
-        <div className="space-y-6 md:space-y-10">
-          {/* Main Graph */}
-          <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
-            <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
-              <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
-                {zoomLevel !== 'monthly' && <button onClick={goBack} className="p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
-                <div className="flex items-center gap-2 md:gap-4">
-                  <button onClick={() => navigatePeriod('prev')} className="p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
-                  <h2 className="text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate max-w-[150px] sm:max-w-none">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
-                  <button onClick={() => navigatePeriod('next')} className="p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
-                </div>
-              </div>
-              <div className="flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black">
-                 {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
-              </div>
-              <div className="text-center lg:text-right text-black font-black">
-                 <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
-                  <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">${selectionCost.toFixed(2)}</div>
-              </div>
-            </div>
-
-            <div className="h-[300px] md:h-[500px] -ml-4 md:-ml-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activeChartData}>
-                  <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
-                  <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-                  <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-                  <Tooltip
-                    cursor={{fill: '#000', opacity: 0.05}}
-                    contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}}
-                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}}
-                    labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}}
-                    formatter={(v, name) => {
-                       if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-                       return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
-                    }}
-                  />
-                  <Bar
-                    dataKey="usage"
-                    fill="#2563EB"
-                    stroke="#000"
-                    strokeWidth={3}
-                    radius={0}
-                    activeBar={{ fill: '#FFD600' }}
-                    onClick={(d) => handleBarClick(d as { key?: string } | null)}
-                    className="cursor-pointer"
-                  >
-                    {activeChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={getBarColor(zoomLevel, entry.key)}
-                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                      />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-4 md:mt-6 flex justify-end">
-              <ExportCsvButton rows={filteredData} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
-            {[
-              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` }, { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` }] },
-              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' }] },
-              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
-            ].map((plan, i) => (
-              <div key={i} onClick={() => setUserPlan(plan.id as 'Tiered' | 'TOU' | 'ULO')} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
-                {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
-                <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
-                <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">${plan.cost?.toFixed(2)}</div>
-                <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
-                  {plan.rates.map((r: { l: string; v: string; c?: string }, j: number) => <div key={j} className={`flex justify-between ${r.c || ''}`}><span>{r.l}</span> <span>{r.v}</span></div>)}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <TrueBillEstimate
-            plan={userPlan}
-            startDate={startDate}
-            endDate={endDate}
-            windowData={filteredData}
-          />
-
-          {comparison && (
-            <div className="bg-black text-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-yellow-400 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase">
-               <div className="space-y-2 md:space-y-4 text-center lg:text-left">
-                  <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-yellow-400 font-black">Winning Economic Plan</div>
-                  <h4 className="text-3xl md:text-5xl italic leading-tight">THE BEST CHOICE IS <br/><span className="text-4xl sm:text-6xl md:text-8xl text-yellow-400 not-italic block mt-1 md:mt-2 font-black">{comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'Time-of-Use' : comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered Pricing' : 'Ultra-Low Overnight'}</span></h4>
-               </div>
-               <div className="bg-white text-black p-6 md:p-10 rounded-2xl md:rounded-[2.5rem] border-4 border-black shadow-xl lg:rotate-3 flex flex-col items-center min-w-[200px] md:min-w-[300px]">
-                  <div className="text-[10px] tracking-widest text-slate-400 mb-1 md:mb-2 font-black text-center uppercase">Plan Impact</div>
-                  <div className="text-4xl md:text-7xl italic text-black whitespace-nowrap leading-none text-center font-black">
-                    {userPlan === (comparison.TOU < comparison.Tiered && comparison.TOU < comparison.ULO ? 'TOU' : comparison.Tiered < comparison.TOU && comparison.Tiered < comparison.ULO ? 'Tiered' : 'ULO') ? (
-                         <span className="text-emerald-600 text-2xl md:text-5xl not-italic block">Optimum<br/>Choice!</span>
-                        ) : ( <span className="text-red-600">-${Math.abs((comparison[userPlan as keyof typeof comparison] as number) - Math.min(comparison.TOU, comparison.Tiered, comparison.ULO)).toFixed(2)}</span> )}
-                  </div>
-                  <div className="text-[8px] md:text-[10px] mt-2 md:mt-4 font-black text-center text-black">vs. your current {userPlan} plan</div>
-               </div>
-            </div>
-          )}
-        </div>
+        <ChartView
+          zoomLevel={zoomLevel}
+          zoomTarget={zoomTarget}
+          goBack={goBack}
+          navigatePeriod={navigatePeriod}
+          setZoomLevelAndClear={setZoomLevelAndClear}
+          activeChartData={activeChartData}
+          handleBarClick={handleBarClick}
+          selectionCost={selectionCost}
+          userPlan={userPlan}
+          setUserPlan={setUserPlan}
+          comparison={comparison}
+          activeRateSet={activeRateSet}
+          filteredData={filteredData}
+          startDate={startDate}
+          endDate={endDate}
+        />
       )}
 
       {viewMode === 'Insights' && (
-        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase">
-          <div className="flex justify-end">
-            <ExportCsvButton rows={filteredData} />
-          </div>
-
-          <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
-             <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase"><AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} /><h3 className="text-2xl md:text-4xl">Usage Anomalies</h3></div>
-             {anomalies.length > 0 ? (
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 font-black text-black">
-                 {anomalies.map((anom, i) => (
-                   <div key={i} className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-black font-black uppercase">
-                     <div className="text-red-600 text-[8px] md:text-[10px] mb-1 md:mb-2 font-black">{format(anom.date, 'EEEE, MMM do')}</div>
-                     <div className="text-2xl md:text-3xl italic font-black text-black">{anom.usage.toFixed(1)} kWh</div>
-                     <div className="text-[8px] md:text-[10px] text-slate-500 mt-1 md:mt-2 font-black">+{anom.diffPct.toFixed(0)}% vs average</div>
-                   </div>
-                 ))}
-               </div>
-             ) : <div className="bg-white p-6 md:p-8 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-lg md:text-xl text-black">No significant spikes detected!</div>}
-          </div>
-
-          <div className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto text-black">
-             <h3 className="text-2xl md:text-4xl mb-4 md:mb-8 italic text-black font-black uppercase">Weekly Routine Heatmap</h3>
-             <div className="min-w-[600px] md:min-w-[800px] text-black">
-               <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2 text-black font-black uppercase">
-                 <div className="w-12 md:w-16 font-black"></div>
-                 {Array.from({length:24}).map((_, i) => <div key={i} className="text-center text-[8px] md:text-[10px] text-black font-black">{i}h</div>)}
-               </div>
-               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dIdx) => (
-                 <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black uppercase">
-                   <div className="w-12 md:w-16 text-[10px] md:text-xs flex items-center font-black uppercase">{day}</div>
-                   {heatmapData.grid[dIdx].map((hour, hIdx) => {
-                      const int = hour.avg / heatmapData.maxAvg;
-                      let bg = 'bg-slate-100';
-                      if (int > 0.8) bg = 'bg-red-600 border-red-800'; else if (int > 0.6) bg = 'bg-orange-500 border-orange-700'; else if (int > 0.4) bg = 'bg-yellow-400 border-yellow-600'; else if (int > 0.2) bg = 'bg-blue-300 border-blue-500';
-                      return <div key={hIdx} className={`h-8 md:h-12 rounded-sm md:rounded-md border-b-2 md:border-b-4 ${bg} hover:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
-                   })}
-                 </div>
-               ))}
-             </div>
-             <div className="mt-4 text-[8px] md:text-[10px] text-slate-400 font-black text-center md:hidden">Scroll horizontally to see all hours →</div>
-          </div>
-        </div>
+        <InsightsView anomalies={anomalies} heatmapData={heatmapData} filteredData={filteredData} />
       )}
     </div>
   );
