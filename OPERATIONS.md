@@ -9,11 +9,20 @@ proxy fronting the container; localhost health checks still work at :3939).
 ## Start / stop / update
 
 ```bash
-cd ~/electricity-dashboard
-docker compose up -d --build     # build & (re)start; restart policy: always
-docker compose down              # stop
-git pull && docker compose up -d --build   # update after pulling
+~/bin/deploy-energy-dashboard.sh   # serialized deploy: fetch + reset + rebuild (flock-guarded)
+cd ~/electricity-dashboard && docker compose down   # stop
 ```
+
+The deploy script (`~/bin/deploy-energy-dashboard.sh` on .110) refuses to run
+concurrently (`DEPLOY_REFUSED`, exit 3) so sibling agents can't swap the image
+mid-verification. `--no-fetch` skips the git step for tar-pushed deploys.
+
+Code delivery on hermescomputer (.110): **native git works** — the host holds a
+read-only GitHub deploy key (`~/.ssh/ed25519_deploy`, key id 165177015,
+read_only=true, scope limited to this repo) and `~/.ssh/config` pins it for
+`github.com`. `git pull` and the deploy script's fetch/reset both work
+verbatim, no tar push needed:
+`code changes → push to GitHub → ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'`
 
 There is no `.env`, no secrets, no volumes — a rebuild is always safe.
 
