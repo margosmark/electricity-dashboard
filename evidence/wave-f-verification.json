@@ -1,0 +1,107 @@
+{
+  "ok": true,
+  "baseUrl": "https://electricity.markarslan.ca/",
+  "generatedAt": "2026-10-02T19:47:15.281Z",
+  "checks": [
+    {
+      "name": "real Oakville XML loads on the deployed stack",
+      "ok": true,
+      "detail": "readings=2184"
+    },
+    {
+      "name": "bill projection banner renders",
+      "ok": true,
+      "detail": "data-state=gated"
+    },
+    {
+      "name": "gated banner states the exact reason instead of guessing",
+      "ok": true,
+      "detail": "THIS MONTH'S BILL2 days into October 2026 — a projection would be a guess. This switches on at day 5 (3 to go)."
+    },
+    {
+      "name": "gated banner shows no projected number",
+      "ok": true,
+      "detail": "THIS MONTH'S BILL2 days into October 2026 — a projection would be a guess. This switches on at day 5 (3 to go)."
+    },
+    {
+      "name": "WFH annotation shows a % of kWh in the 07-19 weekday window",
+      "ok": true,
+      "detail": "34% WORK-FROM-HOME WINDOW (07:00–19:00 WEEKDAYS) 790.2 of 2344.6 kWh in view fall on 22 weekdays — the hours a daytime-heavy home spends either working or not. Context for the plan cards below, not a forecast."
+    },
+    {
+      "name": "always-on floor replaces the vampire-load button",
+      "ok": true,
+      "detail": "ALWAYS-ON FLOOR $1656/yr 36.2 KWH/DAY"
+    },
+    {
+      "name": "always-on floor modal states kWh/day, $/yr and the ~10% benchmark",
+      "ok": true,
+      "detail": "WHAT IS THE ALWAYS-ON FLOOR? THE FLOOR IS THE SLICE OF YOUR BILL THAT NEVER SWITCHES OFF — THE FRIDGE, THE CHARGERS, THE CLOCKS, THE STANDBY LIGHTS. IT IS THERE WHETHER YOU ARE HOME OR NOT, AND IT IS THE ONE PART OF THE BILL YOU CAN ACTUALLY SWITCH. HOW WE MEASURE YOURS: WE LOOK AT YOUR WHOLE VISIBLE WINDOW AND TAKE THE LOWEST 5% OF HOURLY READINGS — THE HOURS WHEN NOTHING SHOULD HAVE BEEN RUNNING. THOSE HOURS AVERAGE 1510 WATTS, ABOUT 36.2 KWH A DAY. PRICED AT YOUR BLENDED 12.5¢/KWH, THAT IS $1656 A YEAR OF NEVER-OFF ENERGY. COMMUNITY BENCHMARK IS ABOUT 10% OF THE BILL — YOURS WORKS OUT AT 46% (ABOVE IT, WORTH A PLUG-HUNT). COSTS ARE COMMODITY (VARIABLE) CHARGES ONLY — NO DELIVERY, REGULATO"
+    },
+    {
+      "name": "shift before/after verification renders with an honest verdict",
+      "ok": true,
+      "detail": "verdict=diverged — CHEAPER WEEK ($8.00), BUT OFF-PEAK SHARE FELL 6 PTS — THAT IS LESS USAGE, NOT A SHIFT"
+    },
+    {
+      "name": "verification carries the one-week caveat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "both 7-day windows are on screen",
+      "ok": true,
+      "detail": "windowLabels=4"
+    },
+    {
+      "name": "EV card prices a charge under all three plans",
+      "ok": true,
+      "detail": "source=detected — /CHARGE $3.28 | /CHARGE $4.02 | /CHARGE $1.31"
+    },
+    {
+      "name": "EV card prices a month of charging",
+      "ok": true,
+      "detail": "/MONTH $98.49 | /MONTH $120.60 | /MONTH $39.20"
+    },
+    {
+      "name": "weekday 16:00-21:00 ULO peak exposure flagged with kWh + $",
+      "ok": true,
+      "detail": "ULO PEAK EXPOSURE · WEEKDAYS 16:00–21:00 501.0 KWH/MO $195.91/MO AT 39.1¢ $176.37/MO MORE THAN THE SAME ENERGY OVERNIGHT 5 weekday afternoon hours sit in ULO's 16:00–21:00 peak window. Keep using them and a ULO switch makes them the most expensive hours you buy."
+    },
+    {
+      "name": "EV card states its assumptions",
+      "ok": true,
+      "detail": "WHAT THESE NUMBERS ASSUME Charging window read from your own data: 22:00–08:00, 33.5 kWh a night across 10 h (3.3 kW average), seen on 89 of 92 days. We can only see a block of load — we cannot tell an EV apart from any other timed appliance. $ per charge assumes the whole charge lands in 23:00–07:00, the ULO overnight window. $ per month"
+    },
+    {
+      "name": "anomalies section on the real Oakville file (cards or honest empty state)",
+      "ok": true,
+      "detail": "0 days above the 1.5x/+5 kWh bar — empty state shown"
+    },
+    {
+      "name": "merge review shows the merged date range + total rows",
+      "ok": true,
+      "detail": "2026-07-02 → 2026-10-01 — rows=2,184"
+    },
+    {
+      "name": "merge review counts duplicate timestamps before import",
+      "ok": true,
+      "detail": "2,184 OF 4,368"
+    },
+    {
+      "name": "nothing is imported until the household confirms",
+      "ok": true,
+      "detail": "stored=0"
+    },
+    {
+      "name": "confirm imports exactly the reviewed row count",
+      "ok": true,
+      "detail": "stored=2184 expected=2184"
+    },
+    {
+      "name": "anomalies carry an appliance signature derived from the day shape",
+      "ok": true,
+      "detail": "count=1 kinds=sustained-high — LOOKS LIKE A WATER HEATER / EV / SPACE HEATER 5 h straight at 3 kW or more (4.0 kW average, 10:00–15:00)"
+    }
+  ]
+}
