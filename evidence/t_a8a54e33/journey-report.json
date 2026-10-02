@@ -1,0 +1,225 @@
+{
+  "startedAt": "2026-10-02T05:34:45.402Z",
+  "baseUrl": "http://127.0.0.1:3111",
+  "journeys": [
+    {
+      "id": "J1",
+      "title": "upload XML -> chart renders",
+      "checks": [
+        {
+          "name": "upload modal shown on empty store",
+          "pass": true,
+          "detail": "Link Data modal visible"
+        },
+        {
+          "name": "chart renders bars",
+          "pass": true,
+          "detail": "1 bars rendered"
+        },
+        {
+          "name": "YTD/daily view has a bar per day",
+          "pass": true,
+          "detail": "33 daily bars"
+        },
+        {
+          "name": "payload persisted under energy_data_v2",
+          "pass": true,
+          "detail": "points=768, keys=[\"unrelated_app_key\",\"energy_data_v2\"]"
+        },
+        {
+          "name": "payload is versioned with explicit fields",
+          "pass": true,
+          "detail": "version=2 source=xml-upload uploadedAt=2026-10-02T05:34:46.365Z"
+        },
+        {
+          "name": "no legacy energy_data key written",
+          "pass": true,
+          "detail": "legacy=null"
+        },
+        {
+          "name": "unrelated key untouched",
+          "pass": true,
+          "detail": "keys=[\"unrelated_app_key\",\"energy_data_v2\"]"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j1-01-upload-modal.png",
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j1-02-chart-after-upload.png"
+      ]
+    },
+    {
+      "id": "J2",
+      "title": "reload -> data survives",
+      "checks": [
+        {
+          "name": "no upload modal after reload",
+          "pass": true,
+          "detail": "modal visible=false"
+        },
+        {
+          "name": "chart re-renders from storage",
+          "pass": true,
+          "detail": "33 daily bars"
+        },
+        {
+          "name": "identical bar geometry to pre-reload",
+          "pass": true,
+          "detail": "33 bars, equal=true"
+        },
+        {
+          "name": "all points survived",
+          "pass": true,
+          "detail": "points=768"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j2-reload-survives.png"
+      ]
+    },
+    {
+      "id": "J3",
+      "title": "export file -> clear -> import -> identical chart",
+      "checks": [
+        {
+          "name": "export downloads a JSON payload",
+          "pass": true,
+          "detail": "file=energy-optimizer-export-2026-10-02.json bytes=53013 points=768"
+        },
+        {
+          "name": "export carries the explicit payload shape",
+          "pass": true,
+          "detail": "version=2 source=manual-export"
+        },
+        {
+          "name": "reset is two-step (dialog first, data intact)",
+          "pass": true,
+          "detail": "keys=[\"unrelated_app_key\",\"energy_data_v2\"]"
+        },
+        {
+          "name": "reset removes only our keys",
+          "pass": true,
+          "detail": "leftover our keys=[] allKeys=[\"unrelated_app_key\"]"
+        },
+        {
+          "name": "unrelated key survives reset",
+          "pass": true,
+          "detail": "unrelated=keep-me"
+        },
+        {
+          "name": "import restores every point",
+          "pass": true,
+          "detail": "points=768"
+        },
+        {
+          "name": "chart fingerprint identical after export->clear->import",
+          "pass": true,
+          "detail": "before=33 bars after=33 equal=true"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j3-01-before-reset.png",
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j3-02-reset-confirm.png",
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j3-03-after-import.png"
+      ]
+    },
+    {
+      "id": "J4",
+      "title": "reset -> back to upload modal",
+      "checks": [
+        {
+          "name": "upload modal after reset",
+          "pass": true,
+          "detail": "Link Data modal visible again"
+        },
+        {
+          "name": "our keys gone",
+          "pass": true,
+          "detail": "keys=[\"unrelated_app_key\"]"
+        },
+        {
+          "name": "unrelated key still present",
+          "pass": true,
+          "detail": "unrelated=keep-me"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j4-reset-back-to-upload-modal.png"
+      ]
+    },
+    {
+      "id": "J5",
+      "title": "legacy energy_data (v1) migrates to energy_data_v2 on read",
+      "checks": [
+        {
+          "name": "legacy data renders after migration",
+          "pass": true,
+          "detail": "2 bars"
+        },
+        {
+          "name": "legacy key migrated to v2 payload",
+          "pass": true,
+          "detail": "legacy=null v2points=49"
+        },
+        {
+          "name": "migrated payload is version 2",
+          "pass": true,
+          "detail": "version=2 source=legacy-migration"
+        },
+        {
+          "name": "billing_day still drives the UI",
+          "pass": true,
+          "detail": "billing day input=20"
+        },
+        {
+          "name": "no storage notice on a clean migration",
+          "pass": true,
+          "detail": "notice row absent"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j5-legacy-migration.png"
+      ]
+    },
+    {
+      "id": "J6",
+      "title": "quota failure -> visible error row, data still exportable",
+      "checks": [
+        {
+          "name": "storage filled to a measured ceiling",
+          "pass": true,
+          "detail": "ceiling=5242872 bytes kept=5232872 headroom=10000B"
+        },
+        {
+          "name": "quota message shown verbatim",
+          "pass": true,
+          "detail": "\"Data too large for browser storage — export and clear old dataQuotaExceeded storing \\\"energy_data_v2\\\": QuotaExceededError: Failed to execute 'setItem' on 'Storag\""
+        },
+        {
+          "name": "failed write is not silently dropped",
+          "pass": true,
+          "detail": "energy_data_v2=null keys=[\"__filler\"]"
+        },
+        {
+          "name": "chart still usable in-memory so the user can export",
+          "pass": true,
+          "detail": "1 bars rendered from memory"
+        },
+        {
+          "name": "export button available while storage is full",
+          "pass": true,
+          "detail": "enabled=true"
+        }
+      ],
+      "screenshots": [
+        "/home/hermes/electricity-dashboard/.worktrees/t_a8a54e33/evidence/t_a8a54e33/j6-quota-error-row.png"
+      ]
+    }
+  ],
+  "consoleErrors": [],
+  "finishedAt": "2026-10-02T05:34:58.643Z",
+  "totals": {
+    "checks": 31,
+    "passed": 31,
+    "failed": 0
+  }
+}
