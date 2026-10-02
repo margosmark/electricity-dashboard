@@ -81,7 +81,9 @@ export default function YearOverYearPanel({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="min-h-[260px] md:min-h-[360px]" data-testid="trend-chart">
+          {/* Definite height (not min-h): ResponsiveContainer's height="100%"
+              resolves against height, and min-height alone leaves it 0×0. */}
+          <div className="h-[300px] md:h-[360px]" data-testid="trend-chart">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
