@@ -1,0 +1,33 @@
+{
+  "barCounts": [
+    {
+      "afterMs": 0,
+      "bars": 2,
+      "paths": 0,
+      "svg": true,
+      "cells": 1
+    },
+    {
+      "afterMs": 500,
+      "bars": 2,
+      "paths": 2,
+      "svg": true,
+      "cells": 3
+    },
+    {
+      "afterMs": 1500,
+      "bars": 2,
+      "paths": 2,
+      "svg": true,
+      "cells": 3
+    },
+    {
+      "afterMs": 3000,
+      "bars": 2,
+      "paths": 2,
+      "svg": true,
+      "cells": 3
+    }
+  ],
+  "screenshot": "evidence/14-chart-settled.png"
+}
