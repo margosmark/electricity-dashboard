@@ -305,6 +305,11 @@ const isoLocalHour = (iso) => pad(new Date(iso).getHours());
         billing_day: 'first',
       },
     }));
+    // A successful import reloads the page, which closes the drawer.
+    if ((await page.getByTestId('backup-import-input').count()) === 0) {
+      await page.getByTestId('backup-toggle').click();
+      await page.getByTestId('backup-import-input').waitFor({ state: 'attached', timeout: 15_000 });
+    }
     await page.setInputFiles('[data-testid="backup-import-input"]', hostile);
     await page.waitForTimeout(1500);
     const errText = flat((await page.getByTestId('backup-error').textContent().catch(() => '')) || '');
