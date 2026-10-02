@@ -1,26 +1,26 @@
 {
   "baseUrl": "https://electricity.markarslan.ca/",
-  "generatedAt": "2026-10-02T22:10:47.743Z",
+  "generatedAt": "2026-10-02T22:14:17.308Z",
   "checks": [
     {
       "name": "deployed /sw.js carries a per-build cache version",
       "ok": true,
-      "detail": "VERSION=oeo-v1-murij9oo"
+      "detail": "VERSION=oeo-v1-murioyfb"
     },
     {
       "name": "installed service worker serves the current version",
       "ok": true,
-      "detail": "oeo-v1-murij9oo controller=true"
+      "detail": "oeo-v1-murioyfb controller=true"
     },
     {
       "name": "shell/runtime caches are keyed by that version",
       "ok": true,
-      "detail": "oeo-v1-murij9oo-shell"
+      "detail": "oeo-v1-murioyfb-shell"
     },
     {
       "name": "a redeploy after a source change serves a DIFFERENT version",
       "ok": true,
-      "detail": "oeo-v1-murij9oo -> oeo-v1-murioyfb"
+      "detail": "oeo-v1-murioyfb -> oeo-v1-muritfqd"
     },
     {
       "name": "deploy script reports the pushed commit",
@@ -35,12 +35,12 @@
     {
       "name": "new caches are keyed by the new version",
       "ok": true,
-      "detail": "oeo-v1-murij9oo-shell,oeo-v1-murij9oo-runtime -> oeo-v1-murioyfb-shell,oeo-v1-murioyfb-runtime"
+      "detail": "oeo-v1-murioyfb-shell,oeo-v1-murioyfb-runtime -> oeo-v1-muritfqd-shell,oeo-v1-muritfqd-runtime"
     },
     {
       "name": "old-version caches were dropped on activate",
       "ok": true,
-      "detail": "oeo-v1-murioyfb-shell, oeo-v1-murioyfb-runtime"
+      "detail": "oeo-v1-muritfqd-shell, oeo-v1-muritfqd-runtime"
     },
     {
       "name": "real Oakville export loads on the deployed stack",
@@ -68,9 +68,14 @@
       "detail": ""
     },
     {
-      "name": "backup round-trip",
-      "ok": false,
-      "detail": "page.setInputFiles: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=\"backup-import-input\"]')\n"
+      "name": "invalid backup is rejected with a reason",
+      "ok": true,
+      "detail": "Row 1 has an invalid timestamp (got \"not-a-number\")."
+    },
+    {
+      "name": "rejected import left the data untouched",
+      "ok": true,
+      "detail": "rows=2184"
     },
     {
       "name": "spring-forward: 2026-03-08 loaded with 23 hourly readings",
@@ -163,9 +168,9 @@
       "detail": "reference-areas=2"
     }
   ],
-  "deployTail": "Container energy-dashboard Starting \n Container energy-dashboard Started \nDEPLOY_OK at 962e879 docs(sw): state the cache-version update contract in the worker header",
-  "total": 32,
-  "passed": 31,
-  "failed": 1,
-  "ok": false
+  "deployTail": "Container energy-dashboard Starting \n Container energy-dashboard Started \nDEPLOY_OK at d95a66e docs(fixtures): record the two scaling bugs these fixtures caught (multiplier link vs summary scalers)",
+  "total": 33,
+  "passed": 33,
+  "failed": 0,
+  "ok": true
 }

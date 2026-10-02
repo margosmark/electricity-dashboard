@@ -21,3 +21,6 @@ webapp/.data/
 .DS_Store
 .env
 .streamlit/
+
+# Evidence files that contain REAL meter data (backup exports) — never commit.
+evidence/*.local.json
