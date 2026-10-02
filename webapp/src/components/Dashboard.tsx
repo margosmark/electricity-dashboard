@@ -21,6 +21,8 @@ import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
 } from '@/hooks/useDashboard';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
+import RateStalenessBanner from '@/components/RateStalenessBanner';
+import { useRateStaleness } from '@/hooks/useRateStaleness';
 import ChartView, { type PlanId } from '@/components/ChartView';
 import InsightsView from '@/components/InsightsView';
 
@@ -74,6 +76,9 @@ export default function Dashboard() {
   // Rate schedule in force for the plan cards — read live, never hardcoded.
   const activeRateSet = useActiveRateSet(processedData);
 
+  // Once-per-session OEB staleness check (client-side, degrades silently).
+  const staleness = useRateStaleness(rateHistory, processedData);
+
   const selectionCost = useMemo(() => {
     const costKey = `cost${userPlan}` as keyof ChartDataItem;
     return activeChartData.reduce((acc, curr) => acc + (curr[costKey] as number), 0);
@@ -83,6 +88,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-10 text-black relative font-black uppercase">
+      {/* Persistent OEB rate-staleness alert: rendered in both views until
+          /api/rates ships the newer effectiveDate. */}
+      <RateStalenessBanner result={staleness} />
+
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
@@ -226,7 +235,12 @@ export default function Dashboard() {
       )}
 
       {viewMode === 'Insights' && (
-        <InsightsView anomalies={anomalies} heatmapData={heatmapData} filteredData={filteredData} />
+        <InsightsView
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          filteredData={filteredData}
+          processedData={processedData}
+        />
       )}
     </div>
   );

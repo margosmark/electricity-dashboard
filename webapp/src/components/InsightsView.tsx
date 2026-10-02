@@ -12,15 +12,22 @@ import { format } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
 import { type Anomaly, type HeatmapData, type ProcessedPoint } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
+import YearOverYearPanel from '@/components/YearOverYearPanel';
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
   heatmapData: HeatmapData;
   /** Current window rows: the CSV export downloads these. */
   filteredData: ProcessedPoint[];
+  /**
+   * Whole loaded dataset — the year-over-year panel gates and computes on
+   * ALL history, never the visible window (a zoom must not change whether
+   * "12+ months" of data exists).
+   */
+  processedData: ProcessedPoint[];
 };
 
-export default function InsightsView({ anomalies, heatmapData, filteredData }: InsightsViewProps) {
+export default function InsightsView({ anomalies, heatmapData, filteredData, processedData }: InsightsViewProps) {
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
       <div className="flex justify-end">
@@ -62,7 +69,10 @@ export default function InsightsView({ anomalies, heatmapData, filteredData }: I
            ))}
          </div>
          <div className="mt-4 text-[8px] md:text-[10px] text-slate-400 font-black text-center md:hidden">Scroll horizontally to see all hours →</div>
-      </div>
-    </div>
-  );
-}
+         </div>
+
+         {/* Year-over-year: gated on full-dataset span, not this window. */}
+         <YearOverYearPanel processedData={processedData} />
+         </div>
+         );
+         }
