@@ -1,0 +1,8752 @@
+{
+  "schema": "ontario-energy-optimizer.backup",
+  "version": 1,
+  "exportedAt": "2026-10-02T22:02:23.434Z",
+  "payload": {
+    "energy_data": [
+      {
+        "timestamp": 1782968400,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1782972000,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1782975600,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1782979200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1782982800,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1782986400,
+        "usage_kwh": 2.65
+      },
+      {
+        "timestamp": 1782990000,
+        "usage_kwh": 2.2
+      },
+      {
+        "timestamp": 1782993600,
+        "usage_kwh": 2.77
+      },
+      {
+        "timestamp": 1782997200,
+        "usage_kwh": 2.78
+      },
+      {
+        "timestamp": 1783000800,
+        "usage_kwh": 2.62
+      },
+      {
+        "timestamp": 1783004400,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1783008000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1783011600,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1783015200,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1783018800,
+        "usage_kwh": 2.66
+      },
+      {
+        "timestamp": 1783022400,
+        "usage_kwh": 4.57
+      },
+      {
+        "timestamp": 1783026000,
+        "usage_kwh": 5.09
+      },
+      {
+        "timestamp": 1783029600,
+        "usage_kwh": 4.99
+      },
+      {
+        "timestamp": 1783033200,
+        "usage_kwh": 5.84
+      },
+      {
+        "timestamp": 1783036800,
+        "usage_kwh": 5.28
+      },
+      {
+        "timestamp": 1783040400,
+        "usage_kwh": 4.64
+      },
+      {
+        "timestamp": 1783044000,
+        "usage_kwh": 6.29
+      },
+      {
+        "timestamp": 1783047600,
+        "usage_kwh": 4.89
+      },
+      {
+        "timestamp": 1783051200,
+        "usage_kwh": 6.28
+      },
+      {
+        "timestamp": 1783054800,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1783058400,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1783062000,
+        "usage_kwh": 1.55
+      },
+      {
+        "timestamp": 1783065600,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1783069200,
+        "usage_kwh": 1.46
+      },
+      {
+        "timestamp": 1783072800,
+        "usage_kwh": 2.3
+      },
+      {
+        "timestamp": 1783076400,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1783080000,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1783083600,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1783087200,
+        "usage_kwh": 4.49
+      },
+      {
+        "timestamp": 1783090800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1783094400,
+        "usage_kwh": 4.14
+      },
+      {
+        "timestamp": 1783098000,
+        "usage_kwh": 3.94
+      },
+      {
+        "timestamp": 1783101600,
+        "usage_kwh": 4.12
+      },
+      {
+        "timestamp": 1783105200,
+        "usage_kwh": 4.63
+      },
+      {
+        "timestamp": 1783108800,
+        "usage_kwh": 5.96
+      },
+      {
+        "timestamp": 1783112400,
+        "usage_kwh": 5.89
+      },
+      {
+        "timestamp": 1783116000,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1783119600,
+        "usage_kwh": 5.83
+      },
+      {
+        "timestamp": 1783123200,
+        "usage_kwh": 6.07
+      },
+      {
+        "timestamp": 1783126800,
+        "usage_kwh": 5.95
+      },
+      {
+        "timestamp": 1783130400,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1783134000,
+        "usage_kwh": 5.83
+      },
+      {
+        "timestamp": 1783137600,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1783141200,
+        "usage_kwh": 5.22
+      },
+      {
+        "timestamp": 1783144800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1783148400,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1783152000,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1783155600,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1783159200,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1783162800,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1783166400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1783170000,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1783173600,
+        "usage_kwh": 4.18
+      },
+      {
+        "timestamp": 1783177200,
+        "usage_kwh": 4.75
+      },
+      {
+        "timestamp": 1783180800,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1783184400,
+        "usage_kwh": 8.23
+      },
+      {
+        "timestamp": 1783188000,
+        "usage_kwh": 5.3
+      },
+      {
+        "timestamp": 1783191600,
+        "usage_kwh": 6.45
+      },
+      {
+        "timestamp": 1783195200,
+        "usage_kwh": 8.07
+      },
+      {
+        "timestamp": 1783198800,
+        "usage_kwh": 5.89
+      },
+      {
+        "timestamp": 1783202400,
+        "usage_kwh": 5.56
+      },
+      {
+        "timestamp": 1783206000,
+        "usage_kwh": 6.34
+      },
+      {
+        "timestamp": 1783209600,
+        "usage_kwh": 6.24
+      },
+      {
+        "timestamp": 1783213200,
+        "usage_kwh": 6.16
+      },
+      {
+        "timestamp": 1783216800,
+        "usage_kwh": 4.9
+      },
+      {
+        "timestamp": 1783220400,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1783224000,
+        "usage_kwh": 5.15
+      },
+      {
+        "timestamp": 1783227600,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1783231200,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1783234800,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1783238400,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1783242000,
+        "usage_kwh": 3.09
+      },
+      {
+        "timestamp": 1783245600,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1783249200,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1783252800,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1783256400,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1783260000,
+        "usage_kwh": 5.47
+      },
+      {
+        "timestamp": 1783263600,
+        "usage_kwh": 6.08
+      },
+      {
+        "timestamp": 1783267200,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1783270800,
+        "usage_kwh": 4.71
+      },
+      {
+        "timestamp": 1783274400,
+        "usage_kwh": 3.94
+      },
+      {
+        "timestamp": 1783278000,
+        "usage_kwh": 4.22
+      },
+      {
+        "timestamp": 1783281600,
+        "usage_kwh": 5.78
+      },
+      {
+        "timestamp": 1783285200,
+        "usage_kwh": 6.14
+      },
+      {
+        "timestamp": 1783288800,
+        "usage_kwh": 5.73
+      },
+      {
+        "timestamp": 1783292400,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1783296000,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783299600,
+        "usage_kwh": 6.16
+      },
+      {
+        "timestamp": 1783303200,
+        "usage_kwh": 4.42
+      },
+      {
+        "timestamp": 1783306800,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1783310400,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1783314000,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1783317600,
+        "usage_kwh": 1.55
+      },
+      {
+        "timestamp": 1783321200,
+        "usage_kwh": 1.54
+      },
+      {
+        "timestamp": 1783324800,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1783328400,
+        "usage_kwh": 1.47
+      },
+      {
+        "timestamp": 1783332000,
+        "usage_kwh": 2.33
+      },
+      {
+        "timestamp": 1783335600,
+        "usage_kwh": 1.68
+      },
+      {
+        "timestamp": 1783339200,
+        "usage_kwh": 2.59
+      },
+      {
+        "timestamp": 1783342800,
+        "usage_kwh": 2.77
+      },
+      {
+        "timestamp": 1783346400,
+        "usage_kwh": 2.66
+      },
+      {
+        "timestamp": 1783350000,
+        "usage_kwh": 2.29
+      },
+      {
+        "timestamp": 1783353600,
+        "usage_kwh": 2.37
+      },
+      {
+        "timestamp": 1783357200,
+        "usage_kwh": 3.06
+      },
+      {
+        "timestamp": 1783360800,
+        "usage_kwh": 2.17
+      },
+      {
+        "timestamp": 1783364400,
+        "usage_kwh": 2.27
+      },
+      {
+        "timestamp": 1783368000,
+        "usage_kwh": 4.32
+      },
+      {
+        "timestamp": 1783371600,
+        "usage_kwh": 4.87
+      },
+      {
+        "timestamp": 1783375200,
+        "usage_kwh": 4.89
+      },
+      {
+        "timestamp": 1783378800,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1783382400,
+        "usage_kwh": 4.81
+      },
+      {
+        "timestamp": 1783386000,
+        "usage_kwh": 2.08
+      },
+      {
+        "timestamp": 1783389600,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1783393200,
+        "usage_kwh": 2.2
+      },
+      {
+        "timestamp": 1783396800,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1783400400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1783404000,
+        "usage_kwh": 3.03
+      },
+      {
+        "timestamp": 1783407600,
+        "usage_kwh": 3
+      },
+      {
+        "timestamp": 1783411200,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1783414800,
+        "usage_kwh": 1.7
+      },
+      {
+        "timestamp": 1783418400,
+        "usage_kwh": 2.48
+      },
+      {
+        "timestamp": 1783422000,
+        "usage_kwh": 1.76
+      },
+      {
+        "timestamp": 1783425600,
+        "usage_kwh": 2.57
+      },
+      {
+        "timestamp": 1783429200,
+        "usage_kwh": 2.51
+      },
+      {
+        "timestamp": 1783432800,
+        "usage_kwh": 2.61
+      },
+      {
+        "timestamp": 1783436400,
+        "usage_kwh": 1.62
+      },
+      {
+        "timestamp": 1783440000,
+        "usage_kwh": 1.61
+      },
+      {
+        "timestamp": 1783443600,
+        "usage_kwh": 3.02
+      },
+      {
+        "timestamp": 1783447200,
+        "usage_kwh": 2.14
+      },
+      {
+        "timestamp": 1783450800,
+        "usage_kwh": 2.21
+      },
+      {
+        "timestamp": 1783454400,
+        "usage_kwh": 4.27
+      },
+      {
+        "timestamp": 1783458000,
+        "usage_kwh": 4.81
+      },
+      {
+        "timestamp": 1783461600,
+        "usage_kwh": 5.58
+      },
+      {
+        "timestamp": 1783465200,
+        "usage_kwh": 5.59
+      },
+      {
+        "timestamp": 1783468800,
+        "usage_kwh": 5.84
+      },
+      {
+        "timestamp": 1783472400,
+        "usage_kwh": 6.09
+      },
+      {
+        "timestamp": 1783476000,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1783479600,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1783483200,
+        "usage_kwh": 4
+      },
+      {
+        "timestamp": 1783486800,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1783490400,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1783494000,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1783497600,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1783501200,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1783504800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1783508400,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1783512000,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1783515600,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1783519200,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1783522800,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1783526400,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1783530000,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1783533600,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1783537200,
+        "usage_kwh": 3.96
+      },
+      {
+        "timestamp": 1783540800,
+        "usage_kwh": 5.86
+      },
+      {
+        "timestamp": 1783544400,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1783548000,
+        "usage_kwh": 5.73
+      },
+      {
+        "timestamp": 1783551600,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1783555200,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1783558800,
+        "usage_kwh": 5.82
+      },
+      {
+        "timestamp": 1783562400,
+        "usage_kwh": 5.89
+      },
+      {
+        "timestamp": 1783566000,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1783569600,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1783573200,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783576800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1783580400,
+        "usage_kwh": 5.55
+      },
+      {
+        "timestamp": 1783584000,
+        "usage_kwh": 5.48
+      },
+      {
+        "timestamp": 1783587600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1783591200,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1783594800,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1783598400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783602000,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1783605600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783609200,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1783612800,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1783616400,
+        "usage_kwh": 3.86
+      },
+      {
+        "timestamp": 1783620000,
+        "usage_kwh": 3.93
+      },
+      {
+        "timestamp": 1783623600,
+        "usage_kwh": 4.26
+      },
+      {
+        "timestamp": 1783627200,
+        "usage_kwh": 7.05
+      },
+      {
+        "timestamp": 1783630800,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1783634400,
+        "usage_kwh": 5.75
+      },
+      {
+        "timestamp": 1783638000,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1783641600,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1783645200,
+        "usage_kwh": 4.01
+      },
+      {
+        "timestamp": 1783648800,
+        "usage_kwh": 5.16
+      },
+      {
+        "timestamp": 1783652400,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1783656000,
+        "usage_kwh": 3.96
+      },
+      {
+        "timestamp": 1783659600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1783663200,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1783666800,
+        "usage_kwh": 5.37
+      },
+      {
+        "timestamp": 1783670400,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1783674000,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1783677600,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1783681200,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1783684800,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1783688400,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1783692000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1783695600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783699200,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1783702800,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1783706400,
+        "usage_kwh": 3.87
+      },
+      {
+        "timestamp": 1783710000,
+        "usage_kwh": 4.15
+      },
+      {
+        "timestamp": 1783713600,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1783717200,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1783720800,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1783724400,
+        "usage_kwh": 7.67
+      },
+      {
+        "timestamp": 1783728000,
+        "usage_kwh": 7.61
+      },
+      {
+        "timestamp": 1783731600,
+        "usage_kwh": 6.96
+      },
+      {
+        "timestamp": 1783735200,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1783738800,
+        "usage_kwh": 2.81
+      },
+      {
+        "timestamp": 1783742400,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1783746000,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1783749600,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1783753200,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1783756800,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1783760400,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1783764000,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1783767600,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1783771200,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1783774800,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1783778400,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1783782000,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1783785600,
+        "usage_kwh": 4.14
+      },
+      {
+        "timestamp": 1783789200,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1783792800,
+        "usage_kwh": 3.94
+      },
+      {
+        "timestamp": 1783796400,
+        "usage_kwh": 4.25
+      },
+      {
+        "timestamp": 1783800000,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1783803600,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1783807200,
+        "usage_kwh": 5.63
+      },
+      {
+        "timestamp": 1783810800,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1783814400,
+        "usage_kwh": 5.74
+      },
+      {
+        "timestamp": 1783818000,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1783821600,
+        "usage_kwh": 4.48
+      },
+      {
+        "timestamp": 1783825200,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1783828800,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1783832400,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1783836000,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1783839600,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1783843200,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1783846800,
+        "usage_kwh": 4.21
+      },
+      {
+        "timestamp": 1783850400,
+        "usage_kwh": 4.45
+      },
+      {
+        "timestamp": 1783854000,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1783857600,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1783861200,
+        "usage_kwh": 4.54
+      },
+      {
+        "timestamp": 1783864800,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1783868400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1783872000,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1783875600,
+        "usage_kwh": 3.96
+      },
+      {
+        "timestamp": 1783879200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1783882800,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1783886400,
+        "usage_kwh": 5.3
+      },
+      {
+        "timestamp": 1783890000,
+        "usage_kwh": 5.46
+      },
+      {
+        "timestamp": 1783893600,
+        "usage_kwh": 5.28
+      },
+      {
+        "timestamp": 1783897200,
+        "usage_kwh": 5.25
+      },
+      {
+        "timestamp": 1783900800,
+        "usage_kwh": 5.06
+      },
+      {
+        "timestamp": 1783904400,
+        "usage_kwh": 5.13
+      },
+      {
+        "timestamp": 1783908000,
+        "usage_kwh": 5.47
+      },
+      {
+        "timestamp": 1783911600,
+        "usage_kwh": 3.09
+      },
+      {
+        "timestamp": 1783915200,
+        "usage_kwh": 2.88
+      },
+      {
+        "timestamp": 1783918800,
+        "usage_kwh": 2.97
+      },
+      {
+        "timestamp": 1783922400,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1783926000,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1783929600,
+        "usage_kwh": 2.86
+      },
+      {
+        "timestamp": 1783933200,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1783936800,
+        "usage_kwh": 2.83
+      },
+      {
+        "timestamp": 1783940400,
+        "usage_kwh": 3.05
+      },
+      {
+        "timestamp": 1783944000,
+        "usage_kwh": 2.83
+      },
+      {
+        "timestamp": 1783947600,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1783951200,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1783954800,
+        "usage_kwh": 2.66
+      },
+      {
+        "timestamp": 1783958400,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1783962000,
+        "usage_kwh": 2.97
+      },
+      {
+        "timestamp": 1783965600,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1783969200,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1783972800,
+        "usage_kwh": 5.9
+      },
+      {
+        "timestamp": 1783976400,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1783980000,
+        "usage_kwh": 5.59
+      },
+      {
+        "timestamp": 1783983600,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1783987200,
+        "usage_kwh": 5.88
+      },
+      {
+        "timestamp": 1783990800,
+        "usage_kwh": 4.17
+      },
+      {
+        "timestamp": 1783994400,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1783998000,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1784001600,
+        "usage_kwh": 5.75
+      },
+      {
+        "timestamp": 1784005200,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1784008800,
+        "usage_kwh": 4.019
+      },
+      {
+        "timestamp": 1784012400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1784016000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1784019600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1784023200,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1784026800,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1784030400,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1784034000,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1784037600,
+        "usage_kwh": 5.84
+      },
+      {
+        "timestamp": 1784041200,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1784044800,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1784048400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1784052000,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1784055600,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1784059200,
+        "usage_kwh": 5.99
+      },
+      {
+        "timestamp": 1784062800,
+        "usage_kwh": 6.08
+      },
+      {
+        "timestamp": 1784066400,
+        "usage_kwh": 5.84
+      },
+      {
+        "timestamp": 1784070000,
+        "usage_kwh": 5.9
+      },
+      {
+        "timestamp": 1784073600,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1784077200,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1784080800,
+        "usage_kwh": 6.06
+      },
+      {
+        "timestamp": 1784084400,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1784088000,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1784091600,
+        "usage_kwh": 5.63
+      },
+      {
+        "timestamp": 1784095200,
+        "usage_kwh": 5.75
+      },
+      {
+        "timestamp": 1784098800,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1784102400,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1784106000,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1784109600,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1784113200,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784116800,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1784120400,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1784124000,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1784127600,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1784131200,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1784134800,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1784138400,
+        "usage_kwh": 4.18
+      },
+      {
+        "timestamp": 1784142000,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1784145600,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1784149200,
+        "usage_kwh": 6.03
+      },
+      {
+        "timestamp": 1784152800,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1784156400,
+        "usage_kwh": 4.67
+      },
+      {
+        "timestamp": 1784160000,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1784163600,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1784167200,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1784170800,
+        "usage_kwh": 4.69
+      },
+      {
+        "timestamp": 1784174400,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1784178000,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1784181600,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1784185200,
+        "usage_kwh": 4.52
+      },
+      {
+        "timestamp": 1784188800,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1784192400,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784196000,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1784199600,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1784203200,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1784206800,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1784210400,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1784214000,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1784217600,
+        "usage_kwh": 4.44
+      },
+      {
+        "timestamp": 1784221200,
+        "usage_kwh": 4.17
+      },
+      {
+        "timestamp": 1784224800,
+        "usage_kwh": 4.19
+      },
+      {
+        "timestamp": 1784228400,
+        "usage_kwh": 4.44
+      },
+      {
+        "timestamp": 1784232000,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1784235600,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1784239200,
+        "usage_kwh": 5.81
+      },
+      {
+        "timestamp": 1784242800,
+        "usage_kwh": 5.75
+      },
+      {
+        "timestamp": 1784246400,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1784250000,
+        "usage_kwh": 5.23
+      },
+      {
+        "timestamp": 1784253600,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1784257200,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1784260800,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1784264400,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1784268000,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1784271600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1784275200,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1784278800,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1784282400,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784286000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1784289600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1784293200,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1784296800,
+        "usage_kwh": 3.07
+      },
+      {
+        "timestamp": 1784300400,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1784304000,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1784307600,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1784311200,
+        "usage_kwh": 4.41
+      },
+      {
+        "timestamp": 1784314800,
+        "usage_kwh": 4.08
+      },
+      {
+        "timestamp": 1784318400,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1784322000,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1784325600,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1784329200,
+        "usage_kwh": 5.75
+      },
+      {
+        "timestamp": 1784332800,
+        "usage_kwh": 5.82
+      },
+      {
+        "timestamp": 1784336400,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1784340000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1784343600,
+        "usage_kwh": 4.45
+      },
+      {
+        "timestamp": 1784347200,
+        "usage_kwh": 4.13
+      },
+      {
+        "timestamp": 1784350800,
+        "usage_kwh": 4.8
+      },
+      {
+        "timestamp": 1784354400,
+        "usage_kwh": 4.05
+      },
+      {
+        "timestamp": 1784358000,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1784361600,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784365200,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1784368800,
+        "usage_kwh": 4.53
+      },
+      {
+        "timestamp": 1784372400,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1784376000,
+        "usage_kwh": 5.05
+      },
+      {
+        "timestamp": 1784379600,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1784383200,
+        "usage_kwh": 4.28
+      },
+      {
+        "timestamp": 1784386800,
+        "usage_kwh": 4.57
+      },
+      {
+        "timestamp": 1784390400,
+        "usage_kwh": 5.06
+      },
+      {
+        "timestamp": 1784394000,
+        "usage_kwh": 5.93
+      },
+      {
+        "timestamp": 1784397600,
+        "usage_kwh": 5.67
+      },
+      {
+        "timestamp": 1784401200,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1784404800,
+        "usage_kwh": 6.18
+      },
+      {
+        "timestamp": 1784408400,
+        "usage_kwh": 6.04
+      },
+      {
+        "timestamp": 1784412000,
+        "usage_kwh": 6.03
+      },
+      {
+        "timestamp": 1784415600,
+        "usage_kwh": 6.11
+      },
+      {
+        "timestamp": 1784419200,
+        "usage_kwh": 4.61
+      },
+      {
+        "timestamp": 1784422800,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1784426400,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1784430000,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1784433600,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1784437200,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1784440800,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1784444400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1784448000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1784451600,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1784455200,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1784458800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1784462400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1784466000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1784469600,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1784473200,
+        "usage_kwh": 5.02
+      },
+      {
+        "timestamp": 1784476800,
+        "usage_kwh": 5.99
+      },
+      {
+        "timestamp": 1784480400,
+        "usage_kwh": 6.42
+      },
+      {
+        "timestamp": 1784484000,
+        "usage_kwh": 5.93
+      },
+      {
+        "timestamp": 1784487600,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1784491200,
+        "usage_kwh": 6.93
+      },
+      {
+        "timestamp": 1784494800,
+        "usage_kwh": 7.9
+      },
+      {
+        "timestamp": 1784498400,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1784502000,
+        "usage_kwh": 7.2
+      },
+      {
+        "timestamp": 1784505600,
+        "usage_kwh": 6.17
+      },
+      {
+        "timestamp": 1784509200,
+        "usage_kwh": 3.85
+      },
+      {
+        "timestamp": 1784512800,
+        "usage_kwh": 3.11
+      },
+      {
+        "timestamp": 1784516400,
+        "usage_kwh": 5.05
+      },
+      {
+        "timestamp": 1784520000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1784523600,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1784527200,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1784530800,
+        "usage_kwh": 1.56
+      },
+      {
+        "timestamp": 1784534400,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1784538000,
+        "usage_kwh": 1.66
+      },
+      {
+        "timestamp": 1784541600,
+        "usage_kwh": 2.46
+      },
+      {
+        "timestamp": 1784545200,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1784548800,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1784552400,
+        "usage_kwh": 2.64
+      },
+      {
+        "timestamp": 1784556000,
+        "usage_kwh": 2.53
+      },
+      {
+        "timestamp": 1784559600,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1784563200,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1784566800,
+        "usage_kwh": 2.67
+      },
+      {
+        "timestamp": 1784570400,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1784574000,
+        "usage_kwh": 1.76
+      },
+      {
+        "timestamp": 1784577600,
+        "usage_kwh": 4.83
+      },
+      {
+        "timestamp": 1784581200,
+        "usage_kwh": 4.75
+      },
+      {
+        "timestamp": 1784584800,
+        "usage_kwh": 4.73
+      },
+      {
+        "timestamp": 1784588400,
+        "usage_kwh": 4.77
+      },
+      {
+        "timestamp": 1784592000,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1784595600,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1784599200,
+        "usage_kwh": 5.2
+      },
+      {
+        "timestamp": 1784602800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1784606400,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1784610000,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1784613600,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1784617200,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1784620800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1784624400,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1784628000,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1784631600,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1784635200,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1784638800,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1784642400,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1784646000,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1784649600,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1784653200,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1784656800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1784660400,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1784664000,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1784667600,
+        "usage_kwh": 4.09
+      },
+      {
+        "timestamp": 1784671200,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1784674800,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1784678400,
+        "usage_kwh": 4.23
+      },
+      {
+        "timestamp": 1784682000,
+        "usage_kwh": 5.23
+      },
+      {
+        "timestamp": 1784685600,
+        "usage_kwh": 5.2
+      },
+      {
+        "timestamp": 1784689200,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1784692800,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1784696400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1784700000,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1784703600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1784707200,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1784710800,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1784714400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1784718000,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1784721600,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1784725200,
+        "usage_kwh": 2.73
+      },
+      {
+        "timestamp": 1784728800,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1784732400,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1784736000,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1784739600,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1784743200,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1784746800,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1784750400,
+        "usage_kwh": 1.64
+      },
+      {
+        "timestamp": 1784754000,
+        "usage_kwh": 2.83
+      },
+      {
+        "timestamp": 1784757600,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1784761200,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1784764800,
+        "usage_kwh": 2.77
+      },
+      {
+        "timestamp": 1784768400,
+        "usage_kwh": 2.04
+      },
+      {
+        "timestamp": 1784772000,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784775600,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1784779200,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1784782800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1784786400,
+        "usage_kwh": 1.5
+      },
+      {
+        "timestamp": 1784790000,
+        "usage_kwh": 1.55
+      },
+      {
+        "timestamp": 1784793600,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1784797200,
+        "usage_kwh": 1.76
+      },
+      {
+        "timestamp": 1784800800,
+        "usage_kwh": 2.57
+      },
+      {
+        "timestamp": 1784804400,
+        "usage_kwh": 2.02
+      },
+      {
+        "timestamp": 1784808000,
+        "usage_kwh": 2.81
+      },
+      {
+        "timestamp": 1784811600,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1784815200,
+        "usage_kwh": 2.63
+      },
+      {
+        "timestamp": 1784818800,
+        "usage_kwh": 1.86
+      },
+      {
+        "timestamp": 1784822400,
+        "usage_kwh": 1.63
+      },
+      {
+        "timestamp": 1784826000,
+        "usage_kwh": 2.59
+      },
+      {
+        "timestamp": 1784829600,
+        "usage_kwh": 1.68
+      },
+      {
+        "timestamp": 1784833200,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1784836800,
+        "usage_kwh": 4.01
+      },
+      {
+        "timestamp": 1784840400,
+        "usage_kwh": 4.88
+      },
+      {
+        "timestamp": 1784844000,
+        "usage_kwh": 4.43
+      },
+      {
+        "timestamp": 1784847600,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1784851200,
+        "usage_kwh": 4.81
+      },
+      {
+        "timestamp": 1784854800,
+        "usage_kwh": 2.5
+      },
+      {
+        "timestamp": 1784858400,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1784862000,
+        "usage_kwh": 2.29
+      },
+      {
+        "timestamp": 1784865600,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1784869200,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1784872800,
+        "usage_kwh": 1.5
+      },
+      {
+        "timestamp": 1784876400,
+        "usage_kwh": 1.53
+      },
+      {
+        "timestamp": 1784880000,
+        "usage_kwh": 3.1
+      },
+      {
+        "timestamp": 1784883600,
+        "usage_kwh": 1.57
+      },
+      {
+        "timestamp": 1784887200,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1784890800,
+        "usage_kwh": 2.18
+      },
+      {
+        "timestamp": 1784894400,
+        "usage_kwh": 2.52
+      },
+      {
+        "timestamp": 1784898000,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1784901600,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1784905200,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1784908800,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1784912400,
+        "usage_kwh": 2.41
+      },
+      {
+        "timestamp": 1784916000,
+        "usage_kwh": 1.57
+      },
+      {
+        "timestamp": 1784919600,
+        "usage_kwh": 1.52
+      },
+      {
+        "timestamp": 1784923200,
+        "usage_kwh": 3.86
+      },
+      {
+        "timestamp": 1784926800,
+        "usage_kwh": 4.85
+      },
+      {
+        "timestamp": 1784930400,
+        "usage_kwh": 4.63
+      },
+      {
+        "timestamp": 1784934000,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1784937600,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1784941200,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1784944800,
+        "usage_kwh": 5
+      },
+      {
+        "timestamp": 1784948400,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1784952000,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1784955600,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1784959200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1784962800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1784966400,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1784970000,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1784973600,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1784977200,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1784980800,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1784984400,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1784988000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1784991600,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1784995200,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1784998800,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1785002400,
+        "usage_kwh": 3.95
+      },
+      {
+        "timestamp": 1785006000,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1785009600,
+        "usage_kwh": 5.57
+      },
+      {
+        "timestamp": 1785013200,
+        "usage_kwh": 5.51
+      },
+      {
+        "timestamp": 1785016800,
+        "usage_kwh": 5.44
+      },
+      {
+        "timestamp": 1785020400,
+        "usage_kwh": 4.7
+      },
+      {
+        "timestamp": 1785024000,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1785027600,
+        "usage_kwh": 5.96
+      },
+      {
+        "timestamp": 1785031200,
+        "usage_kwh": 4.03
+      },
+      {
+        "timestamp": 1785034800,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1785038400,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1785042000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1785045600,
+        "usage_kwh": 5.5
+      },
+      {
+        "timestamp": 1785049200,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1785052800,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1785056400,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1785060000,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1785063600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1785067200,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1785070800,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1785074400,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1785078000,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1785081600,
+        "usage_kwh": 3.1
+      },
+      {
+        "timestamp": 1785085200,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1785088800,
+        "usage_kwh": 3.12
+      },
+      {
+        "timestamp": 1785092400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1785096000,
+        "usage_kwh": 7.54
+      },
+      {
+        "timestamp": 1785099600,
+        "usage_kwh": 7.22
+      },
+      {
+        "timestamp": 1785103200,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1785106800,
+        "usage_kwh": 7.9
+      },
+      {
+        "timestamp": 1785110400,
+        "usage_kwh": 5.84
+      },
+      {
+        "timestamp": 1785114000,
+        "usage_kwh": 4.95
+      },
+      {
+        "timestamp": 1785117600,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1785121200,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1785124800,
+        "usage_kwh": 3.85
+      },
+      {
+        "timestamp": 1785128400,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1785132000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1785135600,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1785139200,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1785142800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1785146400,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1785150000,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1785153600,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1785157200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785160800,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1785164400,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1785168000,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1785171600,
+        "usage_kwh": 3.86
+      },
+      {
+        "timestamp": 1785175200,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1785178800,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1785182400,
+        "usage_kwh": 6.2
+      },
+      {
+        "timestamp": 1785186000,
+        "usage_kwh": 5.96
+      },
+      {
+        "timestamp": 1785189600,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1785193200,
+        "usage_kwh": 6
+      },
+      {
+        "timestamp": 1785196800,
+        "usage_kwh": 6.02
+      },
+      {
+        "timestamp": 1785200400,
+        "usage_kwh": 5.02
+      },
+      {
+        "timestamp": 1785204000,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1785207600,
+        "usage_kwh": 4.92
+      },
+      {
+        "timestamp": 1785211200,
+        "usage_kwh": 6.06
+      },
+      {
+        "timestamp": 1785214800,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1785218400,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1785222000,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1785225600,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1785229200,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1785232800,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1785236400,
+        "usage_kwh": 4.21
+      },
+      {
+        "timestamp": 1785240000,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1785243600,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1785247200,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1785250800,
+        "usage_kwh": 2.52
+      },
+      {
+        "timestamp": 1785254400,
+        "usage_kwh": 2.46
+      },
+      {
+        "timestamp": 1785258000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1785261600,
+        "usage_kwh": 4.35
+      },
+      {
+        "timestamp": 1785265200,
+        "usage_kwh": 4.26
+      },
+      {
+        "timestamp": 1785268800,
+        "usage_kwh": 4.24
+      },
+      {
+        "timestamp": 1785272400,
+        "usage_kwh": 5.15
+      },
+      {
+        "timestamp": 1785276000,
+        "usage_kwh": 5.08
+      },
+      {
+        "timestamp": 1785279600,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1785283200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785286800,
+        "usage_kwh": 2.14
+      },
+      {
+        "timestamp": 1785290400,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1785294000,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1785297600,
+        "usage_kwh": 4.72
+      },
+      {
+        "timestamp": 1785301200,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1785304800,
+        "usage_kwh": 1.67
+      },
+      {
+        "timestamp": 1785308400,
+        "usage_kwh": 1.68
+      },
+      {
+        "timestamp": 1785312000,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1785315600,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1785319200,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1785322800,
+        "usage_kwh": 2.13
+      },
+      {
+        "timestamp": 1785326400,
+        "usage_kwh": 2.64
+      },
+      {
+        "timestamp": 1785330000,
+        "usage_kwh": 2.71
+      },
+      {
+        "timestamp": 1785333600,
+        "usage_kwh": 2.55
+      },
+      {
+        "timestamp": 1785337200,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1785340800,
+        "usage_kwh": 1.72
+      },
+      {
+        "timestamp": 1785344400,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1785348000,
+        "usage_kwh": 2.15
+      },
+      {
+        "timestamp": 1785351600,
+        "usage_kwh": 2.29
+      },
+      {
+        "timestamp": 1785355200,
+        "usage_kwh": 4.21
+      },
+      {
+        "timestamp": 1785358800,
+        "usage_kwh": 5.82
+      },
+      {
+        "timestamp": 1785362400,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1785366000,
+        "usage_kwh": 6.02
+      },
+      {
+        "timestamp": 1785369600,
+        "usage_kwh": 5.37
+      },
+      {
+        "timestamp": 1785373200,
+        "usage_kwh": 4.19
+      },
+      {
+        "timestamp": 1785376800,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1785380400,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1785384000,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1785387600,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1785391200,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1785394800,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1785398400,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1785402000,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1785405600,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1785409200,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1785412800,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1785416400,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1785420000,
+        "usage_kwh": 5.01
+      },
+      {
+        "timestamp": 1785423600,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1785427200,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1785430800,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1785434400,
+        "usage_kwh": 5.29
+      },
+      {
+        "timestamp": 1785438000,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1785441600,
+        "usage_kwh": 4.97
+      },
+      {
+        "timestamp": 1785445200,
+        "usage_kwh": 5.45
+      },
+      {
+        "timestamp": 1785448800,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1785452400,
+        "usage_kwh": 4.9
+      },
+      {
+        "timestamp": 1785456000,
+        "usage_kwh": 5.89
+      },
+      {
+        "timestamp": 1785459600,
+        "usage_kwh": 4.67
+      },
+      {
+        "timestamp": 1785463200,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1785466800,
+        "usage_kwh": 5.44
+      },
+      {
+        "timestamp": 1785470400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1785474000,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1785477600,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785481200,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1785484800,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1785488400,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1785492000,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1785495600,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1785499200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1785502800,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1785506400,
+        "usage_kwh": 3.08
+      },
+      {
+        "timestamp": 1785510000,
+        "usage_kwh": 3.01
+      },
+      {
+        "timestamp": 1785513600,
+        "usage_kwh": 3
+      },
+      {
+        "timestamp": 1785517200,
+        "usage_kwh": 3.02
+      },
+      {
+        "timestamp": 1785520800,
+        "usage_kwh": 2.95
+      },
+      {
+        "timestamp": 1785524400,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1785528000,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1785531600,
+        "usage_kwh": 6.01
+      },
+      {
+        "timestamp": 1785535200,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1785538800,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1785542400,
+        "usage_kwh": 5.58
+      },
+      {
+        "timestamp": 1785546000,
+        "usage_kwh": 4.18
+      },
+      {
+        "timestamp": 1785549600,
+        "usage_kwh": 5.3
+      },
+      {
+        "timestamp": 1785553200,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1785556800,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1785560400,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1785564000,
+        "usage_kwh": 5.04
+      },
+      {
+        "timestamp": 1785567600,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1785571200,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1785574800,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1785578400,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1785582000,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1785585600,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1785589200,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1785592800,
+        "usage_kwh": 3.87
+      },
+      {
+        "timestamp": 1785596400,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1785600000,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1785603600,
+        "usage_kwh": 3.85
+      },
+      {
+        "timestamp": 1785607200,
+        "usage_kwh": 4.64
+      },
+      {
+        "timestamp": 1785610800,
+        "usage_kwh": 4.73
+      },
+      {
+        "timestamp": 1785614400,
+        "usage_kwh": 5.74
+      },
+      {
+        "timestamp": 1785618000,
+        "usage_kwh": 6.01
+      },
+      {
+        "timestamp": 1785621600,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1785625200,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1785628800,
+        "usage_kwh": 5.61
+      },
+      {
+        "timestamp": 1785632400,
+        "usage_kwh": 5.36
+      },
+      {
+        "timestamp": 1785636000,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1785639600,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1785643200,
+        "usage_kwh": 4.98
+      },
+      {
+        "timestamp": 1785646800,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1785650400,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1785654000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1785657600,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1785661200,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1785664800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1785668400,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1785672000,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1785675600,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1785679200,
+        "usage_kwh": 5.14
+      },
+      {
+        "timestamp": 1785682800,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1785686400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1785690000,
+        "usage_kwh": 4.32
+      },
+      {
+        "timestamp": 1785693600,
+        "usage_kwh": 4.69
+      },
+      {
+        "timestamp": 1785697200,
+        "usage_kwh": 8.76
+      },
+      {
+        "timestamp": 1785700800,
+        "usage_kwh": 5.15
+      },
+      {
+        "timestamp": 1785704400,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1785708000,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1785711600,
+        "usage_kwh": 4.059
+      },
+      {
+        "timestamp": 1785715200,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1785718800,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1785722400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1785726000,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1785729600,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785733200,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1785736800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1785740400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1785744000,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1785747600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1785751200,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1785754800,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1785758400,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1785762000,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1785765600,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1785769200,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1785772800,
+        "usage_kwh": 4.27
+      },
+      {
+        "timestamp": 1785776400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1785780000,
+        "usage_kwh": 3.79
+      },
+      {
+        "timestamp": 1785783600,
+        "usage_kwh": 3.97
+      },
+      {
+        "timestamp": 1785787200,
+        "usage_kwh": 5.88
+      },
+      {
+        "timestamp": 1785790800,
+        "usage_kwh": 5.61
+      },
+      {
+        "timestamp": 1785794400,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1785798000,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1785801600,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1785805200,
+        "usage_kwh": 4.36
+      },
+      {
+        "timestamp": 1785808800,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1785812400,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1785816000,
+        "usage_kwh": 5.17
+      },
+      {
+        "timestamp": 1785819600,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1785823200,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1785826800,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1785830400,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1785834000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1785837600,
+        "usage_kwh": 3.19
+      },
+      {
+        "timestamp": 1785841200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785844800,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1785848400,
+        "usage_kwh": 2.5
+      },
+      {
+        "timestamp": 1785852000,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1785855600,
+        "usage_kwh": 2.05
+      },
+      {
+        "timestamp": 1785859200,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1785862800,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1785866400,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1785870000,
+        "usage_kwh": 2.51
+      },
+      {
+        "timestamp": 1785873600,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1785877200,
+        "usage_kwh": 4.27
+      },
+      {
+        "timestamp": 1785880800,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1785884400,
+        "usage_kwh": 4.58
+      },
+      {
+        "timestamp": 1785888000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1785891600,
+        "usage_kwh": 4.55
+      },
+      {
+        "timestamp": 1785895200,
+        "usage_kwh": 6.08
+      },
+      {
+        "timestamp": 1785898800,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1785902400,
+        "usage_kwh": 4.82
+      },
+      {
+        "timestamp": 1785906000,
+        "usage_kwh": 4.41
+      },
+      {
+        "timestamp": 1785909600,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1785913200,
+        "usage_kwh": 1.97
+      },
+      {
+        "timestamp": 1785916800,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1785920400,
+        "usage_kwh": 2.11
+      },
+      {
+        "timestamp": 1785924000,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1785927600,
+        "usage_kwh": 2.32
+      },
+      {
+        "timestamp": 1785931200,
+        "usage_kwh": 2.88
+      },
+      {
+        "timestamp": 1785934800,
+        "usage_kwh": 2.95
+      },
+      {
+        "timestamp": 1785938400,
+        "usage_kwh": 4.12
+      },
+      {
+        "timestamp": 1785942000,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1785945600,
+        "usage_kwh": 2.74
+      },
+      {
+        "timestamp": 1785949200,
+        "usage_kwh": 2.73
+      },
+      {
+        "timestamp": 1785952800,
+        "usage_kwh": 2.5
+      },
+      {
+        "timestamp": 1785956400,
+        "usage_kwh": 2.77
+      },
+      {
+        "timestamp": 1785960000,
+        "usage_kwh": 4.3
+      },
+      {
+        "timestamp": 1785963600,
+        "usage_kwh": 5.39
+      },
+      {
+        "timestamp": 1785967200,
+        "usage_kwh": 5.19
+      },
+      {
+        "timestamp": 1785970800,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1785974400,
+        "usage_kwh": 6.2
+      },
+      {
+        "timestamp": 1785978000,
+        "usage_kwh": 6.24
+      },
+      {
+        "timestamp": 1785981600,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1785985200,
+        "usage_kwh": 2.64
+      },
+      {
+        "timestamp": 1785988800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1785992400,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1785996000,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1785999600,
+        "usage_kwh": 1.87
+      },
+      {
+        "timestamp": 1786003200,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1786006800,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1786010400,
+        "usage_kwh": 2.78
+      },
+      {
+        "timestamp": 1786014000,
+        "usage_kwh": 1.9
+      },
+      {
+        "timestamp": 1786017600,
+        "usage_kwh": 2.86
+      },
+      {
+        "timestamp": 1786021200,
+        "usage_kwh": 2.62
+      },
+      {
+        "timestamp": 1786024800,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1786028400,
+        "usage_kwh": 2.07
+      },
+      {
+        "timestamp": 1786032000,
+        "usage_kwh": 2.46
+      },
+      {
+        "timestamp": 1786035600,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1786039200,
+        "usage_kwh": 2.56
+      },
+      {
+        "timestamp": 1786042800,
+        "usage_kwh": 2.25
+      },
+      {
+        "timestamp": 1786046400,
+        "usage_kwh": 4.34
+      },
+      {
+        "timestamp": 1786050000,
+        "usage_kwh": 5.04
+      },
+      {
+        "timestamp": 1786053600,
+        "usage_kwh": 4.96
+      },
+      {
+        "timestamp": 1786057200,
+        "usage_kwh": 5.67
+      },
+      {
+        "timestamp": 1786060800,
+        "usage_kwh": 4.91
+      },
+      {
+        "timestamp": 1786064400,
+        "usage_kwh": 4.46
+      },
+      {
+        "timestamp": 1786068000,
+        "usage_kwh": 5.9
+      },
+      {
+        "timestamp": 1786071600,
+        "usage_kwh": 1.99
+      },
+      {
+        "timestamp": 1786075200,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1786078800,
+        "usage_kwh": 4.77
+      },
+      {
+        "timestamp": 1786082400,
+        "usage_kwh": 1.56
+      },
+      {
+        "timestamp": 1786086000,
+        "usage_kwh": 1.58
+      },
+      {
+        "timestamp": 1786089600,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1786093200,
+        "usage_kwh": 1.47
+      },
+      {
+        "timestamp": 1786096800,
+        "usage_kwh": 2.58
+      },
+      {
+        "timestamp": 1786100400,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1786104000,
+        "usage_kwh": 2.54
+      },
+      {
+        "timestamp": 1786107600,
+        "usage_kwh": 2.5
+      },
+      {
+        "timestamp": 1786111200,
+        "usage_kwh": 2.45
+      },
+      {
+        "timestamp": 1786114800,
+        "usage_kwh": 1.6
+      },
+      {
+        "timestamp": 1786118400,
+        "usage_kwh": 1.62
+      },
+      {
+        "timestamp": 1786122000,
+        "usage_kwh": 2.47
+      },
+      {
+        "timestamp": 1786125600,
+        "usage_kwh": 3.97
+      },
+      {
+        "timestamp": 1786129200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1786132800,
+        "usage_kwh": 4.17
+      },
+      {
+        "timestamp": 1786136400,
+        "usage_kwh": 4.94
+      },
+      {
+        "timestamp": 1786140000,
+        "usage_kwh": 6.81
+      },
+      {
+        "timestamp": 1786143600,
+        "usage_kwh": 6.57
+      },
+      {
+        "timestamp": 1786147200,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1786150800,
+        "usage_kwh": 8.56
+      },
+      {
+        "timestamp": 1786154400,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1786158000,
+        "usage_kwh": 4.24
+      },
+      {
+        "timestamp": 1786161600,
+        "usage_kwh": 4.69
+      },
+      {
+        "timestamp": 1786165200,
+        "usage_kwh": 5.24
+      },
+      {
+        "timestamp": 1786168800,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1786172400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1786176000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1786179600,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786183200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1786186800,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1786190400,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1786194000,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1786197600,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786201200,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1786204800,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1786208400,
+        "usage_kwh": 4.42
+      },
+      {
+        "timestamp": 1786212000,
+        "usage_kwh": 5.34
+      },
+      {
+        "timestamp": 1786215600,
+        "usage_kwh": 5.46
+      },
+      {
+        "timestamp": 1786219200,
+        "usage_kwh": 6.99
+      },
+      {
+        "timestamp": 1786222800,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1786226400,
+        "usage_kwh": 4.94
+      },
+      {
+        "timestamp": 1786230000,
+        "usage_kwh": 4.95
+      },
+      {
+        "timestamp": 1786233600,
+        "usage_kwh": 5.42
+      },
+      {
+        "timestamp": 1786237200,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1786240800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1786244400,
+        "usage_kwh": 5.22
+      },
+      {
+        "timestamp": 1786248000,
+        "usage_kwh": 5.23
+      },
+      {
+        "timestamp": 1786251600,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1786255200,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1786258800,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1786262400,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1786266000,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1786269600,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1786273200,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1786276800,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1786280400,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1786284000,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1786287600,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1786291200,
+        "usage_kwh": 3.09
+      },
+      {
+        "timestamp": 1786294800,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1786298400,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1786302000,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1786305600,
+        "usage_kwh": 5.62
+      },
+      {
+        "timestamp": 1786309200,
+        "usage_kwh": 5.49
+      },
+      {
+        "timestamp": 1786312800,
+        "usage_kwh": 5.81
+      },
+      {
+        "timestamp": 1786316400,
+        "usage_kwh": 5.62
+      },
+      {
+        "timestamp": 1786320000,
+        "usage_kwh": 5.81
+      },
+      {
+        "timestamp": 1786323600,
+        "usage_kwh": 4.65
+      },
+      {
+        "timestamp": 1786327200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1786330800,
+        "usage_kwh": 5.58
+      },
+      {
+        "timestamp": 1786334400,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1786338000,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1786341600,
+        "usage_kwh": 1.59
+      },
+      {
+        "timestamp": 1786345200,
+        "usage_kwh": 1.57
+      },
+      {
+        "timestamp": 1786348800,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1786352400,
+        "usage_kwh": 1.47
+      },
+      {
+        "timestamp": 1786356000,
+        "usage_kwh": 2.24
+      },
+      {
+        "timestamp": 1786359600,
+        "usage_kwh": 1.95
+      },
+      {
+        "timestamp": 1786363200,
+        "usage_kwh": 2.92
+      },
+      {
+        "timestamp": 1786366800,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1786370400,
+        "usage_kwh": 2.72
+      },
+      {
+        "timestamp": 1786374000,
+        "usage_kwh": 2.04
+      },
+      {
+        "timestamp": 1786377600,
+        "usage_kwh": 2.32
+      },
+      {
+        "timestamp": 1786381200,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1786384800,
+        "usage_kwh": 2.59
+      },
+      {
+        "timestamp": 1786388400,
+        "usage_kwh": 2.73
+      },
+      {
+        "timestamp": 1786392000,
+        "usage_kwh": 5.21
+      },
+      {
+        "timestamp": 1786395600,
+        "usage_kwh": 4.82
+      },
+      {
+        "timestamp": 1786399200,
+        "usage_kwh": 4.67
+      },
+      {
+        "timestamp": 1786402800,
+        "usage_kwh": 5.65
+      },
+      {
+        "timestamp": 1786406400,
+        "usage_kwh": 5.1
+      },
+      {
+        "timestamp": 1786410000,
+        "usage_kwh": 4.6
+      },
+      {
+        "timestamp": 1786413600,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1786417200,
+        "usage_kwh": 2.33
+      },
+      {
+        "timestamp": 1786420800,
+        "usage_kwh": 5.93
+      },
+      {
+        "timestamp": 1786424400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1786428000,
+        "usage_kwh": 1.58
+      },
+      {
+        "timestamp": 1786431600,
+        "usage_kwh": 1.6
+      },
+      {
+        "timestamp": 1786435200,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1786438800,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1786442400,
+        "usage_kwh": 2.56
+      },
+      {
+        "timestamp": 1786446000,
+        "usage_kwh": 2.1
+      },
+      {
+        "timestamp": 1786449600,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1786453200,
+        "usage_kwh": 2.88
+      },
+      {
+        "timestamp": 1786456800,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1786460400,
+        "usage_kwh": 2.3
+      },
+      {
+        "timestamp": 1786464000,
+        "usage_kwh": 2.25
+      },
+      {
+        "timestamp": 1786467600,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1786471200,
+        "usage_kwh": 2.78
+      },
+      {
+        "timestamp": 1786474800,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1786478400,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1786482000,
+        "usage_kwh": 4.98
+      },
+      {
+        "timestamp": 1786485600,
+        "usage_kwh": 5.03
+      },
+      {
+        "timestamp": 1786489200,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1786492800,
+        "usage_kwh": 4.86
+      },
+      {
+        "timestamp": 1786496400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1786500000,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1786503600,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1786507200,
+        "usage_kwh": 4.31
+      },
+      {
+        "timestamp": 1786510800,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786514400,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1786518000,
+        "usage_kwh": 1.78
+      },
+      {
+        "timestamp": 1786521600,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1786525200,
+        "usage_kwh": 1.75
+      },
+      {
+        "timestamp": 1786528800,
+        "usage_kwh": 2.61
+      },
+      {
+        "timestamp": 1786532400,
+        "usage_kwh": 2.029
+      },
+      {
+        "timestamp": 1786536000,
+        "usage_kwh": 2.93
+      },
+      {
+        "timestamp": 1786539600,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1786543200,
+        "usage_kwh": 2.74
+      },
+      {
+        "timestamp": 1786546800,
+        "usage_kwh": 2.04
+      },
+      {
+        "timestamp": 1786550400,
+        "usage_kwh": 2.91
+      },
+      {
+        "timestamp": 1786554000,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1786557600,
+        "usage_kwh": 1.97
+      },
+      {
+        "timestamp": 1786561200,
+        "usage_kwh": 2.36
+      },
+      {
+        "timestamp": 1786564800,
+        "usage_kwh": 1.92
+      },
+      {
+        "timestamp": 1786568400,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1786572000,
+        "usage_kwh": 5.19
+      },
+      {
+        "timestamp": 1786575600,
+        "usage_kwh": 6
+      },
+      {
+        "timestamp": 1786579200,
+        "usage_kwh": 4.66
+      },
+      {
+        "timestamp": 1786582800,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1786586400,
+        "usage_kwh": 5.24
+      },
+      {
+        "timestamp": 1786590000,
+        "usage_kwh": 4.27
+      },
+      {
+        "timestamp": 1786593600,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1786597200,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1786600800,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1786604400,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1786608000,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1786611600,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1786615200,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1786618800,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1786622400,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1786626000,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1786629600,
+        "usage_kwh": 6.07
+      },
+      {
+        "timestamp": 1786633200,
+        "usage_kwh": 4.29
+      },
+      {
+        "timestamp": 1786636800,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1786640400,
+        "usage_kwh": 4.04
+      },
+      {
+        "timestamp": 1786644000,
+        "usage_kwh": 4.1
+      },
+      {
+        "timestamp": 1786647600,
+        "usage_kwh": 4.17
+      },
+      {
+        "timestamp": 1786651200,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1786654800,
+        "usage_kwh": 6.71
+      },
+      {
+        "timestamp": 1786658400,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1786662000,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1786665600,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1786669200,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1786672800,
+        "usage_kwh": 4.4
+      },
+      {
+        "timestamp": 1786676400,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786680000,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1786683600,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1786687200,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1786690800,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1786694400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1786698000,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1786701600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1786705200,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786708800,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1786712400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1786716000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786719600,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1786723200,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1786726800,
+        "usage_kwh": 4.4
+      },
+      {
+        "timestamp": 1786730400,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1786734000,
+        "usage_kwh": 4.52
+      },
+      {
+        "timestamp": 1786737600,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1786741200,
+        "usage_kwh": 5.62
+      },
+      {
+        "timestamp": 1786744800,
+        "usage_kwh": 5.88
+      },
+      {
+        "timestamp": 1786748400,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1786752000,
+        "usage_kwh": 5.8
+      },
+      {
+        "timestamp": 1786755600,
+        "usage_kwh": 4.37
+      },
+      {
+        "timestamp": 1786759200,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1786762800,
+        "usage_kwh": 5.32
+      },
+      {
+        "timestamp": 1786766400,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1786770000,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1786773600,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1786777200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1786780800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1786784400,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1786788000,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1786791600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1786795200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1786798800,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1786802400,
+        "usage_kwh": 4.56
+      },
+      {
+        "timestamp": 1786806000,
+        "usage_kwh": 4.95
+      },
+      {
+        "timestamp": 1786809600,
+        "usage_kwh": 4.05
+      },
+      {
+        "timestamp": 1786813200,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1786816800,
+        "usage_kwh": 3.93
+      },
+      {
+        "timestamp": 1786820400,
+        "usage_kwh": 4
+      },
+      {
+        "timestamp": 1786824000,
+        "usage_kwh": 5.64
+      },
+      {
+        "timestamp": 1786827600,
+        "usage_kwh": 5.57
+      },
+      {
+        "timestamp": 1786831200,
+        "usage_kwh": 5.5
+      },
+      {
+        "timestamp": 1786834800,
+        "usage_kwh": 5.52
+      },
+      {
+        "timestamp": 1786838400,
+        "usage_kwh": 4.74
+      },
+      {
+        "timestamp": 1786842000,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1786845600,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1786849200,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1786852800,
+        "usage_kwh": 5.12
+      },
+      {
+        "timestamp": 1786856400,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1786860000,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1786863600,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1786867200,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1786870800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1786874400,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1786878000,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1786881600,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1786885200,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1786888800,
+        "usage_kwh": 4.51
+      },
+      {
+        "timestamp": 1786892400,
+        "usage_kwh": 6.59
+      },
+      {
+        "timestamp": 1786896000,
+        "usage_kwh": 6.35
+      },
+      {
+        "timestamp": 1786899600,
+        "usage_kwh": 7.02
+      },
+      {
+        "timestamp": 1786903200,
+        "usage_kwh": 7.79
+      },
+      {
+        "timestamp": 1786906800,
+        "usage_kwh": 5.99
+      },
+      {
+        "timestamp": 1786910400,
+        "usage_kwh": 7.66
+      },
+      {
+        "timestamp": 1786914000,
+        "usage_kwh": 6
+      },
+      {
+        "timestamp": 1786917600,
+        "usage_kwh": 5.87
+      },
+      {
+        "timestamp": 1786921200,
+        "usage_kwh": 5.92
+      },
+      {
+        "timestamp": 1786924800,
+        "usage_kwh": 6.02
+      },
+      {
+        "timestamp": 1786928400,
+        "usage_kwh": 5.34
+      },
+      {
+        "timestamp": 1786932000,
+        "usage_kwh": 4.26
+      },
+      {
+        "timestamp": 1786935600,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1786939200,
+        "usage_kwh": 4.05
+      },
+      {
+        "timestamp": 1786942800,
+        "usage_kwh": 5.48
+      },
+      {
+        "timestamp": 1786946400,
+        "usage_kwh": 4.019
+      },
+      {
+        "timestamp": 1786950000,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1786953600,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1786957200,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1786960800,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1786964400,
+        "usage_kwh": 2.21
+      },
+      {
+        "timestamp": 1786968000,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1786971600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1786975200,
+        "usage_kwh": 4.5
+      },
+      {
+        "timestamp": 1786978800,
+        "usage_kwh": 2.58
+      },
+      {
+        "timestamp": 1786982400,
+        "usage_kwh": 2.55
+      },
+      {
+        "timestamp": 1786986000,
+        "usage_kwh": 3.85
+      },
+      {
+        "timestamp": 1786989600,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1786993200,
+        "usage_kwh": 2.54
+      },
+      {
+        "timestamp": 1786996800,
+        "usage_kwh": 4.63
+      },
+      {
+        "timestamp": 1787000400,
+        "usage_kwh": 4.96
+      },
+      {
+        "timestamp": 1787004000,
+        "usage_kwh": 4.86
+      },
+      {
+        "timestamp": 1787007600,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1787011200,
+        "usage_kwh": 4.86
+      },
+      {
+        "timestamp": 1787014800,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1787018400,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1787022000,
+        "usage_kwh": 1.75
+      },
+      {
+        "timestamp": 1787025600,
+        "usage_kwh": 4.14
+      },
+      {
+        "timestamp": 1787029200,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1787032800,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1787036400,
+        "usage_kwh": 1.8
+      },
+      {
+        "timestamp": 1787040000,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787043600,
+        "usage_kwh": 1.74
+      },
+      {
+        "timestamp": 1787047200,
+        "usage_kwh": 2.64
+      },
+      {
+        "timestamp": 1787050800,
+        "usage_kwh": 2.32
+      },
+      {
+        "timestamp": 1787054400,
+        "usage_kwh": 2.94
+      },
+      {
+        "timestamp": 1787058000,
+        "usage_kwh": 2.72
+      },
+      {
+        "timestamp": 1787061600,
+        "usage_kwh": 2.65
+      },
+      {
+        "timestamp": 1787065200,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1787068800,
+        "usage_kwh": 1.78
+      },
+      {
+        "timestamp": 1787072400,
+        "usage_kwh": 2.52
+      },
+      {
+        "timestamp": 1787076000,
+        "usage_kwh": 2.16
+      },
+      {
+        "timestamp": 1787079600,
+        "usage_kwh": 2.23
+      },
+      {
+        "timestamp": 1787083200,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1787086800,
+        "usage_kwh": 5.29
+      },
+      {
+        "timestamp": 1787090400,
+        "usage_kwh": 4.98
+      },
+      {
+        "timestamp": 1787094000,
+        "usage_kwh": 5.74
+      },
+      {
+        "timestamp": 1787097600,
+        "usage_kwh": 4.46
+      },
+      {
+        "timestamp": 1787101200,
+        "usage_kwh": 6.26
+      },
+      {
+        "timestamp": 1787104800,
+        "usage_kwh": 6.1
+      },
+      {
+        "timestamp": 1787108400,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1787112000,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1787115600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1787119200,
+        "usage_kwh": 5.38
+      },
+      {
+        "timestamp": 1787122800,
+        "usage_kwh": 4.1
+      },
+      {
+        "timestamp": 1787126400,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1787130000,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1787133600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787137200,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1787140800,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1787144400,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1787148000,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1787151600,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1787155200,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1787158800,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1787162400,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1787166000,
+        "usage_kwh": 4.38
+      },
+      {
+        "timestamp": 1787169600,
+        "usage_kwh": 5.65
+      },
+      {
+        "timestamp": 1787173200,
+        "usage_kwh": 5.58
+      },
+      {
+        "timestamp": 1787176800,
+        "usage_kwh": 5.38
+      },
+      {
+        "timestamp": 1787180400,
+        "usage_kwh": 5.64
+      },
+      {
+        "timestamp": 1787184000,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1787187600,
+        "usage_kwh": 6.04
+      },
+      {
+        "timestamp": 1787191200,
+        "usage_kwh": 4.83
+      },
+      {
+        "timestamp": 1787194800,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1787198400,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1787202000,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1787205600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1787209200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787212800,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1787216400,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1787220000,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1787223600,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1787227200,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1787230800,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1787234400,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1787238000,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1787241600,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1787245200,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1787248800,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1787252400,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787256000,
+        "usage_kwh": 5.62
+      },
+      {
+        "timestamp": 1787259600,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1787263200,
+        "usage_kwh": 5.27
+      },
+      {
+        "timestamp": 1787266800,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1787270400,
+        "usage_kwh": 4.47
+      },
+      {
+        "timestamp": 1787274000,
+        "usage_kwh": 4.28
+      },
+      {
+        "timestamp": 1787277600,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787281200,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1787284800,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1787288400,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1787292000,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1787295600,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1787299200,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1787302800,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1787306400,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1787310000,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1787313600,
+        "usage_kwh": 3.87
+      },
+      {
+        "timestamp": 1787317200,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1787320800,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1787324400,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787328000,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787331600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1787335200,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1787338800,
+        "usage_kwh": 3.97
+      },
+      {
+        "timestamp": 1787342400,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1787346000,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1787349600,
+        "usage_kwh": 5.78
+      },
+      {
+        "timestamp": 1787353200,
+        "usage_kwh": 5.7
+      },
+      {
+        "timestamp": 1787356800,
+        "usage_kwh": 5.16
+      },
+      {
+        "timestamp": 1787360400,
+        "usage_kwh": 4.26
+      },
+      {
+        "timestamp": 1787364000,
+        "usage_kwh": 3.75
+      },
+      {
+        "timestamp": 1787367600,
+        "usage_kwh": 5.16
+      },
+      {
+        "timestamp": 1787371200,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1787374800,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1787378400,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1787382000,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1787385600,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787389200,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1787392800,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1787396400,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1787400000,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1787403600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1787407200,
+        "usage_kwh": 4.8
+      },
+      {
+        "timestamp": 1787410800,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1787414400,
+        "usage_kwh": 4.44
+      },
+      {
+        "timestamp": 1787418000,
+        "usage_kwh": 4.6
+      },
+      {
+        "timestamp": 1787421600,
+        "usage_kwh": 4.18
+      },
+      {
+        "timestamp": 1787425200,
+        "usage_kwh": 5.02
+      },
+      {
+        "timestamp": 1787428800,
+        "usage_kwh": 6.71
+      },
+      {
+        "timestamp": 1787432400,
+        "usage_kwh": 6.18
+      },
+      {
+        "timestamp": 1787436000,
+        "usage_kwh": 6.04
+      },
+      {
+        "timestamp": 1787439600,
+        "usage_kwh": 5.97
+      },
+      {
+        "timestamp": 1787443200,
+        "usage_kwh": 5.81
+      },
+      {
+        "timestamp": 1787446800,
+        "usage_kwh": 5.65
+      },
+      {
+        "timestamp": 1787450400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1787454000,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1787457600,
+        "usage_kwh": 1.87
+      },
+      {
+        "timestamp": 1787461200,
+        "usage_kwh": 2.31
+      },
+      {
+        "timestamp": 1787464800,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787468400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1787472000,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787475600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1787479200,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787482800,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1787486400,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1787490000,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1787493600,
+        "usage_kwh": 3.96
+      },
+      {
+        "timestamp": 1787497200,
+        "usage_kwh": 4.73
+      },
+      {
+        "timestamp": 1787500800,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1787504400,
+        "usage_kwh": 5.43
+      },
+      {
+        "timestamp": 1787508000,
+        "usage_kwh": 6.35
+      },
+      {
+        "timestamp": 1787511600,
+        "usage_kwh": 6.17
+      },
+      {
+        "timestamp": 1787515200,
+        "usage_kwh": 3.83
+      },
+      {
+        "timestamp": 1787518800,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1787522400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1787526000,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787529600,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1787533200,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1787536800,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1787540400,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1787544000,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1787547600,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1787551200,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1787554800,
+        "usage_kwh": 1.95
+      },
+      {
+        "timestamp": 1787558400,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1787562000,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1787565600,
+        "usage_kwh": 2.71
+      },
+      {
+        "timestamp": 1787569200,
+        "usage_kwh": 2.08
+      },
+      {
+        "timestamp": 1787572800,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1787576400,
+        "usage_kwh": 2.88
+      },
+      {
+        "timestamp": 1787580000,
+        "usage_kwh": 2.8
+      },
+      {
+        "timestamp": 1787583600,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1787587200,
+        "usage_kwh": 1.98
+      },
+      {
+        "timestamp": 1787590800,
+        "usage_kwh": 2.91
+      },
+      {
+        "timestamp": 1787594400,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1787598000,
+        "usage_kwh": 2.47
+      },
+      {
+        "timestamp": 1787601600,
+        "usage_kwh": 2.54
+      },
+      {
+        "timestamp": 1787605200,
+        "usage_kwh": 2.92
+      },
+      {
+        "timestamp": 1787608800,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1787612400,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1787616000,
+        "usage_kwh": 5.19
+      },
+      {
+        "timestamp": 1787619600,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1787623200,
+        "usage_kwh": 4.13
+      },
+      {
+        "timestamp": 1787626800,
+        "usage_kwh": 4.25
+      },
+      {
+        "timestamp": 1787630400,
+        "usage_kwh": 3.96
+      },
+      {
+        "timestamp": 1787634000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1787637600,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1787641200,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1787644800,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1787648400,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787652000,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1787655600,
+        "usage_kwh": 4.5
+      },
+      {
+        "timestamp": 1787659200,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1787662800,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1787666400,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1787670000,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1787673600,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1787677200,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1787680800,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1787684400,
+        "usage_kwh": 4.01
+      },
+      {
+        "timestamp": 1787688000,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1787691600,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1787695200,
+        "usage_kwh": 5.91
+      },
+      {
+        "timestamp": 1787698800,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1787702400,
+        "usage_kwh": 5.25
+      },
+      {
+        "timestamp": 1787706000,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1787709600,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1787713200,
+        "usage_kwh": 3.79
+      },
+      {
+        "timestamp": 1787716800,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1787720400,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1787724000,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1787727600,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1787731200,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1787734800,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1787738400,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1787742000,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1787745600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1787749200,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1787752800,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787756400,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1787760000,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1787763600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1787767200,
+        "usage_kwh": 4.019
+      },
+      {
+        "timestamp": 1787770800,
+        "usage_kwh": 4.059
+      },
+      {
+        "timestamp": 1787774400,
+        "usage_kwh": 6
+      },
+      {
+        "timestamp": 1787778000,
+        "usage_kwh": 6.2
+      },
+      {
+        "timestamp": 1787781600,
+        "usage_kwh": 5.89
+      },
+      {
+        "timestamp": 1787785200,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1787788800,
+        "usage_kwh": 5.88
+      },
+      {
+        "timestamp": 1787792400,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1787796000,
+        "usage_kwh": 3.95
+      },
+      {
+        "timestamp": 1787799600,
+        "usage_kwh": 4.34
+      },
+      {
+        "timestamp": 1787803200,
+        "usage_kwh": 4.2
+      },
+      {
+        "timestamp": 1787806800,
+        "usage_kwh": 5.35
+      },
+      {
+        "timestamp": 1787810400,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1787814000,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1787817600,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1787821200,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1787824800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787828400,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1787832000,
+        "usage_kwh": 4.24
+      },
+      {
+        "timestamp": 1787835600,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1787839200,
+        "usage_kwh": 3.99
+      },
+      {
+        "timestamp": 1787842800,
+        "usage_kwh": 1.76
+      },
+      {
+        "timestamp": 1787846400,
+        "usage_kwh": 2.5
+      },
+      {
+        "timestamp": 1787850000,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1787853600,
+        "usage_kwh": 2.38
+      },
+      {
+        "timestamp": 1787857200,
+        "usage_kwh": 2.29
+      },
+      {
+        "timestamp": 1787860800,
+        "usage_kwh": 4.74
+      },
+      {
+        "timestamp": 1787864400,
+        "usage_kwh": 4.97
+      },
+      {
+        "timestamp": 1787868000,
+        "usage_kwh": 5.06
+      },
+      {
+        "timestamp": 1787871600,
+        "usage_kwh": 6.06
+      },
+      {
+        "timestamp": 1787875200,
+        "usage_kwh": 4.9
+      },
+      {
+        "timestamp": 1787878800,
+        "usage_kwh": 2.11
+      },
+      {
+        "timestamp": 1787882400,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1787886000,
+        "usage_kwh": 2.15
+      },
+      {
+        "timestamp": 1787889600,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1787893200,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1787896800,
+        "usage_kwh": 1.63
+      },
+      {
+        "timestamp": 1787900400,
+        "usage_kwh": 1.61
+      },
+      {
+        "timestamp": 1787904000,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1787907600,
+        "usage_kwh": 1.63
+      },
+      {
+        "timestamp": 1787911200,
+        "usage_kwh": 2.45
+      },
+      {
+        "timestamp": 1787914800,
+        "usage_kwh": 2.35
+      },
+      {
+        "timestamp": 1787918400,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1787922000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1787925600,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1787929200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1787932800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787936400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1787940000,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1787943600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1787947200,
+        "usage_kwh": 5.79
+      },
+      {
+        "timestamp": 1787950800,
+        "usage_kwh": 5.35
+      },
+      {
+        "timestamp": 1787954400,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1787958000,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1787961600,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1787965200,
+        "usage_kwh": 4.65
+      },
+      {
+        "timestamp": 1787968800,
+        "usage_kwh": 5.15
+      },
+      {
+        "timestamp": 1787972400,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1787976000,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1787979600,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787983200,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1787986800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1787990400,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1787994000,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1787997600,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1788001200,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1788004800,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1788008400,
+        "usage_kwh": 4.12
+      },
+      {
+        "timestamp": 1788012000,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1788015600,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1788019200,
+        "usage_kwh": 4.01
+      },
+      {
+        "timestamp": 1788022800,
+        "usage_kwh": 5.94
+      },
+      {
+        "timestamp": 1788026400,
+        "usage_kwh": 5.14
+      },
+      {
+        "timestamp": 1788030000,
+        "usage_kwh": 4.48
+      },
+      {
+        "timestamp": 1788033600,
+        "usage_kwh": 6.06
+      },
+      {
+        "timestamp": 1788037200,
+        "usage_kwh": 5.98
+      },
+      {
+        "timestamp": 1788040800,
+        "usage_kwh": 5.57
+      },
+      {
+        "timestamp": 1788044400,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1788048000,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1788051600,
+        "usage_kwh": 5.14
+      },
+      {
+        "timestamp": 1788055200,
+        "usage_kwh": 5.09
+      },
+      {
+        "timestamp": 1788058800,
+        "usage_kwh": 3.86
+      },
+      {
+        "timestamp": 1788062400,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1788066000,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1788069600,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1788073200,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1788076800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1788080400,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1788084000,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1788087600,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1788091200,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1788094800,
+        "usage_kwh": 3.85
+      },
+      {
+        "timestamp": 1788098400,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1788102000,
+        "usage_kwh": 6.37
+      },
+      {
+        "timestamp": 1788105600,
+        "usage_kwh": 6.84
+      },
+      {
+        "timestamp": 1788109200,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1788112800,
+        "usage_kwh": 4.97
+      },
+      {
+        "timestamp": 1788116400,
+        "usage_kwh": 4.18
+      },
+      {
+        "timestamp": 1788120000,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1788123600,
+        "usage_kwh": 4.79
+      },
+      {
+        "timestamp": 1788127200,
+        "usage_kwh": 5.64
+      },
+      {
+        "timestamp": 1788130800,
+        "usage_kwh": 3.92
+      },
+      {
+        "timestamp": 1788134400,
+        "usage_kwh": 4.28
+      },
+      {
+        "timestamp": 1788138000,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1788141600,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1788145200,
+        "usage_kwh": 5.58
+      },
+      {
+        "timestamp": 1788148800,
+        "usage_kwh": 5.6
+      },
+      {
+        "timestamp": 1788152400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1788156000,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1788159600,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1788163200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1788166800,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1788170400,
+        "usage_kwh": 2.63
+      },
+      {
+        "timestamp": 1788174000,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1788177600,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1788181200,
+        "usage_kwh": 2.8
+      },
+      {
+        "timestamp": 1788184800,
+        "usage_kwh": 2.54
+      },
+      {
+        "timestamp": 1788188400,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1788192000,
+        "usage_kwh": 2.12
+      },
+      {
+        "timestamp": 1788195600,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1788199200,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1788202800,
+        "usage_kwh": 2.61
+      },
+      {
+        "timestamp": 1788206400,
+        "usage_kwh": 2.029
+      },
+      {
+        "timestamp": 1788210000,
+        "usage_kwh": 2.94
+      },
+      {
+        "timestamp": 1788213600,
+        "usage_kwh": 4.04
+      },
+      {
+        "timestamp": 1788217200,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1788220800,
+        "usage_kwh": 4.35
+      },
+      {
+        "timestamp": 1788224400,
+        "usage_kwh": 6.19
+      },
+      {
+        "timestamp": 1788228000,
+        "usage_kwh": 4.31
+      },
+      {
+        "timestamp": 1788231600,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1788235200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1788238800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1788242400,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1788246000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1788249600,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1788253200,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788256800,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1788260400,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1788264000,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1788267600,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1788271200,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1788274800,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1788278400,
+        "usage_kwh": 4.15
+      },
+      {
+        "timestamp": 1788282000,
+        "usage_kwh": 3.97
+      },
+      {
+        "timestamp": 1788285600,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1788289200,
+        "usage_kwh": 4.07
+      },
+      {
+        "timestamp": 1788292800,
+        "usage_kwh": 5.61
+      },
+      {
+        "timestamp": 1788296400,
+        "usage_kwh": 5.68
+      },
+      {
+        "timestamp": 1788300000,
+        "usage_kwh": 5.64
+      },
+      {
+        "timestamp": 1788303600,
+        "usage_kwh": 5.67
+      },
+      {
+        "timestamp": 1788307200,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1788310800,
+        "usage_kwh": 5.88
+      },
+      {
+        "timestamp": 1788314400,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1788318000,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1788321600,
+        "usage_kwh": 4.04
+      },
+      {
+        "timestamp": 1788325200,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1788328800,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1788332400,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1788336000,
+        "usage_kwh": 4.55
+      },
+      {
+        "timestamp": 1788339600,
+        "usage_kwh": 5.41
+      },
+      {
+        "timestamp": 1788343200,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1788346800,
+        "usage_kwh": 4
+      },
+      {
+        "timestamp": 1788350400,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1788354000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1788357600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1788361200,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1788364800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788368400,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1788372000,
+        "usage_kwh": 3.92
+      },
+      {
+        "timestamp": 1788375600,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1788379200,
+        "usage_kwh": 5.82
+      },
+      {
+        "timestamp": 1788382800,
+        "usage_kwh": 5.82
+      },
+      {
+        "timestamp": 1788386400,
+        "usage_kwh": 5.86
+      },
+      {
+        "timestamp": 1788390000,
+        "usage_kwh": 5.71
+      },
+      {
+        "timestamp": 1788393600,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1788397200,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1788400800,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1788404400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1788408000,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1788411600,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1788415200,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1788418800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788422400,
+        "usage_kwh": 3.27
+      },
+      {
+        "timestamp": 1788426000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1788429600,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788433200,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788436800,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1788440400,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1788444000,
+        "usage_kwh": 4.64
+      },
+      {
+        "timestamp": 1788447600,
+        "usage_kwh": 6.08
+      },
+      {
+        "timestamp": 1788451200,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1788454800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788458400,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1788462000,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1788465600,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1788469200,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1788472800,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1788476400,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1788480000,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1788483600,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1788487200,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1788490800,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1788494400,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1788498000,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788501600,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1788505200,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1788508800,
+        "usage_kwh": 3.28
+      },
+      {
+        "timestamp": 1788512400,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1788516000,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1788519600,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1788523200,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1788526800,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788530400,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1788534000,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1788537600,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1788541200,
+        "usage_kwh": 3.05
+      },
+      {
+        "timestamp": 1788544800,
+        "usage_kwh": 3.12
+      },
+      {
+        "timestamp": 1788548400,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1788552000,
+        "usage_kwh": 3.11
+      },
+      {
+        "timestamp": 1788555600,
+        "usage_kwh": 3.19
+      },
+      {
+        "timestamp": 1788559200,
+        "usage_kwh": 3.14
+      },
+      {
+        "timestamp": 1788562800,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1788566400,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1788570000,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1788573600,
+        "usage_kwh": 3.19
+      },
+      {
+        "timestamp": 1788577200,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1788580800,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788584400,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788588000,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1788591600,
+        "usage_kwh": 3.23
+      },
+      {
+        "timestamp": 1788595200,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1788598800,
+        "usage_kwh": 3.21
+      },
+      {
+        "timestamp": 1788602400,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1788606000,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1788609600,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1788613200,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788616800,
+        "usage_kwh": 3.11
+      },
+      {
+        "timestamp": 1788620400,
+        "usage_kwh": 3.07
+      },
+      {
+        "timestamp": 1788624000,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1788627600,
+        "usage_kwh": 3.05
+      },
+      {
+        "timestamp": 1788631200,
+        "usage_kwh": 3.12
+      },
+      {
+        "timestamp": 1788634800,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1788638400,
+        "usage_kwh": 3.1
+      },
+      {
+        "timestamp": 1788642000,
+        "usage_kwh": 3.2
+      },
+      {
+        "timestamp": 1788645600,
+        "usage_kwh": 3.15
+      },
+      {
+        "timestamp": 1788649200,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1788652800,
+        "usage_kwh": 3.24
+      },
+      {
+        "timestamp": 1788656400,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1788660000,
+        "usage_kwh": 3.17
+      },
+      {
+        "timestamp": 1788663600,
+        "usage_kwh": 4.78
+      },
+      {
+        "timestamp": 1788667200,
+        "usage_kwh": 5.51
+      },
+      {
+        "timestamp": 1788670800,
+        "usage_kwh": 5.56
+      },
+      {
+        "timestamp": 1788674400,
+        "usage_kwh": 5.47
+      },
+      {
+        "timestamp": 1788678000,
+        "usage_kwh": 4.68
+      },
+      {
+        "timestamp": 1788681600,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1788685200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1788688800,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1788692400,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1788696000,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1788699600,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1788703200,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1788706800,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1788710400,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1788714000,
+        "usage_kwh": 5.15
+      },
+      {
+        "timestamp": 1788717600,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1788721200,
+        "usage_kwh": 5.83
+      },
+      {
+        "timestamp": 1788724800,
+        "usage_kwh": 5.27
+      },
+      {
+        "timestamp": 1788728400,
+        "usage_kwh": 8.039
+      },
+      {
+        "timestamp": 1788732000,
+        "usage_kwh": 6.58
+      },
+      {
+        "timestamp": 1788735600,
+        "usage_kwh": 4.85
+      },
+      {
+        "timestamp": 1788739200,
+        "usage_kwh": 7.09
+      },
+      {
+        "timestamp": 1788742800,
+        "usage_kwh": 3.79
+      },
+      {
+        "timestamp": 1788746400,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1788750000,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1788753600,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1788757200,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1788760800,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1788764400,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1788768000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1788771600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1788775200,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1788778800,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1788782400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1788786000,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1788789600,
+        "usage_kwh": 3.88
+      },
+      {
+        "timestamp": 1788793200,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1788796800,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1788800400,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1788804000,
+        "usage_kwh": 4.13
+      },
+      {
+        "timestamp": 1788807600,
+        "usage_kwh": 3.92
+      },
+      {
+        "timestamp": 1788811200,
+        "usage_kwh": 5.65
+      },
+      {
+        "timestamp": 1788814800,
+        "usage_kwh": 5.52
+      },
+      {
+        "timestamp": 1788818400,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1788822000,
+        "usage_kwh": 4.72
+      },
+      {
+        "timestamp": 1788825600,
+        "usage_kwh": 4.8
+      },
+      {
+        "timestamp": 1788829200,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1788832800,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1788836400,
+        "usage_kwh": 4.68
+      },
+      {
+        "timestamp": 1788840000,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1788843600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1788847200,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1788850800,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1788854400,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1788858000,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1788861600,
+        "usage_kwh": 2.57
+      },
+      {
+        "timestamp": 1788865200,
+        "usage_kwh": 2.37
+      },
+      {
+        "timestamp": 1788868800,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1788872400,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1788876000,
+        "usage_kwh": 2.54
+      },
+      {
+        "timestamp": 1788879600,
+        "usage_kwh": 1.95
+      },
+      {
+        "timestamp": 1788883200,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1788886800,
+        "usage_kwh": 2.98
+      },
+      {
+        "timestamp": 1788890400,
+        "usage_kwh": 2.34
+      },
+      {
+        "timestamp": 1788894000,
+        "usage_kwh": 2.93
+      },
+      {
+        "timestamp": 1788897600,
+        "usage_kwh": 4.26
+      },
+      {
+        "timestamp": 1788901200,
+        "usage_kwh": 4.75
+      },
+      {
+        "timestamp": 1788904800,
+        "usage_kwh": 4.81
+      },
+      {
+        "timestamp": 1788908400,
+        "usage_kwh": 5.64
+      },
+      {
+        "timestamp": 1788912000,
+        "usage_kwh": 4.88
+      },
+      {
+        "timestamp": 1788915600,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1788919200,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1788922800,
+        "usage_kwh": 2.27
+      },
+      {
+        "timestamp": 1788926400,
+        "usage_kwh": 5.73
+      },
+      {
+        "timestamp": 1788930000,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1788933600,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1788937200,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1788940800,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1788944400,
+        "usage_kwh": 1.64
+      },
+      {
+        "timestamp": 1788948000,
+        "usage_kwh": 2.43
+      },
+      {
+        "timestamp": 1788951600,
+        "usage_kwh": 1.98
+      },
+      {
+        "timestamp": 1788955200,
+        "usage_kwh": 2.67
+      },
+      {
+        "timestamp": 1788958800,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1788962400,
+        "usage_kwh": 2.77
+      },
+      {
+        "timestamp": 1788966000,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1788969600,
+        "usage_kwh": 2.55
+      },
+      {
+        "timestamp": 1788973200,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1788976800,
+        "usage_kwh": 1.87
+      },
+      {
+        "timestamp": 1788980400,
+        "usage_kwh": 3.01
+      },
+      {
+        "timestamp": 1788984000,
+        "usage_kwh": 1.97
+      },
+      {
+        "timestamp": 1788987600,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1788991200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1788994800,
+        "usage_kwh": 5.72
+      },
+      {
+        "timestamp": 1788998400,
+        "usage_kwh": 4.99
+      },
+      {
+        "timestamp": 1789002000,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1789005600,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1789009200,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1789012800,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1789016400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1789020000,
+        "usage_kwh": 1.8
+      },
+      {
+        "timestamp": 1789023600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789027200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1789030800,
+        "usage_kwh": 1.66
+      },
+      {
+        "timestamp": 1789034400,
+        "usage_kwh": 2.66
+      },
+      {
+        "timestamp": 1789038000,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1789041600,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1789045200,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1789048800,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1789052400,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1789056000,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1789059600,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1789063200,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1789066800,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1789070400,
+        "usage_kwh": 4.82
+      },
+      {
+        "timestamp": 1789074000,
+        "usage_kwh": 5.2
+      },
+      {
+        "timestamp": 1789077600,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1789081200,
+        "usage_kwh": 5.1
+      },
+      {
+        "timestamp": 1789084800,
+        "usage_kwh": 4.24
+      },
+      {
+        "timestamp": 1789088400,
+        "usage_kwh": 4.019
+      },
+      {
+        "timestamp": 1789092000,
+        "usage_kwh": 4.14
+      },
+      {
+        "timestamp": 1789095600,
+        "usage_kwh": 3.95
+      },
+      {
+        "timestamp": 1789099200,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1789102800,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1789106400,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789110000,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1789113600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1789117200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1789120800,
+        "usage_kwh": 3.33
+      },
+      {
+        "timestamp": 1789124400,
+        "usage_kwh": 2.21
+      },
+      {
+        "timestamp": 1789128000,
+        "usage_kwh": 3
+      },
+      {
+        "timestamp": 1789131600,
+        "usage_kwh": 2.78
+      },
+      {
+        "timestamp": 1789135200,
+        "usage_kwh": 2.91
+      },
+      {
+        "timestamp": 1789138800,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1789142400,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1789146000,
+        "usage_kwh": 2.71
+      },
+      {
+        "timestamp": 1789149600,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1789153200,
+        "usage_kwh": 1.89
+      },
+      {
+        "timestamp": 1789156800,
+        "usage_kwh": 4.09
+      },
+      {
+        "timestamp": 1789160400,
+        "usage_kwh": 5.77
+      },
+      {
+        "timestamp": 1789164000,
+        "usage_kwh": 2.98
+      },
+      {
+        "timestamp": 1789167600,
+        "usage_kwh": 4.54
+      },
+      {
+        "timestamp": 1789171200,
+        "usage_kwh": 5.07
+      },
+      {
+        "timestamp": 1789174800,
+        "usage_kwh": 2.11
+      },
+      {
+        "timestamp": 1789178400,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1789182000,
+        "usage_kwh": 2.15
+      },
+      {
+        "timestamp": 1789185600,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1789189200,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1789192800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1789196400,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789200000,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1789203600,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1789207200,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1789210800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1789214400,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1789218000,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1789221600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1789225200,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1789228800,
+        "usage_kwh": 4.56
+      },
+      {
+        "timestamp": 1789232400,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1789236000,
+        "usage_kwh": 3.35
+      },
+      {
+        "timestamp": 1789239600,
+        "usage_kwh": 5.66
+      },
+      {
+        "timestamp": 1789243200,
+        "usage_kwh": 5.7
+      },
+      {
+        "timestamp": 1789246800,
+        "usage_kwh": 5.73
+      },
+      {
+        "timestamp": 1789250400,
+        "usage_kwh": 3.87
+      },
+      {
+        "timestamp": 1789254000,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1789257600,
+        "usage_kwh": 4.88
+      },
+      {
+        "timestamp": 1789261200,
+        "usage_kwh": 4.55
+      },
+      {
+        "timestamp": 1789264800,
+        "usage_kwh": 3.8
+      },
+      {
+        "timestamp": 1789268400,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1789272000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1789275600,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1789279200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789282800,
+        "usage_kwh": 5.19
+      },
+      {
+        "timestamp": 1789286400,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1789290000,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1789293600,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1789297200,
+        "usage_kwh": 3.3
+      },
+      {
+        "timestamp": 1789300800,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1789304400,
+        "usage_kwh": 3.63
+      },
+      {
+        "timestamp": 1789308000,
+        "usage_kwh": 5.21
+      },
+      {
+        "timestamp": 1789311600,
+        "usage_kwh": 3.95
+      },
+      {
+        "timestamp": 1789315200,
+        "usage_kwh": 4.53
+      },
+      {
+        "timestamp": 1789318800,
+        "usage_kwh": 6.24
+      },
+      {
+        "timestamp": 1789322400,
+        "usage_kwh": 4.91
+      },
+      {
+        "timestamp": 1789326000,
+        "usage_kwh": 6.02
+      },
+      {
+        "timestamp": 1789329600,
+        "usage_kwh": 7.32
+      },
+      {
+        "timestamp": 1789333200,
+        "usage_kwh": 5.7
+      },
+      {
+        "timestamp": 1789336800,
+        "usage_kwh": 5.53
+      },
+      {
+        "timestamp": 1789340400,
+        "usage_kwh": 5.74
+      },
+      {
+        "timestamp": 1789344000,
+        "usage_kwh": 5.03
+      },
+      {
+        "timestamp": 1789347600,
+        "usage_kwh": 4.09
+      },
+      {
+        "timestamp": 1789351200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1789354800,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1789358400,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1789362000,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1789365600,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1789369200,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1789372800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1789376400,
+        "usage_kwh": 1.7
+      },
+      {
+        "timestamp": 1789380000,
+        "usage_kwh": 2.57
+      },
+      {
+        "timestamp": 1789383600,
+        "usage_kwh": 2
+      },
+      {
+        "timestamp": 1789387200,
+        "usage_kwh": 2.95
+      },
+      {
+        "timestamp": 1789390800,
+        "usage_kwh": 2.88
+      },
+      {
+        "timestamp": 1789394400,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1789398000,
+        "usage_kwh": 2.04
+      },
+      {
+        "timestamp": 1789401600,
+        "usage_kwh": 2.06
+      },
+      {
+        "timestamp": 1789405200,
+        "usage_kwh": 2.72
+      },
+      {
+        "timestamp": 1789408800,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1789412400,
+        "usage_kwh": 1.8
+      },
+      {
+        "timestamp": 1789416000,
+        "usage_kwh": 4.12
+      },
+      {
+        "timestamp": 1789419600,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1789423200,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1789426800,
+        "usage_kwh": 4.43
+      },
+      {
+        "timestamp": 1789430400,
+        "usage_kwh": 2.96
+      },
+      {
+        "timestamp": 1789434000,
+        "usage_kwh": 2.12
+      },
+      {
+        "timestamp": 1789437600,
+        "usage_kwh": 1.99
+      },
+      {
+        "timestamp": 1789441200,
+        "usage_kwh": 2.09
+      },
+      {
+        "timestamp": 1789444800,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1789448400,
+        "usage_kwh": 3.71
+      },
+      {
+        "timestamp": 1789452000,
+        "usage_kwh": 2.02
+      },
+      {
+        "timestamp": 1789455600,
+        "usage_kwh": 1.97
+      },
+      {
+        "timestamp": 1789459200,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1789462800,
+        "usage_kwh": 1.9
+      },
+      {
+        "timestamp": 1789466400,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1789470000,
+        "usage_kwh": 2.35
+      },
+      {
+        "timestamp": 1789473600,
+        "usage_kwh": 2.94
+      },
+      {
+        "timestamp": 1789477200,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1789480800,
+        "usage_kwh": 2.81
+      },
+      {
+        "timestamp": 1789484400,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1789488000,
+        "usage_kwh": 1.91
+      },
+      {
+        "timestamp": 1789491600,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1789495200,
+        "usage_kwh": 1.87
+      },
+      {
+        "timestamp": 1789498800,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1789502400,
+        "usage_kwh": 1.78
+      },
+      {
+        "timestamp": 1789506000,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1789509600,
+        "usage_kwh": 4.36
+      },
+      {
+        "timestamp": 1789513200,
+        "usage_kwh": 4.24
+      },
+      {
+        "timestamp": 1789516800,
+        "usage_kwh": 4.12
+      },
+      {
+        "timestamp": 1789520400,
+        "usage_kwh": 4.91
+      },
+      {
+        "timestamp": 1789524000,
+        "usage_kwh": 5.76
+      },
+      {
+        "timestamp": 1789527600,
+        "usage_kwh": 3.97
+      },
+      {
+        "timestamp": 1789531200,
+        "usage_kwh": 3.89
+      },
+      {
+        "timestamp": 1789534800,
+        "usage_kwh": 3.9
+      },
+      {
+        "timestamp": 1789538400,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1789542000,
+        "usage_kwh": 3.86
+      },
+      {
+        "timestamp": 1789545600,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1789549200,
+        "usage_kwh": 3.77
+      },
+      {
+        "timestamp": 1789552800,
+        "usage_kwh": 3.53
+      },
+      {
+        "timestamp": 1789556400,
+        "usage_kwh": 4.29
+      },
+      {
+        "timestamp": 1789560000,
+        "usage_kwh": 3.91
+      },
+      {
+        "timestamp": 1789563600,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1789567200,
+        "usage_kwh": 5.31
+      },
+      {
+        "timestamp": 1789570800,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789574400,
+        "usage_kwh": 4.64
+      },
+      {
+        "timestamp": 1789578000,
+        "usage_kwh": 4.53
+      },
+      {
+        "timestamp": 1789581600,
+        "usage_kwh": 4.69
+      },
+      {
+        "timestamp": 1789585200,
+        "usage_kwh": 4.37
+      },
+      {
+        "timestamp": 1789588800,
+        "usage_kwh": 5.69
+      },
+      {
+        "timestamp": 1789592400,
+        "usage_kwh": 6.3
+      },
+      {
+        "timestamp": 1789596000,
+        "usage_kwh": 5.53
+      },
+      {
+        "timestamp": 1789599600,
+        "usage_kwh": 5.7
+      },
+      {
+        "timestamp": 1789603200,
+        "usage_kwh": 4.97
+      },
+      {
+        "timestamp": 1789606800,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1789610400,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1789614000,
+        "usage_kwh": 5.56
+      },
+      {
+        "timestamp": 1789617600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789621200,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1789624800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1789628400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1789632000,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1789635600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1789639200,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1789642800,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1789646400,
+        "usage_kwh": 3
+      },
+      {
+        "timestamp": 1789650000,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1789653600,
+        "usage_kwh": 2.59
+      },
+      {
+        "timestamp": 1789657200,
+        "usage_kwh": 1.61
+      },
+      {
+        "timestamp": 1789660800,
+        "usage_kwh": 2.21
+      },
+      {
+        "timestamp": 1789664400,
+        "usage_kwh": 3
+      },
+      {
+        "timestamp": 1789668000,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1789671600,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1789675200,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1789678800,
+        "usage_kwh": 2.81
+      },
+      {
+        "timestamp": 1789682400,
+        "usage_kwh": 2.9
+      },
+      {
+        "timestamp": 1789686000,
+        "usage_kwh": 5.81
+      },
+      {
+        "timestamp": 1789689600,
+        "usage_kwh": 2.69
+      },
+      {
+        "timestamp": 1789693200,
+        "usage_kwh": 2.28
+      },
+      {
+        "timestamp": 1789696800,
+        "usage_kwh": 3.93
+      },
+      {
+        "timestamp": 1789700400,
+        "usage_kwh": 2.37
+      },
+      {
+        "timestamp": 1789704000,
+        "usage_kwh": 4.96
+      },
+      {
+        "timestamp": 1789707600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1789711200,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1789714800,
+        "usage_kwh": 1.75
+      },
+      {
+        "timestamp": 1789718400,
+        "usage_kwh": 3.37
+      },
+      {
+        "timestamp": 1789722000,
+        "usage_kwh": 1.61
+      },
+      {
+        "timestamp": 1789725600,
+        "usage_kwh": 2.44
+      },
+      {
+        "timestamp": 1789729200,
+        "usage_kwh": 2.05
+      },
+      {
+        "timestamp": 1789732800,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1789736400,
+        "usage_kwh": 4.05
+      },
+      {
+        "timestamp": 1789740000,
+        "usage_kwh": 2.58
+      },
+      {
+        "timestamp": 1789743600,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1789747200,
+        "usage_kwh": 1.78
+      },
+      {
+        "timestamp": 1789750800,
+        "usage_kwh": 2.68
+      },
+      {
+        "timestamp": 1789754400,
+        "usage_kwh": 1.93
+      },
+      {
+        "timestamp": 1789758000,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1789761600,
+        "usage_kwh": 4.21
+      },
+      {
+        "timestamp": 1789765200,
+        "usage_kwh": 4.39
+      },
+      {
+        "timestamp": 1789768800,
+        "usage_kwh": 2.76
+      },
+      {
+        "timestamp": 1789772400,
+        "usage_kwh": 3.79
+      },
+      {
+        "timestamp": 1789776000,
+        "usage_kwh": 2.89
+      },
+      {
+        "timestamp": 1789779600,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1789783200,
+        "usage_kwh": 3.62
+      },
+      {
+        "timestamp": 1789786800,
+        "usage_kwh": 2.3
+      },
+      {
+        "timestamp": 1789790400,
+        "usage_kwh": 4.15
+      },
+      {
+        "timestamp": 1789794000,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1789797600,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1789801200,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1789804800,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1789808400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1789812000,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1789815600,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1789819200,
+        "usage_kwh": 3.84
+      },
+      {
+        "timestamp": 1789822800,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1789826400,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1789830000,
+        "usage_kwh": 6.24
+      },
+      {
+        "timestamp": 1789833600,
+        "usage_kwh": 4.16
+      },
+      {
+        "timestamp": 1789837200,
+        "usage_kwh": 5.48
+      },
+      {
+        "timestamp": 1789840800,
+        "usage_kwh": 6.52
+      },
+      {
+        "timestamp": 1789844400,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1789848000,
+        "usage_kwh": 5.35
+      },
+      {
+        "timestamp": 1789851600,
+        "usage_kwh": 4.74
+      },
+      {
+        "timestamp": 1789855200,
+        "usage_kwh": 5.55
+      },
+      {
+        "timestamp": 1789858800,
+        "usage_kwh": 4.23
+      },
+      {
+        "timestamp": 1789862400,
+        "usage_kwh": 3.78
+      },
+      {
+        "timestamp": 1789866000,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1789869600,
+        "usage_kwh": 3.74
+      },
+      {
+        "timestamp": 1789873200,
+        "usage_kwh": 3.67
+      },
+      {
+        "timestamp": 1789876800,
+        "usage_kwh": 3.51
+      },
+      {
+        "timestamp": 1789880400,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1789884000,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1789887600,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1789891200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1789894800,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1789898400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1789902000,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1789905600,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1789909200,
+        "usage_kwh": 4.98
+      },
+      {
+        "timestamp": 1789912800,
+        "usage_kwh": 3.92
+      },
+      {
+        "timestamp": 1789916400,
+        "usage_kwh": 3.29
+      },
+      {
+        "timestamp": 1789920000,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1789923600,
+        "usage_kwh": 3.26
+      },
+      {
+        "timestamp": 1789927200,
+        "usage_kwh": 3.18
+      },
+      {
+        "timestamp": 1789930800,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1789934400,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1789938000,
+        "usage_kwh": 3.16
+      },
+      {
+        "timestamp": 1789941600,
+        "usage_kwh": 3.34
+      },
+      {
+        "timestamp": 1789945200,
+        "usage_kwh": 4.76
+      },
+      {
+        "timestamp": 1789948800,
+        "usage_kwh": 4.17
+      },
+      {
+        "timestamp": 1789952400,
+        "usage_kwh": 3.7
+      },
+      {
+        "timestamp": 1789956000,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1789959600,
+        "usage_kwh": 3.57
+      },
+      {
+        "timestamp": 1789963200,
+        "usage_kwh": 3.92
+      },
+      {
+        "timestamp": 1789966800,
+        "usage_kwh": 3.98
+      },
+      {
+        "timestamp": 1789970400,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1789974000,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1789977600,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1789981200,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1789984800,
+        "usage_kwh": 2.65
+      },
+      {
+        "timestamp": 1789988400,
+        "usage_kwh": 2.22
+      },
+      {
+        "timestamp": 1789992000,
+        "usage_kwh": 2.94
+      },
+      {
+        "timestamp": 1789995600,
+        "usage_kwh": 2.83
+      },
+      {
+        "timestamp": 1789999200,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1790002800,
+        "usage_kwh": 2.09
+      },
+      {
+        "timestamp": 1790006400,
+        "usage_kwh": 2.08
+      },
+      {
+        "timestamp": 1790010000,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1790013600,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1790017200,
+        "usage_kwh": 1.95
+      },
+      {
+        "timestamp": 1790020800,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1790024400,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1790028000,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1790031600,
+        "usage_kwh": 3.58
+      },
+      {
+        "timestamp": 1790035200,
+        "usage_kwh": 2.98
+      },
+      {
+        "timestamp": 1790038800,
+        "usage_kwh": 2.07
+      },
+      {
+        "timestamp": 1790042400,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1790046000,
+        "usage_kwh": 2.11
+      },
+      {
+        "timestamp": 1790049600,
+        "usage_kwh": 3.69
+      },
+      {
+        "timestamp": 1790053200,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1790056800,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1790060400,
+        "usage_kwh": 1.91
+      },
+      {
+        "timestamp": 1790064000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1790067600,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1790071200,
+        "usage_kwh": 2.73
+      },
+      {
+        "timestamp": 1790074800,
+        "usage_kwh": 2.28
+      },
+      {
+        "timestamp": 1790078400,
+        "usage_kwh": 2.82
+      },
+      {
+        "timestamp": 1790082000,
+        "usage_kwh": 2.78
+      },
+      {
+        "timestamp": 1790085600,
+        "usage_kwh": 2.72
+      },
+      {
+        "timestamp": 1790089200,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1790092800,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1790096400,
+        "usage_kwh": 2.64
+      },
+      {
+        "timestamp": 1790100000,
+        "usage_kwh": 1.86
+      },
+      {
+        "timestamp": 1790103600,
+        "usage_kwh": 1.91
+      },
+      {
+        "timestamp": 1790107200,
+        "usage_kwh": 2.029
+      },
+      {
+        "timestamp": 1790110800,
+        "usage_kwh": 2.81
+      },
+      {
+        "timestamp": 1790114400,
+        "usage_kwh": 2.7
+      },
+      {
+        "timestamp": 1790118000,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1790121600,
+        "usage_kwh": 2.68
+      },
+      {
+        "timestamp": 1790125200,
+        "usage_kwh": 2.22
+      },
+      {
+        "timestamp": 1790128800,
+        "usage_kwh": 3.82
+      },
+      {
+        "timestamp": 1790132400,
+        "usage_kwh": 2.27
+      },
+      {
+        "timestamp": 1790136000,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1790139600,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1790143200,
+        "usage_kwh": 1.81
+      },
+      {
+        "timestamp": 1790146800,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1790150400,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1790154000,
+        "usage_kwh": 1.99
+      },
+      {
+        "timestamp": 1790157600,
+        "usage_kwh": 2.61
+      },
+      {
+        "timestamp": 1790161200,
+        "usage_kwh": 1.8
+      },
+      {
+        "timestamp": 1790164800,
+        "usage_kwh": 2.61
+      },
+      {
+        "timestamp": 1790168400,
+        "usage_kwh": 2.67
+      },
+      {
+        "timestamp": 1790172000,
+        "usage_kwh": 2.67
+      },
+      {
+        "timestamp": 1790175600,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1790179200,
+        "usage_kwh": 2.05
+      },
+      {
+        "timestamp": 1790182800,
+        "usage_kwh": 2.75
+      },
+      {
+        "timestamp": 1790186400,
+        "usage_kwh": 1.84
+      },
+      {
+        "timestamp": 1790190000,
+        "usage_kwh": 1.87
+      },
+      {
+        "timestamp": 1790193600,
+        "usage_kwh": 1.77
+      },
+      {
+        "timestamp": 1790197200,
+        "usage_kwh": 3.06
+      },
+      {
+        "timestamp": 1790200800,
+        "usage_kwh": 2.65
+      },
+      {
+        "timestamp": 1790204400,
+        "usage_kwh": 3.66
+      },
+      {
+        "timestamp": 1790208000,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1790211600,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1790215200,
+        "usage_kwh": 3.72
+      },
+      {
+        "timestamp": 1790218800,
+        "usage_kwh": 3.65
+      },
+      {
+        "timestamp": 1790222400,
+        "usage_kwh": 3.68
+      },
+      {
+        "timestamp": 1790226000,
+        "usage_kwh": 3.43
+      },
+      {
+        "timestamp": 1790229600,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1790233200,
+        "usage_kwh": 3.42
+      },
+      {
+        "timestamp": 1790236800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1790240400,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1790244000,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1790247600,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1790251200,
+        "usage_kwh": 3.76
+      },
+      {
+        "timestamp": 1790254800,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1790258400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1790262000,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1790265600,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1790269200,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1790272800,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1790276400,
+        "usage_kwh": 3.55
+      },
+      {
+        "timestamp": 1790280000,
+        "usage_kwh": 3.64
+      },
+      {
+        "timestamp": 1790283600,
+        "usage_kwh": 3.59
+      },
+      {
+        "timestamp": 1790287200,
+        "usage_kwh": 4.27
+      },
+      {
+        "timestamp": 1790290800,
+        "usage_kwh": 3.61
+      },
+      {
+        "timestamp": 1790294400,
+        "usage_kwh": 3.75
+      },
+      {
+        "timestamp": 1790298000,
+        "usage_kwh": 4.11
+      },
+      {
+        "timestamp": 1790301600,
+        "usage_kwh": 4.78
+      },
+      {
+        "timestamp": 1790305200,
+        "usage_kwh": 4.35
+      },
+      {
+        "timestamp": 1790308800,
+        "usage_kwh": 3.81
+      },
+      {
+        "timestamp": 1790312400,
+        "usage_kwh": 3.56
+      },
+      {
+        "timestamp": 1790316000,
+        "usage_kwh": 3.5
+      },
+      {
+        "timestamp": 1790319600,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1790323200,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1790326800,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1790330400,
+        "usage_kwh": 3.54
+      },
+      {
+        "timestamp": 1790334000,
+        "usage_kwh": 3.52
+      },
+      {
+        "timestamp": 1790337600,
+        "usage_kwh": 3.6
+      },
+      {
+        "timestamp": 1790341200,
+        "usage_kwh": 4.33
+      },
+      {
+        "timestamp": 1790344800,
+        "usage_kwh": 3.4
+      },
+      {
+        "timestamp": 1790348400,
+        "usage_kwh": 3.49
+      },
+      {
+        "timestamp": 1790352000,
+        "usage_kwh": 3.94
+      },
+      {
+        "timestamp": 1790355600,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1790359200,
+        "usage_kwh": 3.32
+      },
+      {
+        "timestamp": 1790362800,
+        "usage_kwh": 3.36
+      },
+      {
+        "timestamp": 1790366400,
+        "usage_kwh": 3.31
+      },
+      {
+        "timestamp": 1790370000,
+        "usage_kwh": 3.45
+      },
+      {
+        "timestamp": 1790373600,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1790377200,
+        "usage_kwh": 3.47
+      },
+      {
+        "timestamp": 1790380800,
+        "usage_kwh": 3.48
+      },
+      {
+        "timestamp": 1790384400,
+        "usage_kwh": 4.85
+      },
+      {
+        "timestamp": 1790388000,
+        "usage_kwh": 5.85
+      },
+      {
+        "timestamp": 1790391600,
+        "usage_kwh": 3.73
+      },
+      {
+        "timestamp": 1790395200,
+        "usage_kwh": 3.09
+      },
+      {
+        "timestamp": 1790398800,
+        "usage_kwh": 2.97
+      },
+      {
+        "timestamp": 1790402400,
+        "usage_kwh": 2.99
+      },
+      {
+        "timestamp": 1790406000,
+        "usage_kwh": 2.99
+      },
+      {
+        "timestamp": 1790409600,
+        "usage_kwh": 2.9
+      },
+      {
+        "timestamp": 1790413200,
+        "usage_kwh": 2.85
+      },
+      {
+        "timestamp": 1790416800,
+        "usage_kwh": 2.87
+      },
+      {
+        "timestamp": 1790420400,
+        "usage_kwh": 2.99
+      },
+      {
+        "timestamp": 1790424000,
+        "usage_kwh": 3.08
+      },
+      {
+        "timestamp": 1790427600,
+        "usage_kwh": 3.25
+      },
+      {
+        "timestamp": 1790431200,
+        "usage_kwh": 4.31
+      },
+      {
+        "timestamp": 1790434800,
+        "usage_kwh": 3.44
+      },
+      {
+        "timestamp": 1790438400,
+        "usage_kwh": 1.96
+      },
+      {
+        "timestamp": 1790442000,
+        "usage_kwh": 3.41
+      },
+      {
+        "timestamp": 1790445600,
+        "usage_kwh": 2.27
+      },
+      {
+        "timestamp": 1790449200,
+        "usage_kwh": 2.02
+      },
+      {
+        "timestamp": 1790452800,
+        "usage_kwh": 4.019
+      },
+      {
+        "timestamp": 1790456400,
+        "usage_kwh": 2.91
+      },
+      {
+        "timestamp": 1790460000,
+        "usage_kwh": 2.86
+      },
+      {
+        "timestamp": 1790463600,
+        "usage_kwh": 2.62
+      },
+      {
+        "timestamp": 1790467200,
+        "usage_kwh": 2.08
+      },
+      {
+        "timestamp": 1790470800,
+        "usage_kwh": 2.02
+      },
+      {
+        "timestamp": 1790474400,
+        "usage_kwh": 1.79
+      },
+      {
+        "timestamp": 1790478000,
+        "usage_kwh": 1.83
+      },
+      {
+        "timestamp": 1790481600,
+        "usage_kwh": 1.9
+      },
+      {
+        "timestamp": 1790485200,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1790488800,
+        "usage_kwh": 1.68
+      },
+      {
+        "timestamp": 1790492400,
+        "usage_kwh": 1.71
+      },
+      {
+        "timestamp": 1790496000,
+        "usage_kwh": 1.66
+      },
+      {
+        "timestamp": 1790499600,
+        "usage_kwh": 1.64
+      },
+      {
+        "timestamp": 1790503200,
+        "usage_kwh": 1.62
+      },
+      {
+        "timestamp": 1790506800,
+        "usage_kwh": 1.63
+      },
+      {
+        "timestamp": 1790510400,
+        "usage_kwh": 1.88
+      },
+      {
+        "timestamp": 1790514000,
+        "usage_kwh": 1.93
+      },
+      {
+        "timestamp": 1790517600,
+        "usage_kwh": 2.009
+      },
+      {
+        "timestamp": 1790521200,
+        "usage_kwh": 3.39
+      },
+      {
+        "timestamp": 1790524800,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1790528400,
+        "usage_kwh": 2.35
+      },
+      {
+        "timestamp": 1790532000,
+        "usage_kwh": 5.48
+      },
+      {
+        "timestamp": 1790535600,
+        "usage_kwh": 4.22
+      },
+      {
+        "timestamp": 1790539200,
+        "usage_kwh": 5.4
+      },
+      {
+        "timestamp": 1790542800,
+        "usage_kwh": 5
+      },
+      {
+        "timestamp": 1790546400,
+        "usage_kwh": 4.15
+      },
+      {
+        "timestamp": 1790550000,
+        "usage_kwh": 2.41
+      },
+      {
+        "timestamp": 1790553600,
+        "usage_kwh": 1.72
+      },
+      {
+        "timestamp": 1790557200,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1790560800,
+        "usage_kwh": 2.21
+      },
+      {
+        "timestamp": 1790564400,
+        "usage_kwh": 2.16
+      },
+      {
+        "timestamp": 1790568000,
+        "usage_kwh": 1.62
+      },
+      {
+        "timestamp": 1790571600,
+        "usage_kwh": 1.42
+      },
+      {
+        "timestamp": 1790575200,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1790578800,
+        "usage_kwh": 1.43
+      },
+      {
+        "timestamp": 1790582400,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1790586000,
+        "usage_kwh": 1.34
+      },
+      {
+        "timestamp": 1790589600,
+        "usage_kwh": 1.43
+      },
+      {
+        "timestamp": 1790593200,
+        "usage_kwh": 1.69
+      },
+      {
+        "timestamp": 1790596800,
+        "usage_kwh": 1.85
+      },
+      {
+        "timestamp": 1790600400,
+        "usage_kwh": 1.36
+      },
+      {
+        "timestamp": 1790604000,
+        "usage_kwh": 1.37
+      },
+      {
+        "timestamp": 1790607600,
+        "usage_kwh": 1.33
+      },
+      {
+        "timestamp": 1790611200,
+        "usage_kwh": 1.32
+      },
+      {
+        "timestamp": 1790614800,
+        "usage_kwh": 1.78
+      },
+      {
+        "timestamp": 1790618400,
+        "usage_kwh": 1.39
+      },
+      {
+        "timestamp": 1790622000,
+        "usage_kwh": 2.029
+      },
+      {
+        "timestamp": 1790625600,
+        "usage_kwh": 3.38
+      },
+      {
+        "timestamp": 1790629200,
+        "usage_kwh": 2.18
+      },
+      {
+        "timestamp": 1790632800,
+        "usage_kwh": 1.37
+      },
+      {
+        "timestamp": 1790636400,
+        "usage_kwh": 1.5
+      },
+      {
+        "timestamp": 1790640000,
+        "usage_kwh": 1.58
+      },
+      {
+        "timestamp": 1790643600,
+        "usage_kwh": 1.52
+      },
+      {
+        "timestamp": 1790647200,
+        "usage_kwh": 1.48
+      },
+      {
+        "timestamp": 1790650800,
+        "usage_kwh": 1.55
+      },
+      {
+        "timestamp": 1790654400,
+        "usage_kwh": 1.5
+      },
+      {
+        "timestamp": 1790658000,
+        "usage_kwh": 1.53
+      },
+      {
+        "timestamp": 1790661600,
+        "usage_kwh": 1.45
+      },
+      {
+        "timestamp": 1790665200,
+        "usage_kwh": 1.47
+      },
+      {
+        "timestamp": 1790668800,
+        "usage_kwh": 1.38
+      },
+      {
+        "timestamp": 1790672400,
+        "usage_kwh": 1.38
+      },
+      {
+        "timestamp": 1790676000,
+        "usage_kwh": 1.42
+      },
+      {
+        "timestamp": 1790679600,
+        "usage_kwh": 2.32
+      },
+      {
+        "timestamp": 1790683200,
+        "usage_kwh": 1.59
+      },
+      {
+        "timestamp": 1790686800,
+        "usage_kwh": 1.54
+      },
+      {
+        "timestamp": 1790690400,
+        "usage_kwh": 1.44
+      },
+      {
+        "timestamp": 1790694000,
+        "usage_kwh": 1.47
+      },
+      {
+        "timestamp": 1790697600,
+        "usage_kwh": 1.86
+      },
+      {
+        "timestamp": 1790701200,
+        "usage_kwh": 2.36
+      },
+      {
+        "timestamp": 1790704800,
+        "usage_kwh": 1.75
+      },
+      {
+        "timestamp": 1790708400,
+        "usage_kwh": 2.36
+      },
+      {
+        "timestamp": 1790712000,
+        "usage_kwh": 3.13
+      },
+      {
+        "timestamp": 1790715600,
+        "usage_kwh": 3.02
+      },
+      {
+        "timestamp": 1790719200,
+        "usage_kwh": 1.94
+      },
+      {
+        "timestamp": 1790722800,
+        "usage_kwh": 2.79
+      },
+      {
+        "timestamp": 1790726400,
+        "usage_kwh": 3.22
+      },
+      {
+        "timestamp": 1790730000,
+        "usage_kwh": 2.38
+      },
+      {
+        "timestamp": 1790733600,
+        "usage_kwh": 1.95
+      },
+      {
+        "timestamp": 1790737200,
+        "usage_kwh": 2.37
+      },
+      {
+        "timestamp": 1790740800,
+        "usage_kwh": 1.97
+      },
+      {
+        "timestamp": 1790744400,
+        "usage_kwh": 1.58
+      },
+      {
+        "timestamp": 1790748000,
+        "usage_kwh": 1.4
+      },
+      {
+        "timestamp": 1790751600,
+        "usage_kwh": 1.41
+      },
+      {
+        "timestamp": 1790755200,
+        "usage_kwh": 1.39
+      },
+      {
+        "timestamp": 1790758800,
+        "usage_kwh": 1.4
+      },
+      {
+        "timestamp": 1790762400,
+        "usage_kwh": 1.51
+      },
+      {
+        "timestamp": 1790766000,
+        "usage_kwh": 1.72
+      },
+      {
+        "timestamp": 1790769600,
+        "usage_kwh": 1.42
+      },
+      {
+        "timestamp": 1790773200,
+        "usage_kwh": 1.45
+      },
+      {
+        "timestamp": 1790776800,
+        "usage_kwh": 1.4
+      },
+      {
+        "timestamp": 1790780400,
+        "usage_kwh": 1.35
+      },
+      {
+        "timestamp": 1790784000,
+        "usage_kwh": 1.34
+      },
+      {
+        "timestamp": 1790787600,
+        "usage_kwh": 1.3
+      },
+      {
+        "timestamp": 1790791200,
+        "usage_kwh": 1.29
+      },
+      {
+        "timestamp": 1790794800,
+        "usage_kwh": 1.25
+      },
+      {
+        "timestamp": 1790798400,
+        "usage_kwh": 1.27
+      },
+      {
+        "timestamp": 1790802000,
+        "usage_kwh": 1.45
+      },
+      {
+        "timestamp": 1790805600,
+        "usage_kwh": 1.49
+      },
+      {
+        "timestamp": 1790809200,
+        "usage_kwh": 1.82
+      },
+      {
+        "timestamp": 1790812800,
+        "usage_kwh": 1.86
+      },
+      {
+        "timestamp": 1790816400,
+        "usage_kwh": 3.46
+      },
+      {
+        "timestamp": 1790820000,
+        "usage_kwh": 2.36
+      },
+      {
+        "timestamp": 1790823600,
+        "usage_kwh": 1.61
+      },
+      {
+        "timestamp": 1790827200,
+        "usage_kwh": 1.63
+      }
+    ],
+    "billing_day": 1,
+    "extra_charges": {
+      "deliveryPerKwh": "",
+      "deliveryFlat": "",
+      "regulatoryPerKwh": "",
+      "hstPct": ""
+    }
+  }
+}

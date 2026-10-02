@@ -1,0 +1,161 @@
+{
+  "baseUrl": "https://electricity.markarslan.ca/",
+  "generatedAt": "2026-10-02T22:01:54.063Z",
+  "checks": [
+    {
+      "name": "deployed /sw.js carries a per-build cache version",
+      "ok": true,
+      "detail": "VERSION=oeo-v1-muri3l79"
+    },
+    {
+      "name": "installed service worker serves the current version",
+      "ok": true,
+      "detail": "oeo-v1-muri3l79 controller=true"
+    },
+    {
+      "name": "shell/runtime caches are keyed by that version",
+      "ok": true,
+      "detail": "oeo-v1-muri3l79-shell"
+    },
+    {
+      "name": "a redeploy after a source change serves a DIFFERENT version",
+      "ok": false,
+      "detail": "oeo-v1-muri3l79 -> oeo-v1-muri3l79"
+    },
+    {
+      "name": "deploy script reports the pushed commit",
+      "ok": true,
+      "detail": "Image electricity-dashboard-energy-dashboard Built "
+    },
+    {
+      "name": "installed client installed a new worker after the deploy",
+      "ok": false,
+      "detail": "signal=timeout"
+    },
+    {
+      "name": "new caches are keyed by the new version",
+      "ok": true,
+      "detail": "oeo-v1-muri3l79-shell,oeo-v1-muri3l79-runtime -> oeo-v1-muri3l79-shell,oeo-v1-muri3l79-runtime"
+    },
+    {
+      "name": "old-version caches were dropped on activate",
+      "ok": true,
+      "detail": "oeo-v1-muri3l79-shell, oeo-v1-muri3l79-runtime"
+    },
+    {
+      "name": "real Oakville export loads on the deployed stack",
+      "ok": true,
+      "detail": "readings=2184"
+    },
+    {
+      "name": "exported backup declares a schema version",
+      "ok": true,
+      "detail": "ontario-energy-optimizer.backup v1"
+    },
+    {
+      "name": "backup carries every reading",
+      "ok": true,
+      "detail": "rows=2184"
+    },
+    {
+      "name": "backup round-trip",
+      "ok": false,
+      "detail": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByTestId('backup-toggle')\n    - locator resolved to <button type=\"button\" aria-expanded=\"false\" title=\"Backup & restore\" data-testid=\"backup-toggle\" class=\"p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    57 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4\">…</div> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "spring-forward: 2026-03-08 loaded with 23 hourly readings",
+      "ok": true,
+      "detail": "total=143, that day=23"
+    },
+    {
+      "name": "spring-forward: CSV shows 23 rows for 2026-03-08",
+      "ok": true,
+      "detail": "csv rows=23"
+    },
+    {
+      "name": "spring-forward: every row classifies to a TOU and ULO window",
+      "ok": true,
+      "detail": "2026-03-08T05:00:00.000Z Off-Peak/Overnight | 2026-03-08T06:00:00.000Z Off-Peak/Overnight"
+    },
+    {
+      "name": "fall-back: 2026-11-01 loaded with 25 hourly readings",
+      "ok": true,
+      "detail": "total=97, that day=25"
+    },
+    {
+      "name": "fall-back: CSV shows 25 rows for 2026-11-01",
+      "ok": true,
+      "detail": "csv rows=25"
+    },
+    {
+      "name": "fall-back: every row classifies to a TOU and ULO window",
+      "ok": true,
+      "detail": "2026-11-01T04:00:00.000Z Off-Peak/Overnight | 2026-11-01T05:00:00.000Z Off-Peak/Overnight"
+    },
+    {
+      "name": "fall-back: local 01:00 occurs twice as two distinct instants",
+      "ok": true,
+      "detail": "2026-11-01T05:00:00.000Z vs 2026-11-01T06:00:00.000Z"
+    },
+    {
+      "name": "Hydro One (powerOfTenMultiplier −3): parses on the deployed stack",
+      "ok": true,
+      "detail": "readings=48"
+    },
+    {
+      "name": "Hydro One (powerOfTenMultiplier −3): scaled to real kWh",
+      "ok": true,
+      "detail": "first=3.9546"
+    },
+    {
+      "name": "Toronto Hydro (15-minute): parses on the deployed stack",
+      "ok": true,
+      "detail": "readings=96"
+    },
+    {
+      "name": "Toronto Hydro (15-minute): scaled to real kWh",
+      "ok": true,
+      "detail": "first=0.489"
+    },
+    {
+      "name": "espi:-prefixed Connect feed: parses on the deployed stack",
+      "ok": true,
+      "detail": "readings=514"
+    },
+    {
+      "name": "espi:-prefixed Connect feed: scaled to real kWh",
+      "ok": true,
+      "detail": "first=34"
+    },
+    {
+      "name": "bad upload explains WHAT was wrong, not \"invalid XML\"",
+      "ok": true,
+      "detail": "That looks like a web page, not an export.The file starts with HTML. Portals often hand back a login or error page when the download link expires — the Green Bu"
+    },
+    {
+      "name": "diagnostic offers a next step",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart shows both rate seasons across May 1",
+      "ok": true,
+      "detail": "❄ Winter · Nov 1 – Apr 30 · 1 bars | ☀ Summer · May 1 – Oct 31 · 1 bars"
+    },
+    {
+      "name": "Tiered card names the seasonal threshold in force",
+      "ok": true,
+      "detail": "Tier 1 cut-off600 kWh/moSummer rate window (May 1 – Oct 31) — window spans both seasons · other window: 1,000 kWh/mo"
+    },
+    {
+      "name": "season bands are drawn over the bars",
+      "ok": true,
+      "detail": "reference-areas=2"
+    }
+  ],
+  "deployTail": "Image electricity-dashboard-energy-dashboard Built \n Container energy-dashboard Running \nDEPLOY_OK at ed7f1b5 evidence(wave-g): deployed-stack verification harness + pre-deploy sw.js snapshot",
+  "total": 30,
+  "passed": 27,
+  "failed": 3,
+  "ok": false
+}

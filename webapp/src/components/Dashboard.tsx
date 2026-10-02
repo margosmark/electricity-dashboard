@@ -155,7 +155,11 @@ export default function Dashboard() {
                  )}
                </div>
              )}
-             {!parsing && <button onClick={() => { setParseIssue(null); setShowUploadModal(false); }} className="mt-4 w-full py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-xs md:hidden">Cancel</button>}
+             {/* Reachable at every width: `md:hidden` used to hide it on
+                 desktop, where the overlay has no backdrop/close affordance,
+                 so a user who opened Upload by accident could not back out
+                 without picking a file. */}
+             {!parsing && <button onClick={() => { setParseIssue(null); setShowUploadModal(false); }} className="mt-4 w-full py-2 md:py-3 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs">Cancel</button>}
           </div>
         </div>
       )}
