@@ -1,106 +1,53 @@
 /**
  * Ontario Energy Optimizer - Interaction Fix Edition
- * 
+ *
  * Flow: Monthly ➔ Weekly ➔ Daily ➔ Hourly
- * Fixed: Browser-native click detection using direct Bar component handlers.
+ * State and handlers live in src/hooks/useDashboard.ts; this file renders.
  */
 
 "use client";
 
-import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
-import { 
+import React, { useMemo, useRef, useEffect } from 'react';
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { 
-  format, startOfMonth, lastDayOfMonth, startOfYear,
-  addMonths, subMonths, addDays
-} from 'date-fns';
-import { TrendingUp, DollarSign, ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, Calendar, CheckCircle2, Settings2, Upload, AlertTriangle, Activity, X, Trash2, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
+import { ArrowLeft, ChevronLeft, ChevronRight, HelpCircle, Zap, CheckCircle2, Settings2, Upload, AlertTriangle, X, Trash2 } from 'lucide-react';
 import {
-  type DataPoint, type RateSet, type ChartDataItem,
-  getBillingPeriod, parseGreenButtonXML, processRawData, filterByDateRange,
+  type ChartDataItem,
+  processRawData, filterByDateRange,
   buildActiveChartData, calculateComparison, calculateVampire,
   detectAnomalies, buildHeatmapData, getBarColor,
 } from '@/lib/energy';
+import {
+  useEnergyData, useActiveRateSet, useZoomNavigation,
+} from '@/hooks/useDashboard';
 
 export default function Dashboard() {
+  const {
+    rawData, rateHistory, loading, parsing,
+    showUploadModal, setShowUploadModal,
+    billingDay, startDate, endDate, setStartDate, setEndDate,
+    handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
+  } = useEnergyData();
 
+  const [showVampireHelp, setShowVampireHelp] = React.useState(false);
+  const [userPlan, setUserPlan] = React.useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
+  const [viewMode, setViewMode] = React.useState<'Chart' | 'Insights'>('Chart');
+  const [viewScope, setViewScope] = React.useState<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
 
-  // --- State ---
-  const [rawData, setRawData] = useState<DataPoint[]>([]);
-  const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stuck, setStuck] = useState(false);
-  const [showVampireHelp, setShowVampireHelp] = useState(false);
-  const [userPlan, setUserPlan] = useState<'TOU' | 'Tiered' | 'ULO'>('TOU');
-  const [billingDay, setBillingDay] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'Chart' | 'Insights'>('Chart');
-  const [viewScope, setViewScope] = useState<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  
-  // monthly ➔ weekly ➔ daily ➔ hourly
-  const [zoomLevel, setZoomLevel] = useState<'monthly' | 'weekly' | 'daily' | 'hourly'>('monthly');
-  const [zoomTarget, setZoomTarget] = useState<string | null>(null);
-
-  // --- Helpers ---
-
-  // --- Start Sequence ---
+  // Keep navigatePeriod free of stale closures: getters read live state via
+  // refs synced after render (lint-safe, no stale closures).
+  const viewScopeRef = useRef<'Month' | 'YTD' | 'BillingPeriod' | 'Custom'>('BillingPeriod');
+  const billingDayRef = useRef<number>(1);
   useEffect(() => {
-    let mounted = true;
+    viewScopeRef.current = viewScope;
+    billingDayRef.current = billingDay;
+  }, [viewScope, billingDay]);
 
-    async function init() {
-      try {
-        const res = await fetch('/api/rates');
-        const json = await res.json();
-        if (mounted) setRateHistory(json.historicalRates || []);
-      } catch (e) {}
-      try {
-        const savedBDay = localStorage.getItem('billing_day');
-        if (savedBDay && mounted) setBillingDay(parseInt(savedBDay));
-        const savedData = localStorage.getItem('energy_data');
-        if (savedData) {
-          const parsed = JSON.parse(savedData);
-          if (mounted && parsed.length > 0) {
-            setRawData(parsed);
-            const last = new Date(parsed[parsed.length - 1].timestamp * 1000);
-            const period = getBillingPeriod(last, savedBDay ? parseInt(savedBDay) : 1);
-            setStartDate(format(period.start, 'yyyy-MM-dd'));
-            setEndDate(format(period.end, 'yyyy-MM-dd'));
-          }
-        } else if (mounted) { setShowUploadModal(true); }
-      } catch (e) {}
-      if (mounted) setLoading(false);
-    }
-    init();
-    const stuckTimer = setTimeout(() => { if (loading && mounted) setStuck(true); }, 5000);
-    return () => { mounted = false; if (stuckTimer) clearTimeout(stuckTimer); };
-  }, []);
-
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    setParsing(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = parseGreenButtonXML(ev.target?.result as string);
-        if (data.length > 0) {
-          setRawData(data);
-          localStorage.setItem('energy_data', JSON.stringify(data));
-          const last = new Date(data[data.length-1].timestamp * 1000);
-          const period = getBillingPeriod(last, billingDay);
-          setStartDate(format(period.start, 'yyyy-MM-dd'));
-          setEndDate(format(period.end, 'yyyy-MM-dd'));
-          setShowUploadModal(false);
-        }
-      } catch (err) { alert("Parse Error"); }
-      finally { setParsing(false); }
-    };
-    reader.readAsText(file);
-  };
+  const { zoomLevel, setZoomLevelAndClear, zoomTarget, handleBarClick, goBack, navigatePeriod } =
+    useZoomNavigation(startDate, endDate, setStartDate, setEndDate,
+      () => viewScopeRef.current, () => billingDayRef.current);
 
   // --- Calculations ---
 
@@ -118,64 +65,13 @@ export default function Dashboard() {
 
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
 
-  // --- Handlers ---
+  // Rate schedule in force for the plan cards — read live, never hardcoded.
+  const activeRateSet = useActiveRateSet(processedData);
 
-  const handleBarClick = (item: { key?: string } | null) => {
-
-    if (!item || !item.key) return;
-    if (zoomLevel === 'monthly') { setZoomLevel('weekly'); setZoomTarget(item.key); }
-    else if (zoomLevel === 'weekly') { setZoomLevel('daily'); setZoomTarget(item.key); }
-    else if (zoomLevel === 'daily') { setZoomLevel('hourly'); setZoomTarget(item.key); }
-  };
-
-  const goBack = () => {
-    if (zoomLevel === 'hourly') setZoomLevel('daily');
-    else if (zoomLevel === 'daily') setZoomLevel('weekly');
-    else if (zoomLevel === 'weekly') setZoomLevel('monthly');
-    setZoomTarget(null);
-  };
-
-  const navigatePeriod = (dir: 'prev' | 'next') => {
-    if (zoomTarget) {
-       const cur = new Date((zoomLevel === 'weekly' ? zoomTarget + "-01" : zoomTarget) + "T00:00:00");
-       if (zoomLevel === 'weekly') cur.setMonth(cur.getMonth() + (dir === 'next' ? 1 : -1));
-       else if (zoomLevel === 'daily') cur.setDate(cur.getDate() + (dir === 'next' ? 7 : -7));
-       else if (zoomLevel === 'hourly') cur.setDate(cur.getDate() + (dir === 'next' ? 1 : -1));
-       const next = format(cur, zoomLevel === 'weekly' ? 'yyyy-MM' : 'yyyy-MM-dd');
-       setZoomTarget(next);
-       if (next < startDate) setStartDate(next + (zoomLevel === 'weekly' ? "-01" : ""));
-    } else {
-      const s = new Date(startDate + "T00:00:00");
-      if (viewScope === 'BillingPeriod') {
-        // Move to middle of next/prev month to handle edge cases in getBillingPeriod
-        const target = dir === 'next' ? addMonths(s, 1) : subMonths(s, 1);
-        const p = getBillingPeriod(target, billingDay);
-        setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
-      } else if (viewScope === 'Month') {
-        const target = dir === 'next' ? addMonths(s, 1) : subMonths(s, 1);
-        setStartDate(format(startOfMonth(target), 'yyyy-MM-dd'));
-        setEndDate(format(lastDayOfMonth(target), 'yyyy-MM-dd'));
-      } else {
-        s.setMonth(s.getMonth() + (dir === 'next' ? 1 : -1));
-        const p = getBillingPeriod(s, billingDay);
-        setStartDate(format(p.start, 'yyyy-MM-dd')); setEndDate(format(p.end, 'yyyy-MM-dd'));
-      }
-    }
-  };
-
-  const emergencyReset = () => { localStorage.clear(); window.location.reload(); };
-  const updateBillingDay = (day: number) => { 
-    setBillingDay(day); 
-    localStorage.setItem('billing_day', day.toString()); 
-    if (viewScope === 'BillingPeriod') {
-      const s = new Date(startDate + "T00:00:00");
-      // Use the middle of the current period to re-anchor
-      const anchor = addDays(s, 15);
-      const p = getBillingPeriod(anchor, day);
-      setStartDate(format(p.start, 'yyyy-MM-dd'));
-      setEndDate(format(p.end, 'yyyy-MM-dd'));
-    }
-  };
+  const selectionCost = useMemo(() => {
+    const costKey = `cost${userPlan}` as keyof ChartDataItem;
+    return activeChartData.reduce((acc, curr) => acc + (curr[costKey] as number), 0);
+  }, [activeChartData, userPlan]);
 
   if (loading) return <div className="p-20 text-center font-black text-black text-4xl animate-pulse bg-slate-50 min-screen h-screen flex items-center justify-center">PREPARING OPTIMIZER...</div>;
 
@@ -201,7 +97,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
            <button onClick={() => setShowUploadModal(true)} title="Upload XML" className="p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button onClick={emergencyReset} title="Reset Data" className="p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 transition-all"><Trash2 size={18} strokeWidth={4} /></button>
-           
+
            <div className="flex items-center gap-1 md:gap-2">
              <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-sm text-black bg-white" />
              <span className="opacity-40 font-black text-[10px]">TO</span>
@@ -209,29 +105,11 @@ export default function Dashboard() {
            </div>
 
            <div className="flex gap-1">
-             <button onClick={() => { 
-               setViewScope('BillingPeriod');
-               const p = getBillingPeriod(new Date(), billingDay); 
-               setStartDate(format(p.start, 'yyyy-MM-dd')); 
-               setEndDate(format(p.end, 'yyyy-MM-dd')); 
-               setZoomLevel('monthly'); 
-             }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
-             
-             <button onClick={() => { 
-               setViewScope('Month');
-               const s = startOfMonth(new Date());
-               const e = lastDayOfMonth(new Date());
-               setStartDate(format(s, 'yyyy-MM-dd')); 
-               setEndDate(format(e, 'yyyy-MM-dd')); 
-               setZoomLevel('monthly'); 
-             }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
-             
-             <button onClick={() => { 
-               setViewScope('YTD');
-               setStartDate(format(startOfYear(new Date()), 'yyyy-MM-dd')); 
-               setEndDate(format(new Date(), 'yyyy-MM-dd')); 
-               setZoomLevel('monthly'); 
-             }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
+             <button onClick={() => { setViewScope('BillingPeriod'); applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
+
+             <button onClick={() => { setViewScope('Month'); applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
+
+             <button onClick={() => { setViewScope('YTD'); applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[8px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
            </div>
         </div>
 
@@ -243,7 +121,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center gap-3 md:gap-4 lg:ml-auto">
            <div className="bg-slate-100 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex items-center gap-2 md:gap-3">
               <Settings2 size={16} className="text-slate-500" />
-              <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value))} className="w-8 md:w-12 bg-transparent text-xs md:text-sm outline-none text-black font-black" />
+              <input type="number" min="1" max="31" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-8 md:w-12 bg-transparent text-xs md:text-sm outline-none text-black font-black" />
            </div>
            <div className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
                {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} onClick={() => setUserPlan(p)} className={`px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
@@ -292,14 +170,11 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black">
-                 {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => {setZoomLevel(l); setZoomTarget(null);}} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+                 {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
               </div>
               <div className="text-center lg:text-right text-black font-black">
                  <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
-                  <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">${activeChartData.reduce((acc, curr) => {
-                    const costKey = `cost${userPlan}` as keyof ChartDataItem;
-                    return acc + (curr[costKey] as number);
-                  }, 0).toFixed(2)}</div>
+                  <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">${selectionCost.toFixed(2)}</div>
               </div>
             </div>
 
@@ -309,31 +184,31 @@ export default function Dashboard() {
                   <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
                   <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
                   <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-                  <Tooltip 
-                    cursor={{fill: '#000', opacity: 0.05}} 
-                    contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}} 
-                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}} 
-                    labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}} 
+                  <Tooltip
+                    cursor={{fill: '#000', opacity: 0.05}}
+                    contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}}
+                    itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}}
+                    labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}}
                     formatter={(v, name) => {
                        if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
                        return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
                     }}
                   />
-                  <Bar 
-                    dataKey="usage" 
-                    fill="#2563EB" 
-                    stroke="#000" 
-                    strokeWidth={3} 
-                    radius={0} 
-                    activeBar={{ fill: '#FFD600' }} 
-                    onClick={(d) => handleBarClick(d as { key?: string } | null)} 
+                  <Bar
+                    dataKey="usage"
+                    fill="#2563EB"
+                    stroke="#000"
+                    strokeWidth={3}
+                    radius={0}
+                    activeBar={{ fill: '#FFD600' }}
+                    onClick={(d) => handleBarClick(d as { key?: string } | null)}
                     className="cursor-pointer"
                   >
                     {activeChartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={getBarColor(zoomLevel, entry.key)}
-                        style={{ cursor: 'pointer', pointerEvents: 'auto' }} 
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                       />
                     ))}
                   </Bar>
@@ -345,9 +220,9 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
             {[
-              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: '12.0¢' }, { l: 'Tier 2', v: '14.2¢' }] },
-              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '20.3¢', c: 'text-red-600' }] },
-              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: '3.9¢', c: 'text-purple-600' }, { l: 'Weekend Off', v: '9.8¢', c: 'text-emerald-600' }, { l: 'Mid-Peak', v: '15.7¢', c: 'text-yellow-600' }, { l: 'On-Peak', v: '39.1¢', c: 'text-red-600' }] }
+              { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` }, { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` }] },
+              { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' }] },
+              { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
             ].map((plan, i) => (
               <div key={i} onClick={() => setUserPlan(plan.id as 'Tiered' | 'TOU' | 'ULO')} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
                 {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
