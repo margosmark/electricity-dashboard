@@ -110,6 +110,18 @@ describe('first-run upload diagnostics', () => {
     });
   });
 
+  it('Cancel closes the modal at any viewport width', async () => {
+    // The button used to carry `md:hidden`, i.e. invisible on every desktop,
+    // where the overlay has no backdrop click or close icon — the modal was a
+    // dead end unless you picked a file.
+    await renderEmptyDashboard();
+    expect(screen.getByText(/drop xml here/i)).toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByText(/drop xml here/i)).not.toBeInTheDocument());
+    expect(screen.queryByTestId('parse-diagnostic')).not.toBeInTheDocument();
+  });
+
   it('clears the diagnostic when the modal is reopened', async () => {
     await renderEmptyDashboard();
     await upload('bad.xml', 'this is not xml at all');

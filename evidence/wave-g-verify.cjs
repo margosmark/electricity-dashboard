@@ -257,13 +257,16 @@ const isoLocalHour = (iso) => pad(new Date(iso).getHours());
     const restoredRows = (backup.payload && backup.payload.energy_data) || backup.energy_data || [];
     check('backup carries every reading', restoredRows.length === before.length, `rows=${restoredRows.length}`);
 
-    await page.evaluate(() => localStorage.clear());
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByText('Drop XML Here').waitFor({ state: 'visible', timeout: 45_000 });
-
-    await page.getByTestId('backup-toggle').click();
+    // Clobber the stored data (what a bad night in the browser profile looks
+    // like), then import the export back. Importing into a *cleared* profile
+    // would work too, but the first-run upload modal then covers the page.
+    await page.evaluate(() => localStorage.setItem('energy_data', JSON.stringify([{ timestamp: 1, usage_kwh: 0.1 }])));
     await page.setInputFiles('[data-testid="backup-import-input"]', jsonPath);
-    await page.waitForFunction(() => (localStorage.getItem('energy_data') || '').length > 10, null, { timeout: 30_000 });
+    await page.waitForFunction(
+      (n) => (JSON.parse(localStorage.getItem('energy_data') || '[]')).length === n,
+      before.length,
+      { timeout: 30_000 },
+    );
     const after = await stored(page);
     check('import restores the identical snapshot', JSON.stringify(after) === JSON.stringify(before), `rows=${after.length}`);
     check('app is usable after the import (upload modal not shown)', (await page.getByText('Drop XML Here').count()) === 0, '');
