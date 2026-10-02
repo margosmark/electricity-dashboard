@@ -1,0 +1,133 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "deployed app responds",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "real Oakville XML loads without a picker",
+      "ok": true,
+      "detail": "readings=2184"
+    },
+    {
+      "name": "no picker for a single-UsagePoint feed",
+      "ok": true,
+      "detail": "picker=false"
+    },
+    {
+      "name": "Export CSV button present in Chart view",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "CSV download lands on disk",
+      "ok": true,
+      "detail": "file=energy_export_2026-07-02_2026-10-01.csv"
+    },
+    {
+      "name": "filename follows energy_export_<start>_<end>.csv",
+      "ok": true,
+      "detail": "energy_export_2026-07-02_2026-10-01.csv"
+    },
+    {
+      "name": "CSV header is the documented column list",
+      "ok": true,
+      "detail": "datetime,usage_kwh,tou_category,ulo_category,costTOU,costTiered,costULO,activeRateSet.effectiveDate"
+    },
+    {
+      "name": "CSV row count equals the processed table",
+      "ok": true,
+      "detail": "2184 rows"
+    },
+    {
+      "name": "empty fields keep the untouched caption",
+      "ok": true,
+      "detail": "Estimate covers variable energy charges only — it does not include fixed delivery charges, regulatory charges, or HST."
+    },
+    {
+      "name": "no True Bill figure while every field is empty",
+      "ok": true,
+      "detail": "present=false"
+    },
+    {
+      "name": "all four add-on inputs seed empty",
+      "ok": true,
+      "detail": "[\"\",\"\",\"\",\"\"]"
+    },
+    {
+      "name": "True Bill = variable + delivery + regulatory + HST (13%)",
+      "ok": true,
+      "detail": "actual=$1298.74 expected=$1298.74 (variable=$1004.66, kwh=8063.8, months=4)"
+    },
+    {
+      "name": "caption lists exactly what is included",
+      "ok": true,
+      "detail": "Includes: variable energy charges + delivery ($0.0100/kWh) + delivery ($15.00/month) + regulatory ($0.0005/kWh) + HST (13%)."
+    },
+    {
+      "name": "add-ons persisted to localStorage",
+      "ok": true,
+      "detail": "{\"deliveryPerKwh\":\"0.01\",\"deliveryFlat\":\"15\",\"regulatoryPerKwh\":\"0.0005\",\"hstPct\":\"13\"}"
+    },
+    {
+      "name": "add-on inputs restored after reload",
+      "ok": true,
+      "detail": "[\"0.01\",\"15\",\"0.0005\",\"13\"]"
+    },
+    {
+      "name": "True Bill figure survives a reload",
+      "ok": true,
+      "detail": "$1298.74"
+    },
+    {
+      "name": "picker blocks the import until the user chooses",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "picker lists 2 points + combine",
+      "ok": true,
+      "detail": "3 rows"
+    },
+    {
+      "name": "each point shows its own kWh total",
+      "ok": true,
+      "detail": "UsagePoint f27196f64222.6 kWhf27196f6-c50c-57b3-b08a-8f4a053fa5541080 readings2026-07-02 → 2026-08-16 | UsagePoint c0ffee003841.2 kWhc0ffee00-1111-2222-3333-4444444444441104 readings2026-08-16 → 2026-10-01 | Combine all 2 points (2184 readings)"
+    },
+    {
+      "name": "selection loads only that point rows",
+      "ok": true,
+      "detail": "rows=1080"
+    },
+    {
+      "name": "point A kWh matches its group only",
+      "ok": true,
+      "detail": "kwh=4222.59"
+    },
+    {
+      "name": "combine loads every row",
+      "ok": true,
+      "detail": "rows=2184"
+    }
+  ],
+  "csvFile": "energy_export_2026-07-02_2026-10-01.csv",
+  "csvRows": 2184,
+  "trueBill": {
+    "actual": "$1298.74",
+    "expected": "1298.74",
+    "variable": "1004.66",
+    "kwh": "8063.8",
+    "months": 4
+  },
+  "screenshots": [
+    "01-real-oakville-loaded.png",
+    "02-export-csv-button.png",
+    "03-estimate-baseline-empty.png",
+    "04-true-bill-filled.png",
+    "05-usage-point-picker.png",
+    "06-point-a-loaded.png",
+    "wave-b-verification.json"
+  ]
+}

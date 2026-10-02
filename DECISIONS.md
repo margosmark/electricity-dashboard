@@ -5,6 +5,8 @@ was rejected.
 
 | Date | Decision | Why | Rejected |
 | --- | --- | --- | --- |
+| 2026 (Wave B, 3774198) | True-bill add-ons (delivery $/kWh *and* $/month, regulatory $/kWh, HST %) are **local user inputs**, seeded empty in `localStorage.extra_charges`; all empty ⇒ estimate and caption stay exactly as before | `/api/rates` is commodity-only — delivery/regulatory/HST are utility-specific and not ours to invent; an empty field must not change the existing figure | Deriving add-ons from the OEB rate sets; seeding HST at 13% (that would silently change every existing estimate) |
+| 2026 (Wave B, 3774198) | Readings are grouped per UsagePoint (id taken from each entry's `UsagePoint/<id>` link) and a picker asks which meter to load; `parseGreenButtonXML` keeps its merged semantics as the one-meter fallback | Green Button exports can carry several meters/rate classes — merging them corrupts every kWh and cost figure with no visible error | Keeping the merged parse as the primary path |
 | 2026 (CI wave, #2) | Two-job CI: webapp (lint/typecheck/vitest/build) + Python (pytest for `parser.py`) | The repo carries both the legacy Streamlit parser and the live webapp; each layer is gated by the tests that own it | Single combined job (slower, mixes toolchains) |
 | Mid-2026 | Weekend bars in the daily view get orange-highlighted by `getBarColor` (PR #1, `feature/weekend-bar-colors`) | Weekend consumption patterns differ; color makes weekly rhythm visible at a glance | Separate toggle/legend — visual, zero UI cost |
 | Mid-2026 (be3fdf6) | Comprehensive test suite + `husky` pre-commit hook | Money-adjacent math (rate comparisons drive real spend decisions); regressions in `classifyTOU`/tier proration would be silent otherwise | Manual verification only |
