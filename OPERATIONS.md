@@ -75,6 +75,32 @@ entry with the correct `effectiveDate`; do not edit past entries — historical
 cost math keys off them. Deploy with the normal rebuild. Source:
 https://www.oeb.ca/consumer-information-and-protection/electricity-rates
 
+### Staleness checks (two independent layers)
+
+The OEB page is HTML only — no JSON (Drupal `?_format=json` → 406), no RSS,
+no CORS headers (probed 2026-10-02). Both layers below parse the same page
+with equivalent logic, pinned to `webapp/src/lib/oebRates.fixture.html`:
+
+1. **In-app banner (client, once per tab session).** `next.config.ts` exposes
+   a stateless same-origin rewrite `/oeb-rates-page` (transport only — all
+   parse/compare logic stays client-side in `src/hooks/useRateStaleness.ts`).
+   When OEB's effectiveDate is newer than the shipped set, an orange banner
+   (`RateStalenessBanner`) renders persistently with per-period deltas, a
+   sample impact computed from the user's last ~30 days, and a deep link to
+   edit the rates file. Failures degrade to no banner — never blocks render.
+   `/api/rates` carries `ratesSourceVersion` (FNV-1a over the rate array) and
+   `lastChecked` (build constant — bump when you re-verify/append).
+
+2. **Weekly gateway cron (server, authoritative).**
+   `scripts/check_oeb_staleness.py` (installed at
+   `~/.hermes/profiles/soft-dev/scripts/`, job `47a3720dc33f`, Mondays 9am,
+   `no_agent`) compares live OEB vs the deployed `/api/rates`:
+   - current → empty stdout → nothing delivered (watchdog pattern);
+   - stale → WhatsApp bullet report with ¢/kWh deltas + update instructions;
+   - fetch/parse failure → one-line ⚠️ warning (a silent broken checker is
+     worse than a noisy one).
+   Tests: `tests/test_oeb_staleness.py` (offline, fixture-pinned).
+
 ## Deploying changes
 
 Gate order before pushing (mirrors CI):
