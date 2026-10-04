@@ -51,8 +51,9 @@ describe('Dashboard', () => {
 
   it('renders chart view after loading', async () => {
     await renderLoaded();
-    expect(screen.getByText(/CHART/i)).toBeInTheDocument();
-    expect(screen.getByText(/INSIGHTS/i)).toBeInTheDocument();
+    // Role-scoped: the data-freshness chip also says "chart" in its stale copy.
+    expect(screen.getByRole('button', { name: 'CHART' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'INSIGHTS' })).toBeInTheDocument();
   });
 
   it('renders plan selection buttons', async () => {
@@ -184,7 +185,7 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/CHART/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CHART' })).toBeInTheDocument();
   });
 
   // --- First-load window (Wave A slice 1) ---

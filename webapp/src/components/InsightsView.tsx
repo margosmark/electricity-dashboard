@@ -48,8 +48,8 @@ export default function InsightsView({
   rates,
 }: InsightsViewProps) {
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
-      <div className="flex justify-end">
+    <div className="print-compact space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
+      <div className="flex justify-end no-print">
         <ExportCsvButton rows={filteredData} />
       </div>
 
@@ -90,19 +90,22 @@ export default function InsightsView({
 
       <div className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] overflow-x-auto text-black">
          <h3 className="text-2xl md:text-4xl mb-4 md:mb-8 italic text-black font-black uppercase">Weekly Routine Heatmap</h3>
-         <div className="min-w-[600px] md:min-w-[800px] text-black">
-           <div className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2 text-black font-black uppercase">
-             <div className="w-12 md:w-16 font-black"></div>
-             {Array.from({length:24}).map((_, i) => <div key={i} className="text-center text-[8px] md:text-[10px] text-black font-black">{i}h</div>)}
+         {/* Wave H item 3: grid semantics + a title on every cell, so the
+             hover tooltip also exists as text for keyboard/AT users. */}
+         <div className="min-w-[600px] md:min-w-[800px] text-black" role="grid" aria-label="Average kWh by weekday and hour">
+           <div role="row" className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-2 text-black font-black uppercase">
+             <div role="presentation" className="w-12 md:w-16 font-black"></div>
+             {Array.from({length:24}).map((_, i) => <div key={i} role="columnheader" className="text-center text-[8px] md:text-[10px] text-black font-black">{i}h</div>)}
            </div>
            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, dIdx) => (
-             <div key={day} className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black uppercase">
-               <div className="w-12 md:w-16 text-[10px] md:text-xs flex items-center font-black uppercase">{day}</div>
+             <div key={day} role="row" className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black uppercase">
+               <div role="rowheader" className="w-12 md:w-16 text-[10px] md:text-xs flex items-center font-black uppercase">{day}</div>
                {heatmapData.grid[dIdx].map((hour, hIdx) => {
                   const int = hour.avg / heatmapData.maxAvg;
                   let bg = 'bg-slate-100';
                   if (int > 0.8) bg = 'bg-red-600 border-red-800'; else if (int > 0.6) bg = 'bg-orange-500 border-orange-700'; else if (int > 0.4) bg = 'bg-yellow-400 border-yellow-600'; else if (int > 0.2) bg = 'bg-blue-300 border-blue-500';
-                  return <div key={hIdx} className={`h-8 md:h-12 rounded-sm md:rounded-md border-b-2 md:border-b-4 ${bg} hover:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
+                  const cellLabel = `${day} ${String(hIdx).padStart(2, '0')}:00 — ${hour.avg.toFixed(2)} kWh average`;
+                  return <div key={hIdx} role="gridcell" aria-label={cellLabel} title={cellLabel} className={`heatmap-cell h-8 md:h-12 rounded-sm md:rounded-md border-b-2 md:border-b-4 ${bg} hover:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
                })}
              </div>
            ))}

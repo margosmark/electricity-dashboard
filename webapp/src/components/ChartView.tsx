@@ -9,6 +9,7 @@
 
 "use client";
 
+import { useEffect, useRef, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceArea
 } from 'recharts';
@@ -48,12 +49,64 @@ export type ChartViewProps = {
   wfh: WfhShare | null;
 };
 
+/**
+ * Wave H item 4 — the skeleton that covers Recharts' empty first frame.
+ *
+ * The bars animate in over ~500 ms (Wave B evidence), so for half a second
+ * after data ARRIVES the chart area is a blank white box — exactly what a
+ * first-time user reads as "broken". The shimmer shows instead, keyed on the
+ * 0 -> N rows transition (upload, sample button, restore) so it never flashes
+ * on a zoom or a tab switch, where the bars are already on screen.
+ */
+const CHART_ANIMATION_MS = 520;
+
+function ChartSkeleton({ bars }: { bars: number }) {
+  const columns = Math.min(Math.max(bars, 6), 16);
+  return (
+    <div
+      data-testid="chart-skeleton"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="Drawing the chart"
+      className="absolute inset-0 z-20 bg-white px-4 md:px-8 pt-4 pb-6 flex flex-col"
+    >
+      <div className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 mb-3">
+        Drawing {bars} bar{bars === 1 ? '' : 's'}…
+      </div>
+      <div className="flex-1 flex items-end gap-[2px] md:gap-2 border-b-4 border-black min-h-0">
+        {Array.from({ length: columns }).map((_, i) => (
+          <div
+            key={i}
+            className="skeleton-bar flex-1 border-2 border-black/10 rounded-t-sm"
+            style={{ height: `${28 + ((i * 37) % 62)}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ChartView({
   zoomLevel, zoomTarget, goBack, navigatePeriod, setZoomLevelAndClear,
   activeChartData, handleBarClick, selectionCost,
   userPlan, setUserPlan, comparison, activeRateSet,
   filteredData, startDate, endDate, projection, wfh,
 }: ChartViewProps) {
+  const [skeleton, setSkeleton] = useState(false);
+  const rowCountRef = useRef(activeChartData.length);
+
+  useEffect(() => {
+    const previous = rowCountRef.current;
+    rowCountRef.current = activeChartData.length;
+    // Only a cold 0 -> N transition (data just landed) earns a skeleton.
+    if (previous === 0 && activeChartData.length > 0) {
+      setSkeleton(true);
+      const timer = setTimeout(() => setSkeleton(false), CHART_ANIMATION_MS);
+      return () => clearTimeout(timer);
+    }
+    setSkeleton(false);
+  }, [activeChartData]);
   /**
    * Rate-season bands (Wave G item 6): Ontario flips its rate windows on
    * May 1 / Nov 1, and a window that straddles a boundary would otherwise
@@ -103,15 +156,15 @@ export default function ChartView({
       <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
           <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
-            {zoomLevel !== 'monthly' && <button onClick={goBack} className="p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
+            {zoomLevel !== 'monthly' && <button type="button" aria-label="Back to wider view" onClick={goBack} className="no-print p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
             <div className="flex items-center gap-2 md:gap-4">
-              <button onClick={() => navigatePeriod('prev')} className="p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label="Previous period" onClick={() => navigatePeriod('prev')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
               <h2 className="text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate max-w-[150px] sm:max-w-none">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
-              <button onClick={() => navigatePeriod('next')} className="p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label="Next period" onClick={() => navigatePeriod('next')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
             </div>
           </div>
-          <div className="flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black">
-             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+          <div className="no-print flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black" role="group" aria-label="Zoom level">
+             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
           </div>
           <div className="text-center lg:text-right text-black font-black">
              <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
@@ -119,7 +172,24 @@ export default function ChartView({
           </div>
         </div>
 
-        <div className="h-[300px] md:h-[500px] -ml-4 md:-ml-6">
+        <div className="relative h-[300px] md:h-[500px] -ml-4 md:-ml-6" data-testid="chart-area">
+          {activeChartData.length === 0 ? (
+            /* Nothing in this window yet: say so, instead of drawing an
+               empty axis frame that reads as a rendering failure. */
+            <div
+              data-testid="chart-empty-window"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6"
+            >
+              <div className="text-lg md:text-2xl font-black uppercase text-black">
+                No readings in this window
+              </div>
+              <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-sm">
+                Widen the date range above, or load another export — the chart
+                draws as soon as the window holds data.
+              </div>
+            </div>
+          ) : (
+            <>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={activeChartData}>
               <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
@@ -169,6 +239,10 @@ export default function ChartView({
               <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
             </BarChart>
           </ResponsiveContainer>
+              {/* Wave H item 4: shimmer over Recharts' ~500 ms grow-in. */}
+              {skeleton && <ChartSkeleton bars={activeChartData.length} />}
+            </>
+          )}
         </div>
 
         <div className="mt-4 md:mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -186,7 +260,7 @@ export default function ChartView({
               </span>
             ))}
           </div>
-          <ExportCsvButton rows={filteredData} />
+          <ExportCsvButton rows={filteredData} printHidden />
         </div>
       </div>
 
@@ -196,7 +270,20 @@ export default function ChartView({
           { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' }] },
           { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
         ].map((plan, i) => (
-          <div key={i} onClick={() => setUserPlan(plan.id as PlanId)} className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
+          <div
+            key={i}
+            role="button"
+            tabIndex={0}
+            aria-pressed={userPlan === plan.id}
+            aria-label={`Use the ${plan.name} plan`}
+            onClick={() => setUserPlan(plan.id as PlanId)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setUserPlan(plan.id as PlanId);
+              }
+            }}
+            className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}>
             {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
             <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
             <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">${plan.cost?.toFixed(2)}</div>

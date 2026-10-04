@@ -5,3 +5,6 @@ node_modules
 .venv
 __pycache__
 *.xml
+# The bundled example export (Wave H item 1) must ship in the image even
+# though *.xml keeps local meter exports out of the build context.
+!public/samples/*.xml

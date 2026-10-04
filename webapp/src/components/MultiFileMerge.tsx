@@ -52,7 +52,13 @@ export default function MultiFileMerge({
   const canConfirm = merged.mergedRows > 0 && !awaitingMeterChoice;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Review merged exports"
+      data-testid="merge-dialog"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4"
+    >
       <div
         data-testid="merge-review"
         className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black max-h-[90vh] overflow-y-auto"
