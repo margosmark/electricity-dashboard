@@ -51,8 +51,9 @@ export type Anomaly = {
  *
  * detectAnomalies already knows WHICH day was expensive. These functions say
  * WHAT SHAPE the excess took — hedged, evidence-first, with an honest
- * "we can't tell" fallback. Readings are treated as one per hour (the same
- * assumption calculateVampire makes), summed into an hourly kW curve.
+ * "we can't tell" fallback. Readings are summed into per-clock-hour buckets,
+ * so the curve is kW whatever the feed's cadence is (4×15 min in an hour sums
+ * to the same kWh as 1×60 min) — no hourly-reading assumption here.
  * ========================================================================== */
 
 export type ApplianceSignatureId =
@@ -86,7 +87,13 @@ const SIGNATURE_TAIL_HOURS = [23, 0, 1, 2, 3, 4, 5, 6];
 
 type DayCurve = (number | null)[];
 
-/** Sum each hour's readings into one kWh (= kW for an hourly feed) curve. */
+/**
+ * Sum each clock hour's readings into one bucket.
+ *
+ * kWh accumulated over an hour = average kW over that hour, for ANY cadence,
+ * so the curve is cadence-independent (a partial hour — a gap — reads low,
+ * which is honest).
+ */
 function hourlyCurve(rows: { dateObj: Date; usage_kwh: number }[]): DayCurve {
   const curve: DayCurve = new Array<number | null>(24).fill(null);
   for (const r of rows) {
@@ -815,8 +822,72 @@ export function calculateFullDataTotals(processedData: ProcessedPoint[]): FullDa
   };
 }
 
-/** The lowest 5% of hourly readings — the draw that never turns off. */
-function bottomFivePercentKwh(rows: ProcessedPoint[]): number {
+/* ---------------------------------------------------------------------------
+ * Reading-interval measurement
+ *
+ * `usage_kwh` is energy per READING INTERVAL, and Green Button / ESPI exports
+ * are commonly 15-, 30- or 60-minute IntervalReadings. Anything that turns the
+ * base load into a daily/annual figure multiplies by 24 h (hours/day), which is
+ * only right when the feed is hourly — on a 15-minute export the same maths
+ * comes out 4x too low, silently, because the bundled fixtures are hourly.
+ * --------------------------------------------------------------------------- */
+
+/**
+ * The legacy hourly assumption, used ONLY when the interval can't be measured
+ * from the data (kept explicit rather than silently spread through the maths).
+ */
+export const UNMEASURABLE_INTERVAL_HOURS = 1;
+
+/**
+ * Length of one reading interval, in HOURS, measured from the data itself.
+ *
+ * The *modal* positive gap between consecutive `timestamp`s (ties resolved to
+ * the shortest), because real exports carry gaps the modal spacing ignores:
+ * outage holes, DST transitions, missing readings and duplicated timestamps all
+ * produce off-cadence deltas but never outnumber the true cadence.
+ *
+ * `timestamp` is epoch SECONDS (readings are built as `new Date(t * 1000)`),
+ * so a 900-second gap is a 0.25-hour interval.
+ *
+ * Returns {@link UNMEASURABLE_INTERVAL_HOURS} when there is nothing to measure
+ * from: fewer than two rows, or no positive gap at all (every stamp equal).
+ */
+export function inferIntervalHours(rows: { timestamp: number }[]): number {
+  if (rows.length < 2) return UNMEASURABLE_INTERVAL_HOURS;
+
+  const stamps = rows
+    .map((r) => r.timestamp)
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  if (stamps.length < 2) return UNMEASURABLE_INTERVAL_HOURS;
+
+  const gapCounts = new Map<number, number>();
+  for (let i = 1; i < stamps.length; i += 1) {
+    const gap = stamps[i] - stamps[i - 1];
+    if (gap > 0) gapCounts.set(gap, (gapCounts.get(gap) ?? 0) + 1);
+  }
+  if (gapCounts.size === 0) return UNMEASURABLE_INTERVAL_HOURS;
+
+  let busiest = 0;
+  let shortest = Infinity;
+  for (const [gap, count] of gapCounts) {
+    if (count > busiest || (count === busiest && gap < shortest)) {
+      busiest = count;
+      shortest = gap;
+    }
+  }
+  const hours = shortest / 3600;
+  return hours > 0 ? hours : UNMEASURABLE_INTERVAL_HOURS;
+}
+
+/**
+ * The lowest 5% of readings — energy PER READING INTERVAL, in kWh.
+ *
+ * This is the raw measurement; it equals kW only for an hourly feed. Divide by
+ * {@link inferIntervalHours} for a rate-ready draw (that is what
+ * {@link calculateVampire} and {@link calculateAlwaysOnFloor} do).
+ */
+function bottomFivePercentKwhPerInterval(rows: ProcessedPoint[]): number {
   if (rows.length === 0) return 0;
   const sorted = rows.map((d) => d.usage_kwh).sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
@@ -826,10 +897,14 @@ export function calculateVampire(
   filteredData: ProcessedPoint[],
 ): { cost: number; watts: number } {
   if (filteredData.length === 0) return { cost: 0, watts: 0 };
-  const base = bottomFivePercentKwh(filteredData);
+  // P05 is per-interval kWh; convert to kW first, so the 24 h × 30 d
+  // extrapolation below is right for 15-, 30- and 60-minute feeds alike.
+  const kw =
+    bottomFivePercentKwhPerInterval(filteredData) /
+    inferIntervalHours(filteredData);
   return {
-    cost: base * 24 * 30 * (filteredData[0].activeRateSet.tou.offPeak / 100),
-    watts: base * 1000,
+    cost: kw * 24 * 30 * (filteredData[0].activeRateSet.tou.offPeak / 100),
+    watts: kw * 1000,
   };
 }
 
@@ -868,7 +943,9 @@ export function calculateAlwaysOnFloor(
   plan: 'TOU' | 'Tiered' | 'ULO',
 ): AlwaysOnFloor | null {
   if (rows.length === 0) return null;
-  const base = bottomFivePercentKwh(rows);
+  const basePerInterval = bottomFivePercentKwhPerInterval(rows);
+  // Per-interval kWh → kW, so the ×24 h/day below is cadence-independent.
+  const kw = basePerInterval / inferIntervalHours(rows);
 
   let cost = 0;
   let kwh = 0;
@@ -879,16 +956,18 @@ export function calculateAlwaysOnFloor(
   // The rate this household really pays, across the hours it really used.
   const blendedRateCents = kwh > 0 ? (cost / kwh) * 100 : rows[0].activeRateSet.tou.offPeak;
 
-  const kwhPerDay = base * 24;
+  const kwhPerDay = kw * 24;
   const annualCost = kwhPerDay * 365 * (blendedRateCents / 100);
-  const floorCost = base * rows.length * (blendedRateCents / 100);
+  // Deliberately NOT divided by the interval: per-interval kWh × row count is
+  // already the window's total energy, so this and billShare stay as they are.
+  const floorCost = basePerInterval * rows.length * (blendedRateCents / 100);
   const billShare = cost > 0 ? floorCost / cost : 0;
   const drift = Math.abs(billShare - ALWAYS_ON_BENCHMARK_SHARE);
   const verdict: AlwaysOnFloor['verdict'] =
     drift <= ALWAYS_ON_TOLERANCE ? 'near' : billShare < ALWAYS_ON_BENCHMARK_SHARE ? 'below' : 'above';
 
   return {
-    watts: base * 1000,
+    watts: kw * 1000,
     kwhPerDay,
     annualCost,
     blendedRateCents,
@@ -940,14 +1019,33 @@ export function detectAnomalies(
   return spikes.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
 }
 
-export type HeatmapCell = { sum: number; count: number; avg: number };
+/**
+ * One weekday×hour cell.
+ *
+ * `sum`/`count` describe the readings themselves; `days` is how many distinct
+ * calendar days fed the cell, which is what `avg` divides by (see below).
+ */
+export type HeatmapCell = { sum: number; count: number; days: number; avg: number };
 export type HeatmapData = { grid: HeatmapCell[][]; maxAvg: number };
 
+/**
+ * Average energy for each weekday-hour cell, in kWh.
+ *
+ * `sum` is over every reading in the cell (cadence-independent — 4×15-min
+ * readings in an hour add up to the same kWh as 1×60-min), so `avg` must divide
+ * by the number of DAYS represented, not the number of readings: a reading-mean
+ * would show a quarter of the hour's energy on a 15-minute feed.
+ *
+ * For hourly feeds days === count, so the numbers do not move.
+ */
 export function buildHeatmapData(
   filteredData: ProcessedPoint[],
 ): HeatmapData {
   const grid = Array.from({ length: 7 }, () =>
-    Array.from({ length: 24 }, () => ({ sum: 0, count: 0, avg: 0 })),
+    Array.from({ length: 24 }, () => ({ sum: 0, count: 0, days: 0, avg: 0 })),
+  );
+  const seenDays = Array.from({ length: 7 }, () =>
+    Array.from({ length: 24 }, () => new Set<string>()),
   );
   let maxAvg = 0;
   filteredData.forEach((d) => {
@@ -955,11 +1053,13 @@ export function buildHeatmapData(
     const hour = d.dateObj.getHours();
     grid[day][hour].sum += d.usage_kwh;
     grid[day][hour].count += 1;
+    seenDays[day][hour].add(d.dayStr);
   });
-  grid.forEach((day) =>
-    day.forEach((hour) => {
-      if (hour.count > 0) hour.avg = hour.sum / hour.count;
-      if (hour.avg > maxAvg) maxAvg = hour.avg;
+  grid.forEach((day, dIdx) =>
+    day.forEach((cell, hIdx) => {
+      cell.days = seenDays[dIdx][hIdx].size;
+      if (cell.days > 0) cell.avg = cell.sum / cell.days;
+      if (cell.avg > maxAvg) maxAvg = cell.avg;
     }),
   );
   return { grid, maxAvg };

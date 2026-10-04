@@ -34,6 +34,7 @@ import {
   classifyDayShape,
   calculateWfhShare,
   calculateAlwaysOnFloor,
+  inferIntervalHours,
   type RateSet,
   type ProcessedPoint,
   type DataPoint,
@@ -1142,5 +1143,153 @@ describe('calculateAlwaysOnFloor', () => {
       expect(f.blendedRateCents).toBeGreaterThan(0);
       expect(f.kwhPerDay).toBeCloseTo(24, 6);
     }
+  });
+});
+
+/* ==========================================================================
+ * Reading-interval (cadence) hygiene — 15- and 30-minute exports
+ *
+ * `usage_kwh` is energy PER READING INTERVAL, and every bundled fixture is
+ * hourly, which is exactly why `base * 24` looked right: an hourly feed divides
+ * by 1.0. Each assertion below is made twice — once from an hourly feed and
+ * once from the SAME profile split into 15-minute readings — because a fix that
+ * only re-labels the units would still fail here.
+ * ========================================================================== */
+
+/** 200 hours of varied usage — enough rows for a stable P05. */
+const CADENCE_PROFILE = Array.from(
+  { length: 200 },
+  (_, i) => 0.35 + ((i * 37) % 97) / 30,
+);
+
+/** 2024-01-01T00:00:00Z — no DST transition inside the 200-hour window. */
+const CADENCE_BASE_TS = 1704067200;
+
+/**
+ * The SAME hourly profile rendered at any cadence: each hour's kWh split evenly
+ * across its readings, one interval apart. Costs track usage so the blended
+ * rate is the same either way.
+ */
+function cadenceRows(stepSeconds: number): ProcessedPoint[] {
+  const perHour = 3600 / stepSeconds;
+  return CADENCE_PROFILE.flatMap((hourKwh, h) =>
+    Array.from({ length: perHour }, (_, k) => {
+      const usage_kwh = hourKwh / perHour;
+      return makeProcessedPoint({
+        timestamp: CADENCE_BASE_TS + h * 3600 + k * stepSeconds,
+        usage_kwh,
+        costTOU: usage_kwh * 0.098,
+        costTiered: usage_kwh * 0.12,
+        costULO: usage_kwh * 0.039,
+      });
+    }),
+  );
+}
+
+/** The pre-fix P05: `sorted[floor(n * 0.05)]`, per interval. */
+function legacyP05(rows: ProcessedPoint[]): number {
+  const sorted = rows.map((r) => r.usage_kwh).sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length * 0.05)] || sorted[0];
+}
+
+describe('inferIntervalHours', () => {
+  it('measures the cadence from the data itself', () => {
+    expect(inferIntervalHours(cadenceRows(3600))).toBeCloseTo(1, 9);
+    expect(inferIntervalHours(cadenceRows(1800))).toBeCloseTo(0.5, 9);
+    expect(inferIntervalHours(cadenceRows(900))).toBeCloseTo(0.25, 9);
+  });
+
+  it('reads gaps as epoch-SECONDS (900 s is a 0.25 h interval)', () => {
+    expect(
+      inferIntervalHours([
+        { timestamp: 1704067200 },
+        { timestamp: 1704068100 },
+        { timestamp: 1704069000 },
+      ]),
+    ).toBeCloseTo(0.25, 9);
+  });
+
+  it('picks the cadence over an outage gap, a duplicate stamp and row order', () => {
+    const rows = cadenceRows(900);
+    const gappy = [
+      ...rows.slice(0, 40),
+      // A 7-hour outage, a duplicated timestamp, and the rows shuffled: none of
+      // them outnumber the true cadence.
+      makeProcessedPoint({ timestamp: rows[40].timestamp + 7 * 3600, usage_kwh: 1 }),
+      ...rows.slice(40),
+      makeProcessedPoint({ timestamp: rows[10].timestamp, usage_kwh: 1 }),
+    ];
+    expect(inferIntervalHours(gappy)).toBeCloseTo(0.25, 9);
+
+    const backwards = [...rows].reverse();
+    expect(inferIntervalHours(backwards)).toBeCloseTo(0.25, 9);
+  });
+
+  it('falls back to the hourly assumption when there is nothing to measure', () => {
+    expect(inferIntervalHours([])).toBe(1);
+    expect(inferIntervalHours([{ timestamp: CADENCE_BASE_TS }])).toBe(1);
+    const identical = [0, 1, 2].map(() =>
+      makeProcessedPoint({ timestamp: CADENCE_BASE_TS, usage_kwh: 1 }),
+    );
+    expect(inferIntervalHours(identical)).toBe(1);
+  });
+});
+
+describe('cadence equivalence — the same house, 15-minute vs hourly export', () => {
+  it('calculateVampire reports the same watts and cost either way', () => {
+    const hourly = calculateVampire(cadenceRows(3600));
+    const quarter = calculateVampire(cadenceRows(900));
+    expect(hourly.watts).toBeGreaterThan(0);
+    expect(quarter.watts).toBe(hourly.watts);
+    expect(quarter.cost).toBe(hourly.cost);
+  });
+
+  it('calculateAlwaysOnFloor reports the same watts / kWh-day / annual cost', () => {
+    const hourly = calculateAlwaysOnFloor(cadenceRows(3600), 'TOU')!;
+    const quarter = calculateAlwaysOnFloor(cadenceRows(900), 'TOU')!;
+    expect(quarter.watts).toBe(hourly.watts);
+    expect(quarter.kwhPerDay).toBe(hourly.kwhPerDay);
+    expect(quarter.annualCost).toBeCloseTo(hourly.annualCost, 6);
+    expect(quarter.blendedRateCents).toBeCloseTo(hourly.blendedRateCents, 9);
+    expect(quarter.label).toBe(hourly.label);
+    // floorCost and billShare sum over rows: already cadence-independent, and
+    // they must stay that way (changing them would break the benchmark verdict).
+    expect(quarter.billShare).toBeCloseTo(hourly.billShare, 6);
+    expect(quarter.verdict).toBe(hourly.verdict);
+  });
+
+  it('REGRESSION: a 15-minute feed read 4x low — now it is exactly 4x the old number', () => {
+    const rows = cadenceRows(900);
+    const fixed = calculateVampire(rows);
+
+    // The pre-fix formula, recomputed here on purpose.
+    const p05 = legacyP05(rows);
+    const legacyCost = p05 * 24 * 30 * (rows[0].activeRateSet.tou.offPeak / 100);
+    expect(fixed.cost).toBeCloseTo(legacyCost * 4, 6);
+    expect(fixed.watts).toBeCloseTo(p05 * 1000 * 4, 6);
+
+    // ...and that legacy number WAS the hourly figure divided by 4 — the bug.
+    expect(legacyCost).toBeCloseTo(calculateVampire(cadenceRows(3600)).cost / 4, 6);
+  });
+
+  it('heatmap cells average per HOUR, not per reading', () => {
+    const hourly = buildHeatmapData(cadenceRows(3600));
+    const quarter = buildHeatmapData(cadenceRows(900));
+    expect(quarter.maxAvg).toBeCloseTo(hourly.maxAvg, 9);
+
+    let checked = 0;
+    for (let d = 0; d < 7; d += 1) {
+      for (let h = 0; h < 24; h += 1) {
+        const cell = quarter.grid[d][h];
+        if (cell.days === 0) continue;
+        checked += 1;
+        expect(cell.avg).toBeCloseTo(hourly.grid[d][h].avg, 9);
+        // The 15-minute feed has 4x the readings in the same cell — which is
+        // exactly what the old `sum / count` hid.
+        expect(cell.count).toBe(hourly.grid[d][h].count * 4);
+        expect(cell.avg).toBeCloseTo(cell.sum / cell.days, 9);
+      }
+    }
+    expect(checked).toBeGreaterThan(24); // the profile spans more than a day
   });
 });
