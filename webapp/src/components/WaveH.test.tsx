@@ -158,6 +158,17 @@ describe('Wave H 1 — Try with example data', () => {
     // Modal closed: the dashboard is showing, not still asking for a file.
     expect(screen.queryByText(/Drop XML Here/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('totals-strip')).toBeInTheDocument();
+
+    // Wave H: the demo opens on EVERY reading it just loaded, not on one
+    // lonely bar (selectInitialWindow would otherwise anchor on the current
+    // billing period — correct for a real upload, useless for a demo).
+    // Dates are computed with the same clock the app used, because the test
+    // runner's timezone is not the browser's.
+    const [startInput, endInput] = document.querySelectorAll<HTMLInputElement>(
+      'input[type="date"]',
+    );
+    expect(startInput.value).toBe(format(new Date(1704067200 * 1000), 'yyyy-MM-dd'));
+    expect(endInput.value).toBe(format(new Date(1704070800 * 1000), 'yyyy-MM-dd'));
   });
 
   it('explains a failed download instead of opening an empty dashboard', async () => {

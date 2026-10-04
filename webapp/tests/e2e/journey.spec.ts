@@ -146,6 +146,22 @@ test.describe('full journey', () => {
       .toBe(8760);
 
     await expect(page.getByTestId('totals-strip')).toBeVisible();
+
+    // Wave H: the demo opens on the WHOLE bundled year — one lonely bar
+    // would not be "the full experience".
+    await expect(page.locator('input[type="date"]').first()).toHaveValue('2025-10-01');
+    await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-09-30');
+    // ...so the monthly chart has a year of tick labels, not one. Recharts
+    // v3 parks tick labels in their own z-layer, so select on the group's
+    // own class rather than assuming they sit under the axis <g>.
+    await expect
+      .poll(
+        async () =>
+          page.locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-label').count(),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThanOrEqual(6);
+
     // The answer lives on the Insights tab.
     await page.getByRole('button', { name: 'INSIGHTS' }).click();
     await expect(page.getByTestId('shift-headline')).toBeVisible();
@@ -291,7 +307,11 @@ test.describe('keyboard, print and crash', () => {
   }) => {
     test.setTimeout(120_000);
     await page.goto('/');
-    await expect(page.getByText('Ontario Energy Optimizer').first()).toBeVisible();
+    // The header is server-rendered; the upload modal only exists once the
+    // client's init effect has run. Waiting on IT means the boundary's
+    // window listeners are attached before we throw — otherwise the error
+    // lands pre-hydration and paints nothing.
+    await expect(page.getByText('Drop XML Here')).toBeVisible({ timeout: 60_000 });
 
     // Wave H item 8: the runtime path — an error thrown where React
     // boundaries never look (an event handler / async callback).
