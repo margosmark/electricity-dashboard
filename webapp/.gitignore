@@ -12,6 +12,14 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+
+# Lighthouse CI reports + scratch dir (Wave H item 11 — regenerated every run)
+/lhci-reports/
+/.lighthouseci/
+/test-results/
+/playwright-report/
 
 # next.js
 /.next/

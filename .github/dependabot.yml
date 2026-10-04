@@ -1,0 +1,66 @@
+# Wave H item 10 — automated dependency bumps, weekly, human-merged.
+#
+# NO auto-merge anywhere. Rate-library bumps in particular stay behind a
+# human gate: DECISIONS.md records that Ontario rate math must never change
+# because a dependency decided to. Dependabot opens the PR and assigns a
+# reviewer; a person approves and lands it.
+version: 2
+updates:
+  # Next.js / React / recharts / fast-xml-parser / Playwright — the app's
+  # own dependency tree (the repo root is Python, see `python` job in CI).
+  - package-ecosystem: "npm"
+    directory: "/webapp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "margosmark"
+    labels:
+      - "dependencies"
+      - "npm"
+    # Patch/minor churn grouped so a review batch is one PR, not ten.
+    # Majors always arrive alone — they need their own look.
+    groups:
+      npm-minor-patches:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Base images: node:20-alpine in webapp/Dockerfile (the runner this app
+  # actually ships on).
+  - package-ecosystem: "docker"
+    directory: "/webapp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "margosmark"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # actions/checkout, actions/setup-node, upload-artifact, ... — .github/**
+  # is where CI drift hides.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "margosmark"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

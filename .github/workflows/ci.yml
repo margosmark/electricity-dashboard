@@ -26,6 +26,60 @@ jobs:
       - run: npm run test
       - run: npm run build
 
+  smoke:
+    # Boots the REAL docker image fresh, then asserts against it over HTTP:
+    # app identity, rate payloads, PWA assets (manifest/sw/icons), the
+    # full upload flow + offline service-worker behaviour via Playwright
+    # using a tiny synthetic GreenButton XML (webapp/tests/fixtures), the
+    # Wave H full-journey spec (tests/e2e/journey.spec.ts) against the
+    # bundled sample export, and a Lighthouse performance budget of 90.
+    # No secrets; runner's preinstalled Chrome (no Playwright downloads).
+    name: E2E Smoke (Docker boot, HTTP, upload flow, PWA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: Install deps (skip browser download; channel=chrome uses system Chrome)
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      - name: Build image
+        run: docker build -t energy-smoke .
+      - name: Boot container (fresh, production build)
+        run: docker run -d --rm -p 3100:3000 --name energy-smoke energy-smoke
+      - name: HTTP smoke (/, /api/rates, manifest, sw.js, icons)
+        run: bash tests/e2e/http_smoke.sh http://127.0.0.1:3100
+      - name: Playwright smoke (upload flow, Shift Optimizer, PWA offline)
+        run: npx playwright test
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:3100
+      # Wave H item 11 — performance budget: the desktop-emulated Lighthouse
+      # score for the booted production container must stay >= 90 (PWA/offline
+      # is a feature, so the app staying fast is part of the contract).
+      - name: Lighthouse budget (performance >= 90)
+        run: npx lhci autorun
+      - name: Lighthouse report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: webapp/lhci-reports
+          if-no-files-found: ignore
+      - name: Container logs
+        if: failure()
+        run: docker logs energy-smoke || true
+      - name: Teardown
+        if: always()
+        run: docker rm -f energy-smoke || true
+
   python:
     name: Python (Parser Tests)
     runs-on: ubuntu-latest

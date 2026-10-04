@@ -1,0 +1,70 @@
+{
+  "wave": "A",
+  "task": "t_0be81e60",
+  "commit": "8ddde24200f87aa3e82ee8b3b78245c1717b6250",
+  "verified_on": "2026-10-02T14:15:47Z",
+  "deployed_stack": {
+    "url": "http://10.10.11.110:3939",
+    "container": "energy-dashboard",
+    "note": "image built from 8ddde24; git diff 8ddde24..origin/main -- webapp/ is empty, so the deployed app code equals main"
+  },
+  "fixture": {
+    "file": "Oakville Hydro Green Button 60-minute export, 2026-07-02 .. 2026-10-01",
+    "readings": 2184,
+    "first_day": "2026-07-02",
+    "last_day": "2026-10-01"
+  },
+  "first_load_window": {
+    "before_reported_by_task_e2e": {
+      "window": "2026-10-01 .. 2026-10-31",
+      "coverage": "1 of 31 days (~12h of data)",
+      "cause": "getBillingPeriod anchored on the last data day with billing_day=1"
+    },
+    "after_measured_in_browser": {
+      "window": "2026-09-01 .. 2026-10-01",
+      "coverage_days": 31,
+      "total_days": 31,
+      "coverage": 1.0,
+      "scope": "Custom — no scope chip highlighted (with billing_day=1 the Month window IS the empty billing window, so a third data-anchored candidate is what makes the window data-full)",
+      "default_window_data_full": true
+    },
+    "explicit_scope_clicks_still_work": {
+      "billing_period": "2026-10-01 .. 2026-10-31, chip highlighted",
+      "month": "2026-10-01 .. 2026-10-31"
+    }
+  },
+  "totals_strip": {
+    "since": "Jul 2, 2026",
+    "total_kwh": 8064,
+    "cost_tou": 1004.66,
+    "cost_tiered": 1105.51,
+    "cost_ulo": 1228.58,
+    "best_plan": "TOU",
+    "worst_plan": "ULO",
+    "plan_delta": 223.93,
+    "caption": "Whole dataset (Jul 2 – Oct 1, 2026), variable charges only.",
+    "note": "independent of the visible window (visible window cost was $293.44 for TOU over Sep 1 – Oct 1)"
+  },
+  "component_split": {
+    "chart_view_testid": true,
+    "insights_view_testid": true,
+    "csv_button_in_both_views": true,
+    "true_bill_estimate_in_chart": true,
+    "plan_cards_and_winner_banner": true,
+    "heatmap_cells_rendered": 200,
+    "bars_in_default_window": 2
+  },
+  "gates": {
+    "eslint": "0 errors 0 warnings",
+    "tsc": "--noEmit exit 0",
+    "vitest": "125/125 passed (77 Wave A + 48 Wave B), 3 files, exit 0, no teardown errors",
+    "build": "next build exit 0",
+    "python_pytest": "7 passed",
+    "ci_run": "37017788536 — Frontend (Lint, Typecheck, Test, Build) success, Python (Parser Tests) success; 125 passed in the frontend job log, 0 deselected",
+    "rebased_onto": "3774198 (Wave B) before push; all gates re-run on the combined tree"
+  },
+  "screenshots": [
+    "evidence/wave-a-first-load-window.png",
+    "evidence/wave-a-insights-split.png"
+  ]
+}

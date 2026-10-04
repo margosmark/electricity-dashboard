@@ -1,0 +1,12 @@
+<IntervalReading>
+  <cost>360</cost>
+  <ReadingQuality>
+    <quality>0</quality>
+  </ReadingQuality>
+  <timePeriod>
+    <duration>3600</duration>
+    <start>1784638800</start>
+  </timePeriod>
+  <value>2290000</value>
+  <tou>2</tou>
+</IntervalReading>
