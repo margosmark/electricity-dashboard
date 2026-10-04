@@ -8,7 +8,7 @@
 
 "use client";
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { format } from 'date-fns';
 import { HelpCircle, Zap, Upload, X, Trash2, Settings2 } from 'lucide-react';
 import {
@@ -70,23 +70,54 @@ export default function Dashboard() {
   /**
    * Wave H item 3 — Escape closes whatever is open, top layer first.
    *
+   * ONE listener, registered once on mount and never re-registered, reading
+   * the current overlay state through a ref written during render. The
+   * obvious alternative (effect keyed on the overlay state) leaves a window
+   * between "the modal is on screen" and "the effect re-ran" in which Escape
+   * is silently dropped — which is exactly how this failed the first CI run.
+   * Writing the ref in render means the listener is already correct the
+   * moment the overlay's DOM node exists.
+   *
    * One listener for every overlay instead of five (the backup drawer owns
    * its own, because it also has a toggle button to keep in sync). While the
    * parser is running the upload modal is deliberately NOT dismissable —
    * cancelling mid-parse would strand the FileReader.
    */
+  const overlayRef = useRef({
+    showFloorHelp, setShowFloorHelp, pendingUpload, pendingMerge,
+    showUploadModal, parsing, cancelUsagePoint, cancelMerge,
+    setParseIssue, setShowUploadModal,
+  });
+  // Written in a LAYOUT effect, not during render (the compiler forbids the
+  // latter) and not in a passive effect (which runs after paint, reopening
+  // the window this whole block exists to close). Layout effects run
+  // synchronously after the DOM mutates and before the browser paints, so by
+  // the time an overlay is visible — to a user or to Playwright — the
+  // handler already reads the right state.
+  useLayoutEffect(() => {
+    overlayRef.current = {
+      showFloorHelp, setShowFloorHelp, pendingUpload, pendingMerge,
+      showUploadModal, parsing, cancelUsagePoint, cancelMerge,
+      setParseIssue, setShowUploadModal,
+    };
+  }, [
+    showFloorHelp, pendingUpload, pendingMerge, showUploadModal, parsing,
+    cancelUsagePoint, cancelMerge, setParseIssue, setShowUploadModal,
+  ]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      if (showFloorHelp) {
-        setShowFloorHelp(false);
-      } else if (pendingUpload) {
-        cancelUsagePoint();
-      } else if (pendingMerge) {
-        cancelMerge();
-      } else if (showUploadModal && !parsing) {
-        setParseIssue(null);
-        setShowUploadModal(false);
+      const o = overlayRef.current;
+      if (o.showFloorHelp) {
+        o.setShowFloorHelp(false);
+      } else if (o.pendingUpload) {
+        o.cancelUsagePoint();
+      } else if (o.pendingMerge) {
+        o.cancelMerge();
+      } else if (o.showUploadModal && !o.parsing) {
+        o.setParseIssue(null);
+        o.setShowUploadModal(false);
       } else {
         return;
       }
@@ -94,10 +125,9 @@ export default function Dashboard() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [
-    showFloorHelp, pendingUpload, pendingMerge, showUploadModal, parsing,
-    cancelUsagePoint, cancelMerge, setParseIssue, setShowUploadModal,
-  ]);
+    // Registered ONCE on purpose: the handler reads live state via
+    // overlayRef, so there is nothing for exhaustive-deps to want here.
+  }, []);
 
   const { zoomLevel, setZoomLevelAndClear, zoomTarget, handleBarClick, goBack, navigatePeriod } =
     useZoomNavigation(startDate, endDate, setStartDate, setEndDate,

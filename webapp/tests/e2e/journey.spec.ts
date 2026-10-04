@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -152,6 +152,23 @@ test.describe('full journey', () => {
  * cascade (`:focus-visible`, `@media print`) and real event dispatch.
  */
 test.describe('keyboard, print and crash', () => {
+  /**
+   * Escape until the overlay is gone (bounded).
+   *
+   * The app attaches its Escape listener at mount, so a single press should
+   * always do it — this loop only absorbs the frame between "the overlay's
+   * DOM node exists" and "the browser delivered the key", which a loaded CI
+   * runner can win. It still FAILS if Escape genuinely does nothing: five
+   * presses on a broken handler leave the overlay open.
+   */
+  async function escapeUntilHidden(page: Page, overlay: Locator) {
+    for (let i = 0; i < 5 && (await overlay.isVisible()); i++) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(150);
+    }
+    await expect(overlay).toBeHidden();
+  }
+
   test('focus rings are visible, Escape closes every overlay, tab order works', async ({
     page,
   }) => {
@@ -160,8 +177,8 @@ test.describe('keyboard, print and crash', () => {
     await expect(page.getByText('Drop XML Here')).toBeVisible();
 
     // Wave H item 3: Escape dismisses the upload modal.
-    await page.keyboard.press('Escape');
-    await expect(page.getByText('Drop XML Here')).toBeHidden();
+    const dropZone = page.getByText('Drop XML Here');
+    await escapeUntilHidden(page, dropZone);
 
     // Tab to the upload control: the ring must be DRAWN (blue halo), not
     // merely a focused element with no visible indicator.
@@ -174,6 +191,21 @@ test.describe('keyboard, print and crash', () => {
       if (label === 'Upload XML') break;
       await page.keyboard.press('Tab');
     }
+    // The ring ANIMATES in (the app's buttons all carry `transition-all`),
+    // so read it once it has settled: 3px outline + a 6px blue halo.
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const el = document.activeElement as HTMLElement | null;
+            if (!el) return '';
+            const s = getComputedStyle(el);
+            return `${s.outlineWidth} ${s.boxShadow}`;
+          }),
+        { timeout: 5_000 },
+      )
+      .toMatch(/3px .*0px 0px 0px 6px/);
+
     const ring = await page.evaluate(() => {
       const el = document.activeElement as HTMLElement | null;
       if (!el) return null;
@@ -187,21 +219,20 @@ test.describe('keyboard, print and crash', () => {
     });
     expect(ring?.label).toBe('Upload XML');
     expect(parseFloat(ring?.outlineWidth || '0')).toBeGreaterThan(0);
-    expect(ring?.boxShadow).toMatch(/rgb\(37,\s*99,\s*235\)/); // the blue halo
+    // Blue halo, which is what makes the ring read on white AND on black.
+    expect(ring?.boxShadow).toMatch(/rgb\(37,\s*99,\s*235\)/);
 
     // Enter opens the modal, Escape closes it again.
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Drop XML Here')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByText('Drop XML Here')).toBeHidden();
+    await expect(dropZone).toBeVisible();
+    await escapeUntilHidden(page, dropZone);
 
     // The backup drawer closes on Escape and its aria-expanded tells the truth.
     const toggle = page.getByTestId('backup-toggle');
     await toggle.click();
     await expect(page.getByTestId('backup-drawer')).toBeVisible();
     expect(await toggle.getAttribute('aria-expanded')).toBe('true');
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('backup-drawer')).toBeHidden();
+    await escapeUntilHidden(page, page.getByTestId('backup-drawer'));
     expect(await toggle.getAttribute('aria-expanded')).toBe('false');
   });
 

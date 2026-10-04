@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Database, Download, Upload, X } from 'lucide-react';
 import { downloadTextFile } from '@/lib/download';
 import type { BackupExport, BackupImportResult } from '@/hooks/useDashboard';
@@ -36,17 +36,28 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
   // Wave H item 3: Escape closes this drawer too, same as every other
   // overlay. It owns its own listener because the toggle button's
   // aria-expanded has to stay in sync with the open state.
+  //
+  // Registered ONCE (not gated on `open`) so there is no frame in which the
+  // drawer is on screen but Escape is still unhandled — the same race that
+  // cost the first CI run on the upload modal. `openRef` is written during
+  // render, so the handler is correct the moment the drawer's DOM exists.
+  const openRef = useRef(open);
+  // Layout effect: correct before paint, so Escape works the instant the
+  // drawer is on screen (and lint allows it — refs are not written during
+  // render).
+  useLayoutEffect(() => {
+    openRef.current = open;
+  });
   useEffect(() => {
-    if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
+      if (e.key === 'Escape' && openRef.current && !e.defaultPrevented) {
         e.preventDefault();
         setOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open]);
+  }, []);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
