@@ -145,6 +145,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    *
    * `source` records whether what just landed is the synthetic example set —
    * one flag, written or cleared atomically with the readings themselves.
+   *
+   * The example set ALSO opens on its whole span instead of the current
+   * billing period. selectInitialWindow (Wave A) deliberately anchors a real
+   * upload on a data-FULL current period, which for a fresh export means one
+   * month — one lonely bar. For a dataset whose entire job is to show a
+   * visitor the product, one bar is the wrong first screen, so the demo
+   * opens on every reading it just loaded (12 monthly bars) and the scope
+   * buttons still zoom in from there. Real uploads are untouched.
    */
   const commitReadings = (data: DataPoint[], source: "upload" | "example" = "upload") => {
     setRawData(data);
@@ -154,7 +162,19 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       else localStorage.removeItem(EXAMPLE_DATA_KEY);
     } catch { /* storage blocked: the in-memory flag below still holds */ }
     setExampleData(source === "example");
-    applyInitialWindow(data, billingDay);
+    if (source === "example" && data.length > 0) {
+      let first = data[0];
+      let last = data[0];
+      for (const d of data) {
+        if (d.timestamp < first.timestamp) first = d;
+        if (d.timestamp > last.timestamp) last = d;
+      }
+      setStartDate(format(new Date(first.timestamp * 1000), "yyyy-MM-dd"));
+      setEndDate(format(new Date(last.timestamp * 1000), "yyyy-MM-dd"));
+      setViewScope("Custom");
+    } else {
+      applyInitialWindow(data, billingDay);
+    }
     setParseIssue(null);
     setShowUploadModal(false);
   };

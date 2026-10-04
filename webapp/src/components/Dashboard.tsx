@@ -414,7 +414,8 @@ export default function Dashboard() {
             data-testid="cost-toggle"
             role="group"
             aria-label="Show costs as"
-            className="bg-slate-100 p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1"
+            /* A printed report states one unit; the switch itself is chrome. */
+            className="no-print bg-slate-100 p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1"
           >
             {(['yr', 'day'] as const).map((mode) => (
               <button

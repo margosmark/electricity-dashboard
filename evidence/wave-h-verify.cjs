@@ -182,6 +182,18 @@ async function sampleDataJourney(browser) {
     check('no skeleton left behind', (await page.getByTestId('chart-skeleton').count()) === 0);
     const bars = await page.locator('.recharts-rectangle, .recharts-bar-rectangle').count();
     check('chart drawn (bars present, no empty frame)', bars > 0, `${bars} bar shapes`);
+    // The demo must open on the whole bundled year, not one lonely bar.
+    const startVal = await page.locator('input[type="date"]').first().inputValue();
+    const endVal = await page.locator('input[type="date"]').nth(1).inputValue();
+    check(
+      'demo opens on the full bundled year',
+      startVal === '2025-10-01' && endVal === '2026-09-30',
+      `${startVal} → ${endVal}`,
+    );
+    const ticks = await page
+      .locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-label')
+      .count();
+    check('monthly chart shows the whole year (not one bar)', ticks >= 6, `${ticks} x-axis labels`);
 
     await page.screenshot({ path: path.join(OUT, 'wave-h-sample-loaded.png') });
   } catch (e) {
@@ -363,7 +375,11 @@ async function crashState(browser) {
   const { ctx, page } = await newPage(browser);
   try {
     await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-    await page.getByTestId('active-plan-chip').waitFor({ timeout: 45_000 });
+    // The header chip is SERVER-rendered, so it proves nothing about the
+    // client: throwing before hydration lands the error where no listener
+    // exists yet. The upload modal is only rendered by the client-side init
+    // effect, so it appearing means React has mounted (boundary included).
+    await page.getByText('Drop XML Here').waitFor({ timeout: 45_000 });
 
     // Throw where React boundaries never look: an event handler's timer.
     await page.evaluate(() => {
