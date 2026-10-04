@@ -4,6 +4,7 @@ import {
   buildEvScenario,
   detectEvCandidate,
   CHARGING_NIGHTS_PER_MONTH,
+  EV_MIN_KW,
 } from './evScenario';
 
 const RATES: RateSet = {
@@ -102,6 +103,118 @@ describe('detectEvCandidate', () => {
     expect(c).not.toBeNull();
     expect(c!.hours).toBe(5);
     expect(c!.label).toBe('01:00–06:00');
+  });
+});
+
+/* ========================================================================== *
+ * Reading-interval (cadence) hygiene — the same night at 60 and 15 minutes
+ *
+ * `usage_kwh` is energy PER READING INTERVAL. Every fixture above is hourly,
+ * which is exactly why `sum / readings` looked right: an hourly feed has one
+ * reading per day per clock hour. Split the same profile into 15-minute
+ * readings and that divisor reads 4x low — the block drops under EV_MIN_KW
+ * and detectEvCandidate returns null ("nothing charging-shaped in your
+ * data") on a house that does charge.
+ * ========================================================================== */
+
+/**
+ * The SAME profile rendered at any cadence: each clock hour's kWh split evenly
+ * across its readings, one interval apart. Energy per day is identical at
+ * either cadence, so every derived number must match.
+ */
+function atCadence(
+  days: number,
+  stepMinutes: number,
+  hourKwh: (d: Date) => number,
+): ProcessedPoint[] {
+  const perHour = 60 / stepMinutes;
+  const raw: DataPoint[] = [];
+  for (let day = 0; day < days; day++) {
+    for (let h = 0; h < 24; h++) {
+      const hourTotal = hourKwh(new Date(2026, 5, 1 + day, h, 0, 0));
+      for (let k = 0; k < perHour; k++) {
+        raw.push({
+          timestamp: Math.floor(new Date(2026, 5, 1 + day, h, k * stepMinutes, 0).getTime() / 1000),
+          usage_kwh: hourTotal / perHour,
+        });
+      }
+    }
+  }
+  return processRawData(raw, [RATES]);
+}
+
+/** {@link houseWithNightBlock} at an arbitrary cadence. */
+function houseCadence(days: number, stepMinutes: number, evHours: number[], ev: number) {
+  const evSet = new Set(evHours);
+  return atCadence(days, stepMinutes, (d) => (evSet.has(d.getHours()) ? 0.4 + ev : 0.4));
+}
+
+/** The pre-fix per-reading mean, kept only to pin the 4x delta against. */
+function legacyMeanKw(rows: ProcessedPoint[]): number[] {
+  const sum = new Array<number>(24).fill(0);
+  const count = new Array<number>(24).fill(0);
+  for (const r of rows) {
+    const h = r.dateObj.getHours();
+    sum[h] += r.usage_kwh;
+    count[h] += 1;
+  }
+  return sum.map((s, h) => (count[h] > 0 ? s / count[h] : 0));
+}
+
+describe('detectEvCandidate cadence independence', () => {
+  const NIGHT = [23, 0, 1];
+
+  it('reports identical numbers from an hourly and a 15-minute feed', () => {
+    const hourlyC = detectEvCandidate(houseWithNightBlock(20, NIGHT, 3.0));
+    const quarterC = detectEvCandidate(houseCadence(20, 15, NIGHT, 3.0));
+    expect(hourlyC).not.toBeNull();
+    expect(quarterC).not.toBeNull();
+    expect(quarterC!.meanKw).toBeCloseTo(hourlyC!.meanKw, 9);
+    expect(quarterC!.kwhPerNight).toBeCloseTo(hourlyC!.kwhPerNight, 9);
+    expect(quarterC!.hours).toBe(hourlyC!.hours);
+    expect(quarterC!.label).toBe(hourlyC!.label);
+    expect(quarterC!.nights).toBe(hourlyC!.nights);
+    expect(quarterC!.days).toBe(hourlyC!.days);
+    // The evidence sentence under the prefill, verbatim.
+    expect(quarterC!.detail).toBe(hourlyC!.detail);
+    expect(quarterC!.detail).toContain('10.2 kWh a night across 3 h (3.4 kW average)');
+  });
+
+  it('still finds a 3.4 kW block on a 15-minute feed that a per-reading mean would miss', () => {
+    const rows = houseCadence(20, 15, NIGHT, 3.0);
+    const legacy = legacyMeanKw(rows);
+    // Pre-fix the gate saw 0.85 (a per-15-minute-reading figure), not 3.4.
+    expect(legacy[23]).toBeLessThan(EV_MIN_KW);
+    const c = detectEvCandidate(rows);
+    expect(c).not.toBeNull();
+    expect(c!.meanKw).toBeGreaterThanOrEqual(EV_MIN_KW);
+    expect(c!.meanKw).toBeCloseTo(3.4, 9);
+    expect(c!.kwhPerNight).toBeCloseTo(10.2, 9);
+  });
+
+  it('regression pin: on a 15-minute feed kwhPerNight is 4x the pre-fix figure', () => {
+    // Strong enough to pass EV_MIN_KW even after the 4x haircut, so the
+    // pre-fix code DID fire here — and under-reported by exactly 4x.
+    const rows = houseCadence(20, 15, NIGHT, 7.0);
+    const legacy = legacyMeanKw(rows);
+    const legacyKwhPerNight = NIGHT.reduce((a, h) => a + legacy[h], 0);
+    expect(legacyKwhPerNight).toBeCloseTo(3 * (7.4 / 4), 9);
+
+    const c = detectEvCandidate(rows);
+    expect(c).not.toBeNull();
+    expect(c!.label).toBe('23:00–02:00');
+    expect(c!.kwhPerNight).toBeCloseTo(legacyKwhPerNight * 4, 6);
+    expect(c!.kwhPerNight).toBeCloseTo(3 * 7.4, 6);
+    expect(c!.meanKw).toBeCloseTo(7.4, 6);
+  });
+
+  it('does not move any number on an hourly feed', () => {
+    const c = detectEvCandidate(houseWithNightBlock(20, NIGHT, 3.0));
+    expect(c).not.toBeNull();
+    expect(c!.meanKw).toBeCloseTo(3.4, 5);
+    expect(c!.kwhPerNight).toBeCloseTo(10.2, 5);
+    expect(c!.nights).toBe(20);
+    expect(c!.days).toBe(20);
   });
 });
 
