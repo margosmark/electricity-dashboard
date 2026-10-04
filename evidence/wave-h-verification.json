@@ -1,0 +1,225 @@
+{
+  "wave": "H",
+  "base": "http://10.10.11.110:3939",
+  "at": "2026-10-04T06:20:55.634Z",
+  "total": 43,
+  "passed": 43,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "empty upload screen offers \"Try with example data\"",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "button label matches the spec wording",
+      "ok": true,
+      "detail": "Try with example data"
+    },
+    {
+      "name": "the promise is on screen before the click",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "example dataset committed in full (8 760 hourly readings)",
+      "ok": true,
+      "detail": "8760 readings"
+    },
+    {
+      "name": "example banner labels the data as not real usage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "example flag persisted so a reload keeps the label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "totals strip populated",
+      "ok": true,
+      "detail": "202511845 kWh"
+    },
+    {
+      "name": "\"Data as of {date}\" chip rendered near the totals",
+      "ok": true,
+      "detail": "Data as of Sep 30, 20264 days ago"
+    },
+    {
+      "name": "no skeleton left behind",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart drawn (bars present, no empty frame)",
+      "ok": true,
+      "detail": "27 bar shapes"
+    },
+    {
+      "name": "demo opens on the full bundled year",
+      "ok": true,
+      "detail": "2025-10-01 → 2026-09-30"
+    },
+    {
+      "name": "monthly chart shows the whole year (not one bar)",
+      "ok": true,
+      "detail": "12 x-axis labels"
+    },
+    {
+      "name": "header shows the active plan before any interaction",
+      "ok": true,
+      "detail": "▸Plan: Time-of-Use"
+    },
+    {
+      "name": "plan choice written to localStorage",
+      "ok": true,
+      "detail": "selected_plan=ULO"
+    },
+    {
+      "name": "header chip follows the switcher",
+      "ok": true,
+      "detail": "▸Plan: Ultra-Low Overnight"
+    },
+    {
+      "name": "plan still ULO after a reload (no re-pick)",
+      "ok": true,
+      "detail": "▸Plan: Ultra-Low Overnight"
+    },
+    {
+      "name": "Escape closes the upload modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "tab traversal reaches the upload control",
+      "ok": true,
+      "detail": "{\"label\":\"Upload XML\",\"outlineWidth\":\"3px\",\"boxShadow\":\"rgb(37, 99, 235) 0px 0px 0px 6px\"}"
+    },
+    {
+      "name": "focus ring is computed (width > 0)",
+      "ok": true,
+      "detail": "3px rgb(37, 99, 235) 0px 0px 0px 6px"
+    },
+    {
+      "name": "focus ring carries the blue halo that reads on every chip colour",
+      "ok": true,
+      "detail": "rgb(37, 99, 235) 0px 0px 0px 6px"
+    },
+    {
+      "name": "Enter opens the upload modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Escape closes it again",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "backup drawer opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "aria-expanded reports open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Escape closes the backup drawer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "aria-expanded reports closed again",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "nav/controls hidden in print",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "export button hidden in print",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "view toggle hidden in print",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Insights document still visible in print",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Shift Optimizer still visible in print",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal overflow on Letter width",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "print/PDF renders as a sane Letter document",
+      "ok": true,
+      "detail": "7 page(s), 248 KB, 816x1056 single-page screenshot"
+    },
+    {
+      "name": "totals default to $/yr",
+      "ok": true,
+      "detail": "Time-of-Use$1445.28/yr"
+    },
+    {
+      "name": "conversion sentence present",
+      "ok": true,
+      "detail": "$1445/yr for Time-of-Use is $3.96/day"
+    },
+    {
+      "name": "toggle switches to $/day",
+      "ok": true,
+      "detail": "Time-of-Use$3.96/day"
+    },
+    {
+      "name": "the two units are different numbers",
+      "ok": true,
+      "detail": "Time-of-Use$1445.28/yr -> Time-of-Use$3.96/day"
+    },
+    {
+      "name": "conversion sentence points the other way now",
+      "ok": true,
+      "detail": "$3.96/day for Time-of-Use is $1445/yr"
+    },
+    {
+      "name": "crash screen replaces the blank frame",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "it promises the readings are untouched",
+      "ok": true,
+      "detail": "Runtime errorSomething broke.The dashboard hit an unexpected error and stopped drawing. Your readings were not touched — they are still in this browser. Try aga"
+    },
+    {
+      "name": "copyable incident id present",
+      "ok": true,
+      "detail": "ERR-13A66D"
+    },
+    {
+      "name": "technical detail preserved",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "\"Try again\" recovers to a working app",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
