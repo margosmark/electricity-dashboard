@@ -169,7 +169,18 @@ with tab1:
     
     with col_a:
         st.subheader("Daily Routine (Hourly Average)")
-        hourly_avg = df.groupby('hour')['usage_kwh'].mean().reset_index()
+        # usage_kwh is energy PER READING INTERVAL (exports arrive 15-, 30- or
+        # 60-minute), so average per DATE-HOUR first: summing an hour's readings
+        # and then averaging those hour totals is numerically identical for
+        # hourly data -- the demo does not move -- and stops reading 4x too low
+        # on a 15-minute export.
+        hourly_avg = (
+            df.groupby(['date', 'hour'])['usage_kwh']
+            .sum()
+            .groupby('hour')
+            .mean()
+            .reset_index()
+        )
         fig_hourly = px.bar(hourly_avg, x='hour', y='usage_kwh', 
                             labels={'usage_kwh': 'Avg kWh', 'hour': 'Hour of Day'},
                             title="Average Usage by Hour")
@@ -190,7 +201,12 @@ with tab2:
         
         if not vacation_df.empty:
             st.success(f"Analyzing Vacation Period: {start_vac} to {end_vac}")
-            vac_avg_hourly = vacation_df['usage_kwh'].mean()
+            # Per DATE-HOUR first (same reasoning as the Daily Routine chart):
+            # the mean of an hour's readings, then averaged over the days you
+            # were away. Identical for hourly exports, 4x right for 15-minute.
+            vac_avg_hourly = (
+                vacation_df.groupby(['date', 'hour'])['usage_kwh'].sum().mean()
+            )
             st.metric("Avg Vacation Hourly Usage", f"{vac_avg_hourly:.3f} kWh")
             
             fig_vac = px.line(vacation_df, x='datetime', y='usage_kwh', title="Usage While Away")

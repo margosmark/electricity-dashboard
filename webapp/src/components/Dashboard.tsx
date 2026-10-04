@@ -519,8 +519,8 @@ export default function Dashboard() {
                 <div className="bg-blue-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-blue-200 text-blue-900">
                   <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">How we measure yours:</h4>
                   <ul className="list-disc ml-4 md:ml-5 space-y-1 md:space-y-2 text-[10px] md:text-sm">
-                    <li>We look at your whole visible window and take the <strong>lowest 5% of hourly readings</strong> — the hours when nothing should have been running.</li>
-                    <li>Those hours average <span className="font-black text-blue-600">{floor.watts.toFixed(0)} Watts</span>, about <span className="font-black text-blue-600">{floor.kwhPerDay.toFixed(1)} kWh a day</span>.</li>
+                    <li>We look at your whole visible window and take the <strong>lowest 5% of readings</strong> — the stretches when nothing should have been running.</li>
+                    <li>That floor draws <span className="font-black text-blue-600">{floor.watts.toFixed(0)} Watts</span>, about <span className="font-black text-blue-600">{floor.kwhPerDay.toFixed(1)} kWh a day</span>.</li>
                     <li>Priced at your blended <span className="font-black text-blue-600">{floor.blendedRateCents.toFixed(1)}¢/kWh</span>, that is <span className="font-black text-blue-600">${floor.annualCost.toFixed(0)} a year</span> of never-off energy.</li>
                     <li>{floor.detail}</li>
                   </ul>
