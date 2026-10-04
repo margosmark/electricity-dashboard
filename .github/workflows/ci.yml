@@ -28,9 +28,11 @@ jobs:
 
   smoke:
     # Boots the REAL docker image fresh, then asserts against it over HTTP:
-    # app identity, rate payloads, PWA assets (manifest/sw/icons), and the
+    # app identity, rate payloads, PWA assets (manifest/sw/icons), the
     # full upload flow + offline service-worker behaviour via Playwright
-    # using a tiny synthetic GreenButton XML (webapp/tests/fixtures).
+    # using a tiny synthetic GreenButton XML (webapp/tests/fixtures), the
+    # Wave H full-journey spec (tests/e2e/journey.spec.ts) against the
+    # bundled sample export, and a Lighthouse performance budget of 90.
     # No secrets; runner's preinstalled Chrome (no Playwright downloads).
     name: E2E Smoke (Docker boot, HTTP, upload flow, PWA)
     runs-on: ubuntu-latest
@@ -59,6 +61,18 @@ jobs:
         run: npx playwright test
         env:
           SMOKE_BASE_URL: http://127.0.0.1:3100
+      # Wave H item 11 — performance budget: the desktop-emulated Lighthouse
+      # score for the booted production container must stay >= 90 (PWA/offline
+      # is a feature, so the app staying fast is part of the contract).
+      - name: Lighthouse budget (performance >= 90)
+        run: npx lhci autorun
+      - name: Lighthouse report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: webapp/lhci-reports
+          if-no-files-found: ignore
       - name: Container logs
         if: failure()
         run: docker logs energy-smoke || true
