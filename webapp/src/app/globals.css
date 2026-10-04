@@ -108,20 +108,45 @@ body {
      stacking, and the 7×24 heatmap compressed to a printed strip. */
   .print-compact {
     font-size: 9pt;
+    line-height: 1.2;
+  }
+
+  /* Cards are the direct children: their screen padding (up to 40px) is
+     pure decoration on paper. */
+  .print-compact > * {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
   }
 
   .print-compact > * + * {
     margin-block-start: 6px !important;
   }
 
-  .print-compact .heatmap-cell {
-    height: 7px !important;
-    min-height: 7px !important;
+  /* A printed report carries the RECOMMENDATION, not all twenty evidence
+     rows: keep the four highest-ranked and say nothing is missing. The rows
+     are siblings of the ranked list, so :nth-child trims from the tail. */
+  .print-compact [data-testid^="shift-block-"] {
+    display: none !important;
+  }
+
+  .print-compact [data-testid^="shift-block-"]:nth-child(-n + 4) {
+    display: block !important;
   }
 
   .print-compact h3,
   .print-compact h4 {
-    line-height: 1.1;
+    font-size: 1.15em;
+    margin-block: 2px;
+  }
+
+  .print-compact p,
+  .print-compact li {
+    line-height: 1.25;
+  }
+
+  .print-compact .heatmap-cell {
+    height: 7px !important;
+    min-height: 7px !important;
   }
 
   /* Screenshots of a chart never print their drop shadows. */

@@ -44,15 +44,22 @@ test.describe('full journey', () => {
     await expect(page.getByTestId('active-plan-chip')).toHaveAttribute('data-plan', /TOU|Tiered|ULO/);
 
     // --- 2. Upload: through the same input a real user file takes. --------
+    // NOTE the drop zone is NOT the signal: it flips to "ANALYZING..." the
+    // moment parsing starts, so it disappears long before the commit. Wait
+    // for the dashboard's own evidence that readings are in.
     await page.locator('input[type="file"]').setInputFiles(SAMPLE);
     await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 60_000 });
+    await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
 
     // The readings really landed (a silent parse failure would show an
     // empty dashboard here, which is exactly what the assertions catch).
-    const stored = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('energy_data') || '[]'),
-    );
-    expect(stored.length).toBe(8760);
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]').length),
+        { timeout: 30_000 },
+      )
+      .toBe(8760);
 
     // --- 3. Totals: real numbers, real dates. ----------------------------
     const strip = page.getByTestId('totals-strip');
@@ -121,16 +128,22 @@ test.describe('full journey', () => {
 
     // Wave H item 1 end to end: one click, no file, no account.
     await page.getByTestId('try-example-data').click();
-    await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 60_000 });
 
-    // It is labelled as example data everywhere it is shown.
+    // It is labelled as example data everywhere it is shown. The banner is
+    // the commit signal (the drop zone hides as soon as parsing starts).
     const banner = page.getByTestId('example-data-banner');
-    await expect(banner).toBeVisible();
+    await expect(banner).toBeVisible({ timeout: 60_000 });
     await expect(banner).toContainText('Example data — not real usage');
     expect(
       await page.evaluate(() => localStorage.getItem('energy_data_is_example')),
     ).toBe('1');
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]').length)).toBe(8760);
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]').length),
+        { timeout: 30_000 },
+      )
+      .toBe(8760);
 
     await expect(page.getByTestId('totals-strip')).toBeVisible();
     // The answer lives on the Insights tab.
@@ -242,7 +255,7 @@ test.describe('keyboard, print and crash', () => {
     test.setTimeout(120_000);
     await page.goto('/');
     await page.locator('input[type="file"]').setInputFiles(SAMPLE);
-    await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 60_000 });
+    await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
     await page.getByRole('button', { name: 'INSIGHTS' }).click();
     await expect(page.getByTestId('insights-view')).toBeVisible();
 
