@@ -195,7 +195,13 @@ async function sampleDataJourney(browser) {
       .count();
     check('monthly chart shows the whole year (not one bar)', ticks >= 6, `${ticks} x-axis labels`);
 
-    await page.screenshot({ path: path.join(OUT, 'wave-h-sample-loaded.png') });
+    // Full page: the chart sits below the fold at 1200px, and the point of
+    // this artifact is that the chart is actually drawn.
+    await page.screenshot({ path: path.join(OUT, 'wave-h-sample-loaded.png'), fullPage: true });
+    const chartArea = page.getByTestId('chart-area');
+    await chartArea.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(OUT, 'wave-h-chart.png') });
   } catch (e) {
     check('sample-data journey completed', false, e.message);
   } finally {

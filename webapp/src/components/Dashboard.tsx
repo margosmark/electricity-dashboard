@@ -261,7 +261,8 @@ export default function Dashboard() {
             type="button"
             data-testid="replace-example-data"
             onClick={discardExampleData}
-            className="ml-auto px-4 py-2 bg-black text-white border-4 border-black rounded-lg md:rounded-xl font-black uppercase text-[10px] md:text-xs shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all"
+            /* The provenance note prints; the button that swaps data is chrome. */
+            className="no-print ml-auto px-4 py-2 bg-black text-white border-4 border-black rounded-lg md:rounded-xl font-black uppercase text-[10px] md:text-xs shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all"
           >
             Use my own data
           </button>
