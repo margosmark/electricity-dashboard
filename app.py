@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 
 from recovery import EXPECTED_XML_FILENAME, render_recovery_screen
 from sample_data import load_sample_dataframe
-from vampire import estimate_base_load_kw, monthly_vampire_cost
+from vampire import estimate_base_load_kw, infer_interval_hours, monthly_vampire_cost
 
 # Set page config
 st.set_page_config(page_title="Electricity Usage Dashboard", layout="wide")
@@ -124,16 +124,35 @@ total_cost = df['cost'].sum()
 avg_daily_usage = df.groupby('date')['usage_kwh'].sum().mean()
 
 # Base Load Calculation
-# Robust proxy: P05 of hourly kWh over the trailing 90 days (vampire.py).
-# The old argmin latched onto a single outage dip / lucky quiet hour and treated
-# it as the 24/7 floor; a trailing percentile shrugs those outliers off.
+# Robust proxy: P05 of usage over the trailing 90 days (vampire.py).
+# The old argmin latched onto a single outage dip / lucky quiet reading and
+# treated it as the 24/7 floor; a trailing percentile shrugs those outliers off.
+# usage_kwh is per reading interval, and Green Button / ESPI exports arrive
+# hourly, half-hourly or 15-minute -- so the P05 only equals kW on an hourly
+# feed. vampire.py divides out the interval it measures from the data itself;
+# here we surface that interval so the unit behind the dollar figure is visible.
+interval_hours = infer_interval_hours(df)
 base_load_kw = estimate_base_load_kw(df)
 vampire_monthly_cost = monthly_vampire_cost(base_load_kw, off_peak_rate) # Conservative estimate at off-peak
+
+interval_label = (
+    f"{interval_hours:g}-hour reading interval"
+    if interval_hours >= 1
+    else f"{interval_hours * 60:g}-minute reading interval"
+)
 
 col1.metric("Total Usage", f"{total_usage:,.1f} kWh")
 col2.metric("Total Est. Cost", f"${total_cost:,.2f}")
 col3.metric("Avg Daily Usage", f"{avg_daily_usage:.1f} kWh")
-col4.metric("Vampire Draw Cost", f"${vampire_monthly_cost:.2f}/mo", help="Estimated always-on cost: 5th-percentile hourly usage over the trailing 90 days x 24 h x 30.4 days, at your off-peak rate.")
+col4.metric(
+    "Vampire Draw Cost",
+    f"${vampire_monthly_cost:.2f}/mo",
+    help=(
+        "Estimated always-on cost: 5th-percentile usage over the trailing 90 days, "
+        f"converted from your {interval_label} to kW, x 24 h x 30.4 days, at your "
+        "off-peak rate."
+    ),
+)
 
 st.markdown("---")
 
