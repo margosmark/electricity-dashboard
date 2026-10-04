@@ -1,9 +1,15 @@
 """Tests for the hardened vampire-load estimator (vampire.py).
 
-The pre-fix dashboard used ``df['usage_kwh'].min()`` -- a single argmin hour --
+The pre-fix dashboard used ``df['usage_kwh'].min()`` -- a single argmin reading --
 as the always-on floor. These tests pin the new estimator's behaviour:
 order-independent, outlier-resistant, trailing-window aware, and provably
 different from the old min() on a fixture with a deep dip.
+
+They also pin the unit contract: ``usage_kwh`` is per *reading interval*, so the
+P05 is only kW on an hourly feed. The interval-aware conversion must produce the
+same kW (and the same $/mo) from hourly, 30-minute and 15-minute exports of the
+same house -- the bundled fixture is hourly, so without these a regression would
+be invisible to the demo.
 """
 
 import math
@@ -15,7 +21,10 @@ from vampire import (
     BASE_LOAD_PERCENTILE,
     DAYS_PER_MONTH,
     TRAILING_WINDOW_DAYS,
+    UNMEASURABLE_INTERVAL_HOURS,
     estimate_base_load_kw,
+    estimate_base_load_kwh_per_interval,
+    infer_interval_hours,
     monthly_vampire_cost,
 )
 
@@ -122,3 +131,116 @@ def test_estimator_edge_cases():
 
     with pytest.raises(ValueError):
         estimate_base_load_kw(_household_df(), percentile=101)
+
+
+# --------------------------------------------------------------------------
+# Interval awareness -- the unit contract (Green Button exports arrive hourly,
+# half-hourly or 15-minute; only the hourly case makes per-reading kWh equal kW)
+# --------------------------------------------------------------------------
+
+
+def _interval_df(values, freq, start="2024-07-01 00:00:00"):
+    index = pd.date_range(start, periods=len(values), freq=freq, tz="America/Toronto")
+    return pd.DataFrame({"datetime": index, "usage_kwh": values})
+
+
+def _same_house(freq, per_hour, days=30, night_kwh=0.18, day_kwh=0.45):
+    """One physical house sampled at different cadences.
+
+    ``per_hour`` readings per clock hour (1 hourly, 2 half-hourly, 4 at
+    15 minutes); each clock hour's energy is split evenly across them, so the
+    always-on floor per *reading* is ``night_kwh / per_hour`` while the house's
+    actual draw stays put. Hours 0-6 and 20-23 are the always-on night floor.
+    """
+    values = []
+    for _ in range(days):
+        for hour in range(24):
+            hour_kwh = night_kwh if (hour < 7 or hour >= 20) else day_kwh
+            values.extend([hour_kwh / per_hour] * per_hour)
+    return _interval_df(values, freq)
+
+
+def test_infer_interval_hours_reads_the_cadence_off_the_data():
+    assert infer_interval_hours(_hourly_df([0.18] * 48)) == 1.0
+    assert infer_interval_hours(_same_house("30min", 2)) == 0.5
+    assert infer_interval_hours(_same_house("15min", 4)) == 0.25
+    assert infer_interval_hours(_same_house("h", 1)) == 1.0
+    assert UNMEASURABLE_INTERVAL_HOURS == 1.0
+
+
+def test_infer_interval_hours_survives_gaps_duplicates_and_row_order():
+    quarter = _same_house("15min", 4, days=10)
+    # A 3-hour outage hole, then a duplicated timestamp, then shuffled rows.
+    holed = quarter.drop(index=range(100, 112))
+    holed = pd.concat([holed, holed.iloc[[50]]], ignore_index=True)
+    shuffled = holed.sample(frac=1, random_state=7).reset_index(drop=True)
+
+    assert infer_interval_hours(shuffled) == 0.25
+    assert infer_interval_hours(holed) == 0.25
+
+    # Multi-day hole in an hourly feed: still hourly, not "one giant gap".
+    hourly = _hourly_df([0.18] * 24 * 40)
+    gapped = pd.concat([hourly.iloc[:100], hourly.iloc[-50:]], ignore_index=True)
+    assert infer_interval_hours(gapped) == 1.0
+
+
+def test_infer_interval_hours_falls_back_to_hourly_when_unmeasurable():
+    assert infer_interval_hours(None) == 1.0
+    assert infer_interval_hours(pd.DataFrame(columns=["datetime", "usage_kwh"])) == 1.0
+    # One reading: no spacing to measure, so the legacy hourly assumption is
+    # used deliberately rather than being smuggled in through the maths.
+    assert infer_interval_hours(_hourly_df([0.18])) == 1.0
+
+    with pytest.raises(KeyError):
+        infer_interval_hours(pd.DataFrame({"usage_kwh": [1.0, 2.0]}))
+
+
+def test_base_load_kw_is_a_real_kw_on_a_15_minute_feed():
+    hourly = _same_house("h", 1)
+    quarter = _same_house("15min", 4)
+
+    # Per-interval energy really does differ by the cadence...
+    assert estimate_base_load_kwh_per_interval(hourly) == pytest.approx(0.18, rel=1e-9)
+    assert estimate_base_load_kwh_per_interval(quarter) == pytest.approx(0.045, rel=1e-9)
+
+    # ...and only the conversion makes them the same physical draw.
+    assert estimate_base_load_kw(hourly) == pytest.approx(0.18, rel=1e-9)
+    assert estimate_base_load_kw(quarter) == pytest.approx(0.18, rel=1e-9)
+    assert estimate_base_load_kw(quarter) == pytest.approx(
+        estimate_base_load_kw(hourly), rel=1e-9
+    )
+
+
+def test_hourly_feed_is_bit_for_bit_unchanged_by_the_conversion():
+    df = _household_df()
+    assert infer_interval_hours(df) == 1.0
+    # Division by exactly 1.0: the hourly demo number must not move at all.
+    assert estimate_base_load_kw(df) == estimate_base_load_kwh_per_interval(df)
+
+
+def test_monthly_vampire_cost_is_interval_correct():
+    rate = 8.7
+    expected = 0.18 * 24 * 30.4 * 0.087  # ~$11.43/mo for a 0.18 kW floor
+
+    costs = [
+        monthly_vampire_cost(estimate_base_load_kw(_same_house(freq, n)), rate)
+        for freq, n in (("h", 1), ("30min", 2), ("15min", 4))
+    ]
+    assert costs == pytest.approx([expected, expected, expected], rel=1e-9)
+
+    # The pre-interval-fix number on 15-minute data was 4x too low, because it
+    # priced a quarter-hour of energy as if it were a full hour of draw.
+    quarter = _same_house("15min", 4)
+    pre_fix = monthly_vampire_cost(
+        estimate_base_load_kwh_per_interval(quarter), rate
+    )
+    assert pre_fix == pytest.approx(expected / 4, rel=1e-9)
+    assert costs[2] == pytest.approx(4 * pre_fix, rel=1e-9)
+
+
+def test_bundled_sample_fixture_stays_hourly_so_the_demo_number_is_unchanged():
+    from sample_data import load_sample_dataframe
+
+    sample = load_sample_dataframe()
+    assert infer_interval_hours(sample) == 1.0
+    assert estimate_base_load_kw(sample) == estimate_base_load_kwh_per_interval(sample)
