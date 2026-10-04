@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ServiceWorkerRegister from "@/pwa/ServiceWorkerRegister";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,7 +49,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* Wave H item 8: no view can blank the page — a crash lands on the
+            crash screen with a copyable id instead of white space. */}
+        <AppErrorBoundary>{children}</AppErrorBoundary>
         <ServiceWorkerRegister />
       </body>
     </html>

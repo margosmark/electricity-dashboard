@@ -24,3 +24,108 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ---------------------------------------------------------------------------
+ * Wave H item 3 — one focus ring for the whole app.
+ *
+ * The design language is white chips, yellow chips AND black chips, so a
+ * single-colour outline always loses on one of them. This ring is two-tone:
+ * a white edge flush with the element (reads on black) plus a blue halo
+ * outside it (reads on white and on yellow). Unlayered CSS beats Tailwind's
+ * layered utilities, so it wins over the hard offset shadows while focused
+ * and disappears again on blur — the neobrutalist shadow comes back intact.
+ *
+ * This is the standing gate documented in ARCHITECTURE.md → Accessibility.
+ * ------------------------------------------------------------------------- */
+:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px #2563eb;
+}
+
+/* Wave H item 4 — the chart shimmer (see ChartView's ChartSkeleton). */
+@keyframes skeleton-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-bar {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.2s linear infinite;
+}
+
+/* Animations are decoration: never make them a prerequisite for reading. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar,
+  .animate-pulse,
+  .animate-in {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Wave H item 6 — print / PDF layout.
+ *
+ * Goal: InsightsView prints as a shareable document (spouse, landlord,
+ * auditor) rather than a screenshot of an app: no chrome, no controls, no
+ * wasted page width, and colours preserved so the yellow/black cards still
+ * read on paper. `.no-print` is the contract — see ARCHITECTURE.md →
+ * Accessibility → "Print gate".
+ * ------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: portrait;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    /* The neobrutalist palette is the content here, not decoration. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Never let a card straddle a page break: a half-printed table is worse
+     than a page break. Applied to every direct child of a `.print-compact`
+     view, so each card is printed whole or moved to the next page. */
+  .print-avoid,
+  .print-compact > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Fit a whole view on a Letter/A4 portrait page: tighter type, tighter
+     stacking, and the 7×24 heatmap compressed to a printed strip. */
+  .print-compact {
+    font-size: 9pt;
+  }
+
+  .print-compact > * + * {
+    margin-block-start: 6px !important;
+  }
+
+  .print-compact .heatmap-cell {
+    height: 7px !important;
+    min-height: 7px !important;
+  }
+
+  .print-compact h3,
+  .print-compact h4 {
+    line-height: 1.1;
+  }
+
+  /* Screenshots of a chart never print their drop shadows. */
+  .print-compact [class*="shadow-"] {
+    box-shadow: none !important;
+  }
+}

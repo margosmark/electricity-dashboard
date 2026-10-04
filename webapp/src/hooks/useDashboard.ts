@@ -19,11 +19,19 @@ import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
 } from "@/lib/backup";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
+import { loadExampleReadings } from "@/lib/exampleData";
 
 /** Narrow a rejected FileReader promise back to a rendered failure diagnostic. */
 function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { ok: false }> {
   return !!value && typeof value === "object" && typeof (value as { headline?: unknown }).headline === "string";
 }
+
+/**
+ * Set while the loaded readings are the bundled example dataset (Wave H item
+ * 1). It is a separate key from `energy_data` so a user's own upload always
+ * wins, and so clearing it never has to guess what else to delete.
+ */
+export const EXAMPLE_DATA_KEY = "energy_data_is_example";
 
 /** What an Export click downloads: a versioned JSON document + its filename. */
 export type BackupExport = { filename: string; text: string };
@@ -92,6 +100,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const [endDate, setEndDate] = useState<string>("");
   const [viewScope, setViewScope] = useState<ViewScope>("BillingPeriod");
 
+  /**
+   * True when the stored readings are the synthetic example set — drives the
+   * "example data, not real usage" banner so nobody mistakes it for a bill.
+   */
+  const [exampleData, setExampleData] = useState(false);
+
   /** Multi-meter upload waiting for the user to pick which point to load. */
   const [pendingUpload, setPendingUpload] = useState<{
     fileName: string;
@@ -126,12 +140,20 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   /**
    * Import rows: persist, open a data-full window, close the upload modal.
-   * (Used by both the single-meter path and the UsagePoint picker, so the
-   * first-load fix applies to an upload however the user completed it.)
+   * (Used by the single-meter path, the UsagePoint picker AND the example
+   * button, so the first-load fix applies however the user got readings in.)
+   *
+   * `source` records whether what just landed is the synthetic example set —
+   * one flag, written or cleared atomically with the readings themselves.
    */
-  const commitReadings = (data: DataPoint[]) => {
+  const commitReadings = (data: DataPoint[], source: "upload" | "example" = "upload") => {
     setRawData(data);
     localStorage.setItem("energy_data", JSON.stringify(data));
+    try {
+      if (source === "example") localStorage.setItem(EXAMPLE_DATA_KEY, "1");
+      else localStorage.removeItem(EXAMPLE_DATA_KEY);
+    } catch { /* storage blocked: the in-memory flag below still holds */ }
+    setExampleData(source === "example");
     applyInitialWindow(data, billingDay);
     setParseIssue(null);
     setShowUploadModal(false);
@@ -155,6 +177,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           const parsed = JSON.parse(savedData) as DataPoint[];
           if (mounted && Array.isArray(parsed) && parsed.length > 0) {
             setRawData(parsed);
+            // A reload must keep saying "this is example data" if it is.
+            if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
             applyInitialWindow(parsed, day);
           }
         } else if (mounted) {
@@ -296,6 +320,56 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setShowUploadModal(true);
   };
 
+  /**
+   * Wave H item 1 — "Try with example data".
+   *
+   * Fetches the bundled synthetic export and pushes it through the SAME
+   * parser + commit path as a real upload: no privileged second route to
+   * keep working, and a failure explains itself instead of opening an empty
+   * dashboard (the whole point of the button is someone with no export).
+   */
+  const loadExampleData = async (): Promise<{ ok: boolean; detail?: string }> => {
+    setParsing(true);
+    setParseIssue(null);
+    try {
+      const loaded = await loadExampleReadings();
+      if (!loaded.ok) {
+        setParseIssue({
+          ok: false,
+          headline: "Example data unavailable.",
+          detail: loaded.detail,
+          hints: ["Upload your own Green Button XML export to continue."],
+        });
+        return { ok: false, detail: loaded.detail };
+      }
+      commitReadings(loaded.readings, "example");
+      return { ok: true };
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  /**
+   * Drop the example set and reopen the upload prompt. Readings are the one
+   * thing this app owns, so it is explicit: the example data goes away, the
+   * user's own file replaces it.
+   */
+  const discardExampleData = () => {
+    try {
+      localStorage.removeItem("energy_data");
+      localStorage.removeItem(EXAMPLE_DATA_KEY);
+    } catch { /* nothing to remove */ }
+    setRawData([]);
+    setExampleData(false);
+    setParseIssue(null);
+    setPendingUpload(null);
+    setPendingMerge(null);
+    setStartDate("");
+    setEndDate("");
+    setViewScope("BillingPeriod");
+    setShowUploadModal(true);
+  };
+
   const emergencyReset = () => {
     localStorage.clear();
     window.location.reload();
@@ -391,6 +465,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
     exportBackup, importBackupFile,
     parseIssue, setParseIssue,
+    exampleData, loadExampleData, discardExampleData,
   };
 }
 

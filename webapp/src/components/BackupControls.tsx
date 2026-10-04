@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Database, Download, Upload, X } from 'lucide-react';
 import { downloadTextFile } from '@/lib/download';
 import type { BackupExport, BackupImportResult } from '@/hooks/useDashboard';
@@ -32,6 +32,21 @@ const TOGGLE_CLASS =
 
 export function BackupControls({ onExport, onImport, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
+
+  // Wave H item 3: Escape closes this drawer too, same as every other
+  // overlay. It owns its own listener because the toggle button's
+  // aria-expanded has to stay in sync with the open state.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,6 +84,8 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
         type="button"
         data-testid="backup-toggle"
         title="Backup & restore"
+        aria-label="Backup and restore"
+        aria-haspopup="dialog"
         aria-expanded={open}
         disabled={disabled}
         onClick={() => { setOpen((v) => !v); setStatus(null); setError(null); }}

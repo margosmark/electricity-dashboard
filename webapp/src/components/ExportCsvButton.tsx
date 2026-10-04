@@ -35,9 +35,11 @@ export function downloadCSV(rows: ProcessedPoint[]): string {
 type Props = {
   rows: ProcessedPoint[];
   className?: string;
+  /** Wave H item 6: a printed document does not offer a download button. */
+  printHidden?: boolean;
 };
 
-export function ExportCsvButton({ rows, className = '' }: Props) {
+export function ExportCsvButton({ rows, className = '', printHidden = false }: Props) {
   const disabled = rows.length === 0;
   return (
     <button
@@ -48,6 +50,7 @@ export function ExportCsvButton({ rows, className = '' }: Props) {
       disabled={disabled}
       onClick={() => downloadCSV(rows)}
       className={
+        (printHidden ? 'no-print ' : '') +
         'flex items-center gap-1 md:gap-2 px-3 md:px-5 py-2 md:py-3 rounded-lg md:rounded-xl ' +
         'border-2 md:border-4 border-black bg-white text-black font-black uppercase ' +
         'text-[8px] md:text-[10px] whitespace-nowrap ' +
