@@ -1,0 +1,80 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "real Oakville XML loads",
+      "ok": true,
+      "detail": "readings=2184"
+    },
+    {
+      "name": "no picker for a single-UsagePoint feed",
+      "ok": true,
+      "detail": "pickerMatches=0"
+    },
+    {
+      "name": "header reports both tiers",
+      "ok": true,
+      "detail": "8 on-peak + 9 mid-peak"
+    },
+    {
+      "name": "header carries a real total",
+      "ok": true,
+      "detail": "$84.76"
+    },
+    {
+      "name": "every block renders as a supporting row",
+      "ok": true,
+      "detail": "blocks=17"
+    },
+    {
+      "name": "Mid-Peak blocks are present as the lower tier",
+      "ok": true,
+      "detail": "mid-peak rows=9"
+    },
+    {
+      "name": "On-Peak blocks rank ahead of every Mid-Peak block",
+      "ok": true,
+      "detail": "order=on-peak,on-peak,on-peak,on-peak,on-peak,on-peak,on-peak,on-peak,mid-peak,mid-peak,mid-peak,mid-peak,mid-peak,mid-peak,mid-peak,mid-peak,mid-peak"
+    },
+    {
+      "name": "headline card renders",
+      "ok": true,
+      "detail": "THE ONE MOVE THAT MATTERS SOMEWHAT SWITCH TO ULO AND MOVE YOUR WEEKDAY ROUTINE → ~$84.76/MO 100% OF THE SAVINGS · 17 OF 17 BLOCKS PLAN SWITCH REQUIRED OVERNIGHT"
+    },
+    {
+      "name": "headline names the destination and the money",
+      "ok": true,
+      "detail": "THE ONE MOVE THAT MATTERS SOMEWHAT SWITCH TO ULO AND MOVE YOUR WEEKDAY ROUTINE → ~$84.76/MO 100% OF THE SAVINGS · 17 OF 17 BLOCKS PLAN SWITCH REQUIRED OVERNIGHT"
+    },
+    {
+      "name": "headline demotes the blocks (no repeated full cards)",
+      "ok": true,
+      "detail": "rows=17"
+    },
+    {
+      "name": "confidence badges visible on blocks + headline",
+      "ok": true,
+      "detail": "badges=18 levels=somewhat"
+    },
+    {
+      "name": "headline carries the worst badge",
+      "ok": true,
+      "detail": "headline badge=somewhat"
+    },
+    {
+      "name": "effort chips show both \"no plan switch\" and \"plan switch required\"",
+      "ok": true,
+      "detail": "chips=52 efforts=plan-switch-required,no-plan-switch"
+    },
+    {
+      "name": "classification labels present",
+      "ok": true,
+      "detail": "unidentified=11 hvac=3 fixed=3"
+    },
+    {
+      "name": "honest no-fake-label fallback present",
+      "ok": true,
+      "detail": "unidentified=11"
+    }
+  ]
+}

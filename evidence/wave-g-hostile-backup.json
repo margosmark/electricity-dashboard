@@ -1,0 +1,1 @@
+{"schema":"ontario-energy-optimizer.backup","version":1,"exportedAt":"2026-10-02T22:15:06.348Z","payload":{"energy_data":[{"timestamp":"not-a-number","usage_kwh":"x"},null,{"timestamp":1780000000,"usage_kwh":99999999}],"billing_day":"first"}}

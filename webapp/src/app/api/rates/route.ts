@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { hashRateSets, OEB_RATES_URL } from '@/lib/oebRates';
 
 // Official Ontario rates effective November 1, 2025
 // Source: https://www.oeb.ca/consumer-information-and-protection/electricity-rates
@@ -23,9 +24,20 @@ const historicalRates = [
   }
 ];
 
+// Zero-server-state metadata: `ratesSourceVersion` is derived from the data
+// itself (changes iff a rate value/set changes), and `lastChecked` is a build
+// constant — the date the shipped sets were last verified line-for-line
+// against the live OEB page. Bump it whenever you re-verify or append a set.
+// The weekly staleness cron (see OPERATIONS.md) catches drift between this
+// date and what OEB actually publishes.
+const RATES_LAST_CHECKED = '2026-10-02';
+
 export async function GET() {
   return NextResponse.json({
     historicalRates,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    ratesSourceVersion: hashRateSets(historicalRates),
+    lastChecked: RATES_LAST_CHECKED,
+    source: OEB_RATES_URL,
   });
 }
