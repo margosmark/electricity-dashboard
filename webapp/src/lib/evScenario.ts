@@ -83,6 +83,16 @@ function clockRange(hours: number[]): string {
  * like charging (>= EV_MIN_KW for >= EV_MIN_HOURS), measured across the whole
  * loaded dataset.
  *
+ * `usage_kwh` is energy PER READING INTERVAL, so an hour's sum must be divided
+ * by the number of distinct DAYS that hour spans, not by the number of
+ * readings: a day's worth of one clock hour is an hourly kWh (= kW) whatever
+ * cadence the export used. A per-reading divisor reads 4x low on a
+ * 15-minute feed — the block then fails `EV_MIN_KW` and we return null
+ * ("nothing charging-shaped in your data") on a house that does charge.
+ *
+ * For an hourly feed every day contributes exactly one reading to a clock
+ * hour, so days === readings and no existing number moves.
+ *
  * Returns null when nothing in the data is charging-shaped — which is the
  * normal answer for a house without an EV, and must stay null rather than
  * being guessed at.
@@ -91,15 +101,18 @@ export function detectEvCandidate(rows: ProcessedPoint[]): EvCandidate | null {
   if (rows.length === 0) return null;
 
   const sum = new Array<number>(24).fill(0);
-  const count = new Array<number>(24).fill(0);
+  /** Distinct calendar days that contributed a reading to each clock hour. */
+  const hourDays = Array.from({ length: 24 }, () => new Set<string>());
   const daySet = new Set<string>();
   for (const r of rows) {
     const h = r.dateObj.getHours();
     sum[h] += r.usage_kwh;
-    count[h] += 1;
+    hourDays[h].add(r.dayStr);
     daySet.add(r.dayStr);
   }
-  const meanKw = sum.map((s, h) => (count[h] > 0 ? s / count[h] : 0));
+  const meanKw = sum.map((s, h) =>
+    hourDays[h].size > 0 ? s / hourDays[h].size : 0,
+  );
 
   const order = Array.from(DETECT_NIGHT_ORDER);
   let best: number[] = [];
