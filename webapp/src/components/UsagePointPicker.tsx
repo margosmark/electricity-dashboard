@@ -43,13 +43,13 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex justify-center overflow-y-auto overlay-safe"
       role="dialog"
       aria-modal="true"
       aria-label="Choose usage point"
       data-testid="usage-point-picker"
     >
-      <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black font-black uppercase max-h-[90vh] overflow-y-auto">
+      <div className="my-auto bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black font-black uppercase max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4 mb-4 md:mb-6">
           <h2 className="text-2xl md:text-4xl tracking-tighter flex items-center gap-2 md:gap-3">
             <Gauge size={24} strokeWidth={4} /> {groups.length} Usage Points Found
@@ -58,7 +58,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="p-2 border-2 md:border-4 border-black rounded-xl hover:bg-red-500 hover:text-white transition-all"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-black rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all"
           >
             <X size={18} strokeWidth={4} />
           </button>
@@ -101,14 +101,14 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
             type="button"
             data-testid="usage-point-combine"
             onClick={() => onChoose(combined)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-black text-white rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 transition-colors"
+            className="min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-black text-white rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 active:bg-blue-700 transition-colors"
           >
             <Combine size={16} strokeWidth={4} /> Combine all {groups.length} points ({combined.length} readings)
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="py-3 md:py-4 px-6 bg-slate-100 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-slate-200 transition-colors"
+            className="min-h-11 py-3 md:py-4 px-6 bg-slate-100 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-slate-200 active:bg-slate-300 transition-colors"
           >
             Cancel
           </button>

@@ -69,6 +69,54 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * Wave I items 2/3/6 — touch ergonomics and installed-PWA chrome.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Every fixed overlay in the app (upload modal, always-on floor help,
+ * usage-point picker, merge review) uses this instead of a hard `p-4`.
+ *
+ * `viewport-fit: cover` (layout.tsx) hands the standalone PWA the device's
+ * own insets; without padding by them the status bar sits on the modal's
+ * heading and the home indicator sits on the Cancel button. `max()` keeps the
+ * ordinary 1rem minimum when an inset is 0 (i.e. in a normal browser tab).
+ */
+.overlay-safe {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+/**
+ * Same idea for the document: in standalone display the last row of content
+ * must clear the home indicator. All three are 0 in a browser tab, so this is
+ * a no-op for the desktop and screenshot paths.
+ */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/**
+ * Coarse pointers get double-tap-to-zoom on anything scrollable unless we say
+ * otherwise — which reads as a 300 ms lag on every tap of a phone.
+ */
+@media (pointer: coarse) {
+  a,
+  button,
+  [role="button"],
+  [role="tab"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Wave H item 6 — print / PDF layout.
  *
  * Goal: InsightsView prints as a shareable document (spouse, landlord,

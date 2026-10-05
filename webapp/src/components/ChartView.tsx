@@ -156,15 +156,15 @@ export default function ChartView({
       <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
           <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
-            {zoomLevel !== 'monthly' && <button type="button" aria-label="Back to wider view" onClick={goBack} className="no-print p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
+            {zoomLevel !== 'monthly' && <button type="button" aria-label="Back to wider view" onClick={goBack} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white active:bg-black active:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
             <div className="flex items-center gap-2 md:gap-4">
-              <button type="button" aria-label="Previous period" onClick={() => navigatePeriod('prev')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
-              <h2 className="text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate max-w-[150px] sm:max-w-none">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
-              <button type="button" aria-label="Next period" onClick={() => navigatePeriod('next')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label="Previous period" onClick={() => navigatePeriod('prev')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <h2 className="min-w-0 flex-1 text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
+              <button type="button" aria-label="Next period" onClick={() => navigatePeriod('next')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
             </div>
           </div>
           <div className="no-print flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black" role="group" aria-label="Zoom level">
-             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
           </div>
           <div className="text-center lg:text-right text-black font-black">
              <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
@@ -191,7 +191,10 @@ export default function ChartView({
           ) : (
             <>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={activeChartData}>
+            <BarChart
+              data={activeChartData}
+              margin={{ top: 12, right: 24, left: 0, bottom: 8 }}
+            >
               <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
               {/* Subtle season bands: blue = winter window, amber = summer. */}
               {labelsUnique &&
@@ -268,7 +271,7 @@ export default function ChartView({
         {[
           { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` }, { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` }] },
           { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' }] },
-          { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
+          { id: 'ULO', name: 'Ultra-Low Overnight', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
         ].map((plan, i) => (
           <div
             key={i}
