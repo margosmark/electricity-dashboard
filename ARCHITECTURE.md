@@ -150,6 +150,23 @@ handlers throw, which React boundaries never see — into one screen with a
 copyable `ERR-…` id, "your readings were not touched", and a reset that
 re-mounts the tree.
 
+**7. Phone-first, and the phone numbers are checked.** Wave I made 390x844 and
+360x800 first-class viewports instead of a desktop layout squeezed narrow. The
+standing numbers: **no horizontal page scroll** (`documentElement.scrollWidth`
+must equal `clientWidth`) except where a wide grid scrolls *inside* its own
+`overflow-x:auto` card; **every hit box ≥ 44x44 CSS px** (a radio/checkbox
+scores on its wrapping `<label>`, because that is the region a tap activates);
+**every form field ≥ 16px** on phones (iOS auto-zooms the page below that);
+**an overlay is dismissible two ways** — Escape *and* a tap (Cancel, Close, or
+tap-outside for the backup drawer, which has no backdrop); and **every
+`:hover` affordance has an `:active` twin**, because touch never hovers.
+Fixed overlays use `.overlay-safe` rather than `p-4`, so `env(safe-area-inset-*)`
+clears the status bar and home indicator once `viewport-fit: cover` is on.
+All of it is re-runnable in one command —
+`node scripts/mobile-audit.cjs <baseURL> <outdir>` — and CI asserts the
+outcome two ways: the mobile Lighthouse budget (≥0.85, CLS ≤0.1) and the
+Playwright suite.
+
 ## Accessibility quick checklist for new UI
 
 - [ ] Tab reaches it, and the focus ring is visible on it (any background).
@@ -157,6 +174,9 @@ re-mounts the tree.
 - [ ] If it opens an overlay: `role="dialog"` + `aria-modal` + Escape closes it.
 - [ ] If it conveys data, the information exists as text, not only on hover.
 - [ ] It is either printable or explicitly `.no-print`.
+- [ ] At 360px: hit box ≥ 44px, no horizontal page scroll, and a form field is ≥ 16px.
+- [ ] If it has a `:hover` effect it also has `:active`, and if it is an
+      overlay Escape *and* a tap both close it.
 - [ ] It is asserted in `WaveH.test.tsx` (or the journey spec if it needs real CSS).
 
 All pure math lives in `lib/energy.ts` and `lib/touShift.ts`, unit-tested in
@@ -177,8 +197,10 @@ function + test first, then wiring.
 - **CI** (`.github/workflows/ci.yml`, push/PR to main): three jobs —
   `frontend`: lint → typecheck → vitest → build; `smoke`: build the real
   Docker image, boot it, HTTP checks, Playwright (Wave D smoke + Wave H
-  full journey, `tests/e2e/*.spec.ts`) and a **Lighthouse performance budget
-  ≥ 90** (`lighthouserc.json`, `npm run lighthouse` locally); `python`:
+  full journey, `tests/e2e/*.spec.ts`) and **two Lighthouse performance
+  budgets** — desktop ≥ 90 (`lighthouserc.json`) and mobile ≥ 85 with CLS ≤ 0.1
+  (`lighthouserc.mobile.json`, 390x844 @3x under Lighthouse's mobile
+  throttling); `python`:
   pytest for parser tests. A change to either layer runs the full gate for
   that layer.
 - **Dependencies**: `.github/dependabot.yml` opens weekly PRs for npm
