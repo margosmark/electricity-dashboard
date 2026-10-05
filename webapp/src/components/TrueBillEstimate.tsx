@@ -24,7 +24,7 @@ import { useExtraCharges, type ExtraCharges } from '@/hooks/useDashboard';
 
 const FIELD_CLASS =
   'w-full p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl ' +
-  'bg-slate-50 font-black text-[11px] md:text-xs text-black outline-none ' +
+  'bg-slate-50 font-black text-base md:text-xs text-black outline-none ' +
   'focus:bg-yellow-50 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]';
 
 type FieldProps = {

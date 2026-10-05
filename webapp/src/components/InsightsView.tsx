@@ -9,15 +9,30 @@
 "use client";
 
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
 import { AlertTriangle } from 'lucide-react';
 import { type Anomaly, type HeatmapData, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
-import YearOverYearPanel from '@/components/YearOverYearPanel';
 import ShiftOptimizer from '@/components/ShiftOptimizer';
 import ShiftVerificationCard from '@/components/ShiftVerificationCard';
 import EvScenarioCard from '@/components/EvScenarioCard';
 import type { TouShiftAnalysis } from '@/lib/touShift';
 import type { ShiftVerification } from '@/lib/shiftVerification';
+
+/**
+ * Wave I item 4 — the second Recharts entry point.
+ *
+ * `ChartView` already loads its bars behind `next/dynamic`; this panel is the
+ * only other module that imports Recharts, and it is reachable purely through
+ * the Insights tab. Splitting it too takes the ~465 KB Recharts chunk off the
+ * first visit entirely, which under Lighthouse's mobile throttling is measured
+ * in simulated seconds on the LCP critical path.
+ */
+const YearOverYearPanel = dynamic(() => import('@/components/YearOverYearPanel'), {
+  ssr: false,
+  loading: () => null,
+});
+
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
@@ -105,7 +120,7 @@ export default function InsightsView({
                   let bg = 'bg-slate-100';
                   if (int > 0.8) bg = 'bg-red-600 border-red-800'; else if (int > 0.6) bg = 'bg-orange-500 border-orange-700'; else if (int > 0.4) bg = 'bg-yellow-400 border-yellow-600'; else if (int > 0.2) bg = 'bg-blue-300 border-blue-500';
                   const cellLabel = `${day} ${String(hIdx).padStart(2, '0')}:00 — ${hour.avg.toFixed(2)} kWh average`;
-                  return <div key={hIdx} role="gridcell" aria-label={cellLabel} title={cellLabel} className={`heatmap-cell h-8 md:h-12 rounded-sm md:rounded-md border-b-2 md:border-b-4 ${bg} hover:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
+                  return <div key={hIdx} role="gridcell" aria-label={cellLabel} title={cellLabel} className={`heatmap-cell h-8 md:h-12 rounded-sm md:rounded-md border-b-2 md:border-b-4 ${bg} hover:scale-110 active:scale-110 relative group transition-all font-black`}><div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">{hour.avg.toFixed(2)} kWh</div></div>
                })}
              </div>
            ))}

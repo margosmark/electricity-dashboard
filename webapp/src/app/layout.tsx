@@ -37,6 +37,15 @@ export const viewport: Viewport = {
   themeColor: "#facc15",
   width: "device-width",
   initialScale: 1,
+  // Wave I item 6 — let the standalone PWA span the whole display so the
+  // device's own status bar and home indicator are ours to pad around (the
+  // env(safe-area-inset-*) values in globals.css are 0 without this).
+  viewportFit: "cover",
+  // The whole UI is white/black/yellow cards; a system-dark body would show
+  // through as a black band behind them, and iOS paints the standalone
+  // window from `colorScheme`. Pin it so the installed app renders exactly
+  // like the page.
+  colorScheme: "light",
 };
 
 export default function RootLayout({

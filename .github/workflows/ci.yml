@@ -32,7 +32,8 @@ jobs:
     # full upload flow + offline service-worker behaviour via Playwright
     # using a tiny synthetic GreenButton XML (webapp/tests/fixtures), the
     # Wave H full-journey spec (tests/e2e/journey.spec.ts) against the
-    # bundled sample export, and a Lighthouse performance budget of 90.
+    # bundled sample export, and TWO Lighthouse budgets — desktop >= 90 and
+    # mobile >= 85 with CLS <= 0.1 (Wave I).
     # No secrets; runner's preinstalled Chrome (no Playwright downloads).
     name: E2E Smoke (Docker boot, HTTP, upload flow, PWA)
     runs-on: ubuntu-latest
@@ -61,17 +62,28 @@ jobs:
         run: npx playwright test
         env:
           SMOKE_BASE_URL: http://127.0.0.1:3100
-      # Wave H item 11 — performance budget: the desktop-emulated Lighthouse
-      # score for the booted production container must stay >= 90 (PWA/offline
-      # is a feature, so the app staying fast is part of the contract).
-      - name: Lighthouse budget (performance >= 90)
+      # Wave H item 11 — desktop performance budget: the desktop-emulated
+      # Lighthouse score for the booted production container must stay >= 90.
+      - name: Lighthouse budget (desktop, performance >= 90)
         run: npx lhci autorun
-      - name: Lighthouse report (on failure)
+      # Wave I item 4 — the phone budget, same container, Lighthouse's own
+      # mobile emulation (390x844 @3x, 150 ms RTT, 1.6 Mbps, 4x CPU). Desktop
+      # numbers hide everything this app does wrong on a phone, so it gets its
+      # own run rather than a looser number on the desktop one.
+      - name: Lighthouse mobile budget (performance >= 85, CLS <= 0.1)
+        run: npx lhci autorun --config=lighthouserc.mobile.json
+      # lhci only prints failures, so a green run is an opaque check. Echo the
+      # two numbers the budget is actually about, so a later regression shows
+      # up in the log as a moving number and not just "it used to pass".
+      - name: Report the mobile numbers
+        if: success()
+        run: node -e "const fs=require('fs');const f=fs.readdirSync('lhci-reports-mobile').find(x=>x.endsWith('.report.json'));const j=JSON.parse(fs.readFileSync('lhci-reports-mobile/'+f,'utf8'));const lhr=j.lhr||j;console.log('mobile performance',lhr.categories.performance.score,'| CLS',lhr.audits['cumulative-layout-shift'].numericValue,'| LCP',Math.round(lhr.audits['largest-contentful-paint'].numericValue),'ms | TBT',Math.round(lhr.audits['total-blocking-time'].numericValue),'ms')" || true
+      - name: Lighthouse reports (on failure)
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-report
-          path: webapp/lhci-reports
+          path: webapp/lhci-reports*
           if-no-files-found: ignore
       - name: Container logs
         if: failure()

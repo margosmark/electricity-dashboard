@@ -10,11 +10,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceArea
-} from 'recharts';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { type ChartDataItem, type ProcessedPoint, type RateSet, getBarColor } from '@/lib/energy';
+import { type ChartDataItem, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
@@ -60,8 +58,8 @@ export type ChartViewProps = {
  */
 const CHART_ANIMATION_MS = 520;
 
-function ChartSkeleton({ bars }: { bars: number }) {
-  const columns = Math.min(Math.max(bars, 6), 16);
+function ChartSkeleton({ bars }: { bars?: number }) {
+  const columns = Math.min(Math.max(bars ?? 12, 6), 16);
   return (
     <div
       data-testid="chart-skeleton"
@@ -86,6 +84,23 @@ function ChartSkeleton({ bars }: { bars: number }) {
     </div>
   );
 }
+
+/**
+ * Wave I item 4 — Recharts only ships when there is something to draw.
+ *
+ * `next/dynamic` pulls the chart panel (and with it the ~651 KB vendor chunk:
+ * recharts, date-fns, fast-xml-parser) onto its own request, and the render
+ * below is gated on there being at least one bar — so a first visit, whose
+ * chart area is the "no readings in this window" panel, never downloads or
+ * parses it. Lighthouse measured 74.7% of that chunk as unused on exactly that
+ * visit; under mobile throttling every byte on the critical path is simulated
+ * main-thread time. The Wave H shimmer covers the fetch just as it covers
+ * Recharts' own grow-in.
+ */
+const BarChartPanel = dynamic(() => import('@/components/BarChartPanel'), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
 
 export default function ChartView({
   zoomLevel, zoomTarget, goBack, navigatePeriod, setZoomLevelAndClear,
@@ -156,15 +171,15 @@ export default function ChartView({
       <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
         <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
           <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
-            {zoomLevel !== 'monthly' && <button type="button" aria-label="Back to wider view" onClick={goBack} className="no-print p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
+            {zoomLevel !== 'monthly' && <button type="button" aria-label="Back to wider view" onClick={goBack} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white active:bg-black active:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
             <div className="flex items-center gap-2 md:gap-4">
-              <button type="button" aria-label="Previous period" onClick={() => navigatePeriod('prev')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
-              <h2 className="text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate max-w-[150px] sm:max-w-none">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
-              <button type="button" aria-label="Next period" onClick={() => navigatePeriod('next')} className="no-print p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label="Previous period" onClick={() => navigatePeriod('prev')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <h2 className="min-w-0 flex-1 text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate">{zoomTarget || (zoomLevel === 'monthly' ? "Monthly Overview" : zoomLevel)}</h2>
+              <button type="button" aria-label="Next period" onClick={() => navigatePeriod('next')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
             </div>
           </div>
           <div className="no-print flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black" role="group" aria-label="Zoom level">
-             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[10px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
+             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{l}</button>)}
           </div>
           <div className="text-center lg:text-right text-black font-black">
              <div className="text-[8px] md:text-[10px]">Total selection cost ({userPlan})</div>
@@ -190,55 +205,13 @@ export default function ChartView({
             </div>
           ) : (
             <>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={activeChartData}>
-              <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
-              {/* Subtle season bands: blue = winter window, amber = summer. */}
-              {labelsUnique &&
-                segments.map((s, i) => (
-                  <ReferenceArea
-                    key={`season-${s.season}-${i}`}
-                    x1={s.fromLabel}
-                    x2={s.toLabel}
-                    fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
-                    fillOpacity={0.07}
-                    stroke="none"
-                    label={{ value: s.season === 'winter' ? 'WINTER' : 'SUMMER', position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
-                  />
-                ))}
-              <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-              <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-              <Tooltip
-                cursor={{fill: '#000', opacity: 0.05}}
-                contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}}
-                itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}}
-                labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}}
-                formatter={(v, name) => {
-                   if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-                   return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
-                }}
-              />
-              <Bar
-                dataKey="usage"
-                fill="#2563EB"
-                stroke="#000"
-                strokeWidth={3}
-                radius={0}
-                activeBar={{ fill: '#FFD600' }}
-                onClick={(d) => handleBarClick(d as { key?: string } | null)}
-                className="cursor-pointer"
-              >
-                {activeChartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getBarColor(zoomLevel, entry.key)}
-                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                  />
-                ))}
-              </Bar>
-              <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChartPanel
+            data={activeChartData}
+            zoomLevel={zoomLevel}
+            segments={segments}
+            labelsUnique={labelsUnique}
+            onBarClick={handleBarClick}
+          />
               {/* Wave H item 4: shimmer over Recharts' ~500 ms grow-in. */}
               {skeleton && <ChartSkeleton bars={activeChartData.length} />}
             </>
@@ -268,7 +241,7 @@ export default function ChartView({
         {[
           { id: 'Tiered', name: 'Tiered Pricing', cost: comparison?.Tiered, rates: [{ l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` }, { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` }] },
           { id: 'TOU', name: 'Time-of-Use', cost: comparison?.TOU, rates: [{ l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' }] },
-          { id: 'ULO', name: 'Ultra-Low Over', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
+          { id: 'ULO', name: 'Ultra-Low Overnight', cost: comparison?.ULO, rates: [{ l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' }, { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' }, { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' }, { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' }] }
         ].map((plan, i) => (
           <div
             key={i}
