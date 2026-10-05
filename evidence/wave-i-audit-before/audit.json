@@ -1,0 +1,5540 @@
+{
+  "390x844": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "button.py-3.md:py-4.px-6",
+            "w": 302,
+            "h": 43,
+            "text": "CANCEL"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "Window start date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "Window end date"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Previous period"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Next period"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 63,
+            "h": 23,
+            "text": "monthly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 57,
+            "h": 23,
+            "text": "weekly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 47,
+            "h": 23,
+            "text": "daily"
+          },
+          {
+            "sel": "button.no-print.flex.items-center[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-black/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Previous period"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Next period"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 63,
+            "h": 23,
+            "text": "monthly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 57,
+            "h": 23,
+            "text": "weekly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 47,
+            "h": 23,
+            "text": "daily"
+          },
+          {
+            "sel": "button.no-print.flex.items-center[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          },
+          {
+            "sel": "input#charge-delivery-per-kwh.w-full.p-2.md:p-3[charge-delivery-per-kwh]",
+            "w": 145,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-delivery-flat.w-full.p-2.md:p-3[charge-delivery-flat]",
+            "w": 145,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-regulatory-per-kwh.w-full.p-2.md:p-3[charge-regulatory-per-kwh]",
+            "w": 145,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-hst-pct.w-full.p-2.md:p-3[charge-hst-pct]",
+            "w": 145,
+            "h": 37,
+            "text": ""
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          },
+          {
+            "sel": "input#charge-delivery-per-kwh.w-full.p-2.md:p-3[charge-delivery-per-kwh]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-delivery-flat.w-full.p-2.md:p-3[charge-delivery-flat]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-regulatory-per-kwh.w-full.p-2.md:p-3[charge-regulatory-per-kwh]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-hst-pct.w-full.p-2.md:p-3[charge-hst-pct]",
+            "fontSize": 11,
+            "type": "text"
+          }
+        ],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.absolute.top-4.right-4",
+            "w": 40,
+            "h": 40,
+            "text": "Close"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 453,
+          "clientWidth": 390,
+          "overflowPx": 63
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "button.p-1.hover:bg-slate-100.rounded",
+            "w": 24,
+            "h": 24,
+            "text": "Close backup drawer"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.flex.items-start.justify-between",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": false
+  },
+  "360x800": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "button.py-3.md:py-4.px-6",
+            "w": 272,
+            "h": 43,
+            "text": "CANCEL"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "Window start date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "Window end date"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Previous period"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Next period"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 63,
+            "h": 23,
+            "text": "monthly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 57,
+            "h": 23,
+            "text": "weekly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 47,
+            "h": 23,
+            "text": "daily"
+          },
+          {
+            "sel": "button.no-print.flex.items-center[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-black/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Previous period"
+          },
+          {
+            "sel": "button.no-print.p-1.md:p-2",
+            "w": 28,
+            "h": 28,
+            "text": "Next period"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 63,
+            "h": 23,
+            "text": "monthly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 57,
+            "h": 23,
+            "text": "weekly"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 47,
+            "h": 23,
+            "text": "daily"
+          },
+          {
+            "sel": "button.no-print.flex.items-center[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          },
+          {
+            "sel": "input#charge-delivery-per-kwh.w-full.p-2.md:p-3[charge-delivery-per-kwh]",
+            "w": 130,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-delivery-flat.w-full.p-2.md:p-3[charge-delivery-flat]",
+            "w": 130,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-regulatory-per-kwh.w-full.p-2.md:p-3[charge-regulatory-per-kwh]",
+            "w": 130,
+            "h": 37,
+            "text": ""
+          },
+          {
+            "sel": "input#charge-hst-pct.w-full.p-2.md:p-3[charge-hst-pct]",
+            "w": 130,
+            "h": 37,
+            "text": ""
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          },
+          {
+            "sel": "input#charge-delivery-per-kwh.w-full.p-2.md:p-3[charge-delivery-per-kwh]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-delivery-flat.w-full.p-2.md:p-3[charge-delivery-flat]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-regulatory-per-kwh.w-full.p-2.md:p-3[charge-regulatory-per-kwh]",
+            "fontSize": 11,
+            "type": "text"
+          },
+          {
+            "sel": "input#charge-hst-pct.w-full.p-2.md:p-3[charge-hst-pct]",
+            "fontSize": 11,
+            "type": "text"
+          }
+        ],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.absolute.top-4.right-4",
+            "w": 40,
+            "h": 40,
+            "text": "Close"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 453,
+          "clientWidth": 360,
+          "overflowPx": 93
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [
+          {
+            "sel": "button.no-print.ml-auto.px-4[replace-example-data]",
+            "w": 134,
+            "h": 39,
+            "text": "USE MY OWN DATA"
+          },
+          {
+            "sel": "button.p-1.hover:bg-slate-100.rounded",
+            "w": 24,
+            "h": 24,
+            "text": "Close backup drawer"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2025-10-01"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "w": 121,
+            "h": 35,
+            "text": "2026-09-30"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 85,
+            "h": 32,
+            "text": "BILLING PERIOD"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 49,
+            "h": 32,
+            "text": "MONTH"
+          },
+          {
+            "sel": "button.p-2.md:p-3.border-2",
+            "w": 36,
+            "h": 32,
+            "text": "YTD"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 67,
+            "h": 31,
+            "text": "CHART"
+          },
+          {
+            "sel": "button.px-4.md:px-6.py-2",
+            "w": 79,
+            "h": 31,
+            "text": "INSIGHTS"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "w": 32,
+            "h": 16,
+            "text": "1"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 48,
+            "h": 20,
+            "text": "Tiered"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "TOU"
+          },
+          {
+            "sel": "button.px-3.md:px-6.py-1",
+            "w": 41,
+            "h": 20,
+            "text": "ULO"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 40,
+            "h": 30,
+            "text": "$/yr"
+          },
+          {
+            "sel": "button.px-3.md:px-5.py-2",
+            "w": 47,
+            "h": 30,
+            "text": "$/day"
+          },
+          {
+            "sel": "button.flex.items-center.gap-1[export-csv]",
+            "w": 98,
+            "h": 34,
+            "text": "EXPORT CSV"
+          }
+        ],
+        "smallFonts": [
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.p-2.md:p-3.border-2",
+            "fontSize": 10,
+            "type": "date"
+          },
+          {
+            "sel": "input.w-8.md:w-12.bg-transparent",
+            "fontSize": 12,
+            "type": "number"
+          }
+        ],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.flex.items-start.justify-between",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": false
+  }
+}
