@@ -10,11 +10,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceArea
-} from 'recharts';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { type ChartDataItem, type ProcessedPoint, type RateSet, getBarColor } from '@/lib/energy';
+import { type ChartDataItem, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
@@ -60,8 +58,8 @@ export type ChartViewProps = {
  */
 const CHART_ANIMATION_MS = 520;
 
-function ChartSkeleton({ bars }: { bars: number }) {
-  const columns = Math.min(Math.max(bars, 6), 16);
+function ChartSkeleton({ bars }: { bars?: number }) {
+  const columns = Math.min(Math.max(bars ?? 12, 6), 16);
   return (
     <div
       data-testid="chart-skeleton"
@@ -86,6 +84,23 @@ function ChartSkeleton({ bars }: { bars: number }) {
     </div>
   );
 }
+
+/**
+ * Wave I item 4 — Recharts only ships when there is something to draw.
+ *
+ * `next/dynamic` pulls the chart panel (and with it the ~651 KB vendor chunk:
+ * recharts, date-fns, fast-xml-parser) onto its own request, and the render
+ * below is gated on there being at least one bar — so a first visit, whose
+ * chart area is the "no readings in this window" panel, never downloads or
+ * parses it. Lighthouse measured 74.7% of that chunk as unused on exactly that
+ * visit; under mobile throttling every byte on the critical path is simulated
+ * main-thread time. The Wave H shimmer covers the fetch just as it covers
+ * Recharts' own grow-in.
+ */
+const BarChartPanel = dynamic(() => import('@/components/BarChartPanel'), {
+  ssr: false,
+  loading: () => <ChartSkeleton />,
+});
 
 export default function ChartView({
   zoomLevel, zoomTarget, goBack, navigatePeriod, setZoomLevelAndClear,
@@ -190,58 +205,13 @@ export default function ChartView({
             </div>
           ) : (
             <>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={activeChartData}
-              margin={{ top: 12, right: 24, left: 0, bottom: 8 }}
-            >
-              <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
-              {/* Subtle season bands: blue = winter window, amber = summer. */}
-              {labelsUnique &&
-                segments.map((s, i) => (
-                  <ReferenceArea
-                    key={`season-${s.season}-${i}`}
-                    x1={s.fromLabel}
-                    x2={s.toLabel}
-                    fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
-                    fillOpacity={0.07}
-                    stroke="none"
-                    label={{ value: s.season === 'winter' ? 'WINTER' : 'SUMMER', position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
-                  />
-                ))}
-              <XAxis dataKey="label" tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-              <YAxis tick={{fontSize: 12, fill: '#000', fontWeight: 900}} stroke="#000" strokeWidth={4} />
-              <Tooltip
-                cursor={{fill: '#000', opacity: 0.05}}
-                contentStyle={{borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none'}}
-                itemStyle={{color: '#000', fontWeight: 900, fontSize: '18px'}}
-                labelStyle={{fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase'}}
-                formatter={(v, name) => {
-                   if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-                   return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
-                }}
-              />
-              <Bar
-                dataKey="usage"
-                fill="#2563EB"
-                stroke="#000"
-                strokeWidth={3}
-                radius={0}
-                activeBar={{ fill: '#FFD600' }}
-                onClick={(d) => handleBarClick(d as { key?: string } | null)}
-                className="cursor-pointer"
-              >
-                {activeChartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getBarColor(zoomLevel, entry.key)}
-                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                  />
-                ))}
-              </Bar>
-              <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChartPanel
+            data={activeChartData}
+            zoomLevel={zoomLevel}
+            segments={segments}
+            labelsUnique={labelsUnique}
+            onBarClick={handleBarClick}
+          />
               {/* Wave H item 4: shimmer over Recharts' ~500 ms grow-in. */}
               {skeleton && <ChartSkeleton bars={activeChartData.length} />}
             </>

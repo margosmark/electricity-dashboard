@@ -183,11 +183,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   useEffect(() => {
     let mounted = true;
     async function init() {
-      try {
-        const res = await fetch("/api/rates");
-        const json = await res.json();
-        if (mounted) setRateHistory(json.historicalRates || []);
-      } catch { /* rate fetch failure degrades to empty history; math returns [] */ }
+      // localStorage FIRST: it decides both the visible window and whether
+      // there is anything at all to show, and neither answer needs the network.
+      let loadedReadings = false;
       try {
         const savedBDay = localStorage.getItem("billing_day");
         const day = savedBDay ? parseInt(savedBDay, 10) : 1;
@@ -196,6 +194,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         if (savedData) {
           const parsed = JSON.parse(savedData) as DataPoint[];
           if (mounted && Array.isArray(parsed) && parsed.length > 0) {
+            loadedReadings = true;
             setRawData(parsed);
             // A reload must keep saying "this is example data" if it is.
             if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
@@ -205,7 +204,24 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           setShowUploadModal(true);
         }
       } catch { /* corrupt localStorage = treat as fresh */ }
-      if (mounted) setLoading(false);
+
+      // Wave I item 4 — with no readings the rate schedule has nothing to
+      // price and the dashboard renders identically with or without it, so
+      // leave the loading shell BEFORE the network round trip instead of
+      // after it. Under Lighthouse's mobile throttling that round trip was the
+      // LCP critical path: the first large paint was the upload modal's
+      // paragraph, which only existed once /api/rates had answered. With
+      // readings we still wait, so a plan card can never paint a price
+      // computed from an empty rate set.
+      if (mounted && !loadedReadings) setLoading(false);
+
+      try {
+        const res = await fetch("/api/rates");
+        const json = await res.json();
+        if (mounted) setRateHistory(json.historicalRates || []);
+      } catch { /* rate fetch failure degrades to empty history; math returns [] */ }
+
+      if (mounted && loadedReadings) setLoading(false);
     }
     init();
     return () => { mounted = false; };

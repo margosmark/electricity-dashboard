@@ -9,15 +9,30 @@
 "use client";
 
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
 import { AlertTriangle } from 'lucide-react';
 import { type Anomaly, type HeatmapData, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
-import YearOverYearPanel from '@/components/YearOverYearPanel';
 import ShiftOptimizer from '@/components/ShiftOptimizer';
 import ShiftVerificationCard from '@/components/ShiftVerificationCard';
 import EvScenarioCard from '@/components/EvScenarioCard';
 import type { TouShiftAnalysis } from '@/lib/touShift';
 import type { ShiftVerification } from '@/lib/shiftVerification';
+
+/**
+ * Wave I item 4 — the second Recharts entry point.
+ *
+ * `ChartView` already loads its bars behind `next/dynamic`; this panel is the
+ * only other module that imports Recharts, and it is reachable purely through
+ * the Insights tab. Splitting it too takes the ~465 KB Recharts chunk off the
+ * first visit entirely, which under Lighthouse's mobile throttling is measured
+ * in simulated seconds on the LCP critical path.
+ */
+const YearOverYearPanel = dynamic(() => import('@/components/YearOverYearPanel'), {
+  ssr: false,
+  loading: () => null,
+});
+
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
