@@ -72,6 +72,12 @@ jobs:
       # own run rather than a looser number on the desktop one.
       - name: Lighthouse mobile budget (performance >= 85, CLS <= 0.1)
         run: npx lhci autorun --config=lighthouserc.mobile.json
+      # lhci only prints failures, so a green run is an opaque check. Echo the
+      # two numbers the budget is actually about, so a later regression shows
+      # up in the log as a moving number and not just "it used to pass".
+      - name: Report the mobile numbers
+        if: success()
+        run: node -e "const fs=require('fs');const f=fs.readdirSync('lhci-reports-mobile').find(x=>x.endsWith('.report.json'));const j=JSON.parse(fs.readFileSync('lhci-reports-mobile/'+f,'utf8'));const lhr=j.lhr||j;console.log('mobile performance',lhr.categories.performance.score,'| CLS',lhr.audits['cumulative-layout-shift'].numericValue,'| LCP',Math.round(lhr.audits['largest-contentful-paint'].numericValue),'ms | TBT',Math.round(lhr.audits['total-blocking-time'].numericValue),'ms')" || true
       - name: Lighthouse reports (on failure)
         if: failure()
         uses: actions/upload-artifact@v7
