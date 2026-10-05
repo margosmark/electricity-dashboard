@@ -167,6 +167,17 @@ That turned three things into measurable work instead of guesses:
    rate schedule has nothing to price. With readings it still waits, so a
    plan card can never paint a price computed from an empty rate set.
 
+The re-run after those three fixes passed, and CI now prints the numbers on
+every green run instead of hiding them behind an opaque check:
+
+```
+mobile performance 0.89 | CLS 0 | LCP 3080 ms | TBT 259 ms   (GitHub runner)
+```
+
+`gh pr checks` on the merged PR: **3/3 jobs pass** — Frontend (lint, typecheck,
+515 tests, build), E2E Smoke (Docker boot, HTTP, Playwright 12/12, desktop
+budget, mobile budget), Python.
+
 What was *rejected* after measuring: deferring the Insights-only computations
 (anomalies, heatmap, ToU-shift, verification) to first open of the Insights tab
 saves **11 ms** of the 122 ms — not worth the added statefulness. Splitting
@@ -219,7 +230,26 @@ and it carries a real meter. It lives at the task workspace root as
 `oakville-real-export.xml` for this run only; re-point `WAVE_I_XML` at any
 Green Button export to repeat the pass.
 
-## 7. Gates
+## 7. Deployed verification
+
+`~/bin/deploy-energy-dashboard.sh` on .110 rebuilt the container from `main` and
+reported `DEPLOY_OK at 24f6026`. Everything below was then run against the
+**public origin a real phone installs from** — `https://electricity.markarslan.ca`
+(200), with the LAN container `http://10.10.11.110:3939` as a second check.
+
+| Check | Result |
+|---|---|
+| `mobile-audit.cjs`, bundled example year, 390x844 + 360x800, 5 states | **0 findings**, CLS 0, all four dismissal paths true → `wave-i-deployed-sample-audit.json` |
+| `mobile-audit.cjs`, **real Oakville export**, same 10 runs | **0 findings**, CLS 0, all four dismissal paths true → `wave-i-deployed-oakville-audit.json` |
+| `cls-probe.cjs` (4x CPU / 400 ms RTT / 500 kbps) | **CLS 0.0000, 0 shifts** |
+| `pwa-check.cjs` | **25/25** → `wave-i-pwa.json` |
+| Lighthouse **mobile** 390x844 (the CI config) | **0.92 / 0.98**, LCP 2 462 / 2 467 ms, CLS 0 |
+| Lighthouse **desktop** 1350x940 (the Wave H config) | **1.00** |
+
+Screenshots: `wave-i-deployed-390-chart.jpg`, `wave-i-deployed-360-insights.jpg`
+(sample year) and `wave-i-deployed-oakville-390-chart.jpg` (real export).
+
+## 8. Gates
 
 - `npm run lint` — clean (the four `scripts/*.cjs` carry an explicit
   `eslint-disable` for `no-require-imports`; they are run by `node`, not bundled)
@@ -233,3 +263,7 @@ Green Button export to repeat the pass.
 - `npx lhci autorun --config=lighthouserc.mobile.json` (mobile ≥0.85, CLS ≤0.1)
   — pass
 - `node scripts/pwa-check.cjs` — **25/25**
+- **CI on the PR**: 3/3 jobs green (Frontend, E2E Smoke with *both* Lighthouse
+  budgets, Python) — mobile **0.89 / CLS 0**, desktop 1.00
+- **Deployed**: `DEPLOY_OK at 24f6026`, then the whole audit repeated against
+  the public origin — see §7
