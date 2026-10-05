@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import {
-  format, isWeekend, startOfWeek, startOfMonth,
+  isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
   startOfDay, isAfter, addDays, endOfMonth, differenceInCalendarDays,
 } from 'date-fns';
@@ -531,13 +531,69 @@ export function getUloRateKey(category: string): 'overnight' | 'weekendOffPeak' 
   return 'onPeak';
 }
 
+/* ---------------------------------------------------------------------------
+ * Wave I — fast local date formatting.
+ *
+ * `date-fns` `format()` parses its pattern on EVERY call. On the bundled
+ * 8,760-reading example year the Chart pipeline issued ~35,000 of them per
+ * cold load, measured at 43.6 ms (processRawData) + 25.5 ms (aggregation) of
+ * the 286 ms pipeline — and a phone at 4x CPU slowdown pays that four times
+ * over. These helpers build byte-identical strings for the six patterns this
+ * file actually uses with plain arithmetic in local time, which is what
+ * `format()` does too, so no displayed value changes.
+ * ------------------------------------------------------------------------- */
+const MONTH_ABBR = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const p2 = (n: number): string => (n < 10 ? `0${n}` : String(n));
+
+/** `yyyy-MM-dd` in local time — the app's day key everywhere. */
+export function fmtDay(dt: Date): string {
+  return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}-${p2(dt.getDate())}`;
+}
+
+/** `yyyy-MM` in local time — the monthly bucket key. */
+export function fmtMonthKey(dt: Date): string {
+  return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}`;
+}
+
+/** `MMM yyyy` — the monthly bar label ("Sep 2026"). */
+export function fmtMonthLabel(dt: Date): string {
+  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+
+/** `MMM dd` — the daily bar label ("Oct 04"), zero-padded exactly like date-fns. */
+export function fmtDayLabel(dt: Date): string {
+  return `${MONTH_ABBR[dt.getMonth()]} ${p2(dt.getDate())}`;
+}
+
+/** `HH:mm` — the hourly bar label ("07:00"), zero-padded. */
+export function fmtHour(dt: Date): string {
+  return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
+}
+
+/** Monday 00:00 local — `startOfWeek(d, { weekStartsOn: 1 })`, without the parse. */
+export function mondayOf(dt: Date): Date {
+  const midnight = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  midnight.setDate(midnight.getDate() - ((midnight.getDay() + 6) % 7));
+  return midnight;
+}
+
 export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): ProcessedPoint[] {
   if (rateHistory.length === 0) return [];
   const sorted = [...rateHistory].sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate));
+  // Rate schedules change a handful of times a year, not per reading: resolve
+  // once per distinct day instead of scanning `sorted` 8,760 times.
+  const ratesByDay = new Map<string, RateSet>();
   return rawData.map((d) => {
     const dt = new Date(d.timestamp * 1000);
-    const dayStr = format(dt, 'yyyy-MM-dd');
-    const rates = sorted.find((r) => dayStr >= r.effectiveDate) || sorted[sorted.length - 1];
+    const dayStr = fmtDay(dt);
+    let rates = ratesByDay.get(dayStr);
+    if (!rates) {
+      rates = sorted.find((r) => dayStr >= r.effectiveDate) || sorted[sorted.length - 1];
+      ratesByDay.set(dayStr, rates);
+    }
     const touCategory = categorizeTOU(dt);
     const uloCategory = categorizeULO(dt);
     const isWinter = dt.getMonth() >= 10 || dt.getMonth() <= 3;
@@ -548,7 +604,7 @@ export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): Pr
       ...d,
       dateObj: dt,
       dayStr,
-      hourStr: format(dt, 'HH:mm'),
+      hourStr: fmtHour(dt),
       touCategory,
       uloCategory,
       isWinter,
@@ -577,11 +633,9 @@ export function getFilteredForZoom(
   zoomTarget: string | null,
 ): ProcessedPoint[] {
   if (!zoomTarget) return filteredData;
-  if (zoomLevel === 'weekly') return filteredData.filter((d) => format(d.dateObj, 'yyyy-MM') === zoomTarget);
+  if (zoomLevel === 'weekly') return filteredData.filter((d) => fmtMonthKey(d.dateObj) === zoomTarget);
   if (zoomLevel === 'daily')
-    return filteredData.filter(
-      (d) => format(startOfWeek(d.dateObj, { weekStartsOn: 1 }), 'yyyy-MM-dd') === zoomTarget,
-    );
+    return filteredData.filter((d) => fmtDay(mondayOf(d.dateObj)) === zoomTarget);
   if (zoomLevel === 'hourly') return filteredData.filter((d) => d.dayStr === zoomTarget);
   return filteredData;
 }
@@ -601,33 +655,63 @@ export function aggregateChartData(
     }));
   }
 
-  const map = new Map<string, { label: string; usage: number; key: string; costTOU: number; costULO: number; readings: ProcessedPoint[] }>();
-  data.forEach((d) => {
-    let l = '';
-    let k = '';
+  type Bucket = {
+    label: string;
+    usage: number;
+    key: string;
+    costTOU: number;
+    costULO: number;
+    /** First reading of the bucket — carries the season + rate schedule. */
+    first: ProcessedPoint;
+    /** Distinct days seen, for the tiered threshold's per-30.4-day scaling. */
+    days: Set<string>;
+  };
+
+  // Wave I: a bucket's label and key depend only on the reading's DAY, never
+  // on the row, so derive them once per distinct day. The old code ran two
+  // date-fns `format()` parses per reading — 17,520 of them for a year of
+  // hourly data — and kept every ProcessedPoint in a per-bucket array just to
+  // count distinct days and read element [0].
+  const metaByDay = new Map<string, { label: string; key: string }>();
+  const metaFor = (d: ProcessedPoint): { label: string; key: string } => {
+    const hit = metaByDay.get(d.dayStr);
+    if (hit) return hit;
+    let label = '';
+    let key = '';
     if (zoomLevel === 'monthly') {
-      l = format(d.dateObj, 'MMM yyyy');
-      k = format(d.dateObj, 'yyyy-MM');
+      label = fmtMonthLabel(d.dateObj);
+      key = fmtMonthKey(d.dateObj);
     } else if (zoomLevel === 'weekly') {
-      const mon = startOfWeek(d.dateObj, { weekStartsOn: 1 });
-      l = 'Week of ' + format(mon, 'MMM dd');
-      k = format(mon, 'yyyy-MM-dd');
+      const mon = mondayOf(d.dateObj);
+      label = 'Week of ' + fmtDayLabel(mon);
+      key = fmtDay(mon);
     } else if (zoomLevel === 'daily') {
-      l = format(d.dateObj, 'MMM dd');
-      k = d.dayStr;
+      label = fmtDayLabel(d.dateObj);
+      key = d.dayStr;
     }
-    if (!map.has(k)) map.set(k, { label: l, usage: 0, key: k, costTOU: 0, costULO: 0, readings: [] });
-    const o = map.get(k)!;
+    const meta = { label, key };
+    metaByDay.set(d.dayStr, meta);
+    return meta;
+  };
+
+  const map = new Map<string, Bucket>();
+  for (const d of data) {
+    const { label, key } = metaFor(d);
+    let o = map.get(key);
+    if (!o) {
+      o = { label, usage: 0, key, costTOU: 0, costULO: 0, first: d, days: new Set() };
+      map.set(key, o);
+    }
     o.usage += d.usage_kwh;
     o.costTOU += d.costTOU;
     o.costULO += d.costULO;
-    o.readings.push(d);
-  });
+    o.days.add(d.dayStr);
+  }
 
   return Array.from(map.values())
     .map((v) => {
-      const r = v.readings[0];
-      const days = new Set(v.readings.map((x) => x.dayStr)).size;
+      const r = v.first;
+      const days = v.days.size;
       const th =
         (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) *
         (days / 30.4);
@@ -635,7 +719,7 @@ export function aggregateChartData(
         v.usage <= th
           ? v.usage * (r.activeRateSet.tiered.tier1 / 100)
           : th * (r.activeRateSet.tiered.tier1 / 100) + (v.usage - th) * (r.activeRateSet.tiered.tier2 / 100);
-      return { ...v, costTiered };
+      return { label: v.label, usage: v.usage, key: v.key, costTOU: v.costTOU, costULO: v.costULO, costTiered };
     })
     .sort((a, b) => a.key.localeCompare(b.key));
 }
@@ -718,14 +802,14 @@ export function selectInitialWindow(
   const anchor = isAfter(lastDay, today) ? startOfDay(today) : lastDay;
 
   const daysWithReadings = new Set(
-    rawData.map((d) => format(new Date(d.timestamp * 1000), 'yyyy-MM-dd')),
+    rawData.map((d) => fmtDay(new Date(d.timestamp * 1000))),
   );
   const coverage = (s: Date, e: Date): number => {
     const total = differenceInCalendarDays(e, s) + 1;
     if (total <= 0) return 0;
     let withData = 0;
     for (let d = s; !isAfter(d, e); d = addDays(d, 1)) {
-      if (daysWithReadings.has(format(d, 'yyyy-MM-dd'))) withData += 1;
+      if (daysWithReadings.has(fmtDay(d))) withData += 1;
     }
     return withData / total;
   };
@@ -744,8 +828,8 @@ export function selectInitialWindow(
   for (const c of candidates) {
     if (coverage(c.window.start, c.window.end) >= MIN_WINDOW_COVERAGE) {
       return {
-        start: format(c.window.start, 'yyyy-MM-dd'),
-        end: format(c.window.end, 'yyyy-MM-dd'),
+        start: fmtDay(c.window.start),
+        end: fmtDay(c.window.end),
         scope: c.scope,
       };
     }
@@ -754,8 +838,8 @@ export function selectInitialWindow(
   // Unreachable in practice (the trailing window is data-anchored); if the
   // dataset's own days are mostly missing, show the raw data range instead.
   return {
-    start: format(firstDay, 'yyyy-MM-dd'),
-    end: format(lastDay, 'yyyy-MM-dd'),
+    start: fmtDay(firstDay),
+    end: fmtDay(lastDay),
     scope: 'Custom',
   };
 }
@@ -810,8 +894,8 @@ export function calculateFullDataTotals(processedData: ProcessedPoint[]): FullDa
   }
 
   return {
-    firstDate: format(oldest.dateObj, 'yyyy-MM-dd'),
-    lastDate: format(newest.dateObj, 'yyyy-MM-dd'),
+    firstDate: fmtDay(oldest.dateObj),
+    lastDate: fmtDay(newest.dateObj),
     totalKwh,
     costTOU: costs.TOU,
     costTiered: costs.Tiered,
@@ -1304,7 +1388,7 @@ export type MergeResult = {
 };
 
 function dayOfTimestamp(ts: number): string {
-  return format(new Date(ts * 1000), 'yyyy-MM-dd');
+  return fmtDay(new Date(ts * 1000));
 }
 
 export function mergeReadings(sources: MergeSource[]): MergeResult {

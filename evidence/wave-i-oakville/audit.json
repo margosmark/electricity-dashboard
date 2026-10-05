@@ -1,0 +1,4600 @@
+{
+  "390x844": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-black/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.flex.items-start.justify-between",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "dataset": "oakville-real-export.xml",
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": true
+  },
+  "360x800": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-black/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [
+          {
+            "sel": "div.min-w-[600px].md:min-w-[800px].text-black",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.text-center.text-[8px].md:text-[10px]",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "static"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.grid.grid-cols-[auto_repeat(24,minmax(0,1fr))].gap-1",
+            "left": 42,
+            "right": 642,
+            "w": 600,
+            "pos": "static"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 347,
+            "right": 366,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 370,
+            "right": 389,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 393,
+            "right": 412,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 416,
+            "right": 435,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 439,
+            "right": 458,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 462,
+            "right": 481,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 485,
+            "right": 504,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 508,
+            "right": 527,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 531,
+            "right": 550,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 554,
+            "right": 573,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 577,
+            "right": 596,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 600,
+            "right": 619,
+            "w": 19,
+            "pos": "relative"
+          },
+          {
+            "sel": "div.heatmap-cell.h-8.md:h-12",
+            "left": 623,
+            "right": 642,
+            "w": 19,
+            "pos": "relative"
+          }
+        ],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.flex.items-start.justify-between",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "dataset": "oakville-real-export.xml",
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": true
+  }
+}

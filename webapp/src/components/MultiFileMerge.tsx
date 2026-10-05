@@ -57,11 +57,11 @@ export default function MultiFileMerge({
       aria-modal="true"
       aria-label="Review merged exports"
       data-testid="merge-dialog"
-      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
     >
       <div
         data-testid="merge-review"
-        className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black max-h-[90vh] overflow-y-auto"
+        className="my-auto bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-xl md:text-4xl uppercase tracking-tighter mb-1 md:mb-2 flex items-center gap-2 md:gap-3 font-black">
           <Files size={22} className="md:w-10 md:h-10" strokeWidth={4} /> Merge {files.length}{' '}
@@ -105,7 +105,7 @@ export default function MultiFileMerge({
                     <label
                       key={g.id || j}
                       data-testid={`merge-meter-${i}-${j}`}
-                      className="flex items-center gap-2 text-[10px] md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
+                      className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -118,7 +118,7 @@ export default function MultiFileMerge({
                   ))}
                   <label
                     data-testid={`merge-combine-${i}`}
-                    className="flex items-center gap-2 text-[10px] md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
+                    className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
                   >
                     <input
                       type="radio"

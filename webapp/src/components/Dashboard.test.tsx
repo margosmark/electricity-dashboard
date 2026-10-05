@@ -122,7 +122,7 @@ describe('Dashboard', () => {
     const chart = within(screen.getByTestId('chart-view'));
     expect(chart.getByText('Time-of-Use')).toBeInTheDocument();
     expect(chart.getByText('Tiered Pricing')).toBeInTheDocument();
-    expect(chart.getByText('Ultra-Low Over')).toBeInTheDocument();
+    expect(chart.getByRole('heading', { name: 'Ultra-Low Overnight' })).toBeInTheDocument();
   });
 
   // --- Behavior (not shape): rate chips must come from the active RateSet ---

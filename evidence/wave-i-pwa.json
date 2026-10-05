@@ -1,0 +1,133 @@
+{
+  "url": "http://127.0.0.1:3199",
+  "checkedAt": "2026-10-05T00:26:36.738Z",
+  "results": [
+    {
+      "name": "manifest served with 200",
+      "pass": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "manifest parses as JSON",
+      "pass": true,
+      "detail": "ok"
+    },
+    {
+      "name": "name + short_name",
+      "pass": true,
+      "detail": "Ontario Energy Optimizer / Energy Optimizer"
+    },
+    {
+      "name": "display: standalone",
+      "pass": true,
+      "detail": "standalone"
+    },
+    {
+      "name": "start_url + scope + id",
+      "pass": true,
+      "detail": "/ scope=/ id=/"
+    },
+    {
+      "name": "theme_color is set",
+      "pass": true,
+      "detail": "#facc15"
+    },
+    {
+      "name": "background_color is set",
+      "pass": true,
+      "detail": "#f8fafc"
+    },
+    {
+      "name": "icon 192 for `any`",
+      "pass": true,
+      "detail": "/icons/icon-192.png"
+    },
+    {
+      "name": "icon 512 for `any`",
+      "pass": true,
+      "detail": "/icons/icon-512.png"
+    },
+    {
+      "name": "maskable icon present",
+      "pass": true,
+      "detail": "/icons/icon-maskable-512.png (maskable)"
+    },
+    {
+      "name": "icon pixels match its claim (/icons/icon-192.png)",
+      "pass": true,
+      "detail": "192x192, claims 192x192, 1.3 KB"
+    },
+    {
+      "name": "icon pixels match its claim (/icons/icon-512.png)",
+      "pass": true,
+      "detail": "512x512, claims 512x512, 3.8 KB"
+    },
+    {
+      "name": "icon pixels match its claim (/icons/icon-maskable-512.png)",
+      "pass": true,
+      "detail": "512x512, claims 512x512, 13.4 KB"
+    },
+    {
+      "name": "maskable artwork inside the 80% safe circle",
+      "pass": true,
+      "detail": "bbox 131-380 x 101-409, half-diagonal 198.0px vs safe radius 204.8px, centre offset (-0.5, -1.0)px"
+    },
+    {
+      "name": "icon pixels match its claim (/icons/apple-touch-icon.png)",
+      "pass": true,
+      "detail": "180x180, claims 180x180, 1.2 KB"
+    },
+    {
+      "name": "meta viewport has viewport-fit=cover",
+      "pass": true,
+      "detail": "width=device-width, initial-scale=1, viewport-fit=cover"
+    },
+    {
+      "name": "meta viewport keeps width=device-width + initial-scale",
+      "pass": true,
+      "detail": "width=device-width, initial-scale=1, viewport-fit=cover"
+    },
+    {
+      "name": "theme-color meta matches manifest",
+      "pass": true,
+      "detail": "#facc15"
+    },
+    {
+      "name": "apple-mobile-web-app-capable",
+      "pass": true,
+      "detail": "yes"
+    },
+    {
+      "name": "apple status bar style declared",
+      "pass": true,
+      "detail": "default"
+    },
+    {
+      "name": "manifest link tag",
+      "pass": true,
+      "detail": "http://127.0.0.1:3199/manifest.webmanifest"
+    },
+    {
+      "name": "apple-touch-icon link",
+      "pass": true,
+      "detail": "http://127.0.0.1:3199/icons/apple-touch-icon.png"
+    },
+    {
+      "name": "browser supports env(safe-area-inset-*)",
+      "pass": true,
+      "detail": "true"
+    },
+    {
+      "name": ".overlay-safe resolves real padding",
+      "pass": true,
+      "detail": "{\"top\":\"16px\",\"right\":\"16px\",\"bottom\":\"16px\",\"left\":\"16px\"}"
+    },
+    {
+      "name": "upload modal is scrollable + inset-padded",
+      "pass": true,
+      "detail": "{\"top\":\"16px\",\"bottom\":\"16px\",\"overflowY\":\"auto\",\"height\":\"804px\"}"
+    }
+  ],
+  "passed": 25,
+  "failed": 0
+}

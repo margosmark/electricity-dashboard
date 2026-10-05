@@ -27,8 +27,9 @@ type Props = {
 };
 
 const TOGGLE_CLASS =
+  'min-h-11 min-w-11 inline-flex items-center justify-center ' +
   'p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl ' +
-  'shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 transition-all';
+  'shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(124,58,237,1)] transition-all';
 
 export function BackupControls({ onExport, onImport, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
@@ -58,6 +59,30 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+  // Wave I item 2 — the drawer used to be `absolute left-0 w-[300px]` inside a
+  // wrapper that was `relative` at EVERY width, so its position followed the
+  // toggle: on a 390 px phone the toggle sits at x≈153 and the drawer ran to
+  // x≈453, giving the document 63–93 px of horizontal scroll (measured
+  // scrollWidth 453 vs 390/360). Below `md` the wrapper is no longer the
+  // positioning context, so the drawer anchors to the nav card instead —
+  // `left-0 right-0` spans that card and can never leave the viewport. At `md`
+  // and up the toggle is the anchor again, which is where the popover belongs
+  // on a wide screen.
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Wave I item 2 (part 2) — the mobile touch path for closing the drawer.
+  // Escape works, but a phone has no Escape key and the drawer sits on top of
+  // the page with no backdrop: tapping anywhere outside it now dismisses it.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && rootRef.current && !rootRef.current.contains(target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [open]);
+
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,7 +115,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
   };
 
   return (
-    <div className="relative">
+    <div ref={rootRef} className="md:relative">
       <button
         type="button"
         data-testid="backup-toggle"
@@ -108,7 +133,9 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
       {open && (
         <div
           data-testid="backup-drawer"
-          className="absolute left-0 top-[calc(100%+8px)] z-[250] w-[300px] md:w-[340px] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
+          role="dialog"
+          aria-label="Backup and restore"
+          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[340px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">Backup &amp; Restore</div>
@@ -116,7 +143,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               type="button"
               aria-label="Close backup drawer"
               onClick={() => setOpen(false)}
-              className="p-1 hover:bg-slate-100 rounded"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
             >
               <X size={16} strokeWidth={4} />
             </button>
@@ -133,7 +160,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               data-testid="backup-export"
               onClick={handleExport}
               disabled={disabled}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-yellow-400 text-[10px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-yellow-400 text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
               <Download size={14} strokeWidth={4} /> Export JSON
             </button>
@@ -143,7 +170,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               data-testid="backup-import"
               onClick={() => inputRef.current?.click()}
               disabled={disabled || busy}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-white text-[10px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-white text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
               <Upload size={14} strokeWidth={4} /> Import JSON
             </button>
