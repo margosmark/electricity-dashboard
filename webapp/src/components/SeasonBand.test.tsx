@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import ChartView, { type ChartViewProps } from './ChartView';
 import { type ChartDataItem, type ProcessedPoint, type RateSet } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
@@ -122,14 +122,19 @@ describe('season band chips', () => {
     expect(labels[1]).toMatch(/Winter/);
   });
 
-  it('renders a ReferenceArea band per season over the bars', () => {
+  it('renders a ReferenceArea band per season over the bars', async () => {
     render(<ChartView {...props({
       activeChartData: [bar('2026-04-30'), bar('2026-05-01')],
       filteredData: row(false),
     })} />);
-    // ResponsiveContainer is 0x0 in jsdom; recharts still builds the layer, so
-    // if this ever stops rendering the browser check in evidence/ is the backstop.
-    expect(document.querySelectorAll('.recharts-reference-area').length).toBeGreaterThan(0);
+    // The bars moved behind `next/dynamic` in Wave I (recharts only ships when
+    // there is something to draw), so the panel arrives on its own chunk — wait
+    // for it instead of asserting on the first synchronous render.
+    await waitFor(() => {
+      // ResponsiveContainer is 0x0 in jsdom; recharts still builds the layer, so
+      // if this ever stops rendering the browser check in evidence/ is the backstop.
+      expect(document.querySelectorAll('.recharts-reference-area').length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
   });
 });
 
