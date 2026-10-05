@@ -102,9 +102,11 @@ rtt 40 ms, ≥0.90).
 | Run | Before | After |
 |---|---|---|
 | **Desktop**, performance | 0.95 (Wave H), 0.95 re-measured here | **1.00** |
-| **Mobile 390**, performance, fresh profile | 0.87 / 0.88 / 0.89 | **0.91 / 0.91 / 0.90** |
-| **Mobile 390**, performance, 8 760 rows in localStorage | **0.85** (exactly at the line) | **0.97** |
-| Mobile 390, total blocking time (8 760 rows) | 355 ms | **188 ms** |
+| **Mobile 390**, performance, fresh profile | 0.87 / 0.88 / 0.89 | **0.94 / 0.94 / 0.94** |
+| **Mobile 390**, performance, 8 760 rows in localStorage | **0.85** (exactly at the line) | **0.92 / 0.94 / 0.95** |
+| Mobile 390, LCP, fresh profile | 3 327–3 512 ms | **3 030–3 049 ms** |
+| Mobile 390, total blocking time, fresh profile | 110–146 ms | **62–77 ms** |
+| Mobile 390, total blocking time (8 760 rows) | 355 ms | **272–347 ms** |
 | Mobile 390, CLS | 0.134–0.152 when the race hit | **0** in every run |
 
 The "8 760 rows in localStorage" column is not a synthetic number either:
@@ -114,26 +116,56 @@ that profile with `--disable-storage-reset` — i.e. the state a returning
 installable-PWA user actually lands in, which is where the old 0.85 came from.
 
 `npx lhci autorun` (desktop) and `npx lhci autorun --config=lighthouserc.mobile.json`
-both pass locally against the production build, and both are green in CI.
+both pass locally against the production build.
 
-**Where the mobile score went.** The dominant cost was not recharts and not the
-SW — it was `date-fns`'s `format()`, which *parses its pattern on every call*.
-The pipeline was issuing ~35 000 of them per cold load. Measured head-to-head on
-the same host, same session, 8 760 readings (`HEAD:energy.ts` → Wave I):
+### The first CI run failed at 0.82 — and that is the useful number
 
-| Step | Before | After |
-|---|---|---|
-| `processRawData` | 41.2 ms | **22.6 ms** (−45%) |
-| `buildActiveChartData` | 26.4 ms | **5.0 ms** (−81%) |
-| `calculateFullDataTotals` | 20.3 ms | **5.0 ms** (−75%) |
-| **Cold-load pipeline (excl. XML parse)** | **121.8 ms** | **60.9 ms** (−50%) |
+The new mobile step ran green through everything except its own assertion on
+the first push: **0.82 against the Docker container on the GitHub runner**
+(desktop 1.00 in the same job, CLS 0). Same repo, same config, 0.09 below the
+local number — a shared 4-vCPU runner at 4x CPU slowdown, and Lighthouse's
+simulated LCP broke down as **TTFB 453 ms (14%) / Render Delay 2 864 ms
+(86%)**, i.e. the bottleneck was never the network: it was download + parse +
+execute of the first-load JS before React could commit the upload modal.
 
-The fix is six local formatting helpers (`fmtDay`, `fmtHour`, `fmtMonthKey`,
-`fmtMonthLabel`, `fmtDayLabel`, `mondayOf`) that build byte-identical strings
-with arithmetic in local time, plus a per-day cache for the bucket label/key and
-a per-day cache for the rate schedule. All 515 unit tests — including the whole
-`energy.test.ts` suite — still pass, which is the regression guard on the
-strings being identical.
+That turned three things into measurable work instead of guesses:
+
+1. **`date-fns` `format()` in the hot path** — it re-parses its pattern on
+   *every* call and the pipeline issued ~35 000 of them per cold load.
+   Head-to-head on the same host, same session, 8 760 readings
+   (`HEAD:energy.ts` → Wave I):
+
+   | Step | Before | After |
+   |---|---|---|
+   | `processRawData` | 41.2 ms | **22.6 ms** (−45%) |
+   | `buildActiveChartData` | 26.4 ms | **5.0 ms** (−81%) |
+   | `calculateFullDataTotals` | 20.3 ms | **5.0 ms** (−75%) |
+   | **Cold-load pipeline (excl. XML parse)** | **121.8 ms** | **60.9 ms** (−50%) |
+
+   Six local helpers (`fmtDay`, `fmtHour`, `fmtMonthKey`, `fmtMonthLabel`,
+   `fmtDayLabel`, `mondayOf`) build byte-identical strings with arithmetic in
+   local time, plus a per-day cache for the bucket label/key and one for the
+   rate schedule. All 515 unit tests — including the whole `energy.test.ts`
+   suite — still pass, which is the regression guard on the strings.
+
+2. **Recharts off the first visit.** Lighthouse's own `unused-javascript`
+   audit named it: the vendor chunk was **74.7% unused (141 KB of 190 KB)**
+   on a first visit, whose chart area is the "no readings in this window"
+   panel. Both Recharts entry points now sit behind `next/dynamic` —
+   `ChartView`'s bars (`BarChartPanel`, rendered only when there is at least
+   one bar) and the Insights tab's trend chart (`YearOverYearPanel`). The
+   first alone changed nothing (the trend chart still imported Recharts
+   statically, so Turbopack kept the chunk in the page's script list); with
+   both split, **initial JS dropped 1 212 KB → 849 KB (−30%)**, TBT
+   110–146 → **62–77 ms**, LCP 3 330 → **3 030 ms**.
+
+3. **The upload modal stopped waiting for `/api/rates`.** `init()` used to
+   `await fetch("/api/rates")` before touching localStorage, so the first
+   large paint (the modal's paragraph — Lighthouse's LCP element) could not
+   exist until a network round trip had answered. localStorage now runs
+   first; with no readings the shell is left *before* the fetch, because the
+   rate schedule has nothing to price. With readings it still waits, so a
+   plan card can never paint a price computed from an empty rate set.
 
 What was *rejected* after measuring: deferring the Insights-only computations
 (anomalies, heatmap, ToU-shift, verification) to first open of the Insights tab
@@ -141,13 +173,14 @@ saves **11 ms** of the 122 ms — not worth the added statefulness. Splitting
 `fast-xml-parser` out of the initial bundle saves parse work that only happens
 on an upload (178 ms, off the cold-load path). Both stay as-is.
 
-**Honest residual.** The fresh-profile mobile score sits at 0.90–0.91 rather
-than the old 0.87–0.89 for the *same* reason the heavy score moved so much: the
-simulated LCP is dominated by first-paint of a shell that arrives after
-`fetch('/api/rates')` resolves, and that number moves ±0.02 between runs on this
-host. The budget is 0.85 with 0.05 of headroom, measured over three consecutive
-runs. No assertion was weakened: the desktop budget is untouched at 0.90 and the
-mobile one is new.
+**Honest residual.** The budget is **0.85** and the local ceiling is now 0.94
+on a fresh profile (0.92–0.95 with a year of data) — 0.09 of headroom measured
+over three consecutive runs each, instead of the 0.00 the first CI run showed.
+No assertion was weakened: the desktop budget is untouched at 0.90 and the
+mobile one is new. Runner variance is the one thing the budget cannot
+control: the *pre-optimisation* build scored 0.89 locally and 0.82 on the
+shared runner, so the CI number is re-checked on every push rather than
+treated as a constant.
 
 ## 5. PWA install experience
 
