@@ -8,13 +8,17 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, ChangeEvent } from "react";
+import { useState, useEffect, useMemo, useRef, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
   type DataPoint, type RateSet, type UsagePointGroup,
   getBillingPeriod, parseGreenButtonUsagePoints, selectInitialWindow,
-  EMPTY_EXTRA_CHARGES, type ExtraCharges,
+  mergeReadings, EMPTY_EXTRA_CHARGES, type ExtraCharges,
 } from "@/lib/energy";
+import {
+  fetchGbStatus, fetchGbUsage, disconnectGb, describeGbError,
+  type GbStatus,
+} from "@/lib/greenbutton/client";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
 } from "@/lib/backup";
@@ -38,6 +42,15 @@ export type BackupExport = { filename: string; text: string };
 
 /** Outcome of an Import: ok carries the filename, failure carries the reason. */
 export type BackupImportResult = { ok: boolean; filename?: string; error?: string };
+
+/**
+ * Outcome of one Green Button live sync (Wave K).
+ * `incoming` = rows the feed carried; `added` = rows this browser did not
+ * have; `picker` = the feed had several meters and is waiting for a choice.
+ */
+export type GbSyncOutcome =
+  | { ok: true; incoming: number; added?: number; picker?: boolean }
+  | { ok: false; code: string; detail?: string };
 
 export type { ExtraCharges };
 
@@ -106,10 +119,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const [exampleData, setExampleData] = useState(false);
 
-  /** Multi-meter upload waiting for the user to pick which point to load. */
+  /**
+   * Multi-meter upload waiting for the user to pick which point to load.
+   *
+   * `origin` says where the rows came from. A file upload REPLACES the
+   * dataset (the file is the user's stated truth); a live sync MERGES into
+   * it, because the feed is additive and dropping months of history to
+   * satisfy a picker would be a silent data loss.
+   */
   const [pendingUpload, setPendingUpload] = useState<{
     fileName: string;
     groups: UsagePointGroup[];
+    origin?: "upload" | "greenbutton";
   } | null>(null);
 
   /** 2+ files waiting on the merge review screen (range + rows before import). */
@@ -121,6 +142,27 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * what was missing instead (see lib/parseDiagnostic.ts).
    */
   const [parseIssue, setParseIssue] = useState<ParseDiagnostic | null>(null);
+
+  /* ---------------------------------------------------------------------
+   * Green Button live sync (Wave K).
+   *
+   * The shim pipes ESPI straight through; every byte is parsed HERE and
+   * lands in localStorage exactly like a manual upload, so the server keeps
+   * nothing. These four pieces of state are the whole client footprint.
+   * --------------------------------------------------------------------- */
+  const [gbStatus, setGbStatus] = useState<GbStatus | null>(null);
+  const [gbSyncing, setGbSyncing] = useState(false);
+  const [gbMessage, setGbMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  /** Live-view refs: the sync path is called from effects whose closures
+   *  were built before the data existed, so they read these instead. */
+  const rawDataRef = useRef<DataPoint[]>([]);
+  const gbStatusRef = useRef<GbStatus | null>(null);
+  const syncingRef = useRef(false);
+  const writeRows = (rows: DataPoint[]) => {
+    rawDataRef.current = rows;
+    setRawData(rows);
+  };
 
   /**
    * Open a freshly loaded dataset in a window that is actually full of data.
@@ -155,7 +197,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * buttons still zoom in from there. Real uploads are untouched.
    */
   const commitReadings = (data: DataPoint[], source: "upload" | "example" = "upload") => {
-    setRawData(data);
+    writeRows(data);
     localStorage.setItem("energy_data", JSON.stringify(data));
     try {
       if (source === "example") localStorage.setItem(EXAMPLE_DATA_KEY, "1");
@@ -179,9 +221,78 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setShowUploadModal(false);
   };
 
+  /**
+   * Pull the piped ESPI feed and MERGE it into what this browser already
+   * holds.
+   *
+   * Merge, never replace: the feed is additive (a cursor fetch returns only
+   * new rows; an unfiltered one returns everything), so union-by-timestamp
+   * is correct for both, and a narrow response can never silently delete
+   * history. Incoming rows win on a timestamp collision — the custodian is
+   * the authority for its own readings.
+   *
+   * Multi-meter feeds go to the existing UsagePoint picker instead of being
+   * merged here: a meter is never combined silently, same as an upload.
+   */
+  const syncFromGreenButton = async (): Promise<GbSyncOutcome> => {
+    if (syncingRef.current) return { ok: false, code: "busy" };
+    syncingRef.current = true;
+    setGbSyncing(true);
+    try {
+      let status = gbStatusRef.current;
+      if (!status) {
+        status = await fetchGbStatus();
+        if (status) {
+          gbStatusRef.current = status;
+          setGbStatus(status);
+        }
+      }
+      if (!status) return { ok: false, code: "unreachable" };
+      if (!status.configured) return { ok: false, code: "not_configured" };
+      if (!status.connected) return { ok: false, code: "not_connected" };
+
+      const base = rawDataRef.current;
+      let newest = 0;
+      for (const r of base) if (r.timestamp > newest) newest = r.timestamp;
+      // One hour of overlap: the newest interval may have been incomplete
+      // when it was last seen, and rows are deduped by timestamp anyway.
+      const res = await fetchGbUsage(newest > 0 ? newest - 3600 : undefined);
+      if (!res.ok) return { ok: false, code: res.code, detail: res.detail };
+
+      let groups: UsagePointGroup[];
+      try {
+        groups = parseGreenButtonUsagePoints(res.xml);
+      } catch {
+        return { ok: false, code: "unparseable" };
+      }
+      const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
+      if (incoming === 0) return { ok: false, code: "no_readings" };
+
+      if (groups.length > 1) {
+        setPendingUpload({ fileName: "Oakville Hydro (live sync)", groups, origin: "greenbutton" });
+        setShowUploadModal(false);
+        return { ok: true, incoming, picker: true };
+      }
+
+      const merged = mergeReadings([
+        { name: "Oakville Hydro (live)", readings: groups[0].readings },
+        { name: "Existing readings", readings: base },
+      ]);
+      const added = merged.mergedRows - base.length;
+      commitReadings(merged.readings);
+      return { ok: true, incoming, added };
+    } catch (e) {
+      return { ok: false, code: "unreachable", detail: e instanceof Error ? e.message : String(e) };
+    } finally {
+      syncingRef.current = false;
+      setGbSyncing(false);
+    }
+  };
+
   // --- Start sequence ---
   useEffect(() => {
     let mounted = true;
+    let poller: ReturnType<typeof setInterval> | null = null;
     async function init() {
       // localStorage FIRST: it decides both the visible window and whether
       // there is anything at all to show, and neither answer needs the network.
@@ -195,6 +306,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           const parsed = JSON.parse(savedData) as DataPoint[];
           if (mounted && Array.isArray(parsed) && parsed.length > 0) {
             loadedReadings = true;
+            // Ref first: the Green Button sync runs later in THIS same init
+            // pass and must see what was just restored.
+            rawDataRef.current = parsed;
             setRawData(parsed);
             // A reload must keep saying "this is example data" if it is.
             if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
@@ -222,9 +336,64 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       } catch { /* rate fetch failure degrades to empty history; math returns [] */ }
 
       if (mounted && loadedReadings) setLoading(false);
+
+      /* --- Wave K: Green Button live sync -----------------------------
+       * Status first (one cheap request), then a pull if this browser is
+       * authorised. Runs whether or not the OAuth callback just landed, so
+       * an ordinary page load is also a refresh — that is the whole point
+       * of the feature. The `?gb=` flags come from /greenbutton/callback
+       * and are stripped before they can be replayed by a reload.
+       */
+      const params = new URLSearchParams(window.location.search);
+      const gbFlag = params.get("gb");
+      if (gbFlag) window.history.replaceState({}, "", window.location.pathname);
+
+      const status = await fetchGbStatus();
+      if (!mounted || !status) return;
+      gbStatusRef.current = status;
+      setGbStatus(status);
+
+      if (gbFlag === "connected") {
+        setGbMessage({ tone: "ok", text: "Connected to Oakville Hydro." });
+      } else if (gbFlag?.startsWith("error:")) {
+        const copy = describeGbError(gbFlag.slice("error:".length));
+        setGbMessage({ tone: "error", text: `${copy.headline} — ${copy.detail}` });
+      }
+
+      if (status.connected) {
+        const outcome = await syncFromGreenButton();
+        if (mounted && gbFlag === "connected") {
+          setGbMessage(
+            outcome.ok
+              ? {
+                  tone: "ok",
+                  text: outcome.picker
+                    ? "Connected — pick which meter to load."
+                    : `Live sync: ${outcome.incoming} readings from the feed, ` +
+                      `${outcome.added ?? 0} new.`,
+                }
+              : { tone: "error", text: describeGbError(outcome.code).detail },
+          );
+        }
+      }
+
+      // Background refresh: every 15 minutes while the tab is actually
+      // visible, and never overlapping a sync that is already running.
+      poller = setInterval(() => {
+        if (!mounted || document.visibilityState !== "visible") return;
+        if (syncingRef.current || !gbStatusRef.current?.connected) return;
+        void syncFromGreenButton();
+      }, 15 * 60 * 1000);
     }
     init();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      if (poller) clearInterval(poller);
+    };
+    // One-shot bootstrap by design: it reads live state through refs, so
+    // re-running it on every render would double-sync instead of fixing
+    // staleness.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -344,10 +513,26 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setShowUploadModal(true);
   };
 
-  /** Load exactly the rows the user picked (one UsagePoint, or all of them). */
+  /**
+   * Load exactly the rows the user picked (one UsagePoint, or all of them).
+   *
+   * An UPLOAD replaces: the file the user chose is what they want to see.
+   * A live-sync pick MERGES: the feed is one more source of truth, and
+   * choosing a meter must not delete the history already in the browser.
+   */
   const chooseUsagePoint = (readings: DataPoint[]) => {
+    const origin = pendingUpload?.origin;
     setPendingUpload(null);
-    if (readings.length > 0) commitReadings(readings);
+    if (readings.length === 0) return;
+    if (origin === "greenbutton") {
+      const merged = mergeReadings([
+        { name: "Oakville Hydro (live)", readings },
+        { name: "Existing readings", readings: rawDataRef.current },
+      ]);
+      commitReadings(merged.readings);
+      return;
+    }
+    commitReadings(readings);
   };
 
   /** Back out of the picker without importing anything. */
@@ -491,6 +676,38 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     return { ok: true, filename: file.name };
   };
 
+  /** Re-read /greenbutton/status (connect button, post-disconnect, tests). */
+  const refreshGbStatus = async (): Promise<GbStatus | null> => {
+    const status = await fetchGbStatus();
+    gbStatusRef.current = status;
+    setGbStatus(status);
+    return status;
+  };
+
+  /**
+   * Drop the authorisation: wipes the token file on .110 through the shim,
+   * then re-reads status so the UI flips back to "not connected".
+   */
+  const disconnectGreenButton = async (): Promise<boolean> => {
+    const ok = await disconnectGb();
+    await refreshGbStatus();
+    setGbMessage(
+      ok
+        ? { tone: "ok", text: "Disconnected — stored authorisation wiped from the server." }
+        : { tone: "error", text: "Could not reach the shim to disconnect." },
+    );
+    return ok;
+  };
+
+  const startGreenButtonConnect = () => {
+    // Full page navigation, deliberately NOT router.push: the shim answers
+    // with a 302 to the utility's login page, and only a top-level
+    // navigation carries the origin through the OAuth round trip (and lets
+    // the callback set the session cookie).
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/greenbutton/start");
+  };
+
   return {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
@@ -502,6 +719,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     exportBackup, importBackupFile,
     parseIssue, setParseIssue,
     exampleData, loadExampleData, discardExampleData,
+    // Green Button live sync (Wave K)
+    gbStatus, gbSyncing, gbMessage, setGbMessage,
+    syncFromGreenButton, refreshGbStatus, disconnectGreenButton, startGreenButtonConnect,
   };
 }
 
