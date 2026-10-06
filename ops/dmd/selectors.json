@@ -1,0 +1,106 @@
+{
+  "_comment": [
+    "Declarative flow for the Oakville Hydro Green Button portal.",
+    "Every selector is a Playwright selector string (css=, text=, role=, id=).",
+    "The engine tries each entry in order and takes the FIRST that matches,",
+    "so refining the flow after the first authenticated run is an edit here,",
+    "not a code change. Steps run in order; optional steps are skipped when",
+    "nothing matches, non-optional steps abort with exit code 6.",
+    "POST-LOGIN SELECTORS ARE UNVERIFIED: they could only be discovered from",
+    "the unauthenticated surface (see OPERATIONS.md 'DMD automation'). The",
+    "first authenticated run should be `--recon`, which dumps the post-login",
+    "DOM so these can be pinned before cron is trusted."
+  ],
+
+  "start_url": "https://greenbutton.oakvillehydro.com/",
+  "login": {
+    "url_contains": "myaccount.oakvillehydro.com",
+    "username": ["#mat-input-0", "input[type=text]", "input[autocomplete=username]"],
+    "password": ["#mat-input-1", "input[type=password]"],
+    "submit": ["form.login-form button[type=submit]", "button[type=submit]", "text=SIGN IN"],
+    "success_url_contains": [
+      "greenbutton.oakvillehydro.com",
+      "/user/dashboard",
+      "/home"
+    ],
+    "failure_text": [
+      "invalid",
+      "incorrect",
+      "does not match",
+      "not recognized",
+      "locked",
+      "suspended"
+    ],
+    "failure_selector": "[role=alert], .mat-error, mat-error, .error-message"
+  },
+
+  "mfa": {
+    "url_contains": ["/page/mfa", "otp", "verification"],
+    "selectors": ["input[autocomplete=one-time-code]", "input[type=number]", "text=Enter the code"]
+  },
+
+  "captcha": [
+    "iframe[src*='recaptcha'][src*='anchor']",
+    "iframe[title*='reCAPTCHA']",
+    "iframe[src*='hcaptcha.com']",
+    "#challenge-form",
+    ".g-recaptcha[data-size]",
+    "[data-hcaptcha-widget-id]",
+    "iframe[src*='challenges.cloudflare.com']"
+  ],
+
+  "steps": [
+    {
+      "name": "open download-my-data entry",
+      "action": "click",
+      "selectors": [
+        "text=Download My Data",
+        "text=Download my data",
+        "text=Download Data",
+        "text=Download data",
+        "role=link[name=/download/i]",
+        "role=button[name=/download/i]",
+        "a:has-text('Green Button')"
+      ]
+    },
+    {
+      "name": "pick hourly interval",
+      "action": "click",
+      "optional": true,
+      "selectors": [
+        "text=Hourly",
+        "role=radio[name=/hour/i]",
+        "label:has-text('Hourly')",
+        "option:has-text('Hourly')"
+      ]
+    },
+    {
+      "name": "pick full available range",
+      "action": "click",
+      "optional": true,
+      "selectors": [
+        "text=All available",
+        "text=All data",
+        "text=Maximum",
+        "text=Full range",
+        "role=radio[name=/all/i]"
+      ]
+    },
+    {
+      "name": "request the export",
+      "action": "download",
+      "selectors": [
+        "role=button[name='Download XML']",
+        "role=button[name=/download/i]",
+        "text=Download XML",
+        "text=Download",
+        "a:has-text('XML')"
+      ]
+    }
+  ],
+
+  "download": {
+    "url_pattern": "\\.xml($|\\?)",
+    "timeout_ms": 90000
+  }
+}

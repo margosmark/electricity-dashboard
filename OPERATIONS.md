@@ -131,3 +131,159 @@ container. The `husky` pre-commit hook runs on every local commit.
   surfaces deep inside `RUN npm run build`. Check `df -h /` first; if it is at
   100%, `docker builder prune -f` (build cache only — never touches running
   containers) reclaimed ~26 GB on 2026-10-02.
+
+## DMD automation (Wave J) — refresh without a manual export
+
+`ops/dmd/` keeps Mark's data fresh by driving Oakville Hydro's **own web UI**
+with Mark's **own** credentials, on `.110`, twice a week. No other account is
+ever touched, no credential enters this repo or the container image, and the
+result lands in the browser through the same path a hand upload takes.
+
+### The portal, as actually probed (2026-10-06, unauthenticated)
+
+```
+https://greenbutton.oakvillehydro.com/      302 → /home
+                                            302 → /login?authorization_error=true
+                                            302 → myaccount.oakvillehydro.com/page/login?r=<return>
+```
+
+- Angular Material login: `#mat-input-0` (Email Address), `#mat-input-1`
+  (Password), submit button labelled **SIGN IN**, inside `form.login-form`.
+- **No interactive CAPTCHA on the login page** (probe returned `captcha: []`).
+  The only reCAPTCHA references are Firebase App Check / `RECAPTCHA_SETTINGS`
+  — invisible token minting, not a challenge a human solves.
+- The Green Button host is a separate Spring Boot app (it serves a JSON 404
+  body and sets a `SESSION` cookie); everything under it is auth-gated, so
+  the post-login DOM **cannot** be inspected without credentials.
+- `selectors.json` therefore carries the login selectors (verified) and
+  **provisional** post-login selectors (heuristic, unverified).
+
+**First authenticated run must be `dmd_refresh.py --recon`**, which logs in
+and dumps url/links/buttons + a DOM artifact to
+`~/electricity-data/failed/<ts>-recon/`. Pin the real selectors in
+`selectors.json` from that dump before trusting the crontab entry.
+
+### Files
+
+| Path | Role |
+| --- | --- |
+| `ops/dmd/dmd_refresh.py` | the automation (Playwright, headless) |
+| `ops/dmd/selectors.json` | the whole flow as data — a portal redesign is an edit here, not a code change |
+| `ops/dmd/dmd_export_b64.py` | base64 hand-off helper for `/import` |
+| `ops/dmd/check_dmd_freshness.py` | staleness watchdog (installed below) |
+| `ops/dmd/install.sh` | idempotent .110 setup |
+| `ops/dmd/tests/` | unit + mock-portal end-to-end suite |
+
+### Credentials (hard requirements)
+
+- Live only in `~/electricity-dashboard/ops/dmd/.env` on .110 — **chmod 600**.
+- Gitignored twice over (root `.gitignore` `.env` + an explicit
+  `ops/dmd/.env` line) and outside the Docker build context, which is
+  `./webapp` only.
+- `dmd_refresh.py` refuses to start (exit 8) when the file is group/world
+  readable **or tracked by git** (`git ls-files`, not `.gitignore`, is the
+  authority). No value is ever printed: error messages name the key, never
+  the content, and the suite asserts the password never reaches logs, state
+  or the inbox.
+- Session state: Playwright's context is in-memory; the browser profile lives
+  under `TMPDIR=/run/dmd-browser` (tmpfs) and is deleted at process exit.
+  No trace, no video, and **screenshots are only ever taken of post-login
+  pages**, so no artifact can carry a typed password.
+- Setup: `bash ops/dmd/install.sh` (creates the template if absent; it never
+  fills values in). Entering the credentials is a human step on .110.
+
+### Schedule
+
+```
+0 4 * * 1,4  /usr/bin/flock -n /tmp/dmd-refresh.lock python3 ~/electricity-dashboard/ops/dmd/dmd_refresh.py >> ~/electricity-data/logs/cron.out 2>&1
+```
+
+Mon + Thu 04:00 America/Toronto (off-peak, 2× weekly). `flock -n` means a run
+that somehow outlives its window is skipped rather than stacked.
+**Provisional** — confirm with Mark before treating it as final.
+
+### Failure visibility
+
+- Every run appends to `~/electricity-data/logs/dmd_refresh.log` and exits
+  non-zero on any problem (table below). Structural/auth/challenge failures
+  additionally dump the post-login DOM + screenshot to
+  `~/electricity-data/failed/<ts>-<code>/`.
+- **Staleness watchdog:** `check_dmd_freshness.py` is installed at
+  `~/.hermes/profiles/soft-dev/scripts/` (copy from `ops/dmd/` when it
+  changes) and runs as Hermes cron job **`1b7177616200`**, daily 07:30,
+  `no_agent`, delivering to Mark's WhatsApp. Empty stdout = nothing sent
+  (watchdog pattern); it reports when the last success is older than 7 days
+  or has never happened, and one-lines a ⚠️ if the check itself fails.
+  Until the first successful export it will report daily — that is the
+  outstanding gate, not a bug.
+
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | a new export was filed |
+| 2 | bad usage / unreadable `selectors.json` |
+| 3 | authentication rejected |
+| 4 | download identical to the previous success (no new data) |
+| 5 | interactive challenge — CAPTCHA or MFA; a human is required |
+| 6 | portal structure changed; `selectors.json` needs the `--recon` dump |
+| 7 | payload is not importable Green Button XML (nothing written) |
+| 8 | environment problem: `.env` missing, too permissive, or git-tracked |
+
+Files are named `greenbutton_<UTC>.xml`, chmod 600, and **never overwritten**
+(`-1`, `-2` suffixes on collision). State lives in
+`~/electricity-data/state/last_success.json` (sha256, byte count, reading
+count, timestamp).
+
+### Ingestion into the browser (client-only, no backend)
+
+The app has no server-side ingest and must not grow one, so the handoff is:
+
+```bash
+# on .110
+python3 ~/electricity-dashboard/ops/dmd/dmd_export_b64.py          # summary
+python3 ~/electricity-dashboard/ops/dmd/dmd_export_b64.py --b64    # payload
+```
+
+then either **drop the XML file** onto `https://electricity.markarslan.ca/import`
+or **paste** the base64 there (`?d=<base64>` deep links work for small files).
+
+`/import` parses with `parseGreenButtonUsagePoints` — the app's own parser, so
+a file that loads there loads in the upload modal too — and writes
+`localStorage.energy_data` + clears the example-data flag, the same two keys
+`commitReadings` touches, then navigates to `/` so every hook re-seeds from
+storage. **With readings already present it never writes**: it shows a review
+(`webapp/src/lib/importPlan.ts`, unit-tested) with existing/incoming/overlap/
+net-new counts and two explicit choices — *Merge* (union, the file wins an
+overlapping timestamp) or *Replace* — plus Cancel. Tests: `importPlan.test.ts`
+(pure) and `tests/e2e/import.spec.ts` (runs in CI's smoke job).
+
+### ToS / ethical guardrail
+
+This automates **Mark's own account** through the **same web UI a human uses**
+— no API bypass, no credential sharing, no other customer's data, 2 runs per
+week. Guardrails, in force:
+
+1. Oakville Hydro publishes **no terms-of-use page** (`/terms-of-use` → 404;
+   the footer links only Privacy Policy and Accessibility). If a terms page
+   appears, or the post-login UI carries terms that prohibit automated access
+   to Download My Data, **STOP and flag to Mark before the next run** — do not
+   silently continue.
+2. **CAPTCHA:** if an interactive challenge appears the script exits 5 and
+   does not proceed. No CAPTCHA-solving service, ever. (Invisible reCAPTCHA
+   tokens are not a challenge and are not defeated.)
+3. **MFA:** an OTP step also exits 5. We do not read Mark's second factor.
+4. Rate: 2 sessions/week, one at a time (`flock`), sequential page loads at
+   human pacing — no parallel requests, no endpoint hammering.
+
+### Gate status
+
+| Gate | Status |
+| --- | --- |
+| Script runs green on the real portal | **BLOCKED on Mark entering credentials once on .110**, then `--recon` to pin post-login selectors, then one supervised run |
+| Fresh XML parses cleanly through the app's parser | automated for synthetic input (`tests/e2e/import.spec.ts`, CI); **real export verified on first ingestion at `/import`** |
+| Ingestion into localStorage verified on the deployed instance | `/import` e2e spec against the built container |
+| Cron visible in crontab | `crontab -l` shows the `dmd_refresh.py` line after `install.sh` |
+| Runbook documented | this section |
+| Mechanics of the whole flow | **verified** against `ops/dmd/tests/mock_portal.py` — every exit code above is exercised end to end on .110 |
+

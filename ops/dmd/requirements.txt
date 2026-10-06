@@ -1,0 +1,9 @@
+# Runtime for ops/dmd on .110 (hermescomputer).
+#
+# .110 already ships playwright 1.62.0 + its chromium in the system Python 3.13
+# (`python3 -m playwright install chromium`). This file records the pin so a
+# rebuilt host is reproducible; installing it is `install.sh`'s job, not CI's.
+playwright==1.62.0
+
+# Tests only — never imported by dmd_refresh.py itself.
+pytest>=8
