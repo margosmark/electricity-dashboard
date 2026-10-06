@@ -1,0 +1,79 @@
+{
+  "wave": "J",
+  "task": "t_f1c6dca5",
+  "date": "2026-10-06",
+  "commits": [
+    "3ba92a5 Wave J: own-account DMD auto-refresh + /import merge-gated ingestion",
+    "e652bdb fix(dmd): make selector fallbacks actually fall back; fix the mock portal",
+    "539bc17 docs(decisions): Wave J — /import merge gate, data-driven DMD flow"
+  ],
+  "portal_recon": {
+    "when": "2026-10-06, unauthenticated probes only (no credentials used)",
+    "start_url": "https://greenbutton.oakvillehydro.com/",
+    "redirect_chain": [
+      "302 -> /home",
+      "302 -> /login?authorization_error=true",
+      "302 -> https://myaccount.oakvillehydro.com/page/login?r=https://greenbutton.oakvillehydro.com"
+    ],
+    "login_form": "Angular Material: #mat-input-0 (Email Address), #mat-input-1 (Password), submit labelled SIGN IN inside form.login-form",
+    "interactive_captcha_on_login": false,
+    "captcha_probe": "recon script reported captcha: [] — the only reCAPTCHA strings are Firebase App Check (ReCaptchaEnterpriseProvider) and RECAPTCHA_SETTINGS in settings/settings.json, both invisible token minting",
+    "greenbutton_host": "separate Spring Boot app; JSON 404 body, SESSION cookie, every route 302 to auth — post-login DOM is unreachable without credentials",
+    "greenbutton_oauth_endpoints": "/oauth/authorize + /oauth/token (from open-green-button utilities.conf, id=oakville_hydro)",
+    "post_login_selectors": "PROVISIONAL, heuristics in selectors.json; first authenticated run must be --recon"
+  },
+  "gates": {
+    "webapp_lint": "pass",
+    "webapp_typecheck": "pass",
+    "webapp_unit_tests": "534 passed (32 files)",
+    "webapp_build": "pass — routes / and /import static, /api/rates dynamic",
+    "root_pytest": "33 passed",
+    "dmd_suite_on_110": "25 passed in 34.48s (16 unit + 9 mock-portal end-to-end, from a clean checkout at 539bc17)",
+    "import_e2e_vs_production": "8 passed against https://electricity.markarslan.ca (drop-in, merge review, replace, cancel, base64 paste, ?d= deep link, garbage payload, HTML-instead-of-XML)",
+    "ci": {
+      "run_37526929791": "completed success (3ba92a5)",
+      "run_37527973705": "fix(dmd) push",
+      "run_37528186359": "docs(decisions) push"
+    },
+    "deploy": "DEPLOY_OK at 539bc17 via ~/bin/deploy-energy-dashboard.sh; container energy-dashboard running on :3939"
+  },
+  "exit_codes_exercised_by_the_mock_portal": {
+    "0": "first run files the download (600 perms, sha256 + reading count in state/last_success.json)",
+    "3": "rejected credentials; refusal does not echo the password",
+    "4": "identical re-download -> no new data, duplicate never written, logged",
+    "5": "CAPTCHA challenge and MFA/OTP both abort",
+    "6": "entry point missing -> post-login DOM + screenshot dumped to failed/",
+    "7": "200 whose body is HTML -> not filed",
+    "8": "world-readable .env refused before any browser starts",
+    "credential_leak_check": "mock username/password absent from logs, state and inbox after a full run"
+  },
+  "credential_hygiene_verified_on_110": {
+    "path": "~/electricity-dashboard/ops/dmd/.env",
+    "mode": "600",
+    "git_ignored": "root .gitignore line 33 (.env) — git check-ignore matches",
+    "git_tracked": false,
+    "empty_credentials_gate_run": "exit 8, message names DMD_USERNAME/DMD_PASSWORD keys only",
+    "docker_build_context": "./webapp only",
+    "inside_image": "no /app/ops and no .env found by find / -name .env",
+    "session_state": "Playwright context in-memory; TMPDIR=/run/dmd-browser (tmpfs) removed at exit; no trace/video; screenshots only of post-login pages"
+  },
+  "automation_installed_on_110": {
+    "data_dirs": "~/electricity-data/{inbox,logs,state,failed} mode 700",
+    "crontab": "0 4 * * 1,4 /usr/bin/flock -n /tmp/dmd-refresh.lock python3 ~/electricity-dashboard/ops/dmd/dmd_refresh.py >> ~/electricity-data/logs/cron.out 2>&1",
+    "playwright": "1.62.0 + chromium-1234 in the system Python; test venv at ~/venvs/dmd (--system-site-packages, pytest only)"
+  },
+  "staleness_watchdog": {
+    "script": "~/.hermes/profiles/soft-dev/scripts/check_dmd_freshness.py (copy of ops/dmd/check_dmd_freshness.py)",
+    "cron_job": "1b7177616200",
+    "schedule": "30 7 * * *",
+    "mode": "no_agent, stdout delivered verbatim, empty stdout sends nothing",
+    "deliver": "whatsapp:32890876391493@lid",
+    "current_output": "reports 'never completed successfully' (rc=0) until the first successful export"
+  },
+  "outstanding": [
+    "Mark enters DMD_USERNAME/DMD_PASSWORD once into ~/electricity-dashboard/ops/dmd/.env on .110 (chmod 600 already applied)",
+    "First authenticated run must be --recon to pin the post-login selectors in selectors.json",
+    "One supervised real run, then the crontab line is trusted",
+    "Mark confirms (or changes) the Mon/Thu 04:00 schedule — provisional until then"
+  ]
+}
