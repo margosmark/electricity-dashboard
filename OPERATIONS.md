@@ -24,7 +24,12 @@ read_only=true, scope limited to this repo) and `~/.ssh/config` pins it for
 verbatim, no tar push needed:
 `code changes → push to GitHub → ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'`
 
-There is no `.env`, no secrets, no volumes — a rebuild is always safe.
+A rebuild is always safe. There are no secrets **in the image** and no
+database; the one persistent artefact is the Green Button token file
+(§ Green Button), bind-mounted from `.greenbutton/` and gitignored. Delete it
+and the only cost is re-authorising. Compose *does* read a local `.env` if you
+create one for `GB_CLIENT_ID` / `GB_CLIENT_SECRET` — that file must never be
+committed.
 
 ## Health checks
 
@@ -35,6 +40,9 @@ There is no `.env`, no secrets, no volumes — a rebuild is always safe.
 | Rates API | `curl -fs http://localhost:3939/api/rates` → JSON with `historicalRates` (3 sets) |
 | Logs | `docker compose logs -f energy-dashboard` |
 | Reparse in browser | Upload modal re-appears only if `localStorage.energy_data` is absent |
+| Green Button shim | `curl -fs http://localhost:3939/greenbutton/status` → JSON; `configured:false` until Oakville issues credentials |
+| Green Button live | `curl -fs https://electricity.markarslan.ca/greenbutton/status \| jq .configured` → `true` once `GB_CLIENT_ID`/`GB_CLIENT_SECRET` are set |
+| Token file | `sudo ls -l .greenbutton/` → `tokens.json`, owner uid 1001, mode `600` (absent until the first authorisation) |
 
 ## Data model (user-visible)
 
@@ -65,6 +73,32 @@ Wh values). The file is parsed in-browser by `parseGreenButtonXML`
 (`webapp/src/lib/energy.ts`); unit conversion is Wh→kWh divide-by-1000, and
 timestamps are unix UTC converted implicitly by `new Date(...)` to local time
 for categorization.
+
+## Green Button live sync (Wave K)
+
+Authorisation refreshes the dashboard's readings automatically through Oakville
+Hydro's Connect My Data API instead of a manual XML export. Design, security
+model, registration payload and the terms-of-service check all live in
+**[GREENBUTTON-CMD.md](GREENBUTTON-CMD.md)**; this section is the operational
+part.
+
+**Where the refresh token lives:** `.greenbutton/tokens.json` on .110
+(mounted at `/var/lib/greenbutton/tokens.json`), mode `0600`, owner uid 1001.
+It holds *only* the OAuth token set — never readings. Inspect with
+`sudo ls -l .greenbutton/`; wipe with the UI's **Disconnect** button or by
+deleting the file and restarting the container.
+
+| Task | Command |
+| --- | --- |
+| Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in `docker-compose.yml` (or a local `.env`), then `docker compose up -d` — no rebuild |
+| Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
+| Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (25 checks) |
+| Diagnose a "reconnect" complaint | `docker compose logs energy-dashboard \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
+| Revoke access on Oakville's side | their own portal; the next sync then returns `grant_revoked` and the shim wipes its token file automatically |
+| Incident | if customer data is ever exposed or suspected, notify Oakville Hydro **immediately** (agreement §3): summary + facts, number of customers affected, anything relevant |
+
+The browser polls `/greenbutton/usage` on load and every 15 minutes while the
+tab is visible. Nothing is stored server-side between those calls.
 
 ## Rate data updates
 

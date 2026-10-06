@@ -22,6 +22,7 @@ import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
 } from '@/hooks/useDashboard';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
+import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
@@ -46,6 +47,8 @@ export default function Dashboard() {
     exportBackup, importBackupFile,
     parseIssue, setParseIssue,
     exampleData, loadExampleData, discardExampleData,
+    gbStatus, gbSyncing, gbMessage, setGbMessage,
+    syncFromGreenButton, disconnectGreenButton, startGreenButtonConnect,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
@@ -334,6 +337,18 @@ export default function Dashboard() {
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
              </div>
+             {/* Wave K — the other way to get data in: authorise once and
+                 let the shim pipe ESPI straight through to localStorage. */}
+             <GreenButtonSync
+               variant="modal"
+               status={gbStatus}
+               syncing={gbSyncing}
+               message={gbMessage}
+               onConnect={startGreenButtonConnect}
+               onSync={() => { void syncFromGreenButton(); }}
+               onDisconnect={() => { void disconnectGreenButton(); }}
+               onDismissMessage={() => setGbMessage(null)}
+             />
              {/* Why the last upload loaded nothing: names what was missing,
                  instead of a bare "invalid XML" (Wave G item 4). */}
              {parseIssue && !parseIssue.ok && (
@@ -411,6 +426,16 @@ export default function Dashboard() {
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" aria-label="Upload XML" className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button type="button" onClick={emergencyReset} title="Reset Data" aria-label="Reset all data in this browser" className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
+           <GreenButtonSync
+             variant="chip"
+             status={gbStatus}
+             syncing={gbSyncing}
+             message={gbMessage}
+             onConnect={startGreenButtonConnect}
+             onSync={() => { void syncFromGreenButton(); }}
+             onDisconnect={() => { void disconnectGreenButton(); }}
+             onDismissMessage={() => setGbMessage(null)}
+           />
 
            <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
              <input type="date" aria-label="Window start date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />

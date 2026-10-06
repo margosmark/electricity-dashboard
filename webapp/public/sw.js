@@ -83,6 +83,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Green Button (Wave K): OAuth redirects and the ESPI pipe-through are
+  // one-shot and stateful — never cache them, and never let a navigation to
+  // the callback overwrite the cached app shell with an error page.
+  if (url.pathname.startsWith('/greenbutton/')) return;
+
   // App shell: try network so deploys show up, cached copy when offline.
   if (request.mode === 'navigate') {
     event.respondWith(
