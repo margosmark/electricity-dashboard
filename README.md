@@ -10,6 +10,12 @@ drill-down zoom (monthly → weekly → daily → hourly).
 **Everything is client-side**: your XML is parsed in your browser and cached
 in `localStorage` — no server, no database, no data leaving your machine.
 
+Where Oakville Hydro's *Connect My Data* is available, the app can also pull
+your readings automatically over OAuth2 instead of making you re-export the
+file. Same rule applies: the feed is streamed through and parsed **in your
+browser**, and the server keeps only the OAuth token set.
+See [GREENBUTTON-CMD.md](GREENBUTTON-CMD.md).
+
 ## Quick start
 
 ```bash
@@ -24,6 +30,7 @@ Button XML file from Oakville Hydro. Done.
 | Feature | Where |
 | --- | --- |
 | Three-plan cost comparison (TOU vs Tiered vs ULO) per period | top cards |
+| Auto-refresh from Oakville Hydro (Connect My Data, OAuth2) | toolbar → *Connect Oakville Hydro* (once registered) |
 | Whole-dataset totals: kWh + per-plan cost + best-vs-worst $ gap, *since your first reading* | totals strip |
 | First load opens a data-full window (never a mostly-future billing period) | date range |
 | Usage chart with weekend bars highlighted (daily view) | Chart tab |
