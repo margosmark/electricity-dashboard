@@ -34,6 +34,10 @@ JAR="$WORK/cookies.txt"
 PASS=0
 FAIL=0
 
+port_pid() { # pid of whatever is listening on $1 (own processes only)
+  ss -ltnpH "sport = :$1" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1
+}
+
 check() { # check <label> <condition-exit-status>
   if [ "$2" -eq 0 ]; then
     PASS=$((PASS + 1)); printf '  PASS  %s\n' "$1"
@@ -43,9 +47,17 @@ check() { # check <label> <condition-exit-status>
 }
 
 cleanup() {
-  [ -n "${APP_PID:-}" ] && kill "$APP_PID" 2>/dev/null
-  [ -n "${MOCK_PID:-}" ] && kill "$MOCK_PID" 2>/dev/null
+  # Kill the whole process GROUP, not just the launcher: `npx next start`
+  # forks a next-server child that survives a plain kill and then silently
+  # answers the NEXT run's requests out of a deleted temp dir.
+  if [ -n "${APP_PID:-}" ]; then kill -- -"$APP_PID" 2>/dev/null || kill "$APP_PID" 2>/dev/null; fi
+  if [ -n "${MOCK_PID:-}" ]; then kill -- -"$MOCK_PID" 2>/dev/null || kill "$MOCK_PID" 2>/dev/null; fi
   wait 2>/dev/null
+  # Belt and braces: `npx next start` double-forks, so the group kill can
+  # miss the server that actually holds the port. Find it by its listener.
+  local holder
+  holder="$(port_pid "$PORT")"
+  if [ -n "$holder" ]; then kill "$holder" 2>/dev/null; fi
   if [ "$FAIL" -eq 0 ]; then
     printf '\nE2E OK — %d checks passed\n' "$PASS"
   else
@@ -55,8 +67,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Fail loudly instead of letting a stale process from an earlier run answer
+# this one's requests (that produced 3 phantom failures before this check).
+if curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
+  echo "ERROR: something already answers on $PORT (a previous run did not clean up)." >&2
+  echo "       free it first:  pkill -f 'next[ ]start -p $PORT'" >&2
+  exit 1
+fi
+
 echo "== starting mock custodian on $MOCK_PORT =="
-node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
+setsid node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
 MOCK_PID=$!
 
 echo "== starting next start on $PORT =="
@@ -68,7 +88,7 @@ GB_REDIRECT_URI="$BASE/greenbutton/callback" \
 GB_PUBLIC_ORIGIN="$BASE" \
 GB_TOKEN_FILE="$TOKEN_FILE" \
 GB_SCOPE="FB=1_3_4_5" \
-npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
+setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
 APP_PID=$!
 
 for _ in $(seq 1 90); do

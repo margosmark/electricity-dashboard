@@ -8,13 +8,16 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useRef, ChangeEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
   type DataPoint, type RateSet, type UsagePointGroup,
   getBillingPeriod, parseGreenButtonUsagePoints, selectInitialWindow,
-  mergeReadings, EMPTY_EXTRA_CHARGES, type ExtraCharges,
+  EMPTY_EXTRA_CHARGES, type ExtraCharges,
 } from "@/lib/energy";
+// Wave J owns the merge arithmetic; live sync must not be a second opinion
+// about what a union means (union, incoming wins — see importPlan.ts).
+import { mergeForWrite, planImport } from "@/lib/importPlan";
 import {
   fetchGbStatus, fetchGbUsage, disconnectGb, describeGbError,
   type GbStatus,
@@ -49,7 +52,17 @@ export type BackupImportResult = { ok: boolean; filename?: string; error?: strin
  * have; `picker` = the feed had several meters and is waiting for a choice.
  */
 export type GbSyncOutcome =
-  | { ok: true; incoming: number; added?: number; picker?: boolean }
+  | {
+      ok: true;
+      /** Rows the feed carried. */
+      incoming: number;
+      /** Rows this browser did not already have. */
+      added?: number;
+      /** The feed had several meters; a picker is waiting. */
+      picker?: boolean;
+      /** Nothing changed — storage and view were left alone. */
+      unchanged?: boolean;
+    }
   | { ok: false; code: string; detail?: string };
 
 export type { ExtraCharges };
@@ -159,6 +172,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const rawDataRef = useRef<DataPoint[]>([]);
   const gbStatusRef = useRef<GbStatus | null>(null);
   const syncingRef = useRef(false);
+  /**
+   * The visible window, mirrored for the sync path. commitReadings anchors a
+   * fresh data-full window — correct for an upload, wrong for a background
+   * poll that must not yank the view back while someone is exploring.
+   */
+  const windowRef = useRef<{ start: string; end: string; scope: ViewScope }>({
+    start: "", end: "", scope: "BillingPeriod",
+  });
+  useLayoutEffect(() => {
+    windowRef.current = { start: startDate, end: endDate, scope: viewScope };
+  });
   const writeRows = (rows: DataPoint[]) => {
     rawDataRef.current = rows;
     setRawData(rows);
@@ -274,13 +298,21 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         return { ok: true, incoming, picker: true };
       }
 
-      const merged = mergeReadings([
-        { name: "Oakville Hydro (live)", readings: groups[0].readings },
-        { name: "Existing readings", readings: base },
-      ]);
-      const added = merged.mergedRows - base.length;
-      commitReadings(merged.readings);
-      return { ok: true, incoming, added };
+      const plan = planImport(base, groups[0].readings);
+      // Nothing new: skip the write AND the re-anchor. A 15-minute poll must
+      // not touch storage or move a window the user has panned to.
+      if (plan.identical) return { ok: true, incoming, added: 0, unchanged: true };
+
+      const merged = mergeForWrite(base, groups[0].readings);
+      const keep = windowRef.current;
+      const hadWindow = keep.start !== "" && keep.end !== "";
+      commitReadings(merged);
+      if (hadWindow) {
+        setStartDate(keep.start);
+        setEndDate(keep.end);
+        setViewScope(keep.scope);
+      }
+      return { ok: true, incoming, added: plan.addedRows };
     } catch (e) {
       return { ok: false, code: "unreachable", detail: e instanceof Error ? e.message : String(e) };
     } finally {
@@ -525,11 +557,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setPendingUpload(null);
     if (readings.length === 0) return;
     if (origin === "greenbutton") {
-      const merged = mergeReadings([
-        { name: "Oakville Hydro (live)", readings },
-        { name: "Existing readings", readings: rawDataRef.current },
-      ]);
-      commitReadings(merged.readings);
+      commitReadings(mergeForWrite(rawDataRef.current, readings));
       return;
     }
     commitReadings(readings);

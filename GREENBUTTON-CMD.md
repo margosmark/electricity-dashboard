@@ -7,6 +7,15 @@ manual upload path has always had.
 DMD (download-my-data) file drops become optional: authorise once, and the
 dashboard pulls fresh ESPI on its own.
 
+**Relationship to Wave J:** `ops/dmd/` drives Oakville Hydro's *web UI* with
+Playwright and hands a base64 export to `/import`. That was the best available
+path before a sanctioned API existed; CMD replaces it with an OAuth grant, so
+once the production loop in §6 is closed the DMD refresh, its portal
+credentials and the `/import` paste step can be retired (keep
+`/import` — it is still the merge-gated entry point for any file a human
+hands over). Both paths write through Wave J's `importPlan.mergeForWrite`, so
+they agree on what a merge means.
+
 ---
 
 ## 1. Status
@@ -17,6 +26,7 @@ dashboard pulls fresh ESPI on its own.
 | Edge routes `/greenbutton/*` to the app | **DONE — verified empirically** (see §5) |
 | Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
 | Production loop with Mark's real account | **BLOCKED on §6** |
+| Merge semantics shared with Wave J's `/import` | **DONE** — both write through `importPlan.mergeForWrite` (union, incoming wins) |
 | Revocation detection from Oakville's own UI | Code + tests done; needs a live account to observe for real |
 | Operational runbook | DONE (OPERATIONS.md §Green Button) |
 
