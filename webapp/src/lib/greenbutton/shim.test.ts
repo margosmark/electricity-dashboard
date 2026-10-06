@@ -228,6 +228,24 @@ describe("config", () => {
     // a visitor sees can be reversed back into the client secret.
     expect(getConfig().notificationUri).not.toContain("super-secret");
   });
+
+  it("lets a PINNED notify token win over the derived fallback", () => {
+    // The registration form records the notification URI before Oakville
+    // issues the client secret, so the pinned value must not move when the
+    // secret finally arrives.
+    process.env.GB_CLIENT_ID = "cid";
+    process.env.GB_CLIENT_SECRET = "super-secret";
+    process.env.GB_NOTIFY_TOKEN = "96a1eb36f68816b9606848aa7c628a71";
+    resetConfigCache();
+    expect(getNotifyToken()).toBe("96a1eb36f68816b9606848aa7c628a71");
+    expect(getConfig().notificationUri).toBe(
+      "https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71",
+    );
+    // …and it is identical whether or not the secret exists yet.
+    process.env.GB_CLIENT_SECRET = "";
+    resetConfigCache();
+    expect(getConfig().notificationUri).toContain("96a1eb36f68816b9606848aa7c628a71");
+  });
 });
 
 describe("session state", () => {
