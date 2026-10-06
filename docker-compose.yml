@@ -15,6 +15,11 @@ services:
       GB_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       GB_REDIRECT_URI: https://electricity.markarslan.ca/greenbutton/callback
       GB_SCOPE: ${GB_SCOPE:-FB=1_3_4_5}
+      # Notification URI path token. PINNED, not derived: the form registers
+      # this URL BEFORE Oakville issues the client secret, and a
+      # secret-derived default would change the moment credentials arrive,
+      # invalidating what is on file. Regenerating it breaks notifications.
+      GB_NOTIFY_TOKEN: ${GB_NOTIFY_TOKEN:-96a1eb36f68816b9606848aa7c628a71}
       # The ONLY file the shim writes: the OAuth token set, mode 0600,
       # outside the container. Owner must be uid 1001 (the `nextjs` user).
       GB_TOKEN_FILE: /var/lib/greenbutton/tokens.json
