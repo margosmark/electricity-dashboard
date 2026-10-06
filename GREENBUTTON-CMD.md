@@ -201,7 +201,7 @@ not accept Terms on his behalf.
 | Type of application | **Web App** |
 | Application/Portal Login Page URL | `https://electricity.markarslan.ca/` |
 | Third Party Green Button oAuth2 redirect URL | `https://electricity.markarslan.ca/greenbutton/callback` |
-| Notification URI | `https://electricity.markarslan.ca/greenbutton/notify/<32-hex>` — the value is `sha256("greenbutton-notify:" + GB_CLIENT_SECRET)[:32]`; if the secret does not exist yet, take it from `curl -s https://electricity.markarslan.ca/greenbutton/status \| jq -r .notificationUri` once deployed |
+| Notification URI | `https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71` — already pinned in `docker-compose.yml` as `GB_NOTIFY_TOKEN`. **Do not regenerate it**: the form records this URL before Oakville issues the client secret, so it must not be derived from a secret that does not exist yet (verify with `curl -s https://electricity.markarslan.ca/greenbutton/status \| jq -r .notificationUri`) |
 | Data scope checkboxes | **Usage Information only** (data minimisation — agreement §1: use the data "only to perform its services to the Customer") |
 | Power to enter your company into an agreement | **Yes** (Mark) |
 | Terms & Conditions checkbox | ticked by Mark |

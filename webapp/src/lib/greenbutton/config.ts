@@ -111,10 +111,14 @@ export function getNotifyToken(): string {
 }
 
 /**
- * Derived from the client secret so it is stable across restarts without a
- * separate env var to keep in sync with what we registered on the form.
- * Returns a dev constant when no secret exists yet (the feature is off then,
- * so nothing is exposed).
+ * Fallback when `GB_NOTIFY_TOKEN` is not pinned: derived from the client
+ * secret so it is stable across restarts.
+ *
+ * This is a FALLBACK, not the production path. The registration form records
+ * the notification URI *before* Oakville issues the client secret, so a
+ * derived value would change the moment credentials arrived and leave the
+ * utility posting to a URL we 404. `docker-compose.yml` pins an explicit
+ * token for exactly that reason; see GREENBUTTON-CMD.md §6.
  */
 function deriveNotifyToken(clientSecret: string): string {
   // Always a 32-hex token — the registered notification URI must have the
