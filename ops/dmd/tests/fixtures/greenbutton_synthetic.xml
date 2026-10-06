@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC Green Button export for tests. No meter readings from any real
+  account: every value below is hand-written. Committed deliberately — the
+  root .gitignore ignores *.xml, so this path carries an explicit exception.
+-->
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:espi="http://naesb.org/espi">
+  <entry>
+    <espi:UsagePoint>
+      <espi:ServiceCategory><espi:kind>1</espi:kind></espi:ServiceCategory>
+    </espi:UsagePoint>
+    <espi:MeterReading>
+      <espi:ReadingType>
+        <espi:unitOfMeasure>9</espi:unitOfMeasure>
+        <espi:accumulationBehaviour>3</espi:accumulationBehaviour>
+        <espi:intervalLength>3600</espi:intervalLength>
+      </espi:ReadingType>
+      <espi:IntervalBlock>
+        <espi:duration>3600</espi:duration>
+        <espi:IntervalReading>
+          <espi:timePeriod><espi:duration>3600</espi:duration></espi:timePeriod>
+          <espi:value>512</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod><espi:duration>3600</espi:duration></espi:timePeriod>
+          <espi:value>487</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod><espi:duration>3600</espi:duration></espi:timePeriod>
+          <espi:value>633</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod><espi:duration>3600</espi:duration></espi:timePeriod>
+          <espi:value>701</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </espi:MeterReading>
+  </entry>
+</feed>
