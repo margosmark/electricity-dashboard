@@ -59,8 +59,10 @@ def make_env_file(tmp_path: Path, user: str = MOCK_USER, password: str = MOCK_PA
 
 def run_refresh(env_file: Path, portal_url: str, *extra: str) -> tuple[int, str]:
     proc = subprocess.run(
+        # NOT --quiet: the assertions below are about what the run REPORTS,
+        # and a silent failure would be indistinguishable from a quiet one.
         [sys.executable, str(DMD), "--env-file", str(env_file),
-         "--portal-url", portal_url, "--quiet", *extra],
+         "--portal-url", portal_url, *extra],
         capture_output=True, text=True, timeout=300,
     )
     return proc.returncode, proc.stdout + proc.stderr
