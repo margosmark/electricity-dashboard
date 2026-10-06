@@ -25,7 +25,7 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 HERE = Path(__file__).resolve().parent
 FIXTURE = HERE / "fixtures" / "greenbutton_synthetic.xml"
@@ -47,9 +47,9 @@ LOGIN_PAGE = """<!doctype html><html><head><title>Oakville Hydro</title></head><
 <h1>LOGIN</h1>
 <form class="login-form ng-untouched ng-pristine ng-invalid" action="/login" method="post">
   <label>Email Address</label>
-  <input id="mat-input-0" type="text" value="">
+  <input id="mat-input-0" type="text" name="username" value="">
   <label>Password</label>
-  <input id="mat-input-1" type="password" value="">
+  <input id="mat-input-1" type="password" name="password" value="">
   <button type="submit">SIGN IN</button>
 </form>
 {error}
@@ -148,13 +148,15 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         length = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(length).decode("utf-8", "replace")
-        fields = dict(
-            part.split("=", 1) for part in body.split("&") if "=" in part
-        )
-        password = fields.get("password", "")
+        # application/x-www-form-urlencoded — the '@' in an email address
+        # arrives as %40, so decode before comparing (a hand-rolled split
+        # rejects every legitimate login and hides the real failure).
+        fields = parse_qs(body, keep_blank_values=True)
+        username = fields.get("username", [""])[0]
+        password = fields.get("password", [""])[0]
         if scenario() == "badpass":
             return self._send(LOGIN_PAGE.format(error=ERROR_HTML).encode())
-        if password != mock_pass() or fields.get("username") != mock_user():
+        if password != mock_pass() or username != mock_user():
             return self._send(LOGIN_PAGE.format(error=ERROR_HTML).encode())
         if scenario() == "captcha":
             return self._redirect("/captcha")

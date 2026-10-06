@@ -301,18 +301,30 @@ class Step:
 
 
 def find_first(page, selectors: list[str], timeout_ms: int):
-    """First selector that resolves to at least one visible element, else None."""
+    """First selector that resolves to a VISIBLE element, else None.
+
+    Deliberately a poll over every candidate rather than Playwright's
+    `wait_for` per selector: waiting out selector #1 burns the whole budget
+    and never reaches #2, which turns one stale selector into a false
+    "portal structure changed". Every tick tries every candidate, so the list
+    in selectors.json really is an ordered preference list.
+    """
     deadline = time.monotonic() + timeout_ms / 1000
-    for selector in selectors:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
+    while time.monotonic() < deadline:
+        for selector in selectors:
+            try:
+                locator = page.locator(selector)
+                if locator.count() == 0:
+                    continue
+                first = locator.first
+                if first.is_visible():
+                    return first
+            except Exception:  # noqa: BLE001 — a stale node is just a miss
+                continue
         try:
-            locator = page.locator(selector).first
-            locator.wait_for(state="visible", timeout=max(50, int(remaining * 1000)))
-            return locator
-        except Exception:  # noqa: BLE001 — a miss is just a miss, try the next
-            continue
+            page.wait_for_timeout(200)
+        except Exception:  # noqa: BLE001 — page navigated mid-poll
+            break
     return None
 
 
