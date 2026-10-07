@@ -27,6 +27,9 @@ import { BackupControls } from '@/components/BackupControls';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
+import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
+import { NotificationToggle } from '@/components/NotificationToggle';
+import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import ChartView from '@/components/ChartView';
 import InsightsView from '@/components/InsightsView';
 import { useSelectedPlan, PLAN_LABEL } from '@/hooks/useSelectedPlan';
@@ -49,6 +52,7 @@ export default function Dashboard() {
     exampleData, loadExampleData, discardExampleData,
     gbStatus, gbSyncing, gbMessage, setGbMessage,
     syncFromGreenButton, disconnectGreenButton, startGreenButtonConnect,
+    gbRefreshTick, backgroundSync,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
@@ -182,6 +186,22 @@ export default function Dashboard() {
   // Once-per-session OEB staleness check (client-side, degrades silently).
   const staleness = useRateStaleness(rateHistory, processedData);
 
+  /* --- Wave M: background-refresh notices -------------------------------
+   * Recomputed from STATE (best plan + newest rate effectiveDate) every time
+   * a refresh lands, not from a "something changed" event — so a pull that
+   * brings back "nothing new" can still be the pull that crossed into a new
+   * rate period. `connected` (the gb_session cookie) is the gate: a
+   * manual-DMD-only browser gets an empty array and no storage writes.
+   */
+  const gbConnected = gbStatus?.connected === true;
+  const { notices: refreshNotices, dismiss: dismissRefreshNotice } = useRefreshNotices({
+    connected: gbConnected,
+    totals,
+    processedData,
+    currentPlan: userPlan,
+    refreshTick: gbRefreshTick,
+  });
+
   // Ranked ToU-shift recommendations. Analyzes the FULL loaded dataset (not
   // the view-filtered window): recurrence is a property of recent history,
   // independent of which slice the chart currently shows.
@@ -292,6 +312,11 @@ export default function Dashboard() {
       {/* Persistent OEB rate-staleness alert: rendered in both views until
           /api/rates ships the newer effectiveDate. */}
       <RateStalenessBanner result={staleness} />
+
+      {/* Wave M — what the last background refresh changed: a different best
+          plan, or a newer OEB rate set. Empty (and never rendered) for a
+          browser that has not authorised live sync. */}
+      <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
 
       {/* Wave H item 1 — while the loaded readings are the synthetic set, the
           page says so on every view, and offers the way out. */}
@@ -426,6 +451,9 @@ export default function Dashboard() {
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" aria-label="Upload XML" className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button type="button" onClick={emergencyReset} title="Reset Data" aria-label="Reset all data in this browser" className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
+          {/* Wave M — the only thing in the app allowed to ask the browser
+              for notification permission, and only from its own click. */}
+          <NotificationToggle connected={gbConnected} backgroundSync={backgroundSync} />
            <GreenButtonSync
              variant="chip"
              status={gbStatus}
@@ -477,7 +505,7 @@ export default function Dashboard() {
 
       {/* Full-data totals strip: every reading ever loaded, not just the window above. */}
       {totals && (
-        <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip">
+        <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
           <div className="bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
             <div className="text-[8px] md:text-[10px] text-yellow-400">Since {format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
             <div className="text-xl md:text-3xl italic font-black">{totals.totalKwh.toFixed(0)} kWh</div>
