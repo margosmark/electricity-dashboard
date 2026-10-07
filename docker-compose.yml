@@ -82,10 +82,14 @@ services:
   # public app gets neither, which is the whole reason this is a separate
   # service rather than a set of routes in `energy-dashboard`.
   #
-  # Off by default: `ACCT_ENABLED` is absent from `energy-dashboard`, so its
-  # `/account/*` handlers answer 404 and the site is byte-identical to
-  # pre-Wave-N. Set ACCT_ENABLED=true here (and VAPID_* to turn on push) to
-  # switch the feature on.
+  # Off by default: `ACCT_ENABLED` is false for THIS service and absent from
+  # `energy-dashboard` altogether, so every `/account/*` handler answers 404
+  # and the site is byte-identical to pre-Wave-N. The container is always
+  # started even while off — with it running-but-disabled the path answers
+  # 404 (the feature is invisible), while removing it would make the router
+  # answer 502 (the feature looks broken). Turning accounts on is one line in
+  # the untracked `.env`: ACCT_ENABLED=true (+ VAPID_* for push), then
+  # `docker compose up -d account-server`. See OPERATIONS.md.
   account-server:
     image: electricity-dashboard-energy-dashboard:latest
     container_name: account-server
@@ -93,7 +97,7 @@ services:
     expose:
       - "3000"
     environment:
-      ACCT_ENABLED: ${ACCT_ENABLED:-true}
+      ACCT_ENABLED: ${ACCT_ENABLED:-false}
       ACCT_DB_PATH: /data/accounts.db
       ACCT_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       # Shared with greenbutton-shim for the data_available fan-out. The
