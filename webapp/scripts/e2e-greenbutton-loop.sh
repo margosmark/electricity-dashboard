@@ -17,6 +17,10 @@
 # real authorizeUrl/tokenUrl instead of the mock.
 #
 # Usage: webapp/scripts/e2e-greenbutton-loop.sh   (from anywhere; it cds itself)
+#
+# External mode (containerised topology): GB_E2E_EXTERNAL=1 plus
+#   TOKEN_FILE               where the running stack keeps its token file
+#   GB_E2E_TOKEN_READ_CMD    how to read that file's contents (see below)
 
 set -uo pipefail
 
@@ -29,10 +33,27 @@ MOCK_PORT="${MOCK_PORT:-8099}"
 BASE="http://localhost:$PORT"
 MOCK="http://localhost:$MOCK_PORT"
 WORK="$(mktemp -d)"
-TOKEN_FILE="$WORK/tokens.json"
+# GB_E2E_EXTERNAL=1: drive a stack that is ALREADY running — the containerised
+# router topology (webapp/scripts/e2e-greenbutton-topology.sh) — instead of
+# launching `mock custodian + next start` here. The checks are identical;
+# only who owns the processes (and therefore TOKEN_FILE) changes.
+EXTERNAL="${GB_E2E_EXTERNAL:-}"
+TOKEN_FILE="${TOKEN_FILE:-$WORK/tokens.json}"
 JAR="$WORK/cookies.txt"
 PASS=0
 FAIL=0
+
+# How this script reads the token file's contents. Plain `cat` locally; in
+# external mode the file lives inside a container, is owned by that
+# container's uid and is mode 0600 BY DESIGN — so the gate reads it through
+# the container instead of relaxing the permission it is about to assert.
+token_contents() {
+  if [ -n "${GB_E2E_TOKEN_READ_CMD:-}" ]; then
+    sh -c "$GB_E2E_TOKEN_READ_CMD"
+  else
+    cat "$TOKEN_FILE"
+  fi
+}
 
 port_pid() { # pid of whatever is listening on $1 (own processes only)
   ss -ltnpH "sport = :$1" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1
@@ -50,14 +71,17 @@ cleanup() {
   # Kill the whole process GROUP, not just the launcher: `npx next start`
   # forks a next-server child that survives a plain kill and then silently
   # answers the NEXT run's requests out of a deleted temp dir.
-  if [ -n "${APP_PID:-}" ]; then kill -- -"$APP_PID" 2>/dev/null || kill "$APP_PID" 2>/dev/null; fi
-  if [ -n "${MOCK_PID:-}" ]; then kill -- -"$MOCK_PID" 2>/dev/null || kill "$MOCK_PID" 2>/dev/null; fi
-  wait 2>/dev/null
-  # Belt and braces: `npx next start` double-forks, so the group kill can
-  # miss the server that actually holds the port. Find it by its listener.
-  local holder
-  holder="$(port_pid "$PORT")"
-  if [ -n "$holder" ]; then kill "$holder" 2>/dev/null; fi
+  # In external mode this script owns nothing, so it kills nothing.
+  if [ -z "$EXTERNAL" ]; then
+    if [ -n "${APP_PID:-}" ]; then kill -- -"$APP_PID" 2>/dev/null || kill "$APP_PID" 2>/dev/null; fi
+    if [ -n "${MOCK_PID:-}" ]; then kill -- -"$MOCK_PID" 2>/dev/null || kill "$MOCK_PID" 2>/dev/null; fi
+    wait 2>/dev/null
+    # Belt and braces: `npx next start` double-forks, so the group kill can
+    # miss the server that actually holds the port. Find it by its listener.
+    local holder
+    holder="$(port_pid "$PORT")"
+    if [ -n "$holder" ]; then kill "$holder" 2>/dev/null; fi
+  fi
   if [ "$FAIL" -eq 0 ]; then
     printf '\nE2E OK — %d checks passed\n' "$PASS"
   else
@@ -69,27 +93,32 @@ trap cleanup EXIT
 
 # Fail loudly instead of letting a stale process from an earlier run answer
 # this one's requests (that produced 3 phantom failures before this check).
-if curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
+# External mode skips this: there the stack is supposed to be already up.
+if [ -z "$EXTERNAL" ] && curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
   echo "ERROR: something already answers on $PORT (a previous run did not clean up)." >&2
   echo "       free it first:  pkill -f 'next[ ]start -p $PORT'" >&2
   exit 1
 fi
 
-echo "== starting mock custodian on $MOCK_PORT =="
-setsid node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
-MOCK_PID=$!
+if [ -z "$EXTERNAL" ]; then
+  echo "== starting mock custodian on $MOCK_PORT =="
+  setsid node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
+  MOCK_PID=$!
 
-echo "== starting next start on $PORT =="
-GB_AUTHORIZE_URL="$MOCK/oauth/authorize" \
-GB_TOKEN_URL="$MOCK/oauth/token" \
-GB_CLIENT_ID="mock-client-id" \
-GB_CLIENT_SECRET="mock-client-secret" \
-GB_REDIRECT_URI="$BASE/greenbutton/callback" \
-GB_PUBLIC_ORIGIN="$BASE" \
-GB_TOKEN_FILE="$TOKEN_FILE" \
-GB_SCOPE="FB=1_3_4_5" \
-setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
-APP_PID=$!
+  echo "== starting next start on $PORT =="
+  GB_AUTHORIZE_URL="$MOCK/oauth/authorize" \
+  GB_TOKEN_URL="$MOCK/oauth/token" \
+  GB_CLIENT_ID="mock-client-id" \
+  GB_CLIENT_SECRET="mock-client-secret" \
+  GB_REDIRECT_URI="$BASE/greenbutton/callback" \
+  GB_PUBLIC_ORIGIN="$BASE" \
+  GB_TOKEN_FILE="$TOKEN_FILE" \
+  GB_SCOPE="FB=1_3_4_5" \
+  setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
+  APP_PID=$!
+else
+  echo "== external mode: driving the already-running stack at $BASE =="
+fi
 
 for _ in $(seq 1 90); do
   curl -fsS "$BASE/greenbutton/status" >/dev/null 2>&1 && break
@@ -97,7 +126,7 @@ for _ in $(seq 1 90); do
 done
 
 if ! curl -fsS "$BASE/greenbutton/status" >/dev/null 2>&1; then
-  echo "server never came up"; cat "$WORK/app.log"; FAIL=$((FAIL + 1)); exit 1
+  echo "server never came up"; cat "$WORK/app.log" 2>/dev/null; FAIL=$((FAIL + 1)); exit 1
 fi
 
 echo
@@ -125,9 +154,17 @@ case "$CB_HEADERS" in *'gb=connected'*) check "redirects into the app as connect
 grep -q "gb_session" "$JAR"; check "session cookie minted" $?
 [ -f "$TOKEN_FILE" ]; check "token file created" $?
 [ "$(stat -c %a "$TOKEN_FILE" 2>/dev/null)" = "600" ]; check "token file mode 0600" $?
-KEYS="$(python3 -c "import json,sys;print(','.join(sorted(json.load(open(sys.argv[1])).keys())))" "$TOKEN_FILE" 2>/dev/null)"
+TOKEN_BODY="$(token_contents 2>"$WORK/token-read.err")"
+if [ -z "$TOKEN_BODY" ] && [ -s "$WORK/token-read.err" ]; then
+  # Surface WHY the read failed — an empty body alone is indistinguishable
+  # from a genuinely empty file, and this gate must never pass vacuously.
+  printf '  (token read failed: %s)\n' "$(tr '\n' ' ' < "$WORK/token-read.err" | cut -c1-300)"
+fi
+[ -n "$TOKEN_BODY" ]; check "token file readable by the gate" $?
+KEYS="$(printf '%s' "$TOKEN_BODY" | python3 -c "import json,sys;print(','.join(sorted(json.load(sys.stdin).keys())))" 2>/dev/null)"
 case "$KEYS" in *accessToken*refreshToken*sessionToken*) check "only the token set on disk ($KEYS)" 0;; *) check "only the token set on disk ($KEYS)" 1;; esac
-grep -qi "IntervalReading" "$TOKEN_FILE"; test $? -ne 0; check "no readings on disk" $?
+if printf '%s' "$TOKEN_BODY" | grep -qi "IntervalReading"; then HAS_READINGS=1; else HAS_READINGS=0; fi
+check "no readings on disk" "$HAS_READINGS"
 
 echo "== 5. status = connected, and only with the cookie =="
 STATUS1="$(curl -fsS -b "$JAR" "$BASE/greenbutton/status")"

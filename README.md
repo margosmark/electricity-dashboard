@@ -41,6 +41,22 @@ Button XML file from Oakville Hydro. Done.
 | Weekday × hour heatmap of habits | Insights |
 | Real Ontario rate history (Nov 2023 / Nov 2024 / Nov 2025 OEB sets) | `/api/rates` |
 
+## Where your data lives
+
+Nothing about your usage is stored server-side — that rule is the same for
+the manual XML upload and for the Connect My Data feed:
+
+| Thing | Where it lives |
+| --- | --- |
+| Readings / intervals | your browser's `localStorage` only |
+| OAuth **refresh token** | one file on the host: `~/electricity-dashboard/.greenbutton/tokens.json`, mode `0600`, outside every container (bind-mounted into the shim as `/var/lib/greenbutton/tokens.json`) |
+| OAuth access token | the same file, plus the shim's memory |
+| Browser session | an HttpOnly `gb_session` cookie — not an OAuth credential |
+| Anything else | nowhere: no database, no logs of token values, no readings on disk |
+
+Full detail: [`webapp/src/lib/greenbutton/README.md`](webapp/src/lib/greenbutton/README.md)
+and [`GREENBUTTON-CMD.md`](GREENBUTTON-CMD.md) §3.
+
 ## Docs
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the two generations (Streamlit

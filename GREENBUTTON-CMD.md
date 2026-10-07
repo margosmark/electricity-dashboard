@@ -22,8 +22,9 @@ they agree on what a merge means.
 
 | Gate | State |
 | --- | --- |
-| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (553 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 25/25 checks against a live `next start` + mock custodian) |
-| Edge routes `/greenbutton/*` to the app | **DONE — verified empirically** (see §5) |
+| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (582 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 26/26 checks against a live `next start` + mock custodian) |
+| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router: 30/30; see §5) |
+| Edge routes `/greenbutton/*` to this host | **DONE — verified empirically** (the edge forwards *every* path to `:3939`, so the split is made on-box; see §5) |
 | Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
 | Production loop with Mark's real account | **BLOCKED on §6** |
 | Merge semantics shared with Wave J's `/import` | **DONE** — both write through `importPlan.mergeForWrite` (union, incoming wins) |
@@ -64,9 +65,18 @@ browser                    shim (in the app container)              Oakville Hyd
   | parseGreenButtonUsagePoints()  → merge → localStorage.energy_data     |
 ```
 
-The shim is **not** a second service: it is six route handlers inside the
-existing Next.js app, so it shares the domain, the TLS certificate, the deploy
-and the process. See §5 for why.
+The shim is six route handlers from the existing Next.js app running in
+**its own container** (`greenbutton-shim`), reached only through a local nginx
+path router (`edge-router`) that owns host `:3939`:
+
+```
+edge-router :3939 ─┬─ /greenbutton*  → greenbutton-shim   (client secret + token mount)
+                   └─ everything else → energy-dashboard  (no GB_* env at all)
+```
+
+Same code, same image, same domain and certificate — different process, and
+the only one that holds OAuth credentials. See §5 for how the split is
+proven from the outside.
 
 | Route | Purpose |
 | --- | --- |
@@ -144,11 +154,11 @@ Agent with the issued cert) and re-run the e2e script.
 
 ---
 
-## 5. Hosting decision (deviation from the original plan)
+## 5. Hosting — second container behind `/greenbutton/*`
 
 The plan was "a second small container on .110 behind the same domain with a
-`/greenbutton/*` path prefix, pending verification that the edge can route that
-path". **Verified, and the answer ruled that out:**
+`/greenbutton/*` path prefix, pending verification that the edge can route
+that path". **The edge check came back as measured, not assumed:**
 
 ```
 $ curl -sS https://electricity.markarslan.ca/greenbutton
@@ -159,22 +169,52 @@ $ ssh hermescomputer 'curl -sS http://localhost:3939/api/rates' | md5sum
 → identical payloads (modulo the per-request updatedAt)
 ```
 
-Every path under `electricity.markarslan.ca` is forwarded to the app container
-on :3939 — including `/greenbutton/*`. A second container would therefore need
-a `location` block added to an edge we have no access to from these hosts
-(the origin VPS at 96.44.170.134 has port 22 filtered and no known credentials
-here), which would have blocked the whole wave on an infrastructure request.
+Every path under `electricity.markarslan.ca` is forwarded to **this host's
+port 3939** — including `/greenbutton/*` — and the edge sits on a box we
+cannot reach (origin VPS 96.44.170.134, port 22 filtered). So a second
+container could only be reached by making the split *on this host*:
 
-So the shim ships **inside** the app container, which needs zero edge changes
-and gives the same stable public URLs:
+| Container | Role | Secrets |
+| --- | --- | --- |
+| `edge-router` (nginx, `:3939`) | `/greenbutton*` → shim, everything else → app | none |
+| `greenbutton-shim` | the six `/greenbutton/*` handlers | `GB_CLIENT_ID` / `GB_CLIENT_SECRET`, token mount |
+| `energy-dashboard` | the dashboard | **none** — no `GB_*` env, no token mount |
+
+`ops/edge/default.conf.template` is the whole routing policy; it also turns
+`proxy_buffering` **off** for `/greenbutton*` so the ESPI feed still streams
+byte for byte through the extra hop.
+
+**Proof, from the public URL:**
+
+```
+$ curl -sSI https://electricity.markarslan.ca/greenbutton/status | grep -i x-edge-upstream
+X-Edge-Upstream: shim
+$ curl -sSI https://electricity.markarslan.ca/ | grep -i x-edge-upstream
+X-Edge-Upstream: app
+```
+
+The same assertions are checks in `webapp/scripts/e2e-greenbutton-topology.sh`,
+which brings the whole three-container shape up on port 3940 (never touching
+the live 3939), closes the OAuth loop against the mock custodian and replays
+all 26 loop checks through the router: **30/30**.
+
+Why not go further and extract the shim into a minimal non-Next service? The
+split already puts the grant outside the public web app's process, which was
+the security-relevant property; a second image build costs disk this host
+does not have (96% full) and cannot be validated until Oakville issues
+credentials. The extraction stays a mechanical follow-up: `src/lib/greenbutton/*`
+has no React dependency and the route handlers are plain
+`(Request) → Response`.
+
+Rollback (also in `OPERATIONS.md`): `git revert` the topology commit and
+re-run the deploy, or move `ports:` back onto `energy-dashboard` and drop the
+`edge-router` service — the app's `/greenbutton/*` routes still exist, so the
+feature keeps working, just back inside one container.
+
+Registered URLs are unchanged by any of this:
 
 - `redirect_uri`     = `https://electricity.markarslan.ca/greenbutton/callback`
 - `notification_uri` = `https://electricity.markarslan.ca/greenbutton/notify/<token>`
-
-The logic is a self-contained module (`src/lib/greenbutton/*`) with no
-dependency on React or on Next beyond the route handlers, so extracting it
-into a separate service later — if the edge ever gains path routing — is a
-mechanical move: copy the directory, swap `next/headers` for a tiny router.
 
 ---
 
@@ -283,11 +323,15 @@ parsing always client-side. If the stateless pattern is ever preferred
 
 ```bash
 cd webapp
-npm run lint && npm run typecheck && npm run test   # 553 tests
+npm run lint && npm run typecheck && npm run test   # 582 tests
 npm run build
 
-# End-to-end OAuth loop against a mock custodian (25 checks):
+# End-to-end OAuth loop against a mock custodian (26 checks):
 ./scripts/e2e-greenbutton-loop.sh
+
+# Same loop through the CONTAINERISED router topology (30 checks: 4 routing
+# assertions + the 26 above). Needs docker; binds :3940, never :3939:
+./scripts/e2e-greenbutton-topology.sh
 
 # Just the Wave K suites:
 npx vitest run src/lib/greenbutton src/components/GreenButtonSync.test.tsx
