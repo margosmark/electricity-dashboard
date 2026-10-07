@@ -22,7 +22,6 @@ const base: GbStatus = {
   lastSyncBytes: null,
   dataAvailableSince: null,
   redirectUri: "https://electricity.markarslan.ca/greenbutton/callback",
-  notificationUri: "https://electricity.markarslan.ca/greenbutton/notify/abc",
 };
 
 function props(over: Partial<Parameters<typeof GreenButtonSync>[0]> = {}) {

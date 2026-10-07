@@ -95,7 +95,7 @@ proven from the outside.
 
 | Route | Purpose |
 | --- | --- |
-| `GET /greenbutton/status` | configured / connected / last-sync metadata (scalars only) |
+| `GET /greenbutton/status` | configured / connected / last-sync metadata (scalars only — never the notification URI) |
 | `GET /greenbutton/start` | CSRF state → 302 to the custodian's authorize URL |
 | `GET /greenbutton/callback` | code exchange, token set → disk, session cookie → app |
 | `GET /greenbutton/usage` | **the pipe-through**: ESPI streamed straight to the browser |
@@ -257,7 +257,7 @@ not accept Terms on his behalf.
 | Type of application | **Web App** |
 | Application/Portal Login Page URL | `https://electricity.markarslan.ca/` |
 | Third Party Green Button oAuth2 redirect URL | `https://electricity.markarslan.ca/greenbutton/callback` |
-| Notification URI | `https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71` — already pinned in `docker-compose.yml` as `GB_NOTIFY_TOKEN`. **Do not regenerate it**: the form records this URL before Oakville issues the client secret, so it must not be derived from a secret that does not exist yet (verify with `curl -s https://electricity.markarslan.ca/greenbutton/status \| jq -r .notificationUri`) |
+| Notification URI | `https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71` — already pinned in `docker-compose.yml` as `GB_NOTIFY_TOKEN`. **Do not regenerate it**: the form records this URL before Oakville issues the client secret, so it must not be derived from a secret that does not exist yet (verify with `grep -n GB_NOTIFY_TOKEN docker-compose.yml`; `/greenbutton/status` deliberately does **not** publish it — the path token is the only gate on the webhook, M1) |
 | Data scope checkboxes | **Usage Information only** (data minimisation — agreement §1: use the data "only to perform its services to the Customer") |
 | Power to enter your company into an agreement | **Yes** (Mark) |
 | Terms & Conditions checkbox | ticked by Mark |
@@ -357,6 +357,10 @@ Manual probe of the deployed (still unconfigured) surface:
 ```bash
 curl -s https://electricity.markarslan.ca/greenbutton/status | jq
 # → {"configured": false, "unconfiguredReason": "GB_CLIENT_ID / GB_CLIENT_SECRET are not set…"}
+# No `notificationUri` field: the notify path token must never be published
+# (finding M1). Read the pinned value from docker-compose.yml instead.
+curl -s https://electricity.markarslan.ca/greenbutton/status | jq -e 'has("notificationUri") | not'
+# → true
 curl -s -o /dev/null -w '%{http_code}\n' https://electricity.markarslan.ca/greenbutton/usage
 # → 503 not_configured
 ```

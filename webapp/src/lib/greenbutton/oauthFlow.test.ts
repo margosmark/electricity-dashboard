@@ -13,7 +13,7 @@
  * first.
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -498,6 +498,72 @@ describe("notification webhook", () => {
       { params: Promise.resolve({ token: "not-the-token" }) },
     );
     expect(res.status).toBe(404);
+  });
+
+  it("never publishes the notification token through /greenbutton/status", async () => {
+    await connect();
+    const raw = await (await statusGET(appRequest("/greenbutton/status"))).text();
+    expect(raw).not.toContain("notificationUri");
+    // The token itself must not appear anywhere in the response body — not
+    // as a field, not in a URL, not in an error string (finding M1).
+    expect(raw).not.toContain(getNotifyToken());
+    // redirectUri is still there: the UI needs it and it holds no secret.
+    expect(raw).toContain(REDIRECT_URI);
+  });
+
+  it("reads at most 64 KB of a 100 MB notification instead of buffering it", async () => {
+    await connect();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    // An instrumented body: every chunk we are asked for is counted, so the
+    // assertion is about bytes actually pulled off the wire, not about what
+    // the handler claims. 100 MB total, delivered in 16 KB chunks.
+    const CHUNK = 16 * 1024;
+    const LIMIT = 100 * 1024 * 1024;
+    let pulled = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulled >= LIMIT) {
+          controller.close();
+          return;
+        }
+        pulled += CHUNK;
+        controller.enqueue(new Uint8Array(CHUNK).fill(0x41));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+
+    const started = Date.now();
+    const res = await notifyPOST(
+      new Request(`${APP}/greenbutton/notify/${getNotifyToken()}`, {
+        method: "POST",
+        headers: { "content-type": "application/atom+xml" },
+        body,
+        duplex: "half",
+      } as RequestInit),
+      { params: Promise.resolve({ token: getNotifyToken() }) },
+    );
+    const elapsed = Date.now() - started;
+
+    expect(res.status).toBe(200);
+    // The whole 100 MB was never delivered: the reader stopped at the cap and
+    // cancelled the rest.
+    expect(pulled).toBeLessThanOrEqual(64 * 1024 + CHUNK);
+    expect(cancelled).toBe(true);
+    // And it got there fast because it never buffered anything.
+    expect(elapsed).toBeLessThan(5_000);
+
+    const logged = log.mock.calls
+      .map((c: unknown[]) => String(c[0]))
+      .filter((s: string) => s.includes("notification:"));
+    expect(logged).toHaveLength(1);
+    const bytes = Number(/bytes=(\d+)/.exec(logged[0])?.[1]);
+    expect(bytes).toBeGreaterThan(0);
+    expect(bytes).toBeLessThanOrEqual(64 * 1024);
+    log.mockRestore();
   });
 });
 

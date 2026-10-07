@@ -6,6 +6,11 @@
  * `connected` is deliberately session-scoped: another device that has never
  * run the connect flow sees `false` even though the server holds a token set,
  * because it has no cookie that unlocks the data.
+ *
+ * The notification URI is deliberately ABSENT: its path token is the only
+ * gate on `POST /greenbutton/notify/[token]`, and this endpoint answers with
+ * no cookie, session or Origin at all — publishing it would hand the gate to
+ * every visitor (finding M1).
  */
 
 import {
@@ -38,6 +43,5 @@ export async function GET(request: Request): Promise<Response> {
       ? new Date(meta.dataAvailableSince).toISOString()
       : null,
     redirectUri: cfg.redirectUri,
-    notificationUri: cfg.notificationUri,
   });
 }
