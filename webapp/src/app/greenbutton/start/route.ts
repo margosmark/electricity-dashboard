@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { buildAuthorizeUrl } from "@/lib/greenbutton/oauth";
+import { buildAuthorizeUrl, newCodeVerifier, s256Challenge } from "@/lib/greenbutton/oauth";
 import { newState } from "@/lib/greenbutton/session";
 import {
   cookieSecure,
@@ -20,8 +20,19 @@ export async function GET(): Promise<Response> {
   const cfg = getConfig();
   if (!cfg.configured) return redirectToApp("gb=error:not_configured");
 
-  const state = newState();
-  const url = buildAuthorizeUrl(cfg, state, cfg.redirectUri, cfg.scope);
+  // PKCE (RFC 7636), behind GB_PKCE: the verifier never leaves this process
+  // except as the token endpoint's `code_verifier`; only its S256 challenge
+  // goes to the custodian. It is parked with the state so both die on the
+  // same 10-minute, single-use TTL.
+  const codeVerifier = cfg.pkce ? newCodeVerifier() : undefined;
+  const state = newState(codeVerifier);
+  const url = buildAuthorizeUrl(
+    cfg,
+    state,
+    cfg.redirectUri,
+    cfg.scope,
+    codeVerifier ? s256Challenge(codeVerifier) : undefined,
+  );
 
   const res = NextResponse.redirect(url, 302);
   res.cookies.set(STATE_COOKIE, state, {

@@ -119,4 +119,42 @@ if [ "$LOOP_STATUS" -ne 0 ] && [ "$N_FAIL" -eq 0 ]; then
 fi
 rm -f "$LOOP_LOG"
 
+echo
+echo "== OAuth credential material never reaches the edge log =="
+# Same shape as the canary in the security review, with two DIFFERENT
+# markers: $TAG goes in the PATH (it must be logged — that is what makes
+# these checks non-vacuous), while the code/state values go only in the
+# QUERY and must never appear. Unique per run, so a stale line can neither
+# hide nor fake a hit.
+TAG="gb-canary-$(date +%s)-$$"
+CODE_CANARY="code-$TAG"
+STATE_CANARY="state-$TAG"
+curl -s -o /dev/null "$BASE/greenbutton/status"
+curl -s -o /dev/null "$BASE/greenbutton/$TAG?code=$CODE_CANARY&state=$STATE_CANARY"
+sleep 1
+ROUTER_LOG="$(docker logs gb-topo-router 2>&1)"
+case "$ROUTER_LOG" in
+  *"/greenbutton/$TAG"*) check "canary request WAS logged (so the two checks below mean something)" 0 ;;
+  *)                     check "canary request WAS logged (so the two checks below mean something)" 1 ;;
+esac
+case "$ROUTER_LOG" in
+  *"$CODE_CANARY"*) check "authorization code never reaches the edge log" 1 ;;
+  *)                check "authorization code never reaches the edge log" 0 ;;
+esac
+case "$ROUTER_LOG" in
+  *"$STATE_CANARY"*) check "state value never reaches the edge log" 1 ;;
+  *)                 check "state value never reaches the edge log" 0 ;;
+esac
+
+echo
+echo "== baseline security headers, through the real router =="
+HDRS="$(curl -sSI "$BASE/" | tr -d '\r')"
+for h in strict-transport-security x-content-type-options referrer-policy x-frame-options; do
+  printf '%s\n' "$HDRS" | grep -qi "^$h:"; check "GET / carries $h" $?
+done
+printf '%s\n' "$HDRS" | grep -qi '^strict-transport-security: *max-age=31536000; *includeSubDomains'
+check "HSTS is max-age=31536000; includeSubDomains" $?
+printf '%s\n' "$HDRS" | grep -qi '^x-frame-options: *DENY'
+check "X-Frame-Options is DENY" $?
+
 exit "$FAIL"

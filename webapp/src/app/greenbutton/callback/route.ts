@@ -37,9 +37,13 @@ export async function GET(request: Request): Promise<Response> {
   const oauthError = url.searchParams.get("error");
 
   // State must be present in the store (single-use) AND match the cookie the
-  // browser was handed at /start — either alone is not enough.
+  // browser was handed at /start — either alone is not enough. Consumption
+  // comes first on purpose: a cross-site attempt burns its own state and can
+  // never satisfy the cookie comparison below. What the state was carrying
+  // (the PKCE verifier, if the flow started with PKCE) rides along.
   const cookieState = readCookie(request, STATE_COOKIE);
-  const stateOk = Boolean(state) && consumeState(state) && state === cookieState;
+  const pending = state ? consumeState(state) : null;
+  const stateOk = Boolean(pending) && state === cookieState;
 
   if (!stateOk) return redirectToApp("gb=error:state_mismatch");
   if (oauthError) {
@@ -48,9 +52,13 @@ export async function GET(request: Request): Promise<Response> {
     return redirectToApp(`gb=error:denied&gb_detail=${encodeURIComponent(oauthError)}`);
   }
   if (!code) return redirectToApp("gb=error:no_code");
+  // PKCE is on for this attempt but no verifier came back with the state —
+  // the flow was started by a different (older) build or the config flipped
+  // underneath it. Fail closed rather than exchanging an unbound code.
+  if (cfg.pkce && !pending?.codeVerifier) return redirectToApp("gb=error:pkce_verifier_missing");
 
   try {
-    const res = await exchangeCode(cfg, code, cfg.redirectUri);
+    const res = await exchangeCode(cfg, code, cfg.redirectUri, pending?.codeVerifier);
     const store = getTokenStore(cfg.tokenFile);
     const previous = await store.load();
 
@@ -67,7 +75,13 @@ export async function GET(request: Request): Promise<Response> {
       }
     }
 
-    const sessionToken = previous?.sessionToken ?? randomBytes(24).toString("hex");
+    // A fresh secret on EVERY successful authorisation. Reusing
+    // `previous.sessionToken` meant one value lived in the cookie and in
+    // tokens.json for as long as the grant lasted; minting here means a
+    // value captured once (log, extension, shoulder-surf) is dead the next
+    // time anyone completes the flow, and the stored secret never matches
+    // what an old cookie holds.
+    const sessionToken = randomBytes(24).toString("hex");
     const tokens: TokenSet = {
       accessToken: res.access_token,
       obtainedAt: Date.now(),

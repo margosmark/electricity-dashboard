@@ -4,7 +4,10 @@
  * Two things live here and nothing else:
  *
  *  1. CSRF `state` values for the 10-minute window between /start and
- *     /callback. Single-process, TTL'd, single-use.
+ *     /callback. Single-process, TTL'd, single-use — parked alongside each
+ *     one is the PKCE `code_verifier` for that attempt (when PKCE is on),
+ *     so the two die together and a verifier can never outlive the state it
+ *     belongs to.
  *  2. Sync metadata — timestamps and byte counts only. The shim never parses
  *     or stores readings (zero data at rest); it can honestly report "the
  *     feed was 1.2 MB at 14:03" and "the custodian says data changed at
@@ -18,25 +21,36 @@ import { randomBytes } from "node:crypto";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 
-type StateEntry = { createdAt: number };
+export type StateEntry = {
+  createdAt: number;
+  /** RFC 7636 verifier for this attempt; present only when PKCE was on. */
+  codeVerifier?: string;
+};
 
 const states = new Map<string, StateEntry>();
 
-export function newState(): string {
+export function newState(codeVerifier?: string): string {
   prune();
   const value = randomBytes(24).toString("hex");
-  states.set(value, { createdAt: Date.now() });
+  const entry: StateEntry = { createdAt: Date.now() };
+  if (codeVerifier) entry.codeVerifier = codeVerifier;
+  states.set(value, entry);
   return value;
 }
 
-/** Single-use: a state can be redeemed exactly once, then it is gone. */
-export function consumeState(value: string | undefined | null): boolean {
-  if (!value) return false;
+/**
+ * Single-use: a state can be redeemed exactly once, then it is gone.
+ * Returns what the state was carrying (the PKCE verifier, if any) or `null`
+ * when it was never issued. Consumption happens BEFORE any comparison the
+ * caller makes, so a cross-site attempt burns its own state.
+ */
+export function consumeState(value: string | undefined | null): StateEntry | null {
+  if (!value) return null;
   prune();
   const found = states.get(value);
-  if (!found) return false;
+  if (!found) return null;
   states.delete(value);
-  return Date.now() - found.createdAt <= STATE_TTL_MS;
+  return Date.now() - found.createdAt <= STATE_TTL_MS ? found : null;
 }
 
 function prune(): void {

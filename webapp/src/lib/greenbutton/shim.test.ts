@@ -15,7 +15,13 @@ import { join } from "node:path";
 
 import { TokenStore, PERSISTED_KEYS, resetTokenStore } from "@/lib/greenbutton/tokens";
 import { isSafeResourcePath, buildResourceUrl } from "@/lib/greenbutton/espi";
-import { buildAuthorizeUrl, expiryFrom, resolveResourceUri } from "@/lib/greenbutton/oauth";
+import {
+  buildAuthorizeUrl,
+  expiryFrom,
+  newCodeVerifier,
+  resolveResourceUri,
+  s256Challenge,
+} from "@/lib/greenbutton/oauth";
 import { getConfig, resetConfigCache, getNotifyToken } from "@/lib/greenbutton/config";
 import { newState, consumeState, markSync, getSyncMeta, resetSessionState, markDataAvailable } from "@/lib/greenbutton/session";
 
@@ -178,6 +184,40 @@ describe("OAuth helpers", () => {
     expect(url.searchParams.get("client_secret")).toBeNull(); // never in a URL
   });
 
+  it("mints an RFC 7636 verifier and its S256 challenge", () => {
+    const verifier = newCodeVerifier();
+    // 43-128 characters, unreserved charset only (RFC 7636 §4.1). base64url
+    // of 48 random bytes lands at 64 and never emits +, / or =.
+    expect(verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
+    expect(newCodeVerifier()).not.toBe(verifier);
+
+    // RFC 7636 Appendix B known-answer vector — if this ever drifts, every
+    // challenge we send is wrong and no custodian will accept the flow.
+    expect(s256Challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")).toBe(
+      "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+    );
+  });
+
+  it("puts the CHALLENGE on the authorize URL and never the verifier", () => {
+    const cfg = { ...getConfig(), configured: true, clientId: "cid" };
+    const verifier = newCodeVerifier();
+    const challenge = s256Challenge(verifier);
+
+    const withPkce = new URL(
+      buildAuthorizeUrl(cfg, "state-1", "https://app.example/cb", "FB=1_3_4_5", challenge),
+    );
+    expect(withPkce.searchParams.get("code_challenge")).toBe(challenge);
+    expect(withPkce.searchParams.get("code_challenge_method")).toBe("S256");
+    // The whole point: what travels to the custodian cannot redeem the code.
+    expect(withPkce.toString()).not.toContain(verifier);
+
+    const without = new URL(
+      buildAuthorizeUrl(cfg, "state-1", "https://app.example/cb", "FB=1_3_4_5"),
+    );
+    expect(without.searchParams.has("code_challenge")).toBe(false);
+    expect(without.searchParams.has("code_challenge_method")).toBe(false);
+  });
+
   it("applies expiry skew so a token is refreshed a minute early", () => {
     const now = 1_000_000;
     expect(expiryFrom({ access_token: "a", expires_in: 3600 }, now)).toBe(now + 3_600_000 - 60_000);
@@ -200,6 +240,7 @@ describe("config", () => {
     delete process.env.GB_CLIENT_SECRET;
     delete process.env.GB_PUBLIC_ORIGIN;
     delete process.env.GB_NOTIFY_TOKEN;
+    delete process.env.GB_PKCE;
   });
 
   it("is inert until the utility has issued credentials", () => {
@@ -246,16 +287,49 @@ describe("config", () => {
     resetConfigCache();
     expect(getConfig().notificationUri).toContain("96a1eb36f68816b9606848aa7c628a71");
   });
+
+  it("keeps PKCE OFF unless GB_PKCE is explicitly truthy", () => {
+    // Off by default on purpose: the London-Hydro platform's acceptance of
+    // code_challenge is unconfirmed, and a flow the custodian rejects is
+    // worse than one missing defence-in-depth. Flip only on their reply.
+    delete process.env.GB_PKCE;
+    resetConfigCache();
+    expect(getConfig().pkce).toBe(false);
+    for (const falsy of ["", "0", "false", "no", "off", "banana"]) {
+      process.env.GB_PKCE = falsy;
+      resetConfigCache();
+      expect(getConfig().pkce, `GB_PKCE=${JSON.stringify(falsy)}`).toBe(false);
+    }
+    for (const truthy of ["1", "true", "TRUE", "yes", "on"]) {
+      process.env.GB_PKCE = truthy;
+      resetConfigCache();
+      expect(getConfig().pkce, `GB_PKCE=${JSON.stringify(truthy)}`).toBe(true);
+    }
+  });
 });
 
 describe("session state", () => {
   it("consumes a CSRF state exactly once and then forgets it", () => {
     const s = newState();
     expect(s).toMatch(/^[a-f0-9]{48}$/);
-    expect(consumeState(s)).toBe(true);
-    expect(consumeState(s)).toBe(false);
-    expect(consumeState("never-issued")).toBe(false);
-    expect(consumeState(undefined)).toBe(false);
+    expect(consumeState(s)).not.toBeNull();
+    expect(consumeState(s)).toBeNull();
+    expect(consumeState("never-issued")).toBeNull();
+    expect(consumeState(undefined)).toBeNull();
+    expect(consumeState(null)).toBeNull();
+  });
+
+  it("parks the PKCE verifier with its state and hands it back exactly once", () => {
+    const verifier = newCodeVerifier();
+    const s = newState(verifier);
+    expect(consumeState(s)?.codeVerifier).toBe(verifier);
+    // Redeemed: the verifier is gone with the state it came in on, so it can
+    // never be replayed against a second code.
+    expect(consumeState(s)).toBeNull();
+  });
+
+  it("carries no verifier when the flow started without PKCE", () => {
+    expect(consumeState(newState())?.codeVerifier).toBeUndefined();
   });
 
   it("keeps only scalars in the sync metadata", () => {

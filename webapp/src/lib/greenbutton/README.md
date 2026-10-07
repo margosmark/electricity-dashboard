@@ -15,11 +15,11 @@ Nothing else is stored. Ever.
 
 | | |
 | --- | --- |
-| host path | `~/electricity-dashboard/.greenbutton/tokens.json` (on `.110`) |
+| host path | `/home/hermes/.greenbutton-shim/tokens.json` (on `.110`, outside the git worktree) |
 | container path | `/var/lib/greenbutton/tokens.json` — bind mount of the above |
-| env override | `GB_TOKEN_DIR` (host side) / `GB_TOKEN_FILE` (container side) in `docker-compose.yml` |
-| permissions | `0600`, owner uid 1001 (`nextjs` in the image) |
-| inspect | `sudo ls -l ~/electricity-dashboard/.greenbutton` |
+| env override | `GB_TOKEN_DIR` (host side) / `GB_TOKEN_FILE` (container side) — `GB_TOKEN_DIR` is pinned in the **untracked `.env`**, never in `docker-compose.yml` |
+| permissions | `0600`, owner uid 1001 (`nextjs` in the image); directory `0700` |
+| inspect | `sudo ls -l /home/hermes/.greenbutton-shim` |
 
 That file is the *only* thing the shim writes. Its key set is pinned by a
 test (`PERSISTED_KEYS` in `tokens.ts`): `accessToken`, `refreshToken`,

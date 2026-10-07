@@ -18,8 +18,17 @@ import { getTokenStore, type TokenSet } from "./tokens";
 export const SESSION_COOKIE = "gb_session";
 export const STATE_COOKIE = "gb_state";
 
-/** Session cookie lifetime: the authorisation is years-long, so is this. */
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 365 * 10;
+/**
+ * Session cookie lifetime: 90 days, and never more.
+ *
+ * This used to be a decade — a leaked `gb_session` then granted
+ * `/greenbutton/usage` for ten years, while the secret behind it was also
+ * sitting in `tokens.json`. 90 days bounds the damage to a stolen cookie,
+ * and the value is re-issued on every authenticated data response so a
+ * session that is actually in use slides forward instead of being cut off
+ * mid-year (see `renewSessionCookie`).
+ */
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 90;
 
 /** The origin the utility sent us to — also the origin the app is served from. */
 export function appOrigin(): string {
@@ -63,9 +72,45 @@ export function secretEquals(
   return timingSafeEqual(bufA, bufB);
 }
 
+/**
+ * The session cookie's value if (and only if) this request presents the one
+ * currently on file — constant-time, so a timing probe cannot walk a guess
+ * toward the stored secret. Returns null otherwise; callers that only need
+ * a yes/no want `sessionMatches`.
+ */
+export function validSession(request: Request, tokens: TokenSet | null): string | null {
+  const cookie = readCookie(request, SESSION_COOKIE);
+  if (!tokens?.sessionToken || !secretEquals(cookie, tokens.sessionToken)) return null;
+  return cookie;
+}
+
 export function sessionMatches(request: Request, tokens: TokenSet | null): boolean {
-  if (!tokens?.sessionToken) return false;
-  return secretEquals(readCookie(request, SESSION_COOKIE), tokens.sessionToken);
+  return validSession(request, tokens) !== null;
+}
+
+/**
+ * `Set-Cookie` that slides an already-authenticated session forward by the
+ * full 90 days. Emitted by data-bearing responses, so expiry tracks *use*:
+ * a session nobody touches ages out, one that is in weekly use never
+ * expires on the user mid-year — and the ceiling on any single cookie
+ * remains SESSION_MAX_AGE.
+ *
+ * Built by hand because these route handlers answer with a plain
+ * `Response` (one of them a stream), not a NextResponse.
+ *
+ * `secure` defaults to what the configured origin implies; it is a parameter
+ * so both branches are testable without mutating the shared env.
+ */
+export function sessionSetCookie(value: string, secure: boolean = cookieSecure()): string {
+  const parts = [
+    `${SESSION_COOKIE}=${value}`,
+    "Path=/",
+    `Max-Age=${SESSION_MAX_AGE}`,
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+  if (secure) parts.push("Secure");
+  return parts.join("; ");
 }
 
 /**

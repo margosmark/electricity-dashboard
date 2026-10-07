@@ -45,13 +45,25 @@ services:
       # this URL BEFORE Oakville issues the client secret, and a
       # secret-derived default would change the moment credentials arrive,
       # invalidating what is on file. Regenerating it breaks notifications.
-      GB_NOTIFY_TOKEN: ${GB_NOTIFY_TOKEN:-96a1eb36f68816b9606848aa7c628a71}
+      # It is deliberately NOT given a default in this file: the value is
+      # deploy state, not source, so it lives in the untracked .env next to
+      # GB_TOKEN_DIR (see OPERATIONS.md). `:?` fails the deploy loudly
+      # rather than silently falling back to a derived token.
+      GB_NOTIFY_TOKEN: ${GB_NOTIFY_TOKEN:?set GB_NOTIFY_TOKEN in the untracked .env - see OPERATIONS.md}
       # The ONLY file the shim writes: the OAuth token set, mode 0600,
       # outside the container. Owner must be uid 1001 (the `nextjs` user).
       GB_TOKEN_FILE: /var/lib/greenbutton/tokens.json
       GB_CLIENT_ID: ${GB_CLIENT_ID:-}
       GB_CLIENT_SECRET: ${GB_CLIENT_SECRET:-}
+      # PKCE (RFC 7636, S256): implemented end to end, OFF until Oakville
+      # Hydro confirms the London-Hydro platform accepts code_challenge.
+      # Flip with GB_PKCE=true in the untracked .env.
+      GB_PKCE: ${GB_PKCE:-false}
     volumes:
+      # Host path is a DEPLOY decision, pinned in the untracked `.env`
+      # (GB_TOKEN_DIR=/home/hermes/.greenbutton-shim on .110) so the token
+      # file never lands inside the git worktree. The default below is the
+      # local-dev path only.
       - ${GB_TOKEN_DIR:-./.greenbutton}:/var/lib/greenbutton
 
   # Path split. Holds no application code and no secrets; it only decides
@@ -62,6 +74,16 @@ services:
     restart: always
     ports:
       - "3939:80"
+    # Rotation for THIS container's log, pinned in the repo rather than
+    # inherited from the host daemon: it is the access log the OAuth
+    # callback query string used to land in, and an unbounded json file on
+    # a shared box is not a place to grow token material. The host default
+    # (/etc/docker/daemon.json on .110) covers everything else.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       XFP: ${GB_EDGE_XFP:-https}
     volumes:
