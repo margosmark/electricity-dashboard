@@ -109,7 +109,9 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
       return;
     }
     if (availability === "blocked" || availability === "unsupported") return;
-    // The only requestPermission() in the codebase, inside a click handler.
+    // The prompt itself lives in lib/notifications.ts#requestBrowserPermission
+    // (shared with Wave N's account panel) and this is one of its two callers:
+    // a click handler, never an effect.
     const next = await enableNotifications();
     setAvailability(next);
     setStatus(

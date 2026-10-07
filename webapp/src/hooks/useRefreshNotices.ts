@@ -112,8 +112,8 @@ export function useRefreshNotices(input: {
 
     // Optional on-device alert. Guarded three ways: the id set (once per
     // notice, across reloads), the user's drawer toggle, and the browser
-    // permission — and NEVER a requestPermission(), which only the settings
-    // drawer's click handler may call.
+    // permission — and NEVER a requestPermission(), which only a click
+    // handler may trigger (settings drawer, or the account panel's Web Push).
     for (const notice of derived.notices) {
       const notified = notifiedRef.current;
       if (!notified || notified.has(notice.id)) continue;
