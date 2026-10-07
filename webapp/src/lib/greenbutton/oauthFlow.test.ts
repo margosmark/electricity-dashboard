@@ -142,6 +142,11 @@ beforeEach(async () => {
   mock.setRevoked(false);
   mock.setRotation("none");
   mock.setAsync202(false);
+  mock.setOmitResourceUri(false);
+  mock.setResourceRejectOnce(false);
+  mock.setAuthorizationFail(false);
+  mock.setAuthorizationRedirect(null);
+  mock.setBatchRedirect(null);
   mock.state.requests.length = 0;
 });
 
@@ -320,6 +325,148 @@ describe("ESPI resource guards", () => {
     const sent = Math.floor(new Date(url.searchParams.get("published-max")!).getTime() / 1000);
     expect(sent).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
     expect(url.searchParams.get("published-max")).not.toContain(".");
+  });
+});
+
+describe("ESPI pointer resolution (Authorization-resource fallback)", () => {
+  // The token response may omit `resourceURI`; the spec-defined fallback is
+  // the Authorization resource. That path had ZERO coverage — and every one
+  // of its failure modes used to destroy the years-long refresh token or
+  // poison the token file.
+
+  it("classifies a 500 from the Authorization resource as upstream, not revocation", async () => {
+    mock.setOmitResourceUri(true);
+    const cb = await connect();
+    expect(cb.headers.get("location")).toContain("gb=connected");
+    mock.setAuthorizationFail(true);
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(502);
+    expect((await json(res)).error).toBe("upstream");
+    // A custodian hiccup must never destroy the grant.
+    expect(await fileExists(tokenFile)).toBe(true);
+    const status = await json(await statusGET(appRequest("/greenbutton/status")));
+    expect(status.connected).toBe(true);
+  });
+
+  it("keeps the authorisation when the Authorization resource is unreachable", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+    const raw = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    raw.authorizationUri = "http://127.0.0.1:1/espi/authorization";
+    await writeFile(tokenFile, JSON.stringify(raw), { mode: 0o600 });
+    resetTokenStore();
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(502);
+    expect((await json(res)).error).toBe("upstream");
+    expect(await fileExists(tokenFile)).toBe(true);
+  });
+
+  it("resolves the relative resourceURI the Authorization resource advertises and pipes the feed", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+
+    const feed = await usageGET(appRequest("/greenbutton/usage"));
+    expect(feed.status).toBe(200);
+    const xml = await feed.text();
+    expect(xml).toContain("IntervalReading");
+    expect(parseGreenButtonUsagePoints(xml)).toHaveLength(1);
+
+    // Persisted ABSOLUTE: a raw relative URI makes buildResourceUrl throw
+    // `Invalid URL` on every later sync — permanent 500s from one bad save.
+    const onDisk = JSON.parse(await readFile(tokenFile, "utf8")) as { subscriptionUri?: string };
+    expect(onDisk.subscriptionUri).toMatch(/^https?:\/\//);
+
+    const again = await usageGET(appRequest("/greenbutton/usage"));
+    expect(again.status).toBe(200);
+  });
+
+  it("recovers when the utility expired the access token server-side", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+    mock.expireAccessTokens(); // server forgot the AT; the client copy still looks fresh
+
+    const feed = await usageGET(appRequest("/greenbutton/usage"));
+    expect(feed.status).toBe(200);
+    await feed.arrayBuffer();
+    expect(await fileExists(tokenFile)).toBe(true);
+  });
+
+  it("persists the resolved pointer across an access-token refresh in the same request", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+    const current = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    current.expiresAt = Date.now() - 1000;
+    await writeFile(tokenFile, JSON.stringify(current), { mode: 0o600 });
+    resetTokenStore();
+
+    const feed = await usageGET(appRequest("/greenbutton/usage"));
+    expect(feed.status).toBe(200);
+    await feed.arrayBuffer();
+    const onDisk = JSON.parse(await readFile(tokenFile, "utf8")) as { subscriptionUri?: string };
+    // The refresh's save must not clobber the pointer saved moments earlier.
+    expect(onDisk.subscriptionUri).toMatch(/^https?:\/\//);
+  });
+
+  it("survives rotation plus a one-shot resource 401 (retry uses the rotated refresh token)", async () => {
+    mock.setRotation("always");
+    mock.setResourceRejectOnce(true);
+    await connect();
+    const current = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    current.expiresAt = Date.now() - 1000;
+    await writeFile(tokenFile, JSON.stringify(current), { mode: 0o600 });
+    resetTokenStore();
+
+    const feed = await usageGET(appRequest("/greenbutton/usage"));
+    expect(feed.status).toBe(200);
+    await feed.arrayBuffer();
+    // RED today: the forced retry reuses the pre-rotation refresh token,
+    // gets invalid_grant, and wipes the freshly rotated one from disk.
+    expect(await fileExists(tokenFile)).toBe(true);
+    const onDisk = JSON.parse(await readFile(tokenFile, "utf8")) as { refreshToken?: string };
+    expect(onDisk.refreshToken).toBeTruthy();
+  });
+
+  it("keeps the authorisation when the Authorization resource redirects cross-host", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+    // Same server, different hostname → fetch strips Authorization on the
+    // follow → the target 401s → must not read as "grant revoked".
+    mock.setAuthorizationRedirect(
+      `${mock.origin.replace("127.0.0.1", "localhost")}/espi/1_1/resource/Authorization/mock-auth-1-landed`,
+    );
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(502);
+    expect((await json(res)).error).toBe("upstream");
+    expect(await fileExists(tokenFile)).toBe(true);
+  });
+
+  it("keeps the authorisation when the usage batch redirects cross-host", async () => {
+    await connect();
+    mock.setBatchRedirect(
+      `${mock.origin.replace("127.0.0.1", "localhost")}/espi/1_1/resource/Batch/Subscription/mock-sub-1-landed`,
+    );
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(502);
+    expect((await json(res)).error).toBe("upstream");
+    expect(await fileExists(tokenFile)).toBe(true);
+  });
+
+  it("still clears the token set when it carries no ESPI pointer at all", async () => {
+    mock.setOmitResourceUri(true);
+    await connect();
+    const raw = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    delete raw.authorizationUri;
+    await writeFile(tokenFile, JSON.stringify(raw), { mode: 0o600 });
+    resetTokenStore();
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(401);
+    expect((await json(res)).error).toBe("grant_revoked");
+    expect(await fileExists(tokenFile)).toBe(false);
   });
 });
 

@@ -16,7 +16,16 @@
  *
  * Modes the tests flip at runtime: `setRevoked(true)` (refresh + resource
  * both start refusing), `setRotation('always')` (one-time refresh tokens, the
- * savagedata behaviour), `setAsync202(true)` (202 Accepted + notification).
+ * savagedata behaviour), `setAsync202(true)` (202 Accepted + notification),
+ * `setOmitResourceUri(true)` (token response carries only `authorizationURI`,
+ * forcing the ESPI Authorization-resource fallback), `setResourceRejectOnce(true)`
+ * (one server-side early 401 on the feed, despite a live `expires_in`),
+ * `expireAccessTokens()` (the utility forgets every access token it issued
+ * while refresh tokens stay valid), `setAuthorizationFail(true)` (the
+ * Authorization resource answers 500), `setAuthorizationRedirect(url)` /
+ * `setBatchRedirect(url)` (302 elsewhere — pointing at another origin makes
+ * fetch strip the Authorization header on the way, which must never be
+ * mistaken for a revoked grant).
  *
  * CLI: `node scripts/mock-custodian.mjs --port 8099 --client-id x --client-secret y`
  */
@@ -117,6 +126,20 @@ export async function startMockCustodian(options = {}) {
     revoked: false,
     rotation: 'none', // 'always' → new refresh token on every refresh
     async202: false,
+    // Token exchange answers WITHOUT `resourceURI` (only `authorizationURI`):
+    // forces the client down the ESPI Authorization-resource fallback path.
+    omitResourceUri: false,
+    // The resource server 401s the FIRST feed request even though the access
+    // token is valid per `expires_in` (server-side early expiry).
+    resourceRejectOnce: false,
+    // The Authorization resource itself is sick (500) no matter the token.
+    authorizationFail: false,
+    // The Authorization resource 302s elsewhere (cross-origin when the test
+    // points it at a second listener — fetch strips Authorization there).
+    authorizationRedirect: null,
+    // The usage batch 302s elsewhere: same credential-strip hazard on the
+    // MAIN data path, not just the pointer fallback.
+    batchRedirect: null,
     accessTokens: new Set(),
     refreshTokens: new Map(), // refreshToken → { access }
     codes: new Map(),
@@ -168,6 +191,15 @@ export async function startMockCustodian(options = {}) {
         const refresh = `refresh-${nextId()}`;
         state.accessTokens.add(access);
         state.refreshTokens.set(refresh, { access });
+        // ESPI puts the data pointer in the token response; some custodians
+        // omit `resourceURI` and only advertise it from the Authorization
+        // resource. `omitResourceUri` models that second shape.
+        const pointers = state.omitResourceUri
+          ? { authorizationURI: '/espi/1_1/resource/Authorization/mock-auth-1' }
+          : {
+              resourceURI: '/espi/1_1/resource/Batch/Subscription/mock-sub-1',
+              authorizationURI: '/espi/1_1/resource/Authorization/mock-auth-1',
+            };
         res.writeHead(200, { 'content-type': 'application/json' });
         return void res.end(
           JSON.stringify({
@@ -176,8 +208,7 @@ export async function startMockCustodian(options = {}) {
             refresh_token: refresh,
             expires_in: 3600,
             scope: record.scope,
-            resourceURI: '/espi/1_1/resource/Batch/Subscription/mock-sub-1',
-            authorizationURI: '/espi/1_1/resource/Authorization/mock-auth-1',
+            ...pointers,
           }),
         );
       }
@@ -208,7 +239,20 @@ export async function startMockCustodian(options = {}) {
     }
 
     // ---- ESPI: Authorization resource ----------------------------------
-    if (req.method === 'GET' && url.pathname === '/espi/1_1/resource/Authorization/mock-auth-1') {
+    if (req.method === 'GET' && url.pathname.startsWith('/espi/1_1/resource/Authorization/mock-auth-1')) {
+      // The `-landed` twin exists so a redirect knob can point at a real,
+      // non-redirecting target: first hop 302s, landing path serves (401
+      // when the follow arrived without credentials).
+      if (url.pathname === '/espi/1_1/resource/Authorization/mock-auth-1' && state.authorizationRedirect) {
+        // Infrastructure-level redirect (an http→https hop or an edge rewrite)
+        // arrives BEFORE auth, exactly like a real load balancer's.
+        res.writeHead(302, { location: state.authorizationRedirect });
+        return void res.end();
+      }
+      if (url.pathname === '/espi/1_1/resource/Authorization/mock-auth-1' && state.authorizationFail) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+        return void res.end(JSON.stringify({ error: 'server_error' }));
+      }
       if (state.revoked || !authorised(req, state)) {
         res.writeHead(401, { 'content-type': 'application/json' });
         return void res.end(JSON.stringify({ error: 'invalid_token' }));
@@ -223,8 +267,27 @@ export async function startMockCustodian(options = {}) {
     }
 
     // ---- ESPI: usage batch ---------------------------------------------
-    if (req.method === 'GET' && url.pathname === '/espi/1_1/resource/Batch/Subscription/mock-sub-1') {
+    // Two paths serve the feed: the canonical one (which may 302 when the
+    // redirect knob is on) and its `-landed` twin, the non-redirecting
+    // target redirect tests point at.
+    if (
+      req.method === 'GET' &&
+      (url.pathname === '/espi/1_1/resource/Batch/Subscription/mock-sub-1' ||
+        url.pathname === '/espi/1_1/resource/Batch/Subscription/mock-sub-1-landed')
+    ) {
+      if (
+        url.pathname === '/espi/1_1/resource/Batch/Subscription/mock-sub-1' &&
+        state.batchRedirect
+      ) {
+        res.writeHead(302, { location: state.batchRedirect });
+        return void res.end();
+      }
       if (state.revoked || !authorised(req, state)) {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        return void res.end(JSON.stringify({ error: 'invalid_token' }));
+      }
+      if (state.resourceRejectOnce) {
+        state.resourceRejectOnce = false;
         res.writeHead(401, { 'content-type': 'application/json' });
         return void res.end(JSON.stringify({ error: 'invalid_token' }));
       }
@@ -263,6 +326,17 @@ export async function startMockCustodian(options = {}) {
     setRevoked(v) { state.revoked = v; },
     setRotation(v) { state.rotation = v; },
     setAsync202(v) { state.async202 = v; },
+    setOmitResourceUri(v) { state.omitResourceUri = v; },
+    setResourceRejectOnce(v) { state.resourceRejectOnce = v; },
+    // Server-side early expiry: the utility forgets every access token it
+    // issued (refresh tokens stay valid) — the client's copy still looks fresh.
+    expireAccessTokens() { state.accessTokens.clear(); },
+    // The Authorization resource answers 500 regardless of the token.
+    setAuthorizationFail(v) { state.authorizationFail = v; },
+    // null = serve in place; a URL = 302 the Authorization resource there.
+    setAuthorizationRedirect(v) { state.authorizationRedirect = v; },
+    // null = serve in place; a URL = 302 the usage batch there.
+    setBatchRedirect(v) { state.batchRedirect = v; },
     close: () => new Promise((resolve) => server.close(resolve)),
   };
 }

@@ -12,15 +12,22 @@
  *   data_pending   — 202 Accepted, the custodian is assembling the batch
  *   upstream       — 5xx / unreachable / malformed → retry later
  *
+ * Classification rule that matters for the years-long refresh token: only an
+ * EXPLICIT rejection of a freshly-minted credential (invalid_grant from the
+ * token endpoint, or 401/403 after a forced refresh) destroys the token set.
+ * Everything ambiguous — network errors, 5xx, cross-origin redirects that
+ * strip the Authorization header on the way — is `upstream` and keeps the
+ * grant on disk. A custodian hiccup must never look like a revocation.
+ *
  * Zero data at rest: this module hands the caller a stream and a byte count.
  * It never materialises the feed, never parses it, and never writes anything
  * but the token set.
  */
 
 import { getConfig } from "./config";
-import { OAuthError, expiryFrom, refresh } from "./oauth";
+import { OAuthError, expiryFrom, refresh, resolveResourceUri } from "./oauth";
 import { getTokenStore, type TokenSet } from "./tokens";
-import { fetchResource, type ResourceResult } from "./espi";
+import { fetchResource, isCrossOriginRedirect, type ResourceResult } from "./espi";
 import { markSync } from "./session";
 
 export type FeedErrorCode =
@@ -56,14 +63,9 @@ export async function readFeed(req: FeedRequest = {}): Promise<FeedResult> {
   if (!cfg.configured) return fail("not_configured", cfg.unconfiguredReason);
 
   const store = getTokenStore(cfg.tokenFile);
-  const tokens = await store.load();
-  if (!tokens) return fail("not_connected");
-
-  const uri = await resolveSubscriptionUri(tokens);
-  if (!uri) {
-    await store.clear();
-    return fail("grant_revoked", "token set carried no ESPI resource pointer");
-  }
+  const loaded = await store.load();
+  if (!loaded) return fail("not_connected");
+  let tokens = loaded;
 
   // A revoked grant must leave NOTHING on disk: a token file that keeps
   // failing is a token file an operator will forget about.
@@ -72,25 +74,53 @@ export async function readFeed(req: FeedRequest = {}): Promise<FeedResult> {
     return oauthFailure(e);
   };
 
-  let accessToken: string;
+  // A usable access token comes FIRST: pointer resolution is an
+  // authenticated request too, and resolving with a stale token misreads an
+  // ordinary expiry as a revoked grant. Every later save writes the token
+  // set returned here, so saves compose instead of clobbering each other.
   try {
-    accessToken = await ensureAccessToken(tokens, false);
+    tokens = await ensureAccessToken(tokens, false);
   } catch (e) {
     return failOAuth(e);
   }
 
+  let pointer: PointerResult;
+  try {
+    pointer = await resolveSubscriptionUri(tokens);
+  } catch (e) {
+    // The forced refresh inside pointer resolution said invalid_grant.
+    return failOAuth(e);
+  }
+  if (pointer.kind === "transient") return fail("upstream", pointer.detail);
+  if (pointer.kind === "missing") {
+    await store.clear();
+    return fail("grant_revoked", "token set carried no ESPI resource pointer");
+  }
+  if (pointer.kind === "revoked") {
+    await store.clear();
+    return fail("grant_revoked", pointer.detail);
+  }
+  tokens = pointer.tokens;
+  const uri = pointer.uri;
+
   // Attempt 1, then exactly one forced refresh + retry: a 401 can mean "token
   // expired a second ago" or "grant is gone", and only the retry tells them
   // apart. Wiping a good token set on the first 401 would strand the user.
-  let result = await requestFeed(accessToken, uri, req);
+  let result = await requestFeed(tokens, uri, req);
   if (result.kind === "error" && (result.status === 401 || result.status === 403)) {
+    if (result.redirectedCrossOrigin) {
+      // The redirect dropped our Authorization header, so this 401 proves
+      // nothing about the grant — refreshing would not change the outcome.
+      return fail("upstream", stripDetail(result));
+    }
     try {
-      accessToken = await ensureAccessToken(tokens, true);
+      tokens = await ensureAccessToken(tokens, true);
     } catch (e) {
       return failOAuth(e);
     }
-    result = await requestFeed(accessToken, uri, req);
+    result = await requestFeed(tokens, uri, req);
     if (result.kind === "error" && (result.status === 401 || result.status === 403)) {
+      if (result.redirectedCrossOrigin) return fail("upstream", stripDetail(result));
       await store.clear();
       return fail("grant_revoked", `resource server answered ${result.status} after a fresh token`);
     }
@@ -113,13 +143,17 @@ export async function readFeed(req: FeedRequest = {}): Promise<FeedResult> {
   };
 }
 
+function stripDetail(result: Extract<ResourceResult, { kind: "error" }>): string {
+  return `resource server redirected to another origin and the redirect dropped the Authorization header (${result.status})`;
+}
+
 async function requestFeed(
-  accessToken: string,
+  tokens: TokenSet,
   subscriptionUri: string,
   req: FeedRequest,
 ): Promise<ResourceResult> {
   return fetchResource({
-    accessToken,
+    accessToken: tokens.accessToken,
     subscriptionUri,
     resourcePath: req.resourcePath ?? null,
     publishedMin: req.publishedMin,
@@ -133,14 +167,16 @@ async function requestFeed(
 }
 
 /**
- * A usable access token, refreshing when within a minute of expiry (or when
- * forced). A rotated refresh token is persisted before we return, so a
- * subsequent 401 can't strand us holding a one-time token we already burned.
+ * A usable token set, refreshing when within a minute of expiry (or when
+ * forced). A rotated refresh token is persisted BEFORE the set is returned,
+ * so every caller threads the current credentials onward — a retry that used
+ * a pre-rotation snapshot would burn a one-time token and read invalid_grant
+ * as a revocation.
  */
-async function ensureAccessToken(tokens: TokenSet, force: boolean): Promise<string> {
+async function ensureAccessToken(tokens: TokenSet, force: boolean): Promise<TokenSet> {
   const cfg = getConfig();
   const fresh = !force && (tokens.expiresAt === undefined || tokens.expiresAt > Date.now());
-  if (fresh) return tokens.accessToken;
+  if (fresh) return tokens;
   if (!tokens.refreshToken) {
     throw new OAuthError("grant_revoked", "access token expired and no refresh token is held");
   }
@@ -159,38 +195,114 @@ async function ensureAccessToken(tokens: TokenSet, force: boolean): Promise<stri
   if (res.scope) next.scope = res.scope;
   next.expiresAt = expiryFrom(res);
   await store.save(next);
-  return next.accessToken;
+  return next;
 }
+
+type PointerResult =
+  | { kind: "uri"; uri: string; tokens: TokenSet }
+  | { kind: "missing" }
+  | { kind: "revoked"; detail: string }
+  | { kind: "transient"; detail: string };
 
 /**
  * The token response's `resourceURI` is the batch; if a custodian omitted
  * it, the ESPI Authorization resource advertises it as `<resourceURI>`.
  * Reading that one small resource is the spec-defined way to find the batch —
  * far better than guessing URLs.
+ *
+ * Failure classification mirrors the feed request: one forced refresh + retry
+ * separates "expired a second ago" from "grant is gone", and anything that is
+ * not an explicit rejection (network error, 5xx, cross-origin redirect that
+ * stripped our credentials) is `transient` — reported upstream with the token
+ * set kept intact. A cached pointer is trusted only when it is an absolute
+ * http(s) URL: an older build persisted raw relative URIs, which would throw
+ * in `buildResourceUrl` forever after, so a bad one is discarded and
+ * re-resolved from the Authorization resource.
  */
-async function resolveSubscriptionUri(tokens: TokenSet): Promise<string | null> {
-  if (tokens.subscriptionUri) return tokens.subscriptionUri;
-  if (!tokens.authorizationUri) return null;
-
+async function resolveSubscriptionUri(tokens: TokenSet): Promise<PointerResult> {
   const cfg = getConfig();
+  if (tokens.subscriptionUri && isHttpUrl(tokens.subscriptionUri)) {
+    return { kind: "uri", uri: tokens.subscriptionUri, tokens };
+  }
+  if (!tokens.authorizationUri) return { kind: "missing" };
+
+  let current = tokens;
+  let outcome: PointerAttempt = { kind: "missing" };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    outcome = await fetchAuthorizationResource(current);
+    if (outcome.kind !== "unauthorized") break;
+    // 401 here can be an access token the utility expired server-side before
+    // our clock says so — refresh once and ask again. A second 401 with the
+    // fresh token is a revocation.
+    current = await ensureAccessToken(current, true);
+  }
+
+  if (outcome.kind !== "uri") {
+    if (outcome.kind === "unauthorized") {
+      return { kind: "revoked", detail: "authorization resource rejected a fresh access token" };
+    }
+    return outcome;
+  }
+
+  // Relative references resolve against the Authorization resource's own
+  // URL (RFC 3986); non-http schemes are unusable, not revocable.
+  const uri = resolveResourceUri(outcome.raw, current.authorizationUri!);
+  if (!uri) return { kind: "missing" };
+
+  const next: TokenSet = { ...current, subscriptionUri: uri };
+  await getTokenStore(cfg.tokenFile).save(next);
+  return { kind: "uri", uri, tokens: next };
+}
+
+type PointerAttempt =
+  | { kind: "uri"; raw: string }
+  | { kind: "unauthorized" }
+  | { kind: "missing" }
+  | { kind: "transient"; detail: string };
+
+async function fetchAuthorizationResource(tokens: TokenSet): Promise<PointerAttempt> {
+  const authorizationUri = tokens.authorizationUri!;
+  let res: Response;
   try {
-    const res = await fetch(tokens.authorizationUri, {
+    res = await fetch(authorizationUri, {
       headers: {
         Authorization: `Bearer ${tokens.accessToken}`,
         Accept: "application/atom+xml, application/xml",
       },
       cache: "no-store",
     });
-    if (!res.ok) return null;
-    const xml = await res.text();
-    const match = xml.match(/<(?:\w+:)?resourceURI>\s*([^<]+?)\s*<\/(?:\w+:)?resourceURI>/);
-    const uri = match?.[1]?.trim();
-    if (!uri) return null;
-    const store = getTokenStore(cfg.tokenFile);
-    await store.save({ ...tokens, subscriptionUri: uri });
-    return uri;
+  } catch (e) {
+    return {
+      kind: "transient",
+      detail: `authorization resource unreachable: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+  if (res.status === 401 || res.status === 403) {
+    // A cross-origin follow arrives WITHOUT our Authorization header (fetch
+    // strips it by design), so a 401 after such a hop says nothing about
+    // the grant — treating it as revocation would destroy a valid one.
+    if (isCrossOriginRedirect(authorizationUri, res)) {
+      return {
+        kind: "transient",
+        detail: `authorization resource redirected to another origin and the redirect dropped the Authorization header (${res.status})`,
+      };
+    }
+    return { kind: "unauthorized" };
+  }
+  if (!res.ok) return { kind: "transient", detail: `authorization resource ${res.status}` };
+  const xml = await res.text();
+  const match = xml.match(/<(?:\w+:)?resourceURI>\s*([^<]+?)\s*<\/(?:\w+:)?resourceURI>/);
+  const raw = match?.[1]?.trim();
+  if (!raw) return { kind: "missing" };
+  return { kind: "uri", raw };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
-    return null;
+    return false;
   }
 }
 
