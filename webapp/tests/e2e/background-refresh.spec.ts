@@ -199,7 +199,9 @@ test.describe('Wave M background refresh (browser)', () => {
     await installPermissionSpy(page);
 
     await page.goto('/');
-    await expect(page.getByTestId('gb-chip')).toBeVisible({ timeout: 20_000 });
+    // NOT the gb-chip: against an unconfigured shim (the production default,
+    // and CI's container) the control is deliberately not rendered at all.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 });
 
     // Scope 4: nothing new is rendered for a browser that never authorised.
     await expect(page.locator('[data-testid="notification-toggle"]')).toHaveCount(0);
