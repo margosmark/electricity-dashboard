@@ -152,6 +152,16 @@ echo "== 4. callback exchanges the code =="
 CB_HEADERS="$(curl -sS -D- -o /dev/null -b "$JAR" -c "$JAR" "$CB_URL")"
 case "$CB_HEADERS" in *'gb=connected'*) check "redirects into the app as connected" 0;; *) check "redirects into the app as connected" 1;; esac
 grep -q "gb_session" "$JAR"; check "session cookie minted" $?
+# The session must be minted for at most 90 days — a decade was the finding
+# (a leaked cookie granting /greenbutton/usage until 2036).
+SESSION_LINE="$(printf '%s' "$CB_HEADERS" | grep -i '^set-cookie: *gb_session=' | head -1)"
+GB_MAX_AGE="$(printf '%s' "$SESSION_LINE" | grep -oi 'Max-Age=[0-9]*' | head -1 | cut -d= -f2)"
+printf '%s' "$SESSION_LINE" | grep -qi 'HttpOnly'; check "gb_session is HttpOnly" $?
+if [ -n "$GB_MAX_AGE" ] && [ "$GB_MAX_AGE" -le 7776000 ]; then
+  check "gb_session expires within 90 days (Max-Age=$GB_MAX_AGE)" 0
+else
+  check "gb_session expires within 90 days (Max-Age=${GB_MAX_AGE:-missing})" 1
+fi
 [ -f "$TOKEN_FILE" ]; check "token file created" $?
 [ "$(stat -c %a "$TOKEN_FILE" 2>/dev/null)" = "600" ]; check "token file mode 0600" $?
 TOKEN_BODY="$(token_contents 2>"$WORK/token-read.err")"
@@ -179,6 +189,10 @@ READINGS="$(grep -o "<espi:IntervalReading>" "$WORK/feed.xml" | wc -l | tr -d ' 
 [ "$READINGS" -gt 0 ]; check "feed carries $READINGS IntervalReadings" $?
 PIPE="$(curl -sSI -b "$JAR" "$BASE/greenbutton/usage" | tr -d '\r' | grep -i '^x-greenbutton-pipe:' | awk '{print $2}')"
 [ "$PIPE" = "stream" ]; check "response is streamed, not buffered" $?
+# Sliding expiry: an authenticated read re-issues the cookie for the SAME
+# window it was minted with, so expiry tracks use rather than a fixed date.
+USAGE_MAX_AGE="$(curl -sSI -b "$JAR" "$BASE/greenbutton/usage" | tr -d '\r' | grep -i '^set-cookie: *gb_session=' | grep -oi 'Max-Age=[0-9]*' | head -1 | cut -d= -f2)"
+[ -n "$USAGE_MAX_AGE" ] && [ "$USAGE_MAX_AGE" = "$GB_MAX_AGE" ]; check "gb_session slides on an authenticated read (Max-Age=${USAGE_MAX_AGE:-missing}, minted $GB_MAX_AGE)" $?
 HTTP_NOCOOKIE="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/greenbutton/usage")"
 [ "$HTTP_NOCOOKIE" = "401" ]; check "no cookie → 401" $?
 

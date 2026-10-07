@@ -37,6 +37,16 @@ export type GreenButtonConfig = {
   tokenAuthStyle: TokenAuthStyle | "auto";
   /** Absolute path of the token file (outside the container on .110). */
   tokenFile: string;
+  /**
+   * RFC 7636 PKCE (S256) on the authorization_code flow.
+   *
+   * Defence in depth against a code read off the callback URL — an
+   * extension, a proxy, a Referer, or an access log. It is opt-in because
+   * the London-Hydro platform's stance is unconfirmed: shipping it on by
+   * default risks a flow the custodian rejects, so it waits for their reply
+   * (GB_PKCE=true flips it).
+   */
+  pkce: boolean;
 };
 
 /** Public origin the utility has on file for us — drives both registered URIs. */
@@ -99,6 +109,7 @@ export function getConfig(): GreenButtonConfig {
     scope: str("GB_SCOPE", DEFAULT_SCOPE),
     tokenAuthStyle: parseAuthStyle(str("GB_TOKEN_AUTH_STYLE", "auto")),
     tokenFile: str("GB_TOKEN_FILE", DEFAULT_TOKEN_FILE),
+    pkce: parseBool(str("GB_PKCE", "false")),
   };
   return cached;
 }
@@ -132,6 +143,11 @@ function deriveNotifyToken(clientSecret: string): string {
 
 function parseAuthStyle(raw: string): TokenAuthStyle | "auto" {
   return raw === "basic" || raw === "body" ? raw : "auto";
+}
+
+/** Truthy env flags: `1/true/yes/on`, case-insensitive. Anything else is off. */
+function parseBool(raw: string): boolean {
+  return /^(1|true|yes|on)$/i.test(raw);
 }
 
 /** Test hook — env changes must be observable. */

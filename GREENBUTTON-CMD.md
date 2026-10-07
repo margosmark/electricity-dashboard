@@ -112,19 +112,22 @@ sync, tokens, session, http) and `webapp/src/app/greenbutton/`.
 **Exactly one place:** a JSON file on .110, outside the container, mode `0600`.
 
 ```
-host:      ~/electricity-dashboard/.greenbutton/tokens.json
+host:        /home/hermes/.greenbutton-shim/tokens.json
 in container: /var/lib/greenbutton/tokens.json   (bind mount, GB_TOKEN_FILE)
-inspect:   sudo ls -l ~/electricity-dashboard/.greenbutton
+inspect:     sudo ls -l /home/hermes/.greenbutton-shim
 ```
 
-Override with `GB_TOKEN_DIR` (host path) in `docker-compose.yml`.
+The host path is `GB_TOKEN_DIR`, pinned in the **untracked `.env`** — never
+in `docker-compose.yml`. It sits outside the git worktree on purpose: no
+clone, no `git clean -xfd`, no `git add -A` can reach a live refresh token.
 
 It is never:
 
 - in the browser (the browser holds an HttpOnly `gb_session` cookie that
   unlocks *this* service and nothing else — it is not an OAuth credential),
-- in a commit (`.greenbutton/` is gitignored),
-- in a log (logs carry status codes, error codes, byte counts and URLs only),
+- in a commit (the `.env` and `.greenbutton/` are both gitignored),
+- in a log (the edge logs the `/greenbutton/*` **path only** — `log_format
+  gb_noquery` drops the query string, so `?code=` never lands anywhere),
 - anywhere but the token set itself.
 
 The file's key set is pinned by tests (`PERSISTED_KEYS` in

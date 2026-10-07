@@ -20,6 +20,7 @@ import { join } from "node:path";
 
 import { startMockCustodian } from "../../../scripts/mock-custodian.mjs";
 import { resetConfigCache, getNotifyToken } from "@/lib/greenbutton/config";
+import { s256Challenge } from "@/lib/greenbutton/oauth";
 import { resetTokenStore, PERSISTED_KEYS } from "@/lib/greenbutton/tokens";
 import { resetSessionState, getSyncMeta } from "@/lib/greenbutton/session";
 import { parseGreenButtonUsagePoints } from "@/lib/energy";
@@ -66,9 +67,27 @@ function appRequest(path: string, init: RequestInit = {}): Request {
 }
 
 /** The .mjs mock has no type annotations; this is its request-log shape. */
-type MockRequest = { method?: string; path: string; query: Record<string, string | undefined> };
+type MockRequest = {
+  method?: string;
+  path: string;
+  query: Record<string, string | undefined>;
+  /** Whitelisted token-endpoint fields (grant_type / code_verifier / redirect_uri). */
+  body?: Record<string, string | null>;
+};
 function requests(): MockRequest[] {
   return (mock.state.requests as unknown as MockRequest[]) ?? [];
+}
+
+/** Raw `Set-Cookie` lines — `applySetCookie` keeps only the values, these keep Max-Age. */
+function setCookieLines(res: Response): string[] {
+  const header = res.headers as Headers & { getSetCookie?: () => string[] };
+  return header.getSetCookie?.() ?? [];
+}
+
+function maxAgeOf(line: string | undefined): number | undefined {
+  if (!line) return undefined;
+  const m = /Max-Age=(\d+)/i.exec(line);
+  return m ? Number(m[1]) : undefined;
 }
 
 async function json(res: Response): Promise<Record<string, unknown>> {
@@ -136,6 +155,10 @@ beforeEach(async () => {
   resetTokenStore();
   resetSessionState();
   jar.clear();
+  // PKCE is a per-test choice: default every case to the shipped default
+  // (off — Oakville has not confirmed the platform accepts it yet).
+  delete process.env.GB_PKCE;
+  resetConfigCache();
   // A token file left by the previous test would make "before authorisation"
   // assertions lie, so every case starts from no authorisation at all.
   await rm(tokenFile, { force: true });
@@ -630,5 +653,107 @@ describe("multi-meter feed", () => {
       resetTokenStore();
       await two.close();
     }
+  });
+});
+
+describe("PKCE (RFC 7636) — behind GB_PKCE", () => {
+  it("carries the challenge to the custodian and the verifier to the token endpoint", async () => {
+    process.env.GB_PKCE = "true";
+    resetConfigCache();
+
+    const cb = await connect();
+    expect(cb.headers.get("location")).toContain("gb=connected");
+
+    const authorize = requests().find((r) => r.path === "/oauth/authorize");
+    const challenge = authorize?.query.code_challenge;
+    expect(authorize?.query.code_challenge_method).toBe("S256");
+    expect(challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const exchange = requests().find(
+      (r) => r.path === "/oauth/token" && r.body?.grant_type === "authorization_code",
+    );
+    const verifier = exchange?.body?.code_verifier;
+    expect(verifier).toBeTruthy();
+    // The mock refuses the exchange unless the verifier hashes back to the
+    // challenge it issued (RFC 7636 §4.6) — reaching this line at all is the
+    // proof; this pins the relationship explicitly on top of it.
+    expect(s256Challenge(verifier!)).toBe(challenge);
+  });
+
+  it("sends neither parameter when GB_PKCE is off (the shipped default)", async () => {
+    const cb = await connect();
+    expect(cb.headers.get("location")).toContain("gb=connected");
+
+    const authorize = requests().find((r) => r.path === "/oauth/authorize");
+    expect(authorize?.query.code_challenge).toBeUndefined();
+    expect(authorize?.query.code_challenge_method).toBeUndefined();
+    const exchange = requests().find((r) => r.path === "/oauth/token");
+    expect(exchange?.body?.code_verifier ?? null).toBeNull();
+  });
+
+  it("fails closed when PKCE is on but the state carries no verifier", async () => {
+    // Flow started with PKCE off — no verifier was ever parked with the state.
+    const start = await startGET();
+    applySetCookie(start);
+    const atAuth = (await fetch(start.headers.get("location")!, { redirect: "manual" })) as Response;
+    const callbackUrl = atAuth.headers.get("location")!;
+
+    // …and PKCE is switched on before the callback lands (config change,
+    // redeploy mid-flow). An unbound code must not be redeemed.
+    process.env.GB_PKCE = "true";
+    resetConfigCache();
+
+    const cb = await callbackGET(
+      new Request(callbackUrl, { headers: { cookie: cookieHeader() } }),
+    );
+    expect(cb.status).toBe(302);
+    expect(cb.headers.get("location")).toContain("gb=error:pkce_verifier_missing");
+    expect(await fileExists(tokenFile)).toBe(false);
+    expect(setCookieLines(cb).some((l) => l.startsWith("gb_session="))).toBe(false);
+  });
+});
+
+describe("gb_session lifetime", () => {
+  it("mints at most 90 days, and slides the window on an authenticated read", async () => {
+    const cb = await connect();
+    expect(cb.headers.get("location")).toContain("gb=connected");
+
+    const minted = setCookieLines(cb).find((l) => l.startsWith("gb_session="));
+    if (!minted) throw new Error(`no gb_session on the callback: ${setCookieLines(cb).join(" | ")}`);
+    expect(maxAgeOf(minted)).toBeLessThanOrEqual(60 * 60 * 24 * 90);
+    expect(minted).toContain("HttpOnly");
+    // Next serialises this lower-cased; the attribute value is case-insensitive.
+    expect(minted.toLowerCase()).toContain("samesite=lax");
+
+    // Sliding: the next data read hands the SAME session back for another
+    // full window, so expiry tracks use instead of a fixed mint date.
+    const feed = await usageGET(appRequest("/greenbutton/usage"));
+    expect(feed.status).toBe(200);
+    const renewed = setCookieLines(feed).find((l) => l.startsWith("gb_session="));
+    expect(renewed).toBeTruthy();
+    expect(maxAgeOf(renewed)).toBe(maxAgeOf(minted));
+    await feed.arrayBuffer();
+  });
+
+  it("mints a fresh secret on every successful authorisation", async () => {
+    await connect();
+    const first = jar.get("gb_session");
+    expect(first).toBeTruthy();
+
+    await connect();
+    const second = jar.get("gb_session");
+    expect(second).toBeTruthy();
+    expect(second).not.toBe(first);
+
+    // The stored secret is now the new one — a captured cookie from before
+    // is dead, which is the whole point of rotating here.
+    const onDisk = JSON.parse(await readFile(tokenFile, "utf8")) as { sessionToken?: string };
+    expect(onDisk.sessionToken).toBe(second);
+
+    const stale = await usageGET(
+      new Request(`${APP}/greenbutton/usage`, { headers: { cookie: `gb_session=${first}` } }),
+    );
+    expect(stale.status).toBe(401);
+    expect((await json(stale)).error).toBe("session_required");
   });
 });

@@ -8,13 +8,17 @@
  * WHAT NEVER LIVES HERE: meter readings, interval blocks, XML, or anything
  * derived from them. The `/greenbutton/usage` handler streams the ESPI feed
  * from the custodian straight into the response body and never calls into
- * this module with data. That is the zero-data-at-rest invariant, and
- * `tokens.test.ts` pins the exact on-disk key set so a future refactor
- * cannot quietly widen it.
+ * this module with data. That is the zero-data-at-rest invariant, pinned by
+ * the on-disk key-set assertions in `shim.test.ts` and by `oauthFlow.test.ts`
+ * (a real authorize → callback loop that re-reads the file afterwards), so a
+ * future refactor cannot quietly widen it.
  *
- * WHERE IT LIVES: a single JSON file, mode 0600, outside the container
- * (`GB_TOKEN_FILE`, default `./.greenbutton/tokens.json` for local dev;
- * `.110` mounts `/home/hermes/.greenbutton-shim` there — see OPERATIONS.md).
+ * WHERE IT LIVES: a single JSON file, mode 0600, outside the container.
+ * `GB_TOKEN_FILE` is the container-side path (default
+ * `./.greenbutton/tokens.json` for local dev); the HOST side of the bind
+ * mount is `GB_TOKEN_DIR`, pinned in the untracked `.env` — on .110 that is
+ * `/home/hermes/.greenbutton-shim`, deliberately outside the git worktree so
+ * no clone, clean, or `git add -A` can ever touch it (see OPERATIONS.md).
  * If the path is not writable the store degrades to memory-only and says so
  * via `persistence()`, so a bad mount costs a re-authorisation on restart
  * rather than a broken feature.

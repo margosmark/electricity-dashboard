@@ -19,7 +19,8 @@ import {
   getTokenStore,
   isSameOrigin,
   jsonError,
-  sessionMatches,
+  sessionSetCookie,
+  validSession,
 } from "@/lib/greenbutton/http";
 import { clearDataAvailable } from "@/lib/greenbutton/session";
 import { readFeed } from "@/lib/greenbutton/sync";
@@ -33,7 +34,8 @@ export async function GET(request: Request): Promise<Response> {
   const store = getTokenStore(cfg.tokenFile);
   const tokens = await store.load();
   if (!tokens) return jsonError(401, "not_connected");
-  if (!sessionMatches(request, tokens)) return jsonError(401, "session_required");
+  const session = validSession(request, tokens);
+  if (!session) return jsonError(401, "session_required");
 
   const url = new URL(request.url);
   const resourcePath = url.searchParams.get("resourcePath");
@@ -62,6 +64,10 @@ export async function GET(request: Request): Promise<Response> {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "X-GreenButton-Pipe": "stream",
+      // This request proved the cookie still matches the one on file, so
+      // hand it back for another full SESSION_MAX_AGE — that is what makes
+      // the expiry slide on use rather than run out from a fixed mint date.
+      "Set-Cookie": sessionSetCookie(session),
     },
   });
 }

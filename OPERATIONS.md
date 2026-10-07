@@ -105,17 +105,27 @@ model, registration payload and the terms-of-service check all live in
 **[GREENBUTTON-CMD.md](GREENBUTTON-CMD.md)**; this section is the operational
 part.
 
-**Where the refresh token lives:** `.greenbutton/tokens.json` on .110
-(mounted **only** into `greenbutton-shim` at `/var/lib/greenbutton/tokens.json`),
-mode `0600`, owner uid 1001. It holds *only* the OAuth token set — never
-readings. Inspect with `sudo ls -l .greenbutton/`; wipe with the UI's
-**Disconnect** button or by deleting the file and restarting that container
-(`docker compose restart greenbutton-shim`).
+**Where the refresh token lives:** `/home/hermes/.greenbutton-shim/tokens.json`
+on .110 (mounted **only** into `greenbutton-shim` at
+`/var/lib/greenbutton/tokens.json`), mode `0600`, owner uid 1001. It holds
+*only* the OAuth token set — never readings. The host path comes from
+`GB_TOKEN_DIR` in the **untracked `.env`**, deliberately outside the git
+worktree. Inspect with `sudo ls -l /home/hermes/.greenbutton-shim`; wipe with
+the UI's **Disconnect** button or by deleting the file and restarting that
+container (`docker compose restart greenbutton-shim`).
+
+**The untracked `.env` is required.** `docker-compose.yml` reads
+`GB_NOTIFY_TOKEN` (the pinned notification path token) and `GB_TOKEN_DIR`
+from it and fails loudly (`${VAR:?…}`) rather than falling back to a default
+that silently changes behaviour — so a deploy without `.env` stops with a
+clear message instead of registering a derived token that breaks
+notifications.
 
 | Task | Command |
 | --- | --- |
-| Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in `docker-compose.yml` (or a local `.env`), then `docker compose up -d` — no rebuild |
+| Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in the untracked `.env` (never in `docker-compose.yml`), then `docker compose up -d` — no rebuild |
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
+| Turn PKCE on (once Oakville confirms the platform accepts `code_challenge`) | `GB_PKCE=true` in the untracked `.env`, then `docker compose up -d greenbutton-shim` |
 | Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (26 checks, needs docker only for the second) |
 | Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (30 checks; binds :3940 + :8099, tears itself down) |
 | Re-run the **browser** connect flow | `cd webapp && ./scripts/e2e-greenbutton-browser.sh` — builds, boots a mock custodian + a *configured* shim on :3941, then runs the whole Playwright suite against it: the Authorise button → authorize → callback → localStorage loop with a "no token material in browser storage" assertion, plus `/import` and the journey specs with the feature switched on |

@@ -13,6 +13,7 @@
  *   transient    — upstream/5xx/malformed. Retry, keep tokens.
  */
 
+import { createHash, randomBytes } from "node:crypto";
 import type { GreenButtonConfig, TokenAuthStyle } from "./config";
 
 /** RFC 6749 §5.1 plus the ESPI resource pointers Green Button adds. */
@@ -43,11 +44,30 @@ export class OAuthError extends Error {
 /** Clock skew: refresh a minute early rather than mid-request. */
 const EXPIRY_SKEW_MS = 60_000;
 
+/**
+ * RFC 7636 §4.1 — a `code_verifier` is 43-128 characters of unreserved
+ * charset. 48 random bytes base64url-encoded is 64 characters drawn from
+ * `A-Za-z0-9-_`, i.e. comfortably inside both bounds, and unguessable.
+ */
+export function newCodeVerifier(): string {
+  return randomBytes(48).toString("base64url");
+}
+
+/**
+ * RFC 7636 §4.2 — `BASE64URL(SHA256(ASCII(code_verifier)))`. Only the
+ * challenge ever goes to the custodian, so a code intercepted on the
+ * callback URL is worthless without the verifier parked on this side.
+ */
+export function s256Challenge(verifier: string): string {
+  return createHash("sha256").update(verifier, "ascii").digest("base64url");
+}
+
 export function buildAuthorizeUrl(
   cfg: GreenButtonConfig,
   state: string,
   redirectUri: string,
   scope: string,
+  codeChallenge?: string,
 ): string {
   const url = new URL(cfg.authorizeUrl);
   url.searchParams.set("response_type", "code");
@@ -55,6 +75,10 @@ export function buildAuthorizeUrl(
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("scope", scope);
   url.searchParams.set("state", state);
+  if (codeChallenge) {
+    url.searchParams.set("code_challenge", codeChallenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return url.toString();
 }
 
@@ -62,12 +86,15 @@ export async function exchangeCode(
   cfg: GreenButtonConfig,
   code: string,
   redirectUri: string,
+  codeVerifier?: string,
 ): Promise<TokenResponse> {
-  return postToken(cfg, {
+  const params: Record<string, string> = {
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
-  });
+  };
+  if (codeVerifier) params.code_verifier = codeVerifier;
+  return postToken(cfg, params);
 }
 
 /**

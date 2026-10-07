@@ -4,11 +4,13 @@ Scope: the deployed app at https://electricity.markarslan.ca/ — a Next.js
 frontend that parses **untrusted files in the browser** (Green Button XML from
 a utility portal, JSON backups picked from disk) and a service worker that
 decides what may be cached. There is no account system and **no server-side
-user data**: readings live only in `localStorage`.
+user data**: readings live only in `localStorage`. Alongside it runs the
+Green Button Connect My Data shim (`/greenbutton/*`), which holds OAuth
+*credentials* — a client secret and one token file — but never a reading.
 
-This checklist is executable: every line marked *(tested)* is enforced by
-`webapp/src/lib/security.test.tsx` or `webapp/src/lib/backup.test.ts` — if you
-change the code under one of them, CI fails. Read the test, not just this file.
+This checklist is executable: every line marked *(tested)* names the test
+that enforces it — if you change the code under one of them, CI fails. Read
+the test, not just this file.
 
 ## 1. Parsing untrusted XML (Green Button / ESPI)
 
@@ -50,10 +52,34 @@ as HTML.
 
 ## 4. What is out of scope (and why)
 
-- **No accounts, no cookies, no server-side user rows** — there is nothing to
-  enumerate or exfiltrate server-side. The threat is entirely client-side
-  (malicious file, malicious/PWA-stale bundle).
-- **Transport**: TLS via Let's Encrypt at the edge proxy.
+- **No accounts, no server-side user rows.** Readings live only in
+  `localStorage`; the server never receives them. What the server *does*
+  hold is the shim's OAuth token set — one file, mode `0600`, outside the
+  container — plus exactly two cookies, both set by `/greenbutton/*` and
+  both HttpOnly: `gb_state` (CSRF, 10-minute TTL, single-use) and
+  `gb_session` (90-day sliding expiry, a fresh secret minted on every
+  successful authorisation). So "no cookies" is no longer true and this
+  section no longer claims it; "nothing to enumerate server-side" still is.
+- **Transport**: TLS via Let's Encrypt at the edge proxy (measured: TLS1.3
+  preferred, TLS1.2 ECDHE-GCM only, TLS1.0/1.1 rejected, weak suites
+  refused). The edge also 302s http→https — but a redirect is a request,
+  not a guarantee, so every https response additionally carries
+  `Strict-Transport-Security: max-age=31536000; includeSubDomains`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  strict-origin-when-cross-origin` and `X-Frame-Options: DENY`, set in
+  `webapp/next.config.ts` so they ship with the build instead of depending
+  on a proxy config we do not control. *(tested —
+  `webapp/src/lib/transport-headers.test.ts`)*
+- **OAuth / Green Button**: a code is single-use, short-TTL, bound to a
+  cookie-checked `state`, and redeemable only with our client secret; the
+  `redirect_uri` is built from env on both legs and no client can influence
+  it. PKCE (RFC 7636, S256) is implemented and carried end to end — verifier
+  parked with the state, challenge on the authorize URL, `code_verifier` on
+  the exchange — and is **opt-in** (`GB_PKCE`, default off) until Oakville
+  Hydro confirms the London-Hydro platform accepts the parameters. *(tested —
+  `oauthFlow.test.ts`)* At the edge, `/greenbutton/*` is logged with
+  `log_format gb_noquery` (path only), so `?code=` and `?state=` never reach
+  the access log. *(tested — `webapp/scripts/e2e-greenbutton-topology.sh`)*
 - **CSV export**: every exported field is a number or a fixed enum label, so
   spreadsheet formula injection (`=cmd|…`) is not reachable from feed content.
 
@@ -68,3 +94,14 @@ as HTML.
    /api/rates`.
 4. Bumped the backup schema? → add the migration/refusal test next to
    `BACKUP_VERSION`.
+5. Changed the headers in `next.config.ts`, `SESSION_MAX_AGE`, or the
+   cookie attributes? → `webapp/src/lib/transport-headers.test.ts` pins all
+   three; a regression should fail that test, not wait for a reviewer.
+6. Touched the authorize / callback / token-exchange leg? →
+   `webapp/src/lib/greenbutton/oauthFlow.test.ts` runs the real loop against
+   a mock custodian, PKCE included. Extend it rather than asserting the
+   shape of a URL by hand.
+7. Moved a secret out of git (notify token, token dir, client credentials)? →
+   it belongs in the untracked `.env`, and `docker-compose.yml` must fail
+   loudly (`${VAR:?…}`) rather than quietly falling back to a default that
+   silently changes behaviour.

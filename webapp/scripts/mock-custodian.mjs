@@ -25,12 +25,16 @@
  * Authorization resource answers 500), `setAuthorizationRedirect(url)` /
  * `setBatchRedirect(url)` (302 elsewhere — pointing at another origin makes
  * fetch strip the Authorization header on the way, which must never be
- * mistaken for a revoked grant).
+ * mistaken for a revoked grant), and PKCE: an authorize request carrying
+ * `code_challenge` makes the token endpoint REJECT the exchange unless
+ * `code_verifier` hashes back to it (RFC 7636 §4.6), so a dropped verifier
+ * fails the loop instead of passing quietly.
  *
  * CLI: `node scripts/mock-custodian.mjs --port 8099 --client-id x --client-secret y`
  */
 
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 
 const HOUR = 3600;
 
@@ -164,7 +168,15 @@ export async function startMockCustodian(options = {}) {
         return void res.end();
       }
       const code = `code-${nextId()}`;
-      state.codes.set(code, { redirectUri, scope: url.searchParams.get('scope') ?? '' });
+      // PKCE: remember what the client challenged with so the exchange can be
+      // verified against it (RFC 7636 §4.6). A challenge-less client is
+      // still accepted — the real platform's stance is unconfirmed.
+      state.codes.set(code, {
+        redirectUri,
+        scope: url.searchParams.get('scope') ?? '',
+        challenge: url.searchParams.get('code_challenge'),
+        challengeMethod: url.searchParams.get('code_challenge_method'),
+      });
       const sep = redirectUri.includes('?') ? '&' : '?';
       res.writeHead(302, { location: `${redirectUri}${sep}code=${code}&state=${stateParam ?? ''}` });
       return void res.end();
@@ -174,6 +186,15 @@ export async function startMockCustodian(options = {}) {
     if (req.method === 'POST' && url.pathname === '/oauth/token') {
       const raw = await readBody(req);
       const body = parseUrlencoded(raw);
+      // Whitelisted fields only — never the client_secret, even in a fixture.
+      const logged = state.requests[state.requests.length - 1];
+      if (logged && logged.path === url.pathname) {
+        logged.body = {
+          grant_type: body.grant_type ?? null,
+          code_verifier: body.code_verifier ?? null,
+          redirect_uri: body.redirect_uri ?? null,
+        };
+      }
       state.authStyleSeen.add(req.headers.authorization ? 'basic' : 'body');
       if (!clientAuthMatches(req, body, opts.clientId, opts.clientSecret)) {
         res.writeHead(401, { 'content-type': 'application/json' });
@@ -185,6 +206,24 @@ export async function startMockCustodian(options = {}) {
         if (!record || record.redirectUri !== body.redirect_uri) {
           res.writeHead(400, { 'content-type': 'application/json' });
           return void res.end(JSON.stringify({ error: 'invalid_grant' }));
+        }
+        // RFC 7636 §4.6: a server that issued a challenge REQUIRES a
+        // verifier that hashes back to it. This is the check a strict
+        // custodian applies, so the tests fail loudly if the shim ever
+        // drops the verifier on the way to the token endpoint.
+        if (record.challenge) {
+          const derived =
+            record.challengeMethod === 'S256' &&
+            typeof body.code_verifier === 'string' &&
+            body.code_verifier.length >= 43
+              ? createHash('sha256').update(body.code_verifier, 'ascii').digest('base64url')
+              : '';
+          if (derived !== record.challenge) {
+            res.writeHead(400, { 'content-type': 'application/json' });
+            return void res.end(
+              JSON.stringify({ error: 'invalid_grant', error_description: 'pkce_verification_failed' }),
+            );
+          }
         }
         state.codes.delete(body.code);
         const access = `access-${nextId()}`;
