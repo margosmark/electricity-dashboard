@@ -29,11 +29,26 @@ they agree on what a merge means.
 | Production loop with Mark's real account | **BLOCKED on §6** |
 | Merge semantics shared with Wave J's `/import` | **DONE** — both write through `importPlan.mergeForWrite` (union, incoming wins) |
 | Revocation detection from Oakville's own UI | Code + tests done; needs a live account to observe for real |
+| Browser connect flow (button → authorize → callback → localStorage) | **DONE — verified in a real browser** (`webapp/scripts/e2e-greenbutton-browser.sh`: the whole Playwright suite — 22/22 — against a *configured* shim, incl. an assertion that no token material is left in browser storage and that `/import` still works with the feature switched on) |
 | Operational runbook | DONE (OPERATIONS.md §Green Button) |
 
 Nothing about the feature is switched on until Oakville issues credentials:
 `/greenbutton/status` reports `configured: false`, the toolbar renders no
 button, and the upload dialog says so in plain language.
+
+Once configured, the control reports exactly three states — surfaced as
+`data-gb-state` on its root so tests assert the state machine, not wording:
+
+| State | Toolbar | Meaning |
+| --- | --- | --- |
+| `disconnected` | **Authorise with Oakville Hydro** | this browser holds no grant |
+| `authorised` | **Authorised** | the shim holds a grant; nothing piped yet |
+| `synced` | **Live** (+ "Synced … · N KB") | a feed has been piped and ingested |
+
+The state moves `authorised → synced` without a reload: a successful pull
+re-reads `/greenbutton/status`, which is what stamps `lastSyncAt`. Disconnect
+(the plug button, with a confirmation) wipes the token file on the host and
+returns to `disconnected`; it never touches `localStorage.energy_data`.
 
 ---
 

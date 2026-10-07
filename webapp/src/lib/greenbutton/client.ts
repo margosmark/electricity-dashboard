@@ -105,13 +105,13 @@ export function describeGbError(code: string): { headline: string; detail: strin
       return {
         headline: "Not connected in this browser",
         detail: "The dashboard has no Green Button authorisation for this device yet.",
-        hints: ["Press “Connect Oakville Hydro” to authorise, or keep uploading exports."],
+        hints: ["Press “Authorise with Oakville Hydro” to authorise, or keep uploading exports."],
       };
     case "grant_revoked":
       return {
         headline: "Oakville Hydro disconnected us",
         detail: "The authorisation was revoked or has expired, so live sync stopped.",
-        hints: ["Press “Connect Oakville Hydro” to authorise again."],
+        hints: ["Press “Authorise with Oakville Hydro” to authorise again."],
       };
     case "client_auth":
       return {

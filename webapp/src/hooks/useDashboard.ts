@@ -283,6 +283,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       const res = await fetchGbUsage(newest > 0 ? newest - 3600 : undefined);
       if (!res.ok) return { ok: false, code: res.code, detail: res.detail };
 
+      // The pipe-through itself is what stamps lastSyncAt/lastSyncBytes on
+      // the shim, so re-read status right after a successful pull. Without
+      // this the toolbar would sit on "Authorised" until the next full page
+      // load even though the feed just landed — one cheap scalar request,
+      // only after a pull that actually answered.
+      const fresh = await fetchGbStatus();
+      if (fresh) {
+        gbStatusRef.current = fresh;
+        setGbStatus(fresh);
+      }
+
       let groups: UsagePointGroup[];
       try {
         groups = parseGreenButtonUsagePoints(res.xml);
