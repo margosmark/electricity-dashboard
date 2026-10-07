@@ -114,6 +114,33 @@ export function getConfig(): GreenButtonConfig {
   return cached;
 }
 
+/**
+ * Which container is this process?
+ *
+ * `greenbutton-shim` and `energy-dashboard` run the SAME image, so nothing in
+ * the build tells them apart — only the deployment does. `docker-compose.yml`
+ * mounts the token volume and sets `GB_TOKEN_FILE` on the shim and sets no
+ * `GB_*` env at all on the app, so reading that back from our own config
+ * answers "who am I" from inside the process.
+ *
+ * This is the only source nginx cannot lie about. The router's `X-Edge-Location`
+ * header says which branch of *its* config matched, not who produced the body;
+ * on 2026-10-07 that header read `shim` while the app container was answering
+ * (stale upstream DNS, security finding H1), so a header derived from the
+ * location could never detect the inversion. This one changes with the
+ * process, not with the path.
+ */
+export type ProcessIdentity = "shim" | "app";
+
+export function getProcessIdentity(): ProcessIdentity {
+  // The in-repo default is what a process keeps when nobody told it where a
+  // token file lives. The app container sets no GB_* env, so it keeps the
+  // default and reports "app"; the shim is pointed at its mounted
+  // /var/lib/greenbutton/tokens.json and reports "shim". Tests and dev that
+  // want to act as the shim must set GB_TOKEN_FILE.
+  return getConfig().tokenFile === DEFAULT_TOKEN_FILE ? "app" : "shim";
+}
+
 /** The unguessable path segment of the notification URI. */
 export function getNotifyToken(): string {
   const uri = getConfig().notificationUri;

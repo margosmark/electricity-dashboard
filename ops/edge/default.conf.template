@@ -12,8 +12,21 @@
 # from the container environment, $host/$remote_addr/... are left alone
 # because they are not environment variables.
 #
-# Every response carries `X-Edge-Upstream: app|shim` so the split is
-# auditable from the public URL — no shell on this box required.
+# Two headers, answering two DIFFERENT questions — do not read one for the
+# other:
+#
+#   X-Edge-Location: greenbutton|default   which location block matched, i.e.
+#                                          which branch of THIS file ran
+#   x-gb-process:    shim|app              which container actually produced
+#                                          the body, set by the process from
+#                                          its own config (config.ts
+#                                          getProcessIdentity) — this is the
+#                                          one a proxy cannot fake for you
+#
+# They must agree (`greenbutton`↔`shim`, `default`↔`app`). A response where
+# they disagree is the split being inverted, which is exactly what happened
+# in production on 2026-10-07 (H1): X-Edge-Upstream was emitted per location,
+# so it read `shim` while the app container was answering.
 
 # `?code=` and `?state=` on the OAuth callback are CREDENTIALS, not
 # telemetry: RFC 6749 §4.1.2 makes a code single-use and short-lived, but it
@@ -23,17 +36,33 @@
 # they record — path instead of path+query.
 log_format gb_noquery '$remote_addr [$time_local] "$uri" $status';
 
-upstream gb_app {
-  server energy-dashboard:3000;
-}
-
-upstream gb_shim {
-  server greenbutton-shim:3000;
-}
-
 server {
   listen 80;
   server_name _;
+
+  # Docker's embedded DNS, re-read every 10s.
+  #
+  # nginx resolves a literal `server <name>` inside an `upstream` block ONCE,
+  # at config load, and never again — so when a container is recreated with a
+  # new IP while the router keeps running, the router keeps talking to
+  # whichever container now holds the old address. That inverted the split in
+  # production (the secret-bearing shim ended up serving the public dashboard
+  # and the secret-less app ran the OAuth flow) and it stays inverted until
+  # somebody remembers to restart nginx.
+  #
+  # With `resolver` + a VARIABLE in proxy_pass, nginx resolves the name per
+  # request instead (TTL 10s), so a recreated upstream is picked up on its
+  # own. It also lets the router start before its upstreams exist: a missing
+  # name now yields a 502 on the affected request rather than refusing to
+  # start.
+  resolver 127.0.0.11 valid=10s ipv6=off;
+
+  # Per-request upstreams. Host:port only — deliberately no scheme, no path:
+  # `proxy_pass http://$gb_shim;` then passes the ORIGINAL request URI
+  # through untouched (the variable form does no location-prefix rewriting,
+  # so /greenbutton/status arrives as /greenbutton/status).
+  set $gb_app  energy-dashboard:3000;
+  set $gb_shim greenbutton-shim:3000;
 
   # /import accepts a pasted XML export; give it room.
   client_max_body_size 64m;
@@ -48,7 +77,7 @@ server {
   # proxy_buffering OFF on purpose — /greenbutton/usage streams the custodian's
   # feed to the browser byte for byte instead of holding it in nginx memory.
   location /greenbutton {
-    proxy_pass http://gb_shim;
+    proxy_pass http://$gb_shim;
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_read_timeout 300s;
@@ -56,12 +85,12 @@ server {
     # `?code=…&state=…` can never reach the docker json log. Verified by
     # webapp/scripts/e2e-greenbutton-topology.sh.
     access_log /var/log/nginx/access.log gb_noquery;
-    add_header X-Edge-Upstream shim always;
+    add_header X-Edge-Location greenbutton always;
   }
 
   # Everything else — the dashboard itself.
   location / {
-    proxy_pass http://gb_app;
-    add_header X-Edge-Upstream app always;
+    proxy_pass http://$gb_app;
+    add_header X-Edge-Location default always;
   }
 }
