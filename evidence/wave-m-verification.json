@@ -20,11 +20,12 @@
     "lighthouse_mobile": "performance 0.93 (budget >= 0.85), CLS 0 (budget <= 0.1), LCP 3198 ms, TBT 85 ms, FCP 760 ms",
     "lhci_assert_both_configs": "exit 0",
     "ci": "BLOCKED, not failed on merits \u2014 GitHub Actions never started a job: 'recent account payments have failed or your spending limit needs to be increased'. Every run on the repo since 2026-10-06T21:00Z fails in ~2 s with 0 steps; last green run 37530464465 (2026-10-06T20:58Z). Re-run after billing is fixed.",
-    "deploy": "DEPLOY_OK at 4eca137 via ~/bin/deploy-energy-dashboard.sh on hermescomputer (git reset --hard origin/main + docker compose up -d --build; energy-dashboard and greenbutton-shim recreated)"
+    "deploy": "DEPLOY_OK at 3fc371c via ~/bin/deploy-energy-dashboard.sh on hermescomputer (git reset --hard origin/main + docker compose up -d --build; the Wave M code landed at 4eca137 and the evidence-only follow-up moved main to 3fc371c \u2014 same image, containers not recreated)",
+    "ci_note": "CI was never able to start: fix GitHub Actions billing, then `gh run rerun` on any Wave M run."
   },
   "browser_verification_live": {
     "url": "https://electricity.markarslan.ca",
-    "when": "2026-10-07T16:09:31.948Z",
+    "when": "2026-10-07T16:12:52.741Z",
     "documentTitle": "Ontario Energy Optimizer",
     "permission_prompt_calls_on_load": 0,
     "permission_state_after_load": "default",

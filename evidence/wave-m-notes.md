@@ -59,7 +59,7 @@ is what the table below already measured locally.
 | Lighthouse desktop | performance **1.00** (budget ≥ 0.90), CLS 0.002, LCP 700 ms, TBT 0 ms, FCP 224 ms |
 | Lighthouse mobile | performance **0.93** (budget ≥ 0.85), **CLS 0** (budget ≤ 0.1), LCP 3198 ms, TBT 85 ms, FCP 760 ms |
 | `npx lhci assert`, both configs | exit 0 |
-| Deploy | `DEPLOY_OK at 4eca137` via `~/bin/deploy-energy-dashboard.sh` on hermescomputer |
+| Deploy | `DEPLOY_OK at 4eca137` (Wave M) → `3fc371c` (evidence) via `~/bin/deploy-energy-dashboard.sh` on hermescomputer |
 
 Background work did not regress the phone score: **0.93 / CLS 0** against
 budgets of 0.85 / 0.1.
@@ -96,8 +96,9 @@ budgets of 0.85 / 0.1.
 }
 ```
 
-Screenshot: `evidence/wave-m-deployed.png`. The deployed commit on `.110` is
-`4eca137`, and the Wave M notice keys are present in the served JS bundle
+Screenshot: `evidence/wave-m-deployed.png`. The Wave M code landed in
+`4eca137` (PR #26) and `.110` now runs `3fc371c` — the evidence record on top
+of it, same image. The Wave M notice keys are present in the served JS bundle
 (`/_next/static/chunks/1pyzyttc-9fdi.js` contains `wave_m_ack_plan`).
 
 The **connected** half cannot be exercised against production — the shim has
