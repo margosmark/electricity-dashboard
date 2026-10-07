@@ -1,10 +1,20 @@
 # Operations runbook — electricity dashboard
 
-Daily-driver operations for the deploy at `~/electricity-dashboard`
-(container `energy-dashboard`, host port **3939** → container 3000).
+Daily-driver operations for the deploy at `~/electricity-dashboard`.
+
+**Three containers, one host port (3939):**
+
+| Container | Job |
+| --- | --- |
+| `edge-router` | nginx on host `:3939` — `/greenbutton*` → shim, everything else → app |
+| `greenbutton-shim` | the Connect My Data shim; the ONLY container with `GB_*` env and the token mount |
+| `energy-dashboard` | the dashboard; no Green Button env, no token mount |
 
 **Public URL:** https://electricity.markarslan.ca/ (Let's Encrypt TLS, edge
-proxy fronting the container; localhost health checks still work at :3939).
+proxy fronting `:3939`; localhost health checks still work at :3939).
+
+Which container answered a request: every response carries
+`X-Edge-Upstream: app` or `X-Edge-Upstream: shim`.
 
 ## Start / stop / update
 
@@ -35,8 +45,9 @@ committed.
 
 | Check | Command / expectation |
 | --- | --- |
-| Container up | `docker compose ps` → `energy-dashboard` running |
+| Containers up | `docker compose ps` → `edge-router`, `energy-dashboard`, `greenbutton-shim` all running |
 | Serves the app | `curl -fs http://localhost:3939/` → HTML containing "Ontario Energy Optimizer" |
+| Router split works | `curl -sSI http://localhost:3939/ \| grep -i x-edge-upstream` → `app`; same for `/greenbutton/status` → `shim` |
 | Rates API | `curl -fs http://localhost:3939/api/rates` → JSON with `historicalRates` (3 sets) |
 | Logs | `docker compose logs -f energy-dashboard` |
 | Reparse in browser | Upload modal re-appears only if `localStorage.energy_data` is absent |
@@ -83,17 +94,21 @@ model, registration payload and the terms-of-service check all live in
 part.
 
 **Where the refresh token lives:** `.greenbutton/tokens.json` on .110
-(mounted at `/var/lib/greenbutton/tokens.json`), mode `0600`, owner uid 1001.
-It holds *only* the OAuth token set — never readings. Inspect with
-`sudo ls -l .greenbutton/`; wipe with the UI's **Disconnect** button or by
-deleting the file and restarting the container.
+(mounted **only** into `greenbutton-shim` at `/var/lib/greenbutton/tokens.json`),
+mode `0600`, owner uid 1001. It holds *only* the OAuth token set — never
+readings. Inspect with `sudo ls -l .greenbutton/`; wipe with the UI's
+**Disconnect** button or by deleting the file and restarting that container
+(`docker compose restart greenbutton-shim`).
 
 | Task | Command |
 | --- | --- |
 | Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in `docker-compose.yml` (or a local `.env`), then `docker compose up -d` — no rebuild |
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
-| Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (25 checks) |
-| Diagnose a "reconnect" complaint | `docker compose logs energy-dashboard \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
+| Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (26 checks, needs docker only for the second) |
+| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (30 checks; binds :3940 + :8099, tears itself down) |
+| Diagnose a "reconnect" complaint | `docker compose logs greenbutton-shim \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
+| Shim unreachable (`/greenbutton/*` 502) | `docker compose ps` (shim stopped?) then `docker compose logs edge-router` |
+| Undo the container split | `git revert` the topology commit + deploy, **or** move `ports:` back to `energy-dashboard`, delete `edge-router`, `docker compose up -d` — the shim's routes still exist inside the app, just without the split |
 | Revoke access on Oakville's side | their own portal; the next sync then returns `grant_revoked` and the shim wipes its token file automatically |
 | Incident | if customer data is ever exposed or suspected, notify Oakville Hydro **immediately** (agreement §3): summary + facts, number of customers affected, anything relevant |
 

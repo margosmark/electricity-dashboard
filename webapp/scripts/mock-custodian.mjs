@@ -313,9 +313,9 @@ export async function startMockCustodian(options = {}) {
     res.end('not found');
   });
 
-  await new Promise((resolve) => server.listen(options.port ?? 0, '127.0.0.1', resolve));
+  await new Promise((resolve) => server.listen(options.port ?? 0, options.host ?? '127.0.0.1', resolve));
   const address = server.address();
-  const origin = `http://127.0.0.1:${address.port}`;
+  const origin = `http://${options.host ?? '127.0.0.1'}:${address.port}`;
 
   return {
     origin,
@@ -356,6 +356,10 @@ if (isMain) {
   };
   const mock = await startMockCustodian({
     port: Number(arg('port', 8099)),
+    // Default stays loopback: only the containerised topology test asks for a
+    // routable interface, because there the client is a shim in ANOTHER
+    // container reaching this one over the compose/LAN network.
+    host: arg('host', '127.0.0.1'),
     clientId: arg('client-id', 'mock-client-id'),
     clientSecret: arg('client-secret', 'mock-client-secret'),
     usagePoints: Number(arg('usage-points', 1)),

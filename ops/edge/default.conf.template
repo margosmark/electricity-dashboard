@@ -1,0 +1,55 @@
+# Edge router — the single listener this host exposes for the domain.
+#
+# The upstream edge (origin VPS 96.44.170.134) forwards EVERY path of
+# electricity.markarslan.ca to this box on host port 3939, so the
+# "/greenbutton/* lives on its own container" requirement is implemented
+# here instead of in an edge config we cannot reach:
+#
+#   /greenbutton…  → greenbutton-shim   (OAuth client secret + token file)
+#   everything else → energy-dashboard  (no Green Button secrets at all)
+#
+# Rendered by the nginx image's template entrypoint: ${XFP} is substituted
+# from the container environment, $host/$remote_addr/... are left alone
+# because they are not environment variables.
+#
+# Every response carries `X-Edge-Upstream: app|shim` so the split is
+# auditable from the public URL — no shell on this box required.
+
+upstream gb_app {
+  server energy-dashboard:3000;
+}
+
+upstream gb_shim {
+  server greenbutton-shim:3000;
+}
+
+server {
+  listen 80;
+  server_name _;
+
+  # /import accepts a pasted XML export; give it room.
+  client_max_body_size 64m;
+
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto ${XFP};
+
+  # The Green Button shim: OAuth2 handshake + the ESPI pipe-through.
+  # proxy_buffering OFF on purpose — /greenbutton/usage streams the custodian's
+  # feed to the browser byte for byte instead of holding it in nginx memory.
+  location /greenbutton {
+    proxy_pass http://gb_shim;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 300s;
+    add_header X-Edge-Upstream shim always;
+  }
+
+  # Everything else — the dashboard itself.
+  location / {
+    proxy_pass http://gb_app;
+    add_header X-Edge-Upstream app always;
+  }
+}

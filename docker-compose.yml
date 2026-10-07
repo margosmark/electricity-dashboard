@@ -1,21 +1,47 @@
 services:
+  # ------------------------------------------------------------------
+  # electricity.markarslan.ca on .110 — three containers, one host port.
+  #
+  #   edge-router :3939  →  /greenbutton*  → greenbutton-shim
+  #                        everything else → energy-dashboard
+  #
+  # The upstream edge forwards every path of the domain to this host's port
+  # 3939 (measured: see GREENBUTTON-CMD.md §5), so the path split lives in
+  # the router below. The shim is its OWN container: it is the only service
+  # that sees GB_CLIENT_ID / GB_CLIENT_SECRET, the only one with the token
+  # file mounted, and the only one behind the /greenbutton/* prefix.
+  # ------------------------------------------------------------------
+
+  # The public dashboard. No Green Button environment, no token mount —
+  # if a request ever reaches it on /greenbutton/* it answers
+  # configured:false and can leak nothing, because it holds no secrets.
   energy-dashboard:
     build:
       context: ./webapp
       dockerfile: Dockerfile
+    image: electricity-dashboard-energy-dashboard:latest
     container_name: energy-dashboard
-    ports:
-      - "3939:3000"
     restart: always
+    expose:
+      - "3000"
+
+  # The shim. Same image (the shim is six route handlers in this app), but a
+  # separate process with its own secrets. Never published on the host —
+  # only edge-router can reach it, only on the /greenbutton/* prefix.
+  greenbutton-shim:
+    image: electricity-dashboard-energy-dashboard:latest
+    container_name: greenbutton-shim
+    restart: always
+    expose:
+      - "3000"
     environment:
-      # --- Green Button CMD shim (Wave K) ---------------------------------
       # Inert until GB_CLIENT_ID / GB_CLIENT_SECRET are issued by Oakville
       # Hydro: /greenbutton/status then reports configured=false and the
-      # toolbar renders nothing. See docs/GREENBUTTON-CMD.md.
+      # toolbar renders nothing. See GREENBUTTON-CMD.md.
       GB_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       GB_REDIRECT_URI: https://electricity.markarslan.ca/greenbutton/callback
       GB_SCOPE: ${GB_SCOPE:-FB=1_3_4_5}
-      # Notification URI path token. PINNED, not derived: the form registers
+      # Notification URI path token. PINNED, not derived: the form records
       # this URL BEFORE Oakville issues the client secret, and a
       # secret-derived default would change the moment credentials arrive,
       # invalidating what is on file. Regenerating it breaks notifications.
@@ -27,3 +53,19 @@ services:
       GB_CLIENT_SECRET: ${GB_CLIENT_SECRET:-}
     volumes:
       - ${GB_TOKEN_DIR:-./.greenbutton}:/var/lib/greenbutton
+
+  # Path split. Holds no application code and no secrets; it only decides
+  # which of the two containers answers. XFP = the scheme the edge saw.
+  edge-router:
+    image: nginx:1.29-alpine
+    container_name: edge-router
+    restart: always
+    ports:
+      - "3939:80"
+    environment:
+      XFP: ${GB_EDGE_XFP:-https}
+    volumes:
+      - ./ops/edge/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - energy-dashboard
+      - greenbutton-shim

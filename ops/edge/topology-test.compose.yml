@@ -1,0 +1,80 @@
+# Containerised topology gate for the Green Button shim.
+#
+# Runs the SAME three-container shape production runs (router → shim | app)
+# against a mock data custodian, on host port 3940 so it can never touch the
+# live stack on 3939. Driven by webapp/scripts/e2e-greenbutton-topology.sh,
+# which also supplies GB_TOPO_TOKEN_DIR and GB_TOPO_MOCK_ORIGIN.
+#
+#   docker compose -p gb-topo -f ops/edge/topology-test.compose.yml up -d
+#
+# Deliberate differences from production, and why they are safe:
+#   * image is reused, never built   — .110 has GBs of headroom, not more
+#   * GB_* points at the mock        — no Oakville credentials needed yet
+#   * XFP=http                      — the router is reached over plain http
+#   * no GB_NOTIFY_TOKEN            — so the token is derived from the mock
+#                                     client secret, which is what the e2e
+#                                     script computes on its side
+
+services:
+  # Public app, exactly as in production: no Green Button environment at all.
+  # Service KEY = production's key on purpose: the router resolves its
+  # upstreams by service name at start-up, so the config is identical in
+  # both stacks (container_name stays gb-topo-* to keep the two apart).
+  energy-dashboard:
+    image: electricity-dashboard-energy-dashboard:latest
+    container_name: gb-topo-app
+    restart: "no"
+    expose:
+      - "3000"
+
+  # The shim: the only container with credentials and the token mount.
+  greenbutton-shim:
+    image: electricity-dashboard-energy-dashboard:latest
+    container_name: gb-topo-shim
+    restart: "no"
+    expose:
+      - "3000"
+    environment:
+      GB_PUBLIC_ORIGIN: http://localhost:3940
+      GB_REDIRECT_URI: http://localhost:3940/greenbutton/callback
+      GB_AUTHORIZE_URL: ${GB_TOPO_MOCK_ORIGIN:?}/oauth/authorize
+      GB_TOKEN_URL: ${GB_TOPO_MOCK_ORIGIN:?}/oauth/token
+      GB_CLIENT_ID: mock-client-id
+      GB_CLIENT_SECRET: mock-client-secret
+      GB_SCOPE: FB=1_3_4_5
+      GB_TOKEN_FILE: /var/lib/greenbutton/tokens.json
+    volumes:
+      - ${GB_TOPO_TOKEN_DIR:?}:/var/lib/greenbutton
+
+  # London-Hydro-shaped mock custodian, listening on the host so both the
+  # shim container (via the host's LAN address) and the curl "browser" in the
+  # e2e script can reach the same URLs.
+  mock:
+    image: electricity-dashboard-energy-dashboard:latest
+    container_name: gb-topo-mock
+    restart: "no"
+    command:
+      - node
+      - /scripts/mock-custodian.mjs
+      - --port
+      - "8099"
+      - --host
+      - "0.0.0.0"
+    volumes:
+      - ../../webapp/scripts:/scripts:ro
+    ports:
+      - "8099:8099"
+
+  router:
+    image: nginx:1.29-alpine
+    container_name: gb-topo-router
+    restart: "no"
+    ports:
+      - "3940:80"
+    environment:
+      XFP: http
+    volumes:
+      - ./default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - energy-dashboard
+      - greenbutton-shim
