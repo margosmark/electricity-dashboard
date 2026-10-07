@@ -15,6 +15,14 @@
 # Every response carries `X-Edge-Upstream: app|shim` so the split is
 # auditable from the public URL — no shell on this box required.
 
+# `?code=` and `?state=` on the OAuth callback are CREDENTIALS, not
+# telemetry: RFC 6749 §4.1.2 makes a code single-use and short-lived, but it
+# is still token material and it must not sit in a log next to a request the
+# default `main` format would echo in full ($request includes the query
+# string). This scope inherits the same file, so the two differ only in what
+# they record — path instead of path+query.
+log_format gb_noquery '$remote_addr [$time_local] "$uri" $status';
+
 upstream gb_app {
   server energy-dashboard:3000;
 }
@@ -44,6 +52,10 @@ server {
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_read_timeout 300s;
+    # Log the path only: `$uri` drops the query string, so a canary
+    # `?code=…&state=…` can never reach the docker json log. Verified by
+    # webapp/scripts/e2e-greenbutton-topology.sh.
+    access_log /var/log/nginx/access.log gb_noquery;
     add_header X-Edge-Upstream shim always;
   }
 
