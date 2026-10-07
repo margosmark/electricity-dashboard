@@ -13,7 +13,23 @@
  *      navigations  -> network first, fall back to cached shell (offline)
  *      /api/rates   -> network first, cache fallback (offline rate math)
  *      immutable    -> cache first: /_next/static, icons, manifest, favicon
+ *      /greenbutton/* -> never cached (Wave K: one-shot, stateful, secret)
  *      anything else same-origin -> untouched (browser default)
+ *
+ * WAVE M — PERIODIC BACKGROUND SYNC:
+ *  - `periodicsync` (tag `greenbutton-refresh`) fetches the piped feed using
+ *    a cursor the PAGE published into Cache Storage, stages the response, and
+ *    messages any open window so it can merge immediately.
+ *  - The service worker has NO `localStorage`, so it cannot merge readings,
+ *    cannot re-price the three plans and cannot raise the plan-change banner
+ *    by itself. Staging + messaging is the honest maximum available; if no
+ *    window is open, the staged body is merged the next time one is.
+ *  - The loop is only ever REGISTERED by a browser that has authorised live
+ *    sync (src/lib/periodicSync.ts), and an unauthorised request 401s into
+ *    the `!res.ok` early return — so a manual-upload-only profile does no
+ *    background work at all.
+ *  - Availability is Chromium-only and installed-app-only; minInterval is a
+ *    floor, not a schedule. See src/lib/periodicSync.ts for the citations.
  *
  * UPDATE CONTRACT: scripts/bump-sw-version.mjs rewrites `VERSION` from the
  * `prebuild` npm lifecycle, so every `npm run build` (CI, Docker, deploy)
@@ -64,6 +80,81 @@ self.addEventListener('activate', (event) => {
       )
       .then(() => self.clients.claim())
   );
+});
+
+/* --------------------------------------------------------------------------
+ * Wave M — periodic background refresh of the piped Green Button feed.
+ *
+ * The names below are mirrored in `src/lib/backgroundRefresh.ts`; a unit test
+ * asserts the two files agree, because a drift here would quietly stage every
+ * feed where nobody ever looks.
+ *
+ * These two caches are deliberately NOT named from VERSION: `activate` drops
+ * anything that does not start with the current version, and a cursor or a
+ * staged feed has to survive a deploy.
+ * ------------------------------------------------------------------------ */
+const GB_CURSOR_CACHE = 'oeo-gb-cursor';
+const GB_STAGED_CACHE = 'oeo-gb-staged';
+const GB_CURSOR_URL = '/__gb_cursor';
+const GB_STAGED_URL = '/__gb_staged_feed';
+const GB_PERIODIC_TAG = 'greenbutton-refresh';
+
+/** Newest timestamp the PAGE already holds — the incremental cursor. */
+function gbReadCursor() {
+  return self.caches
+    .open(GB_CURSOR_CACHE)
+    .then((cache) => cache.match(GB_CURSOR_URL))
+    .then((res) => (res ? res.text() : null))
+    .then((raw) => {
+      const value = raw === null ? NaN : parseInt(raw, 10);
+      return Number.isFinite(value) && value > 0 ? value : null;
+    })
+    .catch(() => null);
+}
+
+/**
+ * Fetch the feed and stage it for a window to merge.
+ *
+ * Cookie rides along: a same-origin `fetch` defaults to `credentials:
+ * 'same-origin'`, and `gb_session` is what authorises the request. An
+ * unauthorised or unconfigured browser gets 401/503, which lands in the
+ * `!res.ok` early return — this handler never throws, because an unhandled
+ * rejection here is a failed `periodicsync` event and a silent console error.
+ */
+function gbBackgroundRefresh() {
+  return gbReadCursor()
+    .then((cursor) => {
+      const url = new URL('/greenbutton/usage', self.location.origin);
+      // One hour of overlap, same as the page's own pull: the newest interval
+      // may have been incomplete when it was last seen, and rows are deduped
+      // by timestamp anyway.
+      if (cursor) url.searchParams.set('publishedMin', String(cursor - 3600));
+      return self.fetch(url.toString(), { cache: 'no-store' });
+    })
+    .then((res) => (res.ok ? res.text() : ''))
+    .then((xml) => {
+      if (!xml) return null;
+      return self.caches
+        .open(GB_STAGED_CACHE)
+        .then((cache) =>
+          cache.put(
+            GB_STAGED_URL,
+            new Response(xml, { headers: { 'Content-Type': 'application/xml' } }),
+          ),
+        )
+        .then(() => self.clients.matchAll({ type: 'window' }))
+        .then((clients) => {
+          for (const client of clients) client.postMessage({ type: 'gb-staged-feed' });
+        });
+    })
+    .catch(() => {
+      /* offline / shim down / grant gone: nothing staged, nothing to report */
+    });
+}
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag !== GB_PERIODIC_TAG) return;
+  event.waitUntil(gbBackgroundRefresh());
 });
 
 function isImmutableStatic(pathname) {
