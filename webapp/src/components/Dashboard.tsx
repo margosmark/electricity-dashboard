@@ -17,6 +17,7 @@ import {
   buildActiveChartData, calculateComparison,
   detectAnomalies, buildHeatmapData, calculateFullDataTotals,
   calculateAlwaysOnFloor, calculateWfhShare,
+  resolveZone,
 } from '@/lib/energy';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
@@ -53,6 +54,8 @@ export default function Dashboard() {
     gbStatus, gbSyncing, gbMessage, setGbMessage,
     syncFromGreenButton, disconnectGreenButton, startGreenButtonConnect,
     gbRefreshTick, backgroundSync,
+    // Wave L: UsageSummary bills + the feed's own clock rules
+    billFeed,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
@@ -142,7 +145,16 @@ export default function Dashboard() {
 
   // --- Calculations ---
 
-  const processedData = useMemo(() => processRawData(rawData, rateHistory), [rawData, rateHistory]);
+  // Wave L item 4: when the file carries LocalTimeParameters it — not the
+  // browser's timezone — decides the day bucket, the hour bucket and the
+  // TOU/ULO/winter season for THIS dataset. No rules in the file means the
+  // browser clock, exactly as before.
+  const zone = useMemo(() => resolveZone(billFeed.localTime), [billFeed.localTime]);
+
+  const processedData = useMemo(
+    () => processRawData(rawData, rateHistory, zone),
+    [rawData, rateHistory, zone],
+  );
 
   const filteredData = useMemo(() => filterByDateRange(processedData, startDate, endDate), [processedData, startDate, endDate]);
 
@@ -651,6 +663,8 @@ export default function Dashboard() {
           comparison={comparison}
           activeRateSet={activeRateSet}
           filteredData={filteredData}
+          allData={processedData}
+          summaries={billFeed.summaries}
           startDate={startDate}
           endDate={endDate}
           projection={projection}

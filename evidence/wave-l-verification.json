@@ -1,0 +1,141 @@
+{
+  "wave": "L",
+  "base": "http://127.0.0.1:3100/",
+  "xml": "doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
+  "at": "2026-10-07T16:20:05.845Z",
+  "total": 26,
+  "passed": 26,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "empty profile opens the upload modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "real Oakville readings loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the estimate window has rows (True Bill card can render)",
+      "ok": true,
+      "detail": "$289.39"
+    },
+    {
+      "name": "usage_summaries written by the browser",
+      "ok": true,
+      "detail": "3 periods"
+    },
+    {
+      "name": "periods are the real 2026-05-25 / 06-23 / 07-22, 29 days each",
+      "ok": true,
+      "detail": "[\"2026-05-25+29d\",\"2026-06-23+29d\",\"2026-07-22+29d\"]"
+    },
+    {
+      "name": "the feed's own clock (LocalTimeParameters) was captured",
+      "ok": true,
+      "detail": "{\"tzOffset\":-18000,\"dstOffset\":3600,\"dstStartRule\":\"360E2000\",\"dstEndRule\":\"B40E2000\"}"
+    },
+    {
+      "name": "no request carried the XML (parse stayed in the browser)",
+      "ok": true,
+      "detail": "21 requests, methods: GET"
+    },
+    {
+      "name": "\"Your actual bill\" panel is visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "all three billing periods are shown",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "the real period labels are on screen",
+      "ok": true,
+      "detail": "may 25, 2026 – jun 23 $406.65 you paid · 2,651 | jun 23, 2026 – jul 22 $419.38 you paid · 2,790 | jul 22, 2026 – aug 20 $395.68 you paid · 2,641"
+    },
+    {
+      "name": "the real amounts actually paid per period",
+      "ok": true,
+      "detail": "$406.65 · $419.38 · $395.68"
+    },
+    {
+      "name": "the utility's own line-item wording is verbatim",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the HST line keeps its account number as the file wrote it",
+      "ok": true,
+      "detail": "H.S.T. # 86917797213"
+    },
+    {
+      "name": "exactly one period is comparable (full coverage)",
+      "ok": true,
+      "detail": "check=1 mismatch=0 skip=2"
+    },
+    {
+      "name": "periods we cannot cover are skipped, not faked",
+      "ok": true,
+      "detail": "skip=2"
+    },
+    {
+      "name": "commodity: our estimate vs Oakville within $1",
+      "ok": true,
+      "detail": "Commodity check ✓ — our rates estimate $324.99, Oakville billed $325.00 (Δ −$0.01, within $1)."
+    },
+    {
+      "name": "no red rate-assumptions banner",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "billed kWh vs our own interval readings agree",
+      "ok": true,
+      "detail": "billed 2,641.66 kwh · your readings add up to 2,641.59 kwh (δ 0.07 kwh)."
+    },
+    {
+      "name": "True Bill inputs are pre-filled with no typing",
+      "ok": true,
+      "detail": "$/kWh=0.0253 $/mo=35.69 reg=0.0056 hst=13"
+    },
+    {
+      "name": "HST is the file’s 13%",
+      "ok": true,
+      "detail": "13"
+    },
+    {
+      "name": "provenance caption names the period",
+      "ok": true,
+      "detail": "Pre-filled from your XML's Jul 22, 2026 – Aug 20 bill ($102.34 delivery · $14.76 regulatory · 13% HST). Type in any fiel"
+    },
+    {
+      "name": "True Bill Estimate appears untouched",
+      "ok": true,
+      "detail": "$489.53"
+    },
+    {
+      "name": "estimated vs actual for the sourced period, within $1",
+      "ok": true,
+      "detail": "estimate=$499.8 actual=$499.57 (Δ $0.23)"
+    },
+    {
+      "name": "panel visible on a 390x844 phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal overflow with the bill open",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "period picker buttons are touch-sized (>=44px)",
+      "ok": true,
+      "detail": "103x44"
+    }
+  ]
+}
