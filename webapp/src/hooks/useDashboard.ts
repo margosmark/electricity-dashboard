@@ -27,6 +27,17 @@ import {
 } from "@/lib/backup";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
 import { loadExampleReadings } from "@/lib/exampleData";
+// Wave M — one gated entry point for every background refresh, plus the
+// page⇄service-worker names that public/sw.js mirrors (asserted by a test).
+import {
+  backgroundRefreshMinMs, shouldBackgroundRefresh,
+  GB_CURSOR_CACHE, GB_CURSOR_URL, GB_STAGED_CACHE, GB_STAGED_URL, GB_STAGED_MESSAGE,
+  type RefreshTrigger,
+} from "@/lib/backgroundRefresh";
+import {
+  registerGreenButtonPeriodicSync, unregisterGreenButtonPeriodicSync,
+  type BackgroundSyncState,
+} from "@/lib/periodicSync";
 
 /** Narrow a rejected FileReader promise back to a rendered failure diagnostic. */
 function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { ok: false }> {
@@ -167,6 +178,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const [gbSyncing, setGbSyncing] = useState(false);
   const [gbMessage, setGbMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
+  /* ---------------------------------------------------------------------
+   * Wave M — background refresh.
+   *
+   * `gbRefreshTick` is the only thing the notice hook needs to know that a
+   * refresh just ran; `backgroundSync` is what the settings drawer prints
+   * about Periodic Background Sync; `lastRefreshAtRef` is the shared throttle
+   * so interval, focus and visibilitychange can never stack requests.
+   * --------------------------------------------------------------------- */
+  const [gbRefreshTick, setGbRefreshTick] = useState(0);
+  const [backgroundSync, setBackgroundSync] = useState<BackgroundSyncState>("unknown");
+  const lastRefreshAtRef = useRef(0);
+
   /** Live-view refs: the sync path is called from effects whose closures
    *  were built before the data existed, so they read these instead. */
   const rawDataRef = useRef<DataPoint[]>([]);
@@ -246,6 +269,98 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   };
 
   /**
+   * Parse + merge one ESPI document.
+   *
+   * Split out of `syncFromGreenButton` so the service worker's staged feed
+   * goes through EXACTLY the same path as the network pull — same merge
+   * semantics, same multi-meter picker, same "nothing new ⇒ touch nothing".
+   * A second ingestion path would be a second opinion about what a union
+   * means, which is the one thing Wave J's importPlan already owns.
+   */
+  const ingestFeedXml = (xml: string): GbSyncOutcome => {
+    const base = rawDataRef.current;
+    let groups: UsagePointGroup[];
+    try {
+      groups = parseGreenButtonUsagePoints(xml);
+    } catch {
+      return { ok: false, code: "unparseable" };
+    }
+    const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
+    if (incoming === 0) return { ok: false, code: "no_readings" };
+
+    if (groups.length > 1) {
+      setPendingUpload({ fileName: "Oakville Hydro (live sync)", groups, origin: "greenbutton" });
+      setShowUploadModal(false);
+      return { ok: true, incoming, picker: true };
+    }
+
+    const plan = planImport(base, groups[0].readings);
+    // Nothing new: skip the write AND the re-anchor. A 15-minute poll must
+    // not touch storage or move a window the user has panned to.
+    if (plan.identical) return { ok: true, incoming, added: 0, unchanged: true };
+
+    const merged = mergeForWrite(base, groups[0].readings);
+    const keep = windowRef.current;
+    const hadWindow = keep.start !== "" && keep.end !== "";
+    commitReadings(merged);
+    if (hadWindow) {
+      setStartDate(keep.start);
+      setEndDate(keep.end);
+      setViewScope(keep.scope);
+    }
+    return { ok: true, incoming, added: plan.addedRows };
+  };
+
+  /**
+   * Publish this browser's cursor where the SERVICE WORKER can read it.
+   *
+   * `localStorage` is invisible to a service worker, so the newest timestamp
+   * goes into a fixed-name Cache Storage entry instead — the one channel both
+   * contexts share. Without it a periodic background sync would pull the
+   * whole feed every time. Failures are silent: a missing cursor only makes
+   * the next background pull wider, never wrong.
+   */
+  const storeGbCursor = async (): Promise<void> => {
+    try {
+      if (typeof caches === "undefined") return;
+      let newest = 0;
+      for (const r of rawDataRef.current) if (r.timestamp > newest) newest = r.timestamp;
+      if (newest <= 0) return;
+      const cache = await caches.open(GB_CURSOR_CACHE);
+      await cache.put(GB_CURSOR_URL, new Response(String(newest)));
+    } catch {
+      /* no Cache Storage (private mode / insecure origin): full pull next time */
+    }
+  };
+
+  /**
+   * Merge a feed the service worker already fetched — either just now (it
+   * messaged an open window) or while the app was closed. Deleted once read,
+   * so a staged feed can never be applied twice or linger across deploys.
+   *
+   * It does NOT replace the network pull that follows on load: a staged body
+   * may be older than what the custodian would answer with today, and
+   * freshness is never assumed from a cache. Both merge idempotently by
+   * timestamp, so applying the same rows twice costs one parse.
+   */
+  const drainStagedFeed = async (): Promise<GbSyncOutcome | null> => {
+    try {
+      if (typeof caches === "undefined") return null;
+      const cache = await caches.open(GB_STAGED_CACHE);
+      const staged = await cache.match(GB_STAGED_URL);
+      if (!staged) return null;
+      const xml = await staged.text();
+      await cache.delete(GB_STAGED_URL);
+      if (!xml) return null;
+      const outcome = ingestFeedXml(xml);
+      if (outcome.ok) void storeGbCursor();
+      return outcome;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
    * Pull the piped ESPI feed and MERGE it into what this browser already
    * holds.
    *
@@ -262,6 +377,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     if (syncingRef.current) return { ok: false, code: "busy" };
     syncingRef.current = true;
     setGbSyncing(true);
+    // Stamp at START (including the load-time pull): restoring a window fires
+    // visibilitychange and focus together, and only an immediately-written
+    // timestamp lets `shouldBackgroundRefresh` refuse the second one.
+    lastRefreshAtRef.current = Date.now();
     try {
       let status = gbStatusRef.current;
       if (!status) {
@@ -294,36 +413,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         setGbStatus(fresh);
       }
 
-      let groups: UsagePointGroup[];
-      try {
-        groups = parseGreenButtonUsagePoints(res.xml);
-      } catch {
-        return { ok: false, code: "unparseable" };
-      }
-      const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
-      if (incoming === 0) return { ok: false, code: "no_readings" };
-
-      if (groups.length > 1) {
-        setPendingUpload({ fileName: "Oakville Hydro (live sync)", groups, origin: "greenbutton" });
-        setShowUploadModal(false);
-        return { ok: true, incoming, picker: true };
-      }
-
-      const plan = planImport(base, groups[0].readings);
-      // Nothing new: skip the write AND the re-anchor. A 15-minute poll must
-      // not touch storage or move a window the user has panned to.
-      if (plan.identical) return { ok: true, incoming, added: 0, unchanged: true };
-
-      const merged = mergeForWrite(base, groups[0].readings);
-      const keep = windowRef.current;
-      const hadWindow = keep.start !== "" && keep.end !== "";
-      commitReadings(merged);
-      if (hadWindow) {
-        setStartDate(keep.start);
-        setEndDate(keep.end);
-        setViewScope(keep.scope);
-      }
-      return { ok: true, incoming, added: plan.addedRows };
+      const outcome = ingestFeedXml(res.xml);
+      // Publish the cursor even when nothing was added: the next pull — this
+      // page's next refresh OR the service worker's — should start from what
+      // this browser already holds rather than re-reading the whole feed.
+      if (outcome.ok) void storeGbCursor();
+      return outcome;
     } catch (e) {
       return { ok: false, code: "unreachable", detail: e instanceof Error ? e.message : String(e) };
     } finally {
@@ -336,6 +431,50 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   useEffect(() => {
     let mounted = true;
     let poller: ReturnType<typeof setInterval> | null = null;
+    // Wave M listeners: declared here (not inside `init`) so the cleanup can
+    // detach them — an unauthorised browser never assigns them at all.
+    let onVisibilityChange: (() => void) | null = null;
+    let onFocus: (() => void) | null = null;
+    let onSwMessage: ((event: MessageEvent) => void) | null = null;
+
+    /**
+     * The single gated entry point every background refresh goes through.
+     *
+     * Four triggers — the 15-minute visible-tab interval, `visibilitychange`,
+     * `focus`, and a message from the service worker — sharing ONE throttle,
+     * so restoring a window (which fires BOTH visibilitychange and focus in
+     * the same instant) produces exactly one request. Returns whether it
+     * fired; that boolean is what the e2e asserts.
+     *
+     * `connected` is checked inside `shouldBackgroundRefresh`, so a browser
+     * with no `gb_session` never reaches `fetch` no matter what fires.
+     *
+     * Declared inside this effect, not in the component body: it is only ever
+     * called from event handlers and the interval, and keeping it out of the
+     * render scope is what lets React's purity rule see that the `Date.now()`
+     * below can never run during render.
+     */
+    const runBackgroundRefresh = (trigger: RefreshTrigger): boolean => {
+      const fire = shouldBackgroundRefresh({
+        trigger,
+        now: Date.now(),
+        lastRefreshAt: lastRefreshAtRef.current,
+        minIntervalMs: backgroundRefreshMinMs(),
+        connected: gbStatusRef.current?.connected === true,
+        syncing: syncingRef.current,
+        visibility: typeof document === "undefined" ? "visible" : document.visibilityState,
+      });
+      if (!fire) return false;
+      // Stamp on START, not on completion: visibilitychange and focus land in
+      // the same tick, and only an immediately-written stamp guarantees the
+      // second one is refused. The 15-minute interval is the retry safety net.
+      lastRefreshAtRef.current = Date.now();
+      void syncFromGreenButton().then((outcome) => {
+        if (outcome.ok) setGbRefreshTick((t) => t + 1);
+      });
+      return true;
+    };
+
     async function init() {
       // localStorage FIRST: it decides both the visible window and whether
       // there is anything at all to show, and neither answer needs the network.
@@ -403,35 +542,83 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         setGbMessage({ tone: "error", text: `${copy.headline} — ${copy.detail}` });
       }
 
-      if (status.connected) {
-        const outcome = await syncFromGreenButton();
-        if (mounted && gbFlag === "connected") {
-          setGbMessage(
-            outcome.ok
-              ? {
-                  tone: "ok",
-                  text: outcome.picker
-                    ? "Connected — pick which meter to load."
-                    : `Live sync: ${outcome.incoming} readings from the feed, ` +
-                      `${outcome.added ?? 0} new.`,
-                }
-              : { tone: "error", text: describeGbError(outcome.code).detail },
-          );
-        }
+      /* --- Wave M: the background loop exists ONLY for an authorised browser.
+       * A manual-DMD-only profile (no `gb_session`) leaves here with no timer,
+       * no listeners and no periodic sync — scope 4 of the card, enforced at
+       * the source rather than by every callback re-checking it.
+       */
+      if (!status.connected) return;
+
+      // A feed the service worker already fetched (periodic background sync
+      // while the app was closed): merge it FIRST, so the pull below can ask
+      // for as little as possible.
+      const staged = await drainStagedFeed();
+      if (staged?.ok && mounted) setGbRefreshTick((t) => t + 1);
+
+      const outcome = await syncFromGreenButton();
+      if (outcome.ok && mounted) setGbRefreshTick((t) => t + 1);
+      if (mounted && gbFlag === "connected") {
+        setGbMessage(
+          outcome.ok
+            ? {
+                tone: "ok",
+                text: outcome.picker
+                  ? "Connected — pick which meter to load."
+                  : `Live sync: ${outcome.incoming} readings from the feed, ` +
+                    `${outcome.added ?? 0} new.`,
+              }
+            : { tone: "error", text: describeGbError(outcome.code).detail },
+        );
       }
 
-      // Background refresh: every 15 minutes while the tab is actually
-      // visible, and never overlapping a sync that is already running.
+      // Wave K's 15-minute visible-tab poll, unchanged in cadence but now
+      // routed through the shared gate so interval/focus/visibility cannot
+      // stack requests on top of each other.
       poller = setInterval(() => {
-        if (!mounted || document.visibilityState !== "visible") return;
-        if (syncingRef.current || !gbStatusRef.current?.connected) return;
-        void syncFromGreenButton();
+        if (!mounted) return;
+        runBackgroundRefresh("interval");
       }, 15 * 60 * 1000);
+
+      // Wave M: the tab came back — refresh now rather than after up to 15
+      // minutes. A restored window fires BOTH of these; the throttle written
+      // at the start of a refresh is what makes that one request, not two.
+      onVisibilityChange = () => {
+        if (!mounted || document.visibilityState !== "visible") return;
+        runBackgroundRefresh("visibility");
+      };
+      onFocus = () => {
+        if (!mounted) return;
+        runBackgroundRefresh("focus");
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      window.addEventListener("focus", onFocus);
+
+      // The service worker staged a feed while this window was open.
+      onSwMessage = (event: MessageEvent) => {
+        if (!mounted || event.data?.type !== GB_STAGED_MESSAGE) return;
+        void drainStagedFeed().then((got) => {
+          if (got?.ok) setGbRefreshTick((t) => t + 1);
+        });
+      };
+      if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener("message", onSwMessage);
+      }
+
+      // Chromium + installed app only; never prompts, never throws, and the
+      // settings drawer prints whichever state comes back (see lib/periodicSync).
+      void registerGreenButtonPeriodicSync().then((state) => {
+        if (mounted) setBackgroundSync(state);
+      });
     }
     init();
     return () => {
       mounted = false;
       if (poller) clearInterval(poller);
+      if (onVisibilityChange) document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (onFocus) window.removeEventListener("focus", onFocus);
+      if (onSwMessage && typeof navigator !== "undefined" && navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener("message", onSwMessage);
+      }
     };
     // One-shot bootstrap by design: it reads live state through refs, so
     // re-running it on every render would double-sync instead of fixing
@@ -729,6 +916,13 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const disconnectGreenButton = async (): Promise<boolean> => {
     const ok = await disconnectGb();
+    // Wave M: a background loop that outlives the grant it depends on would
+    // keep asking the utility for data this browser is no longer allowed to
+    // read — drop it with the authorisation.
+    if (ok) {
+      void unregisterGreenButtonPeriodicSync();
+      setBackgroundSync("unconfigured");
+    }
     await refreshGbStatus();
     setGbMessage(
       ok
@@ -761,6 +955,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // Green Button live sync (Wave K)
     gbStatus, gbSyncing, gbMessage, setGbMessage,
     syncFromGreenButton, refreshGbStatus, disconnectGreenButton, startGreenButtonConnect,
+    // Background refresh + alerts (Wave M)
+    gbRefreshTick, backgroundSync,
   };
 }
 
