@@ -27,6 +27,18 @@ The deploy script (`~/bin/deploy-energy-dashboard.sh` on .110) refuses to run
 concurrently (`DEPLOY_REFUSED`, exit 3) so sibling agents can't swap the image
 mid-verification. `--no-fetch` skips the git step for tar-pushed deploys.
 
+**Check disk before a deploy.** This host runs the **vfs** storage driver
+(`/var/lib/docker/vfs/dir` ≈ 92 G), so an image build can eat several GB of
+cache and hit `no space left on device` mid-recreate. The old container
+survives (the recreate fails before the swap — the site does not go down), but
+free the space first:
+
+```bash
+df -h /                                     # want ≥ 4 G before deploying
+sudo docker builder prune -f                # reclaims GBs, touches no running container
+apt-get clean && sudo journalctl --vacuum-size=50M   # a few hundred MB more
+```
+
 Code delivery on hermescomputer (.110): **native git works** — the host holds a
 read-only GitHub deploy key (`~/.ssh/ed25519_deploy`, key id 165177015,
 read_only=true, scope limited to this repo) and `~/.ssh/config` pins it for
