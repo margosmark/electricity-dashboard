@@ -63,6 +63,9 @@ and [`GREENBUTTON-CMD.md`](GREENBUTTON-CMD.md) §3.
   prototype → Next.js webapp) fit together, and the client-side pipeline
 - [`OPERATIONS.md`](OPERATIONS.md) — run it, update it, refresh Ontario rates
 - [`DECISIONS.md`](DECISIONS.md) — why it's built this way, and what was rejected
+- [`REGISTRATION-OAKVILLE.md`](REGISTRATION-OAKVILLE.md) — Mark's step-by-step
+  for Oakville Hydro's third-party registration form (every field value,
+  copy-paste ready)
 
 ## Development
 
