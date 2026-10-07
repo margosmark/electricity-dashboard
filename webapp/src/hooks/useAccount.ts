@@ -38,6 +38,7 @@ import {
   importSessionKey,
 } from "@/lib/account/crypto";
 import * as sync from "@/lib/account/sync";
+import { requestBrowserPermission } from "@/lib/notifications";
 import { parseBackup, serializeBackup } from "@/lib/backup";
 
 export type AccountMessage = { tone: "ok" | "error"; text: string } | null;
@@ -608,9 +609,18 @@ export function useAccount(options: Options = {}) {
       return false;
     }
     try {
-      const permission = await Notification.requestPermission();
+      // The browser prompt lives in one place (`lib/notifications.ts`) so
+      // "never prompts outside a click" stays a single, readable rule even
+      // though two surfaces can now ask: Wave M's on-device toggle and this
+      // one. Push needs the same permission an on-device alert does.
+      const permission = await requestBrowserPermission();
       if (permission !== "granted") {
-        say("error", "Notifications were blocked in the browser.");
+        say(
+          "error",
+          permission === "unsupported"
+            ? "This browser cannot show notifications."
+            : "Notifications were blocked in the browser.",
+        );
         return false;
       }
       const registration = await navigator.serviceWorker.ready;

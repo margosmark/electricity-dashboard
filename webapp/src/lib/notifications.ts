@@ -4,10 +4,13 @@
  * Hard rules encoded here, because they are the ones a later refactor would
  * most easily break:
  *
- *  1. NOTHING calls `Notification.requestPermission()` on its own. The only
- *     path that can prompt is `enableNotifications()`, which only runs from
- *     the settings drawer's toggle — a direct user gesture. Page load, a
- *     background refresh and a plan change are all explicitly silent.
+ *  1. NOTHING calls `Notification.requestPermission()` on its own. The
+ *     prompt lives in exactly one place, `requestBrowserPermission()`, and
+ *     only two direct user gestures reach it: Wave M's settings-drawer toggle
+ *     (`enableNotifications` below) and Wave N's account panel "Turn on"
+ *     (`hooks/useAccount`). Page load, a background refresh and a plan change
+ *     are all explicitly silent — see `RefreshNoticeBanner.test.tsx`, which
+ *     fails if any of them prompts.
  *  2. Absence is normal. Safari/Firefox without the API, a denied
  *     permission, a private window, or a plain http:// origin all resolve to
  *     "unsupported / unavailable" and the feature degrades to the in-app
@@ -77,23 +80,39 @@ export function notificationAvailability(): NotificationAvailability {
 }
 
 /**
- * Switch the app's opt-in on. ONLY ever called from the toggle's onClick:
- * `requestPermission()` may show the browser's prompt, so calling it from an
- * effect would make the card's "no prompt on first load" impossible.
+ * THE prompt. One implementation, because "we never ask without a click" is
+ * only enforceable if there is a single place to read.
+ *
+ * It deliberately does NOT touch the app's own opt-in flag: the browser
+ * permission is one thing (needed by Wave M's on-device alerts *and* by Wave
+ * N's push subscription — the Push API requires it), while the opt-in flag is
+ * Wave M's channel state. Callers decide what a grant means for them.
+ *
+ * Callers must be click handlers. An effect, a load path or a background
+ * refresh calling this is the regression `RefreshNoticeBanner.test.tsx`
+ * exists to catch.
  */
-export async function enableNotifications(): Promise<NotificationAvailability> {
+export async function requestBrowserPermission(): Promise<'granted' | 'blocked' | 'unsupported'> {
   if (!notificationSupport()) return 'unsupported';
   if (Notification.permission === 'denied') return 'blocked';
+  if (Notification.permission === 'granted') return 'granted';
 
-  let permission: NotificationPermission = Notification.permission;
-  if (permission === 'default') {
-    try {
-      permission = await Notification.requestPermission();
-    } catch {
-      return 'blocked';
-    }
+  try {
+    return (await Notification.requestPermission()) === 'granted' ? 'granted' : 'blocked';
+  } catch {
+    return 'blocked';
   }
-  if (permission !== 'granted') return 'blocked';
+}
+
+/**
+ * Switch the app's opt-in on. ONLY ever called from the toggle's onClick:
+ * it may show the browser's prompt (via `requestBrowserPermission`), so
+ * calling it from an effect would make the card's "no prompt on first load"
+ * impossible.
+ */
+export async function enableNotifications(): Promise<NotificationAvailability> {
+  const permission = await requestBrowserPermission();
+  if (permission !== 'granted') return permission === 'unsupported' ? 'unsupported' : 'blocked';
 
   storageSet(NOTIFICATIONS_ENABLED_KEY, '1');
   return 'on';
