@@ -94,10 +94,13 @@ as HTML.
 
 ## 5. The account server (Wave N, optional)
 
-Off by default: `docker-compose.yml` sets `ACCT_ENABLED` (and `VAPID_*`) on
-the `account-server` service only. Same image, different process, different
-env — which is what makes "who am I" an environment read the container that
-serves the public site can never fake (see `lib/account/config.ts`).
+Off by default: `ACCT_ENABLED` defaults to `false` on the `account-server`
+service and is absent from every other service, so a deploy of this change
+leaves the site exactly as it was — enabling it is one line in the untracked
+.env` (`OPERATIONS.md` → Account server). Same image, different process,
+different env — which is what makes "who am I" an environment read the
+container that serves the public site can never fake (see
+`lib/account/config.ts`).
 
 | # | Rule | Status |
 |---|---|---|

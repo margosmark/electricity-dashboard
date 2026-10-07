@@ -155,18 +155,27 @@ A fourth container (`account-server`), same image, started by `docker compose
 up -d`. It is the only process given `ACCT_*` (argon2 verifiers, session rows,
 the SQLite file) and `VAPID_*` (the push signing key); the dashboard container
 gets neither, which is why `/account/*` answers **404** on the public app
-process by design. `ACCT_ENABLED` defaults to `true` for this service only —
-to turn accounts off, put `ACCT_ENABLED=false` in `.env` (or don't start the
-service); the data file stays on disk either way.
+process by design. **The feature is off until you turn it on:** `ACCT_ENABLED`
+defaults to `false`, so a deploy of this change is a no-op for the site. To
+enable it (and to disable it again), set `ACCT_ENABLED=true` in the untracked
+`.env` and `docker compose up -d account-server`; the data file stays on disk
+whichever way it is set, and the container stays running either way so the
+path answers 404 rather than 502.
 
 ```bash
-# one-time: push keys + the shared shim→account token (both go in the
-# untracked .env, never in docker-compose.yml)
-cd ~/electricity-dashboard/webapp && npx web-push generate-vapid-keys
-openssl rand -hex 32          # → ACCT_INTERNAL_TOKEN
+# one-time: turn the feature on. Push keys and the shared shim→account token
+# both go in the untracked .env, never in docker-compose.yml.
+cd ~/electricity-dashboard/webapp && npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
+openssl rand -hex 32                                                     # → ACCT_INTERNAL_TOKEN
+cd .. && printf 'ACCT_ENABLED=true
+' >> .env
 docker compose up -d account-server
 docker compose up -d --build edge-router   # the /account locations are BAKED into that image
 ```
+
+The router rebuild is only needed when `ops/edge/default.conf.template`
+changes; the `/account/*` locations shipped with this change, so it is a
+one-time step for this upgrade.
 
 | Check | Command / expectation |
 | --- | --- |
