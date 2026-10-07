@@ -20,8 +20,10 @@
  * `detectAnomalies()` already exists in `lib/energy.ts` and runs where the
  * data is; this is the component that gives its output a way to reach a
  * closed tab. The third client-side trigger, `plan_change`, is deliberately
- * NOT here: it belongs to Wave M's plan detector, which posts the same shape
- * to the same endpoint and is capped by the same server-side rules.
+ * NOT here: it belongs to Wave M's plan detector
+ * (`hooks/useRefreshNotices.ts`) and lives in `AccountPlanTrigger` next
+ * door, which posts the same shape to the same endpoint and is capped by the
+ * same server-side rules.
  *
  * WHAT LEAVES THIS DEVICE (stated because the card demanded it, SECURITY.md
  * §5): the payload is pre-rendered text — a title ("Unusual usage on Oct 3")

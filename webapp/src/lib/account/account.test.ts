@@ -627,6 +627,132 @@ describe("session-authed notify", () => {
 });
 
 /* ==========================================================================
+ * The plan_change trigger — the LAST gap in the §7 trigger table.
+ *
+ * Wave M's detector computes "your best plan changed" in the browser (under
+ * E2EE the server has ciphertext and could not) and posts it here as
+ * pre-rendered text. These three tests are the ones that make the card's
+ * acceptance real: the message lands in `notify_log`, and the caps that make
+ * "NOT spammy" true apply to THIS topic exactly as they do to the four the
+ * server originates itself.
+ * ========================================================================== */
+
+describe("the plan_change trigger", () => {
+  const accountIdOf = (email: string) => {
+    const db = openDb(getAccountConfig().dbPath);
+    return (db.prepare("SELECT id FROM accounts WHERE email = ?").get(email) as { id: number }).id;
+  };
+
+  const notifyRows = () => {
+    const db = openDb(getAccountConfig().dbPath);
+    return db.prepare("SELECT topic, title, outcome FROM notify_log ORDER BY id").all() as {
+      topic: string;
+      title: string;
+      outcome: string;
+    }[];
+  };
+
+  /**
+   * Equal quiet bounds mean "no quiet hours" (`push.ts#inQuietHours`), so a
+   * verdict below is about the CAP and not about the clock this test happens
+   * to run on. The interval and duplicate checks run BEFORE quiet hours and
+   * need no help; the daily-cap one does.
+   */
+  const withoutQuietHours = async (cookie: string) => {
+    const res = await prefsRoute.PUT(
+      put(`${BASE}/account/push/preferences`, { quietStart: 0, quietEnd: 0, tzOffset: 0 }, cookie),
+    );
+    expect(res.status).toBe(200);
+  };
+
+  /** A send that already happened — the state the next post is judged against. */
+  const seedSent = (accountId: number, topic: string, title: string, sentAt: number) => {
+    openDb(getAccountConfig().dbPath)
+      .prepare("INSERT INTO notify_log (account_id, topic, title, sent_at, outcome) VALUES (?, ?, ?, ?, 'sent')")
+      .run(accountId, topic, title, sentAt);
+  };
+
+  const postPlanChange = (title: string, cookie: string) =>
+    notifyRoute.POST(
+      post(`${BASE}/account/notify`, { topic: "plan_change", title, body: "Your readings now put TOU ahead." }, cookie),
+    );
+
+  it("records the browser's plan_change message in notify_log", async () => {
+    const { cookie } = await register();
+    await withoutQuietHours(cookie);
+
+    const res = await postPlanChange("Best plan changed to TOU", cookie);
+    expect(res.status).toBe(200);
+    // A correct outcome, not an error: this fixture has no VAPID keys and no
+    // subscription, so there is nowhere to deliver — but the DECISION is
+    // recorded either way, which is the whole point of `notify_log`.
+    expect((await res.json()) as { sent: number; suppressed: string | null }).toEqual({
+      ok: true,
+      sent: 0,
+      suppressed: "no_subscriptions",
+    });
+
+    const rows = notifyRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      topic: "plan_change",
+      title: "Best plan changed to TOU",
+      outcome: "no_subscriptions",
+    });
+  });
+
+  it("caps the next one at plan_change's interval, and a repeat title is a duplicate", async () => {
+    const { cookie } = await register();
+    await withoutQuietHours(cookie);
+    seedSent(accountIdOf("mark@example.com"), "plan_change", "Best plan changed to TOU", Date.now() - 60_000);
+
+    const repeat = await postPlanChange("Best plan changed to TOU", cookie);
+    expect(repeat.status).toBe(200);
+    expect((await repeat.json()) as { suppressed: string | null }).toEqual({
+      ok: true,
+      sent: 0,
+      suppressed: "duplicate",
+    });
+
+    // A genuinely different plan-change inside the 1/day window: capped, not
+    // dropped as a duplicate — the two must stay distinguishable in the log.
+    const capped = await postPlanChange("Best plan changed to Tiered", cookie);
+    expect((await capped.json()) as { suppressed: string | null }).toMatchObject({
+      suppressed: "capped_interval",
+    });
+
+    expect(notifyRows().map((r) => r.outcome)).toEqual(["sent", "duplicate", "capped_interval"]);
+    expect(notifyRows().every((r) => r.topic === "plan_change")).toBe(true);
+  });
+
+  it("spends the same global daily budget as every other topic", async () => {
+    const { cookie } = await register();
+    const accountId = accountIdOf("mark@example.com");
+    await withoutQuietHours(cookie);
+
+    // The last plan_change was yesterday (the 1/day interval has elapsed, so
+    // the cap below is the one that answers) and today's budget of three is
+    // already spent by three OTHER topics — the cap is global by design.
+    seedSent(accountId, "plan_change", "Best plan changed to Tiered", Date.now() - 25 * 60 * 60 * 1000);
+    for (const topic of ["oeb_rates", "anomaly", "data_available"]) {
+      seedSent(accountId, topic, `already sent: ${topic}`, Date.now());
+    }
+
+    const res = await postPlanChange("Best plan changed to TOU", cookie);
+    expect((await res.json()) as { suppressed: string | null }).toEqual({
+      ok: true,
+      sent: 0,
+      suppressed: "capped_daily",
+    });
+    expect(notifyRows().at(-1)).toEqual({
+      topic: "plan_change",
+      title: "Best plan changed to TOU",
+      outcome: "capped_daily",
+    });
+  });
+});
+
+/* ==========================================================================
  * Push preferences + the cap policy
  * ========================================================================== */
 

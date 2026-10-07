@@ -27,6 +27,7 @@ import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
 import { AccountControls } from '@/components/AccountControls';
 import { AccountTriggers } from '@/components/AccountTriggers';
+import { AccountPlanTrigger } from '@/components/AccountPlanTrigger';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
@@ -329,6 +330,11 @@ export default function Dashboard() {
   return (
     <div key="ready" className="space-y-10 text-black relative font-black uppercase">
       {accountTriggers}
+      {/* Wave N's last missing trigger: the SAME plan-change notice the
+          banner below shows, posted to the account server so it can reach a
+          closed tab — once per notice, and only from a browser whose account
+          probe says enabled && authed. Renders nothing. */}
+      <AccountPlanTrigger notices={refreshNotices} />
       {/* Persistent OEB rate-staleness alert: rendered in both views until
           /api/rates ships the newer effectiveDate. */}
       <RateStalenessBanner result={staleness} />

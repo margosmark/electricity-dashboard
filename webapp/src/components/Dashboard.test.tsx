@@ -4,6 +4,15 @@ import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
 import Dashboard from './Dashboard';
 
+// Wave N mounts a third, invisible component next to `AccountTriggers`: the
+// plan_change push. It renders nothing, so the only thing a test can catch
+// here is that it is actually wired to the derived notices at all — the
+// behaviour lives in AccountPlanTrigger.test.tsx.
+vi.mock('@/components/AccountPlanTrigger', () => ({
+  AccountPlanTrigger: vi.fn(() => null),
+}));
+import { AccountPlanTrigger } from '@/components/AccountPlanTrigger';
+
 const mockRates = {
   historicalRates: [
     {
@@ -271,5 +280,19 @@ describe('Dashboard', () => {
     await user.click(screen.getByText('INSIGHTS'));
     expect(screen.getByTestId('insights-view')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+  });
+
+  // --- Wave N: the last §7 trigger is actually mounted ---
+
+  it('mounts the plan_change push with the derived notices', async () => {
+    const trigger = vi.mocked(AccountPlanTrigger);
+    trigger.mockClear();
+    await renderLoaded();
+    const last = trigger.mock.calls.at(-1);
+    expect(last).toBeDefined();
+    // `useRefreshNotices`' output, handed straight to the push. Empty in this
+    // fixture (no gb_session), which is also the point: nothing to push.
+    expect(Array.isArray(last?.[0].notices)).toBe(true);
+    expect(last?.[0].notices).toEqual([]);
   });
 });
