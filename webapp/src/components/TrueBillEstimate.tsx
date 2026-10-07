@@ -3,24 +3,38 @@
  * imply, plus optional LOCAL add-ons (delivery, regulatory, HST) that turn it
  * into a true-bill estimate.
  *
- * Every field is seeded empty. With all four empty the card is exactly the
- * old behavior — variable-only figure plus the "does not include …" caption.
- * These numbers are user inputs kept in this browser; they are deliberately
- * NOT read from /api/rates, which only carries OEB commodity rates.
+ * With all four fields empty the card is exactly the old behavior —
+ * variable-only figure plus the "does not include …" caption. The numbers
+ * are user inputs kept in this browser; they are deliberately NOT read from
+ * /api/rates, which only carries OEB commodity rates.
+ *
+ * Wave L: when the imported file carries a UsageSummary bill, the four fields
+ * are pre-filled from the newest period once (and only while they remain
+ * untouched — see applyDerivedIfPristine), with the provenance shown so the
+ * value is never a mystery.
  */
 
 "use client";
 
+import { useEffect, useMemo } from 'react';
+
 import {
   type ProcessedPoint,
+  type UsageSummary,
+  type ExtraChargeField,
+  billTotals,
+  billWindow,
   buildActiveChartData,
   calculateComparison,
   calculateTrueBill,
+  chargesArePristine,
   countMonthsInView,
+  deriveExtraCharges,
   hasExtraCharges,
+  planCostFor,
   BASELINE_ESTIMATE_CAPTION,
 } from '@/lib/energy';
-import { useExtraCharges, type ExtraCharges } from '@/hooks/useDashboard';
+import { useExtraCharges } from '@/hooks/useDashboard';
 
 const FIELD_CLASS =
   'w-full p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl ' +
@@ -63,10 +77,74 @@ type Props = {
   endDate: string;
   /** The window on screen — the estimate is for exactly this range. */
   windowData: ProcessedPoint[];
+  /**
+   * Bill periods parsed out of the same file (Wave L item 3): when present,
+   * the four fields above are pre-filled from the newest one instead of
+   * staying empty, and the card shows what that period actually cost.
+   * Every field stays editable — a typed value always wins.
+   */
+  summaries?: UsageSummary[];
+  /** Every priced reading, so a billing period can be priced on its own. */
+  allData?: ProcessedPoint[];
 };
 
-export function TrueBillEstimate({ plan, startDate, endDate, windowData }: Props) {
-  const { charges, setCharge } = useExtraCharges();
+export function TrueBillEstimate({
+  plan,
+  startDate,
+  endDate,
+  windowData,
+  summaries = [],
+  allData,
+}: Props) {
+  const { charges, setCharge, applyDerivedIfPristine } = useExtraCharges();
+
+  // Wave L: the file's own bill, newest period first. Null when the feed
+  // carried no bill (or one with no charges) — then nothing changes at all.
+  const derived = useMemo(
+    () => (summaries.length > 0 ? deriveExtraCharges(summaries, allData) : null),
+    [summaries, allData],
+  );
+
+  /**
+   * Pre-fill the four fields from the file — once. The hook only applies the
+   * values while the stored ones are still pristine (never typed in, or still
+   * byte-identical to what an earlier file produced), so editing a field, or
+   * clearing it, sticks: the user's version outlives every later sync.
+   */
+  useEffect(() => {
+    if (derived?.charges.xmlSource) applyDerivedIfPristine(derived.charges.xmlSource);
+  }, [derived, applyDerivedIfPristine]);
+
+  /**
+   * Estimate vs actual for the period the prefill came from: same basis as
+   * the bill (everything before the rebate — Wave B has no rebate field, so
+   * the rebate is reported underneath rather than silently ignored).
+   */
+  const vsActual = useMemo(() => {
+    if (!derived || !allData || allData.length === 0) return null;
+    const s = derived.source;
+    // The billed window, not the coarse billingPeriod stamp — see billWindow.
+    const window = billWindow(s);
+    const rows = allData.filter((r) => r.timestamp >= window.start && r.timestamp < window.end);
+    if (rows.length === 0) return null;
+    const totals = billTotals(s);
+    const months = Math.max(1, Math.round((window.end - window.start) / 86400 / 30.44));
+    const estimate = calculateTrueBill({
+      variableCost: planCostFor(rows, plan),
+      totalKwh: rows.reduce((n, r) => n + r.usage_kwh, 0),
+      months,
+      charges,
+    });
+    if (!estimate) return null;
+    return {
+      label: derived.label,
+      estimate: estimate.total,
+      actual: totals.preRebate,
+      delta: estimate.total - totals.preRebate,
+      credit: totals.credit,
+      payable: totals.payable,
+    };
+  }, [derived, allData, plan, charges]);
 
   if (windowData.length === 0) return null;
 
@@ -79,7 +157,10 @@ export function TrueBillEstimate({ plan, startDate, endDate, windowData }: Props
   const bill = calculateTrueBill({ variableCost, totalKwh, months, charges });
   const active = hasExtraCharges(charges) && bill !== null;
 
-  const set = (field: keyof ExtraCharges) => (value: string) => setCharge(field, value);
+  const set = (field: ExtraChargeField) => (value: string) => setCharge(field, value);
+
+  /** Still exactly what the file produced (vs. typed over or cleared). */
+  const xmlIntact = !!charges.xmlSource && chargesArePristine(charges);
 
   return (
     <section
@@ -136,9 +217,36 @@ export function TrueBillEstimate({ plan, startDate, endDate, windowData }: Props
               onChange={set('hstPct')}
             />
           </div>
-          <div className="mt-2 text-[8px] text-slate-400 normal-case">
-            Local inputs — not derived from the OEB commodity rates in /api/rates.
-          </div>
+          {charges.xmlSource ? (
+            <div
+              data-testid="xml-charge-source"
+              className="mt-2 text-[8px] md:text-[10px] text-slate-500 normal-case font-bold"
+            >
+              {xmlIntact ? (
+                <>
+                  Pre-filled from your XML&apos;s{' '}
+                  <strong>{charges.xmlSource.label}</strong> bill
+                  {derived
+                    ? ` ($${derived.delivery.toFixed(2)} delivery · $${derived.regulatory.toFixed(2)} regulatory · ${derived.hstPct}% HST)`
+                    : ''}
+                  . Type in any field to override it — your version sticks, even after the next
+                  sync.
+                  {derived?.fit.mode === 'split' && derived.fit.flat !== null
+                    ? ` Delivery fits $${derived.fit.flat.toFixed(2)} fixed + $${derived.fit.perKwh.toFixed(4)}/kWh across ${derived.fit.periods} periods (±$${(derived.fit.maxResidual ?? 0).toFixed(2)}).`
+                    : ''}
+                </>
+              ) : (
+                <>
+                  Originally from your XML&apos;s <strong>{charges.xmlSource.label}</strong> bill —
+                  you&apos;ve edited these. Clear a field to drop that charge from the estimate.
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 text-[8px] md:text-[10px] text-slate-400 normal-case">
+              Local inputs — not derived from the OEB commodity rates in /api/rates.
+            </div>
+          )}
         </div>
       </div>
 
@@ -180,6 +288,58 @@ export function TrueBillEstimate({ plan, startDate, endDate, windowData }: Props
                 <div className="italic">${bill.hst.toFixed(2)}</div>
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Wave L: the same period, as Oakville actually billed it. */}
+      {vsActual && (
+        <div
+          data-testid="true-bill-vs-actual"
+          className="mt-4 md:mt-6 border-t-4 border-black pt-4 md:pt-6"
+        >
+          <div className="text-[10px] md:text-xs tracking-[0.2em] text-slate-400 uppercase font-black">
+            Estimated vs actual · {vsActual.label}
+          </div>
+          <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2 text-black">
+            <div>
+              <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
+                Your estimate
+              </div>
+              <div className="text-2xl md:text-3xl italic font-black">
+                ${vsActual.estimate.toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
+                Oakville billed
+              </div>
+              <div className="text-2xl md:text-3xl italic font-black text-emerald-600">
+                ${vsActual.actual.toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
+                Difference
+              </div>
+              <div
+                className={`text-2xl md:text-3xl italic font-black ${
+                  Math.abs(vsActual.delta) <= 1 ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {vsActual.delta < 0 ? '−' : ''}
+                ${Math.abs(vsActual.delta).toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] md:text-xs text-slate-500 font-bold normal-case">
+            Compared before the Ontario Electricity Rebate (this estimate has no rebate field):
+            the rebate took{' '}
+            <strong>
+              {vsActual.credit < 0 ? '−' : ''}${Math.abs(vsActual.credit).toFixed(2)}
+            </strong>{' '}
+            off, so Oakville actually asked for{' '}
+            <strong>${vsActual.payable.toFixed(2)}</strong> for that period.
           </div>
         </div>
       )}

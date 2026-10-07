@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Wave L fixture: a SYNTHETIC Green Button feed carrying three itemized bills.
+
+  Built by hand to reproduce the figures the 2026-10-07 data audit published
+  as sums across three 29-day periods — $1,365.03 total, $311.61 delivery,
+  $177.46 HST, -$320.78 rebate, $45.15 regulatory, $530.74/$218.71/$258.82
+  off/mid/on — while keeping every per-period number self-consistent:
+
+      Total = commodity + delivery + regulatory
+      HST   = 13% of that subtotal, rounded per period
+      rebate= 23.5% of it, rounded per period
+      delivery ≈ $36.00 fixed + $0.0252/kWh (so the amortized split the panel
+                shows is actually fitted, not asserted)
+
+  It is NOT the app owner's Oakville Hydro export: no meter data, no account
+  numbers, no read dates from a real bill (see tests/fixtures/README.md —
+  the owner's own export must never enter this repo). The real file is used
+  for the deployed browser check only; it is never committed.
+
+  The LocalTimeParameters entry carries the same North-American DST rules
+  every public fixture uses (360E2000 / B40E2000, tzOffset -18000).
+-->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi" xml:lang="en-us">
+    <id>urn:uuid:22222222-2222-2222-2222-222222222222</id>
+    <title>Synthetic Usage Summary feed (Wave L)</title>
+    <updated>2026-01-01T00:00:00Z</updated>
+    <entry xmlns:espi="http://naesb.org/espi" xmlns="http://www.w3.org/2005/Atom">
+        <id>urn:uuid:44444444-4444-4444-4444-444444444444</id>
+        <link href="https://utility.example/espi/1_1/resource/LocalTimeParameters/1" rel="self" type="espi-entry/LocalTimeParameters"/>
+        <title>DST For North America</title>
+        <content>
+            <espi:LocalTimeParameters>
+                <espi:dstEndRule>B40E2000</espi:dstEndRule>
+                <espi:dstOffset>3600</espi:dstOffset>
+                <espi:dstStartRule>360E2000</espi:dstStartRule>
+                <espi:tzOffset>-18000</espi:tzOffset>
+            </espi:LocalTimeParameters>
+        </content>
+        <published>2026-01-01T00:00:00Z</published>
+        <updated>2026-01-01T00:00:00Z</updated>
+    </entry>
+    <entry xmlns:espi="http://naesb.org/espi" xmlns="http://www.w3.org/2005/Atom">
+        <id>urn:uuid:33333333-3333-3333-3333-333333333330</id>
+        <link href="https://utility.example/espi/1_1/resource/UsageSummary/0" rel="self" type="espi-entry/UsageSummary"/>
+        <title>Usage Summary</title>
+        <content>
+            <espi:UsageSummary>
+                <espi:billingPeriod>
+                    <espi:duration>2505600</espi:duration>
+                    <espi:start>1779667200</espi:start>
+                </espi:billingPeriod>
+                <espi:billLastPeriod>0</espi:billLastPeriod>
+                <espi:billToDate>0</espi:billToDate>
+                <espi:costAdditionalLastPeriod>0</espi:costAdditionalLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Amount Due</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>6467000</espi:amount>
+                <espi:note>H.S.T. # 123456789</espi:note>
+                <espi:itemKind>5</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>9888000</espi:amount>
+                <espi:note>On Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>-11690000</espi:amount>
+                <espi:note>Ontario Electricity Rebate</espi:note>
+                <espi:itemKind>8</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Balance Forward</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>1162000</espi:amount>
+                <espi:note>Regulatory Charges</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>10278000</espi:amount>
+                <espi:note>Delivery</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>8864000</espi:amount>
+                <espi:note>Mid Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>49745000</espi:amount>
+                <espi:note>Total Electricity Charges</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>19553000</espi:amount>
+                <espi:note>Off Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Mid Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>450000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>On Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>400000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Off Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1800000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Current Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>249650000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Previous Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>247000000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Number of days in bill period</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>114</espi:uom><espi:value>29</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Distribution Loss Factor</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-6</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1037600</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Current Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1782190848</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Previous Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1779685248</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Due Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1783468800</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Bill Post Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1780531200</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+                <espi:currency>124</espi:currency>
+                <espi:overallConsumptionLastPeriod>
+                    <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+                    <espi:timeStamp>1779667200</espi:timeStamp>
+                    <espi:uom>72</espi:uom>
+                    <espi:value>2650000</espi:value>
+                </espi:overallConsumptionLastPeriod>
+                <espi:qualityOfReading>0</espi:qualityOfReading>
+                <espi:statusTimeStamp>1782172800</espi:statusTimeStamp>
+            </espi:UsageSummary>
+        </content>
+        <published>2026-01-01T00:00:00Z</published>
+        <updated>2026-01-01T00:00:00Z</updated>
+    </entry>
+    <entry xmlns:espi="http://naesb.org/espi" xmlns="http://www.w3.org/2005/Atom">
+        <id>urn:uuid:33333333-3333-3333-3333-333333333331</id>
+        <link href="https://utility.example/espi/1_1/resource/UsageSummary/1" rel="self" type="espi-entry/UsageSummary"/>
+        <title>Usage Summary</title>
+        <content>
+            <espi:UsageSummary>
+                <espi:billingPeriod>
+                    <espi:duration>2505600</espi:duration>
+                    <espi:start>1782172800</espi:start>
+                </espi:billingPeriod>
+                <espi:billLastPeriod>0</espi:billLastPeriod>
+                <espi:billToDate>0</espi:billToDate>
+                <espi:costAdditionalLastPeriod>0</espi:costAdditionalLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Amount Due</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>5247000</espi:amount>
+                <espi:note>H.S.T. # 123456789</espi:note>
+                <espi:itemKind>5</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>6046000</espi:amount>
+                <espi:note>On Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>-9484000</espi:amount>
+                <espi:note>Ontario Electricity Rebate</espi:note>
+                <espi:itemKind>8</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Balance Forward</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>1925000</espi:amount>
+                <espi:note>Regulatory Charges</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>10631000</espi:amount>
+                <espi:note>Delivery</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>5922000</espi:amount>
+                <espi:note>Mid Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>40358000</espi:amount>
+                <espi:note>Total Electricity Charges</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>15834000</espi:amount>
+                <espi:note>Off Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Mid Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>480000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>On Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>410000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Off Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1900000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Current Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>252440000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Previous Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>249650000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Number of days in bill period</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>114</espi:uom><espi:value>29</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Distribution Loss Factor</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-6</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1037600</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Current Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1784696448</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Previous Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1782190848</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Due Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1785974400</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Bill Post Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1783036800</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+                <espi:currency>124</espi:currency>
+                <espi:overallConsumptionLastPeriod>
+                    <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+                    <espi:timeStamp>1782172800</espi:timeStamp>
+                    <espi:uom>72</espi:uom>
+                    <espi:value>2790000</espi:value>
+                </espi:overallConsumptionLastPeriod>
+                <espi:qualityOfReading>0</espi:qualityOfReading>
+                <espi:statusTimeStamp>1784678400</espi:statusTimeStamp>
+            </espi:UsageSummary>
+        </content>
+        <published>2026-01-01T00:00:00Z</published>
+        <updated>2026-01-01T00:00:00Z</updated>
+    </entry>
+    <entry xmlns:espi="http://naesb.org/espi" xmlns="http://www.w3.org/2005/Atom">
+        <id>urn:uuid:33333333-3333-3333-3333-333333333332</id>
+        <link href="https://utility.example/espi/1_1/resource/UsageSummary/2" rel="self" type="espi-entry/UsageSummary"/>
+        <title>Usage Summary</title>
+        <content>
+            <espi:UsageSummary>
+                <espi:billingPeriod>
+                    <espi:duration>2505600</espi:duration>
+                    <espi:start>1784678400</espi:start>
+                </espi:billingPeriod>
+                <espi:billLastPeriod>0</espi:billLastPeriod>
+                <espi:billToDate>0</espi:billToDate>
+                <espi:costAdditionalLastPeriod>0</espi:costAdditionalLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Amount Due</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>6032000</espi:amount>
+                <espi:note>H.S.T. # 123456789</espi:note>
+                <espi:itemKind>5</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>9948000</espi:amount>
+                <espi:note>On Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>-10904000</espi:amount>
+                <espi:note>Ontario Electricity Rebate</espi:note>
+                <espi:itemKind>8</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Balance Forward</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>1428000</espi:amount>
+                <espi:note>Regulatory Charges</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>10252000</espi:amount>
+                <espi:note>Delivery</espi:note>
+                <espi:itemKind>4</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>7085000</espi:amount>
+                <espi:note>Mid Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>46400000</espi:amount>
+                <espi:note>Total Electricity Charges</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>17687000</espi:amount>
+                <espi:note>Off Peak-Summer</espi:note>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Mid Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>430000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>On Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>360000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Off Peak-Summer Usage</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1850000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Current Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>255080000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Previous Meter Read</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>252440000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Number of days in bill period</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>114</espi:uom><espi:value>29</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Distribution Loss Factor</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>-6</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>72</espi:uom><espi:value>1037600</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Current Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1787202048</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Billing Period - Previous Read Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1784696448</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Due Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1788480000</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+            <espi:costAdditionalDetailLastPeriod>
+                <espi:amount>0</espi:amount>
+                <espi:note>Bill Post Date</espi:note>
+            <espi:measurement><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:timeStamp>0</espi:timeStamp><espi:uom>27</espi:uom><espi:value>1785542400</espi:value></espi:measurement>
+                <espi:itemKind>10</espi:itemKind>
+                <espi:unitCost>0</espi:unitCost>
+            </espi:costAdditionalDetailLastPeriod>
+                <espi:currency>124</espi:currency>
+                <espi:overallConsumptionLastPeriod>
+                    <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+                    <espi:timeStamp>1784678400</espi:timeStamp>
+                    <espi:uom>72</espi:uom>
+                    <espi:value>2640000</espi:value>
+                </espi:overallConsumptionLastPeriod>
+                <espi:qualityOfReading>0</espi:qualityOfReading>
+                <espi:statusTimeStamp>1787184000</espi:statusTimeStamp>
+            </espi:UsageSummary>
+        </content>
+        <published>2026-01-01T00:00:00Z</published>
+        <updated>2026-01-01T00:00:00Z</updated>
+    </entry>
+</feed>
