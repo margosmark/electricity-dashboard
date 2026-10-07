@@ -48,7 +48,33 @@ export type ResourceResult =
       url: string;
     }
   | { kind: "accepted"; url: string; detail: string }
-  | { kind: "error"; status: number; url: string; detail: string };
+  | {
+      kind: "error";
+      status: number;
+      url: string;
+      detail: string;
+      /**
+       * The 401/403 arrived AFTER fetch followed a redirect to another
+       * origin, which strips the Authorization header by design — so the
+       * rejection proves nothing about the grant and must not revoke it.
+       */
+      redirectedCrossOrigin?: boolean;
+    };
+
+/**
+ * True when fetch followed this response through a redirect to a different
+ * origin (scheme/host/port). Cross-origin follows never carry credentials
+ * (fetch spec), so a 401 on the far side is an artefact of the hop, not a
+ * verdict on the token.
+ */
+export function isCrossOriginRedirect(requestUrl: string, res: Response): boolean {
+  if (!res.redirected || !res.url) return false;
+  try {
+    return new URL(res.url).origin !== new URL(requestUrl).origin;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Build the resource URL.
@@ -108,7 +134,13 @@ export async function fetchResource(
   }
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 500);
-    return { kind: "error", status: res.status, url, detail };
+    return {
+      kind: "error",
+      status: res.status,
+      url,
+      detail,
+      redirectedCrossOrigin: isCrossOriginRedirect(url, res),
+    };
   }
   if (!res.body) {
     const detail = await res.text();
