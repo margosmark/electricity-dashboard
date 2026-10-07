@@ -86,12 +86,22 @@ path router (`edge-router`) that owns host `:3939`:
 
 ```
 edge-router :3939 ─┬─ /greenbutton*  → greenbutton-shim   (client secret + token mount)
-                   └─ everything else → energy-dashboard  (no GB_* env at all)
+                   ├─ /account/*     → account-server     (Wave N; `deny all` on /account/internal)
+                   └─ everything else → energy-dashboard  (no GB_* env, no ACCT_* env)
 ```
 
-Same code, same image, same domain and certificate — different process, and
-the only one that holds OAuth credentials. See §5 for how the split is
-proven from the outside.
+Same code, same image, same domain and certificate — different processes, and
+each holds only its own secret set. See §5 for how the split is proven from
+the outside.
+
+**Zero data at rest, for the shim — still true after Wave N.** The shim pipes
+ESPI to the browser and keeps scalars only (`lastSyncAt`, `lastSyncBytes`,
+`dataAvailableSince` — see
+`lib/greenbutton/session.ts`). The browser is what encrypts: by the time
+anything is stored in the account server, the readings are an AES-GCM blob the
+server cannot open. Wave N is not licence to start persisting readings in the
+shim — if a reading ever lands in `.greenbutton/tokens.json` or in the shim's
+session state, that is a regression against this document.
 
 | Route | Purpose |
 | --- | --- |
@@ -99,7 +109,7 @@ proven from the outside.
 | `GET /greenbutton/start` | CSRF state → 302 to the custodian's authorize URL |
 | `GET /greenbutton/callback` | code exchange, token set → disk, session cookie → app |
 | `GET /greenbutton/usage` | **the pipe-through**: ESPI streamed straight to the browser |
-| `POST /greenbutton/notify/[token]` | utility's "data changed" webhook; records a timestamp only |
+| `POST /greenbutton/notify/[token]` | utility's "data changed" webhook; records a timestamp only, and (Wave N) tells the account server *that* the data moved — over the compose network, with a shared token, carrying scalars only |
 | `POST /greenbutton/disconnect` | wipe the token file + expire the cookie |
 
 Implementation lives in `webapp/src/lib/greenbutton/` (config, oauth, espi,
@@ -323,7 +333,7 @@ Obligations that do apply, and how this implementation meets them:
 
 | Clause | Requirement | Here |
 | --- | --- | --- |
-| §1 Privacy | treat data per Ontario privacy law, secure it, use it only for the customer's services, don't share it | readings are parsed in the browser and stored in that browser's localStorage; the server holds no readings at all |
+| §1 Privacy | treat data per Ontario privacy law, secure it, use it only for the customer's services, don't share it | readings are parsed in the browser and stored in that browser's localStorage; the shim holds no readings at all, and the optional account server (Wave N) holds them only as ciphertext it cannot open (`SECURITY.md` §5) |
 | §2(c)(d) | RSA ≥2048-bit certs, TLS for all exchanges | TLS 1.2+ to `greenbutton.oakvillehydro.com` (their cert, system CA trust); client-cert question flagged in §4 |
 | §2(a) | make no representations on behalf of Oakville Hydro | the UI says "authorise on Oakville Hydro's own page" and never implies endorsement |
 | §2(b)(e) | comply with law, industry-standard DoS controls | narrow scope, rate-limited by the single-user design, no credential sharing |

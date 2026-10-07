@@ -32,6 +32,7 @@ import {
 } from "@/lib/greenbutton/client";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
+  EXAMPLE_DATA_KEY,
 } from "@/lib/backup";
 // Durable storage (t_a8a54e33): versioned `energy_data_v2` + legacy-key
 // migration, quota failures surfaced instead of swallowed, and a reset that
@@ -46,7 +47,7 @@ import {
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
 import { PLAN_TIMELINE_KEY } from "@/lib/planTimeline";
-import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import { PLAN_STORAGE_KEY, readStoredPlan } from "@/hooks/useSelectedPlan";
 import { TAB_STORAGE_KEY } from "@/lib/tabs";
 import { ESTIMATE_LEDGER_KEY } from "@/lib/estimateLedger";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
@@ -74,8 +75,12 @@ function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { 
  * Set while the loaded readings are the bundled example dataset (Wave H item
  * 1). It is a separate key from `energy_data` so a user's own upload always
  * wins, and so clearing it never has to guess what else to delete.
+ *
+ * Declared in `lib/backup.ts` (a restore has to write it, and importing this
+ * hook from there would be a cycle) and re-exported here so every existing
+ * `import { EXAMPLE_DATA_KEY } from "@/hooks/useDashboard"` keeps working.
  */
-export const EXAMPLE_DATA_KEY = "energy_data_is_example";
+export { EXAMPLE_DATA_KEY };
 
 /* -------------------------------------------------------------------------
  * Wave L — the bill half of the feed, kept beside the readings.
@@ -1262,6 +1267,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       billingDay,
       extraCharges: readStoredExtraCharges(),
       planTimeline: readStoredTimeline(),
+      // Wave N (backup v2): a restore should put back the whole picture, not
+      // just the readings — the plan and the example-data banner are part of
+      // what the user was looking at when they exported.
+      selectedPlan: readStoredPlan(),
+      isExample: exampleData,
       exportedAt: now,
     });
     return { filename: backupFilename(now), text: serializeBackup(doc) };
@@ -1306,9 +1316,15 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           reportStorage(day);
           return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
         }
-        // The remaining keys are owned by their own hooks (charges, timeline).
-        localStorage.setItem(EXTRA_CHARGES_KEY, values.extra_charges);
-        localStorage.setItem(PLAN_TIMELINE_KEY, values.plan_timeline);
+        // Everything else in the document is owned by the hook that reads it
+        // (charges, timeline, plan, example flag). Same contract the account
+        // sync uses (lib/account/sync.ts): an empty value means "clear this
+        // flag", so a restore cannot leave a stale demo banner behind (Wave N).
+        for (const [key, value] of Object.entries(values)) {
+          if (key === "energy_data" || key === "billing_day") continue;
+          if (value === "") localStorage.removeItem(key);
+          else localStorage.setItem(key, value);
+        }
       } catch {
         return {
           ok: false,

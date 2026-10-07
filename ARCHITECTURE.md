@@ -35,18 +35,34 @@ The Streamlit tree stays in the repo as the analysis prototype; the webapp is
 the standard. New features go in `webapp/`. If Streamlit is ever dropped, the
 root `parser.py` tests (`tests/`) are its only reason to remain.
 
-## The webapp pipeline (all client-side, no database)
+## The webapp pipeline (all client-side, no database in the dashboard)
 
-There is deliberately **no backend storage**: an upload is parsed entirely in
-the browser and cached in `localStorage` (`energy_data`) — it never leaves the
-user's machine. Accounts are the one thing that would change this, and they
-exist on neither this branch nor this deployment: the account server is built
-but unmerged and parked — see
-[ACCOUNT-SERVER-AUDIT.md](ACCOUNT-SERVER-AUDIT.md). The one server route,
-`/api/rates`, is a static JSON snapshot
-of Ontario rate history from the OEB (effective 2023-11-01 / 2024-11-01 /
-2025-11-01), so rate math is versioned and reproducible rather than hardcoded
-into components.
+There is deliberately **no backend storage in the dashboard**: an upload is
+parsed entirely in the browser and cached in `localStorage` (`energy_data`) —
+in readable form it never leaves the user's machine. The one route the app
+owns, `/api/rates`, is a static JSON snapshot of Ontario rate history from the
+OEB (effective 2023-11-01 / 2024-11-01 / 2025-11-01), so rate math is
+versioned and reproducible rather than hardcoded into components.
+
+Two sidecars run beside it as **separate containers running the same image**
+(Wave K, Wave N), each with its own env block, which is what keeps secrets out
+of the process that serves the public site:
+
+| Container | Path | Holds |
+| --- | --- | --- |
+| `energy-dashboard` | everything else | nothing user-specific — no `GB_*`, no `ACCT_*`, no volumes |
+| `greenbutton-shim` | `/greenbutton/*` | the OAuth client secret + one token file; scalars only, never a reading |
+| `account-server` | `/account/*` | argon2 verifiers, session rows, the VAPID key, and the dataset **as ciphertext** (`SECURITY.md` §5) |
+| `edge-router` | host `:3939` | the nginx path split; no application code, no secrets |
+
+The account server is how multi-device sync and real Web Push exist without
+turning this into a hosted service: the browser derives the key from the
+password (PBKDF2-HMAC-SHA256, 600k iterations → AES-GCM) and uploads bytes the
+server cannot read; push subscriptions, topic caps and quiet hours live with
+that server, while every decision that needs the readings still runs in the
+browser. With `ACCT_ENABLED` unset — the default for the public app — every
+`/account/*` route answers 404, so a deployment without accounts behaves
+exactly as it did before Wave N.
 
 1. **Parse** — `parseGreenButtonXML` walks the feed object stack, pulls every
    `IntervalReading` (`timePeriod.start` unix seconds + `value` in Wh → kWh).
@@ -100,18 +116,29 @@ into components.
 
 ### What this browser persists
 
-Everything below is `localStorage`, cleared only by the Reset button
-(`emergencyReset` → `localStorage.clear()`), and all of it is written by a
-browser-local app that never uploads any of it:
+Everything below is `localStorage`, cleared only by the Reset button (a
+scoped reset that removes THIS app's keys and nothing else), and all of it is
+written by a browser-local app that uploads it **only when you have signed in
+and chosen to back this device up** (`useAccount`) — and then only as
+ciphertext:
 
 | Key | Written by | Read by |
 | --- | --- | --- |
-| `energy_data` | upload / sample button / backup restore | `useEnergyData` start sequence |
+| `energy_data` | upload / sample button / backup restore / account pull | `useEnergyData` start sequence |
 | `energy_data_is_example` | the sample button (`commitReadings(source)`), cleared by a real upload | the "example data — not real usage" banner |
 | `billing_day` | `updateBillingDay` | `getBillingPeriod` anchors |
 | `selected_plan` | `useSelectedPlan` (nav switcher, plan cards) | `useSelectedPlan` — the switcher AND the header chip read one store |
 | `extra_charges` | True-bill fields | `useExtraCharges` |
-| `open_estimate_ledger` | `useEstimateLedger` (the open period's claim + every claim a bill has since scored) | `lib/estimateLedger` — settles on load, so a new export closes its own windows |
+| `account_blob_key` | `useAccount` on sign-in (exported AES key) | the same hook, so a reload does not ask for the password again; wiped on sign-out (`SECURITY.md` §5.6) |
+| `account_sync_rev` | every successful sync PUT/GET | "is the server ahead of me?" — what turns a blind overwrite into a 409-and-ask |
+| `account_upload_declined` | the "Not now" button on the first-upload prompt | stops the same question being asked on every load |
+
+The five dataset rows (readings, example flag, billing day, plan, charges) move
+between devices as one versioned document (`lib/backup.ts`, schema v2 — the same
+shape Export/Import use); the three `account_*` rows are bookkeeping for that,
+and `open_estimate_ledger` stays on this device (a restore settles its own
+windows). Sign-out removes the dataset, the revision and the derived key, and
+**never** removes them when the latest changes have not reached the server.
 
 ## Accessibility (standing gate)
 
@@ -202,8 +229,12 @@ function + test first, then wiring.
   `http://localhost:3939`. Restart policy `always`.
 - **Build:** multi-stage Node 20 Alpine, `npm run build` → Next.js
   `standalone` output, non-root user. No secrets, no volumes, no env vars.
-- **Data safety:** everything user-related is browser-local. A container
-  rebuild loses nothing; clearing browser storage is the only way to lose data.
+- **Data safety:** everything user-related is browser-local by default, so a
+  container rebuild loses nothing and clearing browser storage is the only way
+  to lose data. **Exception (Wave N):** with the account server enabled, its
+  SQLite file lives on the `.account/` bind mount and holds the encrypted
+  copies — back it up like the Green Button token file
+  (`OPERATIONS.md` → Account server).
 - **CI** (`.github/workflows/ci.yml`): disabled server-side 2026-10-10 —
   Actions minutes exhausted, so push/PR runs died in 3–4s with zero steps
   scheduled (the reds were billing, not failures). Three jobs —

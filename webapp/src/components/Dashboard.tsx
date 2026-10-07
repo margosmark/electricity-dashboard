@@ -36,6 +36,8 @@ import { exportEnergyData } from '@/lib/storage';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
 import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
+import { AccountControls } from '@/components/AccountControls';
+import { AccountTriggers } from '@/components/AccountTriggers';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
@@ -281,6 +283,11 @@ export default function Dashboard() {
     [processedData, filteredData, temps.temps],
   );
 
+  // Wave N: anomalies are computed HERE (the data never leaves the browser),
+  // and AccountTriggers is what lets one reach a closed tab — via the
+  // server's caps, never on its own. Renders nothing.
+  const accountTriggers = <AccountTriggers anomalies={anomalies} />;
+
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
 
   // Always-on floor (the old "vampire load"), phrased against the ~10% of
@@ -475,6 +482,9 @@ export default function Dashboard() {
 
   return (
     <div key="ready" className="space-y-6 md:space-y-10 text-ink relative font-black uppercase">
+      {/* Wave N — renders nothing on its own: it is what lets an anomaly
+          computed here reach a closed tab (server caps, never on its own). */}
+      {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
       <TabNav active={tab} onChange={setActiveTab} />
@@ -651,6 +661,9 @@ export default function Dashboard() {
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
           <NotificationToggle connected={gbConnected} backgroundSync={backgroundSync} />
+          {/* Wave N — the account control sits with the other global chrome:
+              sign-in state is as global as the notification toggle. */}
+          <AccountControls onDataApplied={() => window.location.reload()} />
           {/* Wave R — the answer, on every tab. Click jumps to the banner. */}
           <BestChoiceChip
             comparison={comparison}

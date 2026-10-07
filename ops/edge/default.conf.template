@@ -5,8 +5,12 @@
 # "/greenbutton/* lives on its own container" requirement is implemented
 # here instead of in an edge config we cannot reach:
 #
-#   /greenbutton…  → greenbutton-shim   (OAuth client secret + token file)
-#   everything else → energy-dashboard  (no Green Button secrets at all)
+#   /greenbutton…          → greenbutton-shim   (OAuth client secret + token file)
+#   /account/internal/…    → DENIED here (403). The shim→account fan-out runs
+#                            on the docker network only; this path must never
+#                            be reachable from the internet.
+#   /account/…             → account-server     (password verifiers, VAPID key)
+#   everything else        → energy-dashboard   (no secrets at all)
 #
 # Rendered by the nginx image's template entrypoint: ${XFP} is substituted
 # from the container environment, $host/$remote_addr/... are left alone
@@ -15,18 +19,26 @@
 # Two headers, answering two DIFFERENT questions — do not read one for the
 # other:
 #
-#   X-Edge-Location: greenbutton|default   which location block matched, i.e.
-#                                          which branch of THIS file ran
-#   x-gb-process:    shim|app              which container actually produced
-#                                          the body, set by the process from
-#                                          its own config (config.ts
-#                                          getProcessIdentity) — this is the
-#                                          one a proxy cannot fake for you
+#   X-Edge-Location: greenbutton|account|account-deny|default   which location
+#                                                block matched, i.e. which
+#                                                branch of THIS file ran
+#                                                i.e. which branch of THIS
+#                                                file ran
+#   x-gb-process:    shim|account|app             which container actually
+#                                                produced the body, set by
+#                                                the process from its own
+#                                                config (config.ts
+#                                                getProcessIdentity) — this
+#                                                is the one a proxy cannot
+#                                                fake for you
 #
-# They must agree (`greenbutton`↔`shim`, `default`↔`app`). A response where
-# they disagree is the split being inverted, which is exactly what happened
-# in production on 2026-10-07 (H1): X-Edge-Upstream was emitted per location,
-# so it read `shim` while the app container was answering.
+# They must agree (`greenbutton`↔`shim`, `account`↔`account`, `default`↔`app`).
+# A response where they disagree is the split being inverted, which is exactly
+# what happened in production on 2026-10-07 (H1): X-Edge-Upstream was emitted
+# per location, so it read `shim` while the app container was answering.
+#
+# Wave N adds a third pair for the same reason: `/account/*` must be answered
+# by the container that holds the verifiers, never by the public app.
 
 # `?code=` and `?state=` on the OAuth callback are CREDENTIALS, not
 # telemetry: RFC 6749 §4.1.2 makes a code single-use and short-lived, but it
@@ -61,8 +73,9 @@ server {
   # `proxy_pass http://$gb_shim;` then passes the ORIGINAL request URI
   # through untouched (the variable form does no location-prefix rewriting,
   # so /greenbutton/status arrives as /greenbutton/status).
-  set $gb_app  energy-dashboard:3000;
-  set $gb_shim greenbutton-shim:3000;
+  set $gb_app     energy-dashboard:3000;
+  set $gb_shim    greenbutton-shim:3000;
+  set $gb_account account-server:3000;
 
   # /import accepts a pasted XML export; give it room.
   client_max_body_size 64m;
@@ -86,6 +99,29 @@ server {
     # webapp/scripts/e2e-greenbutton-topology.sh.
     access_log /var/log/nginx/access.log gb_noquery;
     add_header X-Edge-Location greenbutton always;
+  }
+
+  # Wave N — the internal fan-out the Green Button shim calls over the
+  # docker network when Oakville says new data exists. Denied HERE, so the
+  # only way to reach it is the compose network: even with a stolen
+  # ACCT_INTERNAL_TOKEN the path does not exist from the internet.
+  #
+  # Declared BEFORE /account so it is obviously not part of the public API.
+  location /account/internal {
+    # UNCONDITIONALLY denied — no `allow` list. The shim reaches the account
+    # server directly on the compose network (`ACCT_NOTIFY_URL`), never
+    # through nginx, so nothing legitimate arrives here. An allow list keyed
+    # on source IP would be wrong twice over: docker egress is the host, and
+    # a local reverse proxy makes every external request look like 127.0.0.1.
+    deny all;
+    # No proxy_pass: a denied request must never reach an upstream.
+    add_header X-Edge-Location account-deny always;
+  }
+
+  # Wave N — the account API. Same two-header contract as the other splits.
+  location /account {
+    proxy_pass http://$gb_account;
+    add_header X-Edge-Location account always;
   }
 
   # Everything else — the dashboard itself.
