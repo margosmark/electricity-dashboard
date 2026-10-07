@@ -5,9 +5,10 @@
 #   curl :3940 → edge-router ─┬─ /greenbutton/* → greenbutton-shim (creds, token file)
 #                             └─ everything else → energy-dashboard (no creds)
 #
-# It reuses the 25 checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
-# adds the routing assertions that only make sense here: which container
-# actually answered.
+# It reuses the 29 checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
+# adds what only makes sense at the edge: which container actually answered,
+# whether a credential-bearing query string reaches the access log, and the
+# baseline security headers on a real response.
 #
 # Nothing in this script touches the live stack: the router binds 3940, the
 # mock 8099, and every container name is prefixed gb-topo-.

@@ -126,8 +126,8 @@ notifications.
 | Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in the untracked `.env` (never in `docker-compose.yml`), then `docker compose up -d` — no rebuild |
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
 | Turn PKCE on (once Oakville confirms the platform accepts `code_challenge`) | `GB_PKCE=true` in the untracked `.env`, then `docker compose up -d greenbutton-shim` |
-| Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (26 checks, needs docker only for the second) |
-| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (30 checks; binds :3940 + :8099, tears itself down) |
+| Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (29 checks, needs docker only for the second) |
+| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (42 checks; binds :3940 + :8099, tears itself down) |
 | Re-run the **browser** connect flow | `cd webapp && ./scripts/e2e-greenbutton-browser.sh` — builds, boots a mock custodian + a *configured* shim on :3941, then runs the whole Playwright suite against it: the Authorise button → authorize → callback → localStorage loop with a "no token material in browser storage" assertion, plus `/import` and the journey specs with the feature switched on |
 | Diagnose a "reconnect" complaint | `docker compose logs greenbutton-shim \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
 | Shim unreachable (`/greenbutton/*` 502) | `docker compose ps` (shim stopped?) then `docker compose logs edge-router` |

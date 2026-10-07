@@ -22,8 +22,8 @@ they agree on what a merge means.
 
 | Gate | State |
 | --- | --- |
-| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (582 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 26/26 checks against a live `next start` + mock custodian) |
-| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router: 30/30; see §5) |
+| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (602 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 29/29 checks against a live `next start` + mock custodian) |
+| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router: 42/42; see §5) |
 | Edge routes `/greenbutton/*` to this host | **DONE — verified empirically** (the edge forwards *every* path to `:3939`, so the split is made on-box; see §5) |
 | Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
 | Production loop with Mark's real account | **BLOCKED on §6** |
@@ -341,14 +341,15 @@ parsing always client-side. If the stateless pattern is ever preferred
 
 ```bash
 cd webapp
-npm run lint && npm run typecheck && npm run test   # 582 tests
+npm run lint && npm run typecheck && npm run test   # 602 tests
 npm run build
 
-# End-to-end OAuth loop against a mock custodian (26 checks):
+# End-to-end OAuth loop against a mock custodian (29 checks):
 ./scripts/e2e-greenbutton-loop.sh
 
-# Same loop through the CONTAINERISED router topology (30 checks: 4 routing
-# assertions + the 26 above). Needs docker; binds :3940, never :3939:
+# Same loop through the CONTAINERISED router topology (42 checks: 4 routing
+# + 3 access-log canary + 6 security-header assertions + the 29 above).
+# Needs docker; binds :3940, never :3939:
 ./scripts/e2e-greenbutton-topology.sh
 
 # Just the Wave K suites:
