@@ -1,8 +1,8 @@
 {
   "wave": "L",
-  "base": "http://127.0.0.1:3100/",
+  "base": "http://127.0.0.1:3939/",
   "xml": "doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
-  "at": "2026-10-07T16:20:05.845Z",
+  "at": "2026-10-07T16:27:33.083Z",
   "total": 26,
   "passed": 26,
   "failed": 0,
