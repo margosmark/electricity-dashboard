@@ -12,10 +12,11 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { type ChartDataItem, type ProcessedPoint, type RateSet } from '@/lib/energy';
+import { type ChartDataItem, type ProcessedPoint, type RateSet, type UsageSummary } from '@/lib/energy';
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
+import { ActualBillPanel } from '@/components/ActualBillPanel';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import type { BillProjection } from '@/lib/billProjection';
 import type { WfhShare } from '@/lib/energy';
@@ -39,6 +40,14 @@ export type ChartViewProps = {
   activeRateSet: RateSet | null;
   /** Current window rows: CSV export + the true-bill estimate read these. */
   filteredData: ProcessedPoint[];
+  /**
+   * Every priced reading (Wave L). A billing period is wider than whatever
+   * window is on screen, so the actual-bill panel reconciles against the
+   * whole dataset instead of the zoom.
+   */
+  allData?: ProcessedPoint[];
+  /** Bill periods parsed out of the imported file; empty = no bills. */
+  summaries?: UsageSummary[];
   startDate: string;
   endDate: string;
   /** "This month's bill" projection (gated — see lib/billProjection). */
@@ -106,7 +115,7 @@ export default function ChartView({
   zoomLevel, zoomTarget, goBack, navigatePeriod, setZoomLevelAndClear,
   activeChartData, handleBarClick, selectionCost,
   userPlan, setUserPlan, comparison, activeRateSet,
-  filteredData, startDate, endDate, projection, wfh,
+  filteredData, allData = [], summaries = [], startDate, endDate, projection, wfh,
 }: ChartViewProps) {
   const [skeleton, setSkeleton] = useState(false);
   const rowCountRef = useRef(activeChartData.length);
@@ -292,7 +301,11 @@ export default function ChartView({
         startDate={startDate}
         endDate={endDate}
         windowData={filteredData}
+        summaries={summaries}
+        allData={allData}
       />
+
+      <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />
 
       {comparison && (
         <div className="bg-black text-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-yellow-400 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase">

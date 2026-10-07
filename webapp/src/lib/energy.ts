@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { isOntarioHoliday } from './ontarioHolidays';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -408,14 +409,29 @@ function pickUsagePointId(entry: Record<string, unknown>): string | null {
   return null;
 }
 
+/** What one parse of one Green Button document produces. */
+export type GreenButtonFeed = {
+  /** Per-UsagePoint reading groups; [] when the document carries no readings. */
+  groups: UsagePointGroup[];
+  /** Every bill block, oldest billing period first. */
+  summaries: UsageSummary[];
+  /** The feed's own clock rules, when the file carries LocalTimeParameters. */
+  localTime: LocalTimeParams | null;
+};
+
 /**
- * Parse a Green Button document into per-UsagePoint groups.
- * Returns [] when the document carries no readings at all.
- * Documents that never identify a UsagePoint (plain fixtures, single-meter
- * exports without links) collapse into exactly one group with id '' — the
- * historical behavior.
+ * One pass over one document: readings, bills and the feed's own clock.
+ *
+ * Everything Wave L needs sits in the same XML the reading parser already
+ * parses, so parsing it twice would double an 800 KB document's cost for no
+ * reason — the whole feed comes out of a single `XMLParser.parse`.
+ *
+ * Readings: a document is grouped per UsagePoint, and one that never
+ * identifies a UsagePoint (plain fixtures, single-meter exports without
+ * links) collapses into exactly one group with id '' — the historical
+ * behaviour. Returns empty groups when the document carries no readings.
  */
-export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
+export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
@@ -474,12 +490,32 @@ export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] 
 
   const out = Array.from(groups.values());
   for (const g of out) g.readings.sort((a, b) => a.timestamp - b.timestamp);
-  return out.sort((a, b) => {
+  out.sort((a, b) => {
     const at = a.readings[0]?.timestamp ?? 0;
     const bt = b.readings[0]?.timestamp ?? 0;
     if (at !== bt) return at - bt;
     return a.id.localeCompare(b.id);
   });
+
+  return {
+    groups: out,
+    summaries: parseUsageSummaryNodes(parsed),
+    localTime: parseLocalTimeNode(parsed),
+  };
+}
+
+/**
+ * Parse a Green Button document into per-UsagePoint groups.
+ * Returns [] when the document carries no readings at all.
+ * Documents that never identify a UsagePoint (plain fixtures, single-meter
+ * exports without links) collapse into exactly one group with id '' — the
+ * historical behavior.
+ *
+ * Callers that also want the bills or the feed's clock use
+ * {@link parseGreenButtonFeed} instead, so the document is parsed once.
+ */
+export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
+  return parseGreenButtonFeed(xmlText).groups;
 }
 
 function countIntervalBlocks(node: unknown): number {
@@ -501,21 +537,81 @@ function countIntervalBlocks(node: unknown): number {
   return n;
 }
 
-export function categorizeTOU(date: Date): string {
-  const h = date.getHours();
-  if (isWeekend(date)) return 'Off-Peak';
-  const isWin = date.getMonth() >= 10 || date.getMonth() <= 3;
+/**
+ * The wall-clock parts TOU/ULO/season classification reads.
+ *
+ * `month` is 1–12, `dow` is `Date#getDay` order (0 = Sunday). These come from
+ * the browser's clock today, and from the feed's own {@link LocalTimeParams}
+ * when the file carries them (Wave L) — the classifier itself never looks at
+ * a `Date`, so one implementation prices both.
+ */
+export type WallClock = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  dow: number;
+};
+
+export function wallClockOf(dt: Date): WallClock {
+  return {
+    year: dt.getFullYear(),
+    month: dt.getMonth() + 1,
+    day: dt.getDate(),
+    hour: dt.getHours(),
+    minute: dt.getMinutes(),
+    dow: dt.getDay(),
+  };
+}
+
+/**
+ * OEB time-of-use windows, on a wall clock (not on a `Date`).
+ *
+ * Weekends AND the OEB's published holidays price off-peak all day — the
+ * second half of that rule was missing until Wave L, when Mark's real bill
+ * showed 2026-08-03 counted as a full off-peak day on the meter (see
+ * lib/ontarioHolidays.ts).
+ */
+export function categorizeTOUAt(
+  w: Pick<WallClock, 'hour' | 'dow' | 'month' | 'year' | 'day'>,
+): string {
+  const h = w.hour;
+  if (w.dow === 0 || w.dow === 6) return 'Off-Peak';
+  if (isOntarioHoliday(w.year, w.month, w.day)) return 'Off-Peak';
+  // Ontario rate season: winter Nov 1 – Apr 30 (1-based months), summer May 1 – Oct 31.
+  const isWin = w.month >= 11 || w.month <= 4;
   if (h >= 19 || h < 7) return 'Off-Peak';
   if (isWin) return (h >= 7 && h < 11) || (h >= 17 && h < 19) ? 'On-Peak' : 'Mid-Peak';
   return (h >= 11 && h < 17) ? 'On-Peak' : 'Mid-Peak';
 }
 
-export function categorizeULO(date: Date): string {
-  const h = date.getHours();
+/**
+ * OEB ultra-low-overnight windows, on a wall clock.
+ * On the OEB's holidays ULO prices like a weekend (weekend-off-peak + overnight).
+ */
+export function categorizeULOAt(
+  w: Pick<WallClock, 'hour' | 'dow'> & Partial<Pick<WallClock, 'year' | 'month' | 'day'>>,
+): string {
+  const h = w.hour;
   if (h >= 23 || h < 7) return 'Overnight';
-  if (isWeekend(date)) return 'Weekend Off-Peak';
+  const holiday =
+    w.year !== undefined && w.month !== undefined && w.day !== undefined
+      ? isOntarioHoliday(w.year, w.month, w.day)
+      : false;
+  if (w.dow === 0 || w.dow === 6 || holiday) return 'Weekend Off-Peak';
   if (h >= 16 && h < 21) return 'On-Peak';
   return 'Mid-Peak';
+}
+
+/** Local-browser classification — the pre-Wave-L behaviour, unchanged. */
+export function categorizeTOU(date: Date): string {
+  return categorizeTOUAt(wallClockOf(date));
+}
+
+/** Local-browser classification — the pre-Wave-L behaviour, unchanged. */
+export function categorizeULO(date: Date): string {
+  return categorizeULOAt(wallClockOf(date));
 }
 
 export function getTouRateKey(category: string): 'offPeak' | 'midPeak' | 'onPeak' {
@@ -580,7 +676,57 @@ export function mondayOf(dt: Date): Date {
   return midnight;
 }
 
-export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): ProcessedPoint[] {
+/* --- day-key arithmetic -------------------------------------------------
+ * A `yyyy-MM-dd` day key carries no timezone, so it must be read back with
+ * calendar maths rather than through a local Date (whose answer would depend
+ * on the machine). These are the label/key twins of fmtDayLabel / fmtMonthKey
+ * / mondayOf, for code that already holds a key. */
+
+function dayKeyParts(key: string): { year: number; month: number; day: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+}
+
+/** `MMM dd` for a day key ("Oct 04"). */
+function dayLabelOfDayKey(key: string): string {
+  const p = dayKeyParts(key);
+  if (!p) return key;
+  return `${MONTH_ABBR[p.month - 1]} ${p2(p.day)}`;
+}
+
+/** `MMM yyyy` for a day key ("Sep 2026"). */
+function monthLabelOfDayKey(key: string): string {
+  const p = dayKeyParts(key);
+  if (!p) return key;
+  return `${MONTH_ABBR[p.month - 1]} ${p.year}`;
+}
+
+/** Monday's day key for a day key — mondayOf's arithmetic, timezone-free. */
+function mondayKeyOfDayKey(key: string): string {
+  const p = dayKeyParts(key);
+  if (!p) return key;
+  const utc = Date.UTC(p.year, p.month - 1, p.day);
+  const shift = (new Date(utc).getUTCDay() + 6) % 7;
+  const mon = new Date(utc - shift * 86400000);
+  return `${mon.getUTCFullYear()}-${p2(mon.getUTCMonth() + 1)}-${p2(mon.getUTCDate())}`;
+}
+
+/**
+ * Price every reading.
+ *
+ * `zone` is the dataset's own clock (from the file's LocalTimeParameters,
+ * Wave L item 4): when present it decides the day bucket, the hour bucket and
+ * the TOU/ULO/winter classification — i.e. everything the bill is computed
+ * from — so a feed whose DST regime differs from the browser's still prices
+ * correctly. `dateObj` always stays the true instant; without a zone this is
+ * the browser's local clock, exactly as before.
+ */
+export function processRawData(
+  rawData: DataPoint[],
+  rateHistory: RateSet[],
+  zone?: DatasetZone | null,
+): ProcessedPoint[] {
   if (rateHistory.length === 0) return [];
   const sorted = [...rateHistory].sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate));
   // Rate schedules change a handful of times a year, not per reading: resolve
@@ -588,15 +734,16 @@ export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): Pr
   const ratesByDay = new Map<string, RateSet>();
   return rawData.map((d) => {
     const dt = new Date(d.timestamp * 1000);
-    const dayStr = fmtDay(dt);
+    const w = zone ? zone.wallClock(d.timestamp) : wallClockOf(dt);
+    const dayStr = zone ? zone.dayKey(d.timestamp) : fmtDay(dt);
     let rates = ratesByDay.get(dayStr);
     if (!rates) {
       rates = sorted.find((r) => dayStr >= r.effectiveDate) || sorted[sorted.length - 1];
       ratesByDay.set(dayStr, rates);
     }
-    const touCategory = categorizeTOU(dt);
-    const uloCategory = categorizeULO(dt);
-    const isWinter = dt.getMonth() >= 10 || dt.getMonth() <= 3;
+    const touCategory = categorizeTOUAt(w);
+    const uloCategory = categorizeULOAt(w);
+    const isWinter = w.month >= 11 || w.month <= 4;
     const costTOU = d.usage_kwh * (rates.tou[getTouRateKey(touCategory)] / 100);
     const costULO = d.usage_kwh * (rates.ulo[getUloRateKey(uloCategory)] / 100);
     const costTiered = d.usage_kwh * (rates.tiered.tier1 / 100);
@@ -604,7 +751,7 @@ export function processRawData(rawData: DataPoint[], rateHistory: RateSet[]): Pr
       ...d,
       dateObj: dt,
       dayStr,
-      hourStr: fmtHour(dt),
+      hourStr: zone ? zone.hourKey(d.timestamp) : fmtHour(dt),
       touCategory,
       uloCategory,
       isWinter,
@@ -673,20 +820,25 @@ export function aggregateChartData(
   // hourly data — and kept every ProcessedPoint in a per-bucket array just to
   // count distinct days and read element [0].
   const metaByDay = new Map<string, { label: string; key: string }>();
+  // A bucket's label and key depend only on the reading's DAY. Deriving them
+  // from dayStr (not from dateObj) keeps the buckets in the dataset's own
+  // clock when the feed carries LocalTimeParameters (Wave L item 4) and
+  // changes nothing otherwise — dayStr is exactly the local date string a
+  // no-zone feed produced before.
   const metaFor = (d: ProcessedPoint): { label: string; key: string } => {
     const hit = metaByDay.get(d.dayStr);
     if (hit) return hit;
     let label = '';
     let key = '';
     if (zoomLevel === 'monthly') {
-      label = fmtMonthLabel(d.dateObj);
-      key = fmtMonthKey(d.dateObj);
+      label = monthLabelOfDayKey(d.dayStr);
+      key = d.dayStr.slice(0, 7);
     } else if (zoomLevel === 'weekly') {
-      const mon = mondayOf(d.dateObj);
-      label = 'Week of ' + fmtDayLabel(mon);
-      key = fmtDay(mon);
+      const mon = mondayKeyOfDayKey(d.dayStr);
+      label = 'Week of ' + dayLabelOfDayKey(mon);
+      key = mon;
     } else if (zoomLevel === 'daily') {
-      label = fmtDayLabel(d.dateObj);
+      label = dayLabelOfDayKey(d.dayStr);
       key = d.dayStr;
     }
     const meta = { label, key };
@@ -1233,6 +1385,24 @@ export function csvFilenameForRows(rows: ProcessedPoint[]): string {
  * utility and are supplied by the user here).
  * ========================================================================== */
 
+/** The four user-editable add-on fields (the card's inputs, nothing else). */
+export type ExtraChargeField =
+  | 'deliveryPerKwh'
+  | 'deliveryFlat'
+  | 'regulatoryPerKwh'
+  | 'hstPct';
+
+/** Where a set of add-on values came from, when it was not typed by hand. */
+export type ExtraChargesSource = {
+  /** billingPeriod.start of the UsageSummary they were derived from. */
+  periodStart: number;
+  /** Human label for that period ("Jul 22, 2026 – Aug 20"). */
+  label: string;
+  /** Exactly what the file produced — so "still the file's numbers" is a
+   *  comparison, not a guess, and a later file can refresh them safely. */
+  values: Record<ExtraChargeField, string>;
+};
+
 export type ExtraCharges = {
   /** Delivery, $/kWh. */
   deliveryPerKwh: string;
@@ -1242,7 +1412,31 @@ export type ExtraCharges = {
   regulatoryPerKwh: string;
   /** HST percentage (Ontario default hint: 13). */
   hstPct: string;
+  /** Set when these values were pre-filled from the feed's own bill (Wave L). */
+  xmlSource?: ExtraChargesSource;
 };
+
+export const EXTRA_CHARGE_FIELDS: ExtraChargeField[] = [
+  'deliveryPerKwh',
+  'deliveryFlat',
+  'regulatoryPerKwh',
+  'hstPct',
+];
+
+/**
+ * True while every field still says what it said when it was stored — either
+ * untouched (all empty, no source) or exactly what the file produced. That is
+ * the state in which a NEW bill may safely overwrite the values; once any
+ * field differs, the user owns them.
+ */
+export function chargesArePristine(charges: ExtraCharges): boolean {
+  if (charges.xmlSource) {
+    return EXTRA_CHARGE_FIELDS.every(
+      (f) => charges[f] === (charges.xmlSource?.values[f] ?? ''),
+    );
+  }
+  return EXTRA_CHARGE_FIELDS.every((f) => charges[f] === '');
+}
 
 /** Every field starts empty: with nothing set the estimate stays variable-only. */
 export const EMPTY_EXTRA_CHARGES: ExtraCharges = {
@@ -1349,6 +1543,911 @@ export function calculateTrueBill(input: {
     totalKwh,
     included,
     caption: `Includes: ${included.join(' + ')}.`,
+  };
+}
+
+/* ==========================================================================
+ * Wave L — the bill the feed already carries (UsageSummary)
+ *
+ * Oakville Hydro's export is not just meter readings: Mark's file has three
+ * UsageSummary blocks, each a complete itemized bill (billingPeriod, money
+ * scalars, and a costAdditionalDetailLastPeriod list of amount + note +
+ * itemKind + optional measurement). Money is ESPI's "hundred-thousandths of
+ * the currency" — see BILL_AMOUNT_SCALE — and the note is the only label we
+ * can trust (see BillLineItem.itemKind).
+ *
+ * Everything below is pure and client-side: it runs over the same XML string
+ * the reading parser already gets, and callers persist the results in
+ * localStorage next to `energy_data`. No server round trip, ever.
+ * ========================================================================== */
+
+/** ESPI money scale: bill amounts are hundred-thousandths of a currency unit
+ *  (the schema documents billLastPeriod exactly that way). $1,365.03 arrives
+ *  as 136503000. Verified against Mark's Oakville Hydro export: the three
+ *  periods' "Total Electricity Charges" sum to $1,365.03, matching the bill
+ *  line-for-line. */
+export const BILL_AMOUNT_SCALE = 100000;
+
+export type BillMeasurement = {
+  /** `value × 10^powerOfTenMultiplier` — the number the utility means. */
+  scaled: number;
+  value: number;
+  powerOfTenMultiplier: number;
+  uom: number | null;
+};
+
+export type BillLineItem = {
+  /** Verbatim `<note>`, never normalised: it is the only dependable label. */
+  note: string;
+  /** Dollars (raw ÷ BILL_AMOUNT_SCALE); null when the element is absent. */
+  amount: number | null;
+  /** The raw integer exactly as the file sent it. */
+  rawAmount: number | null;
+  /** The raw ESPI ItemKind code, kept exactly as emitted — nothing in this
+   *  app may branch on it. The published schemas do not agree on what the
+   *  codes mean: the OpenADR-published Green Button XSD's LineItem has no
+   *  itemKind at all, while beckn's open DEG documents 1–10 whose meaning
+   *  contradicts Oakville's usage (4 on Delivery/Regulatory, 10 on priced
+   *  TOU lines). So no code list is hard-coded here — grouping keys off
+   *  `note`, and unknown codes still render as the number they are. */
+  itemKind: number | null;
+  /** Dollars per unit when the utility sends one (same money scale). */
+  unitCost: number | null;
+  /** Present on the informational lines: meter reads, TOU usage, dates. */
+  measurement: BillMeasurement | null;
+};
+
+export type UsageSummary = {
+  /** Element name the block arrived under: ESPI calls the schema type
+   *  ElectricPowerUsageSummary, utilities also emit plain UsageSummary. */
+  source: 'UsageSummary' | 'ElectricPowerUsageSummary';
+  /** billingPeriod.start / .duration, unix seconds. */
+  start: number;
+  duration: number;
+  /** `yyyy-MM-dd` of start and of start+duration, taken from the raw stamp. */
+  startDate: string;
+  endDate: string;
+  days: number;
+  billLastPeriod: number | null;
+  billToDate: number | null;
+  costAdditionalLastPeriod: number | null;
+  /** ISO 4217 numeric code as emitted (124 = CAD). Null when absent. */
+  currency: number | null;
+  /** overallConsumptionLastPeriod, scaled by its own multiplier. */
+  consumption: BillMeasurement | null;
+  /** Every line item, verbatim and in file order. */
+  items: BillLineItem[];
+};
+
+/** The feed's own clock rules, when the file carries them. */
+export type LocalTimeParams = {
+  /** Seconds east of UTC for the feed's standard time (Oakville: -18000). */
+  tzOffset: number;
+  /** Seconds added while DST is in force (usually 3600). */
+  dstOffset: number | null;
+  /** ESPI DstRuleType bitmaps, verbatim hex (`360E2000`). */
+  dstStartRule: string | null;
+  dstEndRule: string | null;
+};
+
+const BILL_BLOCK_NAMES = new Set(['UsageSummary', 'ElectricPowerUsageSummary']);
+
+/** `yyyy-MM-dd` from a unix stamp, in UTC — how a billingPeriod reads. */
+function utcDayKey(ts: number): string {
+  const d = new Date(ts * 1000);
+  return `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
+}
+
+function billNum(v: unknown): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Raw ESPI money (hundred-thousandths) → dollars; null stays null. */
+function scaleMoney(raw: number | null): number | null {
+  return raw === null ? null : raw / BILL_AMOUNT_SCALE;
+}
+
+function billText(v: unknown): string | null {
+  if (v === undefined || v === null) return null;
+  const s = String(Array.isArray(v) ? v[0] : v).trim();
+  return s === '' ? null : s;
+}
+
+/** Depth-first collection of every named node in the parsed document. */
+function collectBillNodes(
+  node: unknown,
+  names: Set<string>,
+): { name: string; node: Record<string, unknown> }[] {
+  const out: { name: string; node: Record<string, unknown> }[] = [];
+  const stack: unknown[] = [node];
+  while (stack.length > 0) {
+    const obj = stack.pop();
+    if (!obj || typeof obj !== 'object') continue;
+    if (Array.isArray(obj)) {
+      obj.forEach((i) => stack.push(i));
+      continue;
+    }
+    const o = obj as Record<string, unknown>;
+    for (const k of Object.keys(o)) {
+      const child = o[k];
+      if (typeof child !== 'object' || child === null) continue;
+      if (names.has(k)) {
+        for (const c of asArray<Record<string, unknown>>(child as Record<string, unknown>)) {
+          out.push({ name: k, node: c });
+        }
+      }
+      stack.push(child);
+    }
+  }
+  return out;
+}
+
+function parseMeasurement(raw: unknown): BillMeasurement | null {
+  const node = asArray<Record<string, unknown>>(
+    (raw as Record<string, unknown> | undefined) ?? {},
+  )[0];
+  if (!node) return null;
+  const value = billNum(node.value);
+  if (value === null) return null;
+  const powerOfTenMultiplier = billNum(node.powerOfTenMultiplier) ?? 0;
+  return {
+    value,
+    powerOfTenMultiplier,
+    uom: billNum(node.uom),
+    scaled: value * 10 ** powerOfTenMultiplier,
+  };
+}
+
+function parseLineItem(raw: unknown): BillLineItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const rawAmount = billNum(o.amount);
+  const note = billText(o.note) ?? '';
+  const measurement = parseMeasurement(o.measurement);
+  if (rawAmount === null && !note && measurement === null) return null;
+  const rawUnitCost = billNum(o.unitCost);
+  return {
+    note,
+    rawAmount,
+    amount: rawAmount === null ? null : rawAmount / BILL_AMOUNT_SCALE,
+    itemKind: billNum(o.itemKind),
+    unitCost: rawUnitCost === null ? null : rawUnitCost / BILL_AMOUNT_SCALE,
+    measurement,
+  };
+}
+
+/**
+ * Every bill block in an already-parsed document, oldest period first.
+ * Blocks without a usable billingPeriod are skipped — they are not a bill.
+ */
+export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
+  const out: UsageSummary[] = [];
+  for (const { name, node } of collectBillNodes(parsed, BILL_BLOCK_NAMES)) {
+    const period = asArray<Record<string, unknown>>(
+      (node.billingPeriod as Record<string, unknown> | undefined) ?? {},
+    )[0];
+    const start = billNum(period?.start);
+    const duration = billNum(period?.duration);
+    if (start === null || duration === null || duration <= 0) continue;
+    const items = asArray<Record<string, unknown>>(
+      node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
+    )
+      .map(parseLineItem)
+      .filter((i): i is BillLineItem => i !== null);
+    const consumption = parseMeasurement(node.overallConsumptionLastPeriod);
+    out.push({
+      source: name as UsageSummary['source'],
+      start,
+      duration,
+      startDate: utcDayKey(start),
+      endDate: utcDayKey(start + duration),
+      days: Math.round((duration / 86400) * 10) / 10,
+      // the same hundred-thousandths scale as the line items
+      billLastPeriod: scaleMoney(billNum(node.billLastPeriod)),
+      billToDate: scaleMoney(billNum(node.billToDate)),
+      costAdditionalLastPeriod: scaleMoney(billNum(node.costAdditionalLastPeriod)),
+      currency: billNum(node.currency),
+      consumption,
+      items,
+    });
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+/**
+ * The first LocalTimeParameters in an already-parsed document, or null.
+ * A block without tzOffset describes no clock, so it is ignored rather than
+ * guessed at.
+ */
+export function parseLocalTimeNode(parsed: unknown): LocalTimeParams | null {
+  for (const { node } of collectBillNodes(parsed, new Set(['LocalTimeParameters']))) {
+    const tzOffset = billNum(node.tzOffset);
+    if (tzOffset === null) continue;
+    return {
+      tzOffset,
+      dstOffset: billNum(node.dstOffset),
+      dstStartRule: billText(node.dstStartRule)?.toUpperCase() ?? null,
+      dstEndRule: billText(node.dstEndRule)?.toUpperCase() ?? null,
+    };
+  }
+  return null;
+}
+
+/** Convenience for callers that only want the bills (tests, scripts). */
+export function parseUsageSummaries(xmlText: string): UsageSummary[] {
+  return parseGreenButtonFeed(xmlText).summaries;
+}
+
+/* -------------------------------------------------------------------------
+ * LocalTimeParameters → the dataset's own clock (Wave L item 4)
+ *
+ * ESPI's dstStartRule/dstEndRule are DstRuleType bitmaps:
+ *   bits 0-11 seconds-in-hour (0-3599) · 12-16 hour · 17-19 weekday (1 = Mon
+ *   … 7 = Sun) · 20-24 day of month · 25-27 operator · 28-31 month.
+ * The operators: 0 = on the day of the month, 1 = first weekday on/after it,
+ * 2-6 = 1st-5th weekday of the month, 7 = last weekday. 0xFFFFFFFF disables
+ * DST. The rule's time is read in the local time in force BEFORE the change.
+ * ------------------------------------------------------------------------- */
+
+export type DstRule = {
+  month: number;
+  operator: number;
+  dayOfMonth: number;
+  dayOfWeek: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+/** `0xFFFFFFFF` — rule processing / DST correction disabled. */
+export const DST_RULE_DISABLED = 0xffffffff;
+
+/** Decode one ESPI DstRuleType hex bitmap; null when absent/disabled/broken. */
+export function decodeDstRule(rule: string | null | undefined): DstRule | null {
+  if (!rule) return null;
+  const text = String(rule).trim();
+  if (!/^[0-9a-fA-F]{1,8}$/.test(text)) return null;
+  const v = parseInt(text, 16);
+  if (!Number.isFinite(v) || v === DST_RULE_DISABLED) return null;
+  const secondsInHour = v & 0xfff;
+  const ruleOut: DstRule = {
+    month: (v >>> 28) & 0x0f,
+    operator: (v >>> 25) & 0x07,
+    dayOfMonth: (v >>> 20) & 0x1f,
+    dayOfWeek: (v >>> 17) & 0x07,
+    hour: (v >>> 12) & 0x1f,
+    minute: Math.floor(secondsInHour / 60),
+    second: secondsInHour % 60,
+  };
+  if (ruleOut.month < 1 || ruleOut.month > 12) return null;
+  if (ruleOut.hour > 23) return null;
+  return ruleOut;
+}
+
+/** ESPI weekday (1 = Monday … 7 = Sunday) → JS weekday (0 = Sunday). */
+function jsWeekday(espiDow: number): number | null {
+  if (espiDow < 1 || espiDow > 7) return null;
+  return espiDow === 7 ? 0 : espiDow;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Day of month the rule fires on in `year`, or null when it cannot. */
+function ruleDayOfMonth(rule: DstRule, year: number): number | null {
+  const dim = daysInMonth(year, rule.month);
+  const wd = jsWeekday(rule.dayOfWeek);
+  const dowAt = (day: number) => new Date(Date.UTC(year, rule.month - 1, day)).getUTCDay();
+  switch (rule.operator) {
+    case 0:
+      return rule.dayOfMonth >= 1 && rule.dayOfMonth <= dim ? rule.dayOfMonth : null;
+    case 1: {
+      if (wd === null) return null;
+      const from = rule.dayOfMonth >= 1 ? rule.dayOfMonth : 1;
+      if (from > dim) return null;
+      return from + ((wd - dowAt(from) + 7) % 7);
+    }
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6: {
+      if (wd === null) return null;
+      const firstDay = 1 + ((wd - dowAt(1) + 7) % 7);
+      const day = firstDay + (rule.operator - 2) * 7;
+      return day <= dim ? day : null;
+    }
+    case 7: {
+      if (wd === null) return null;
+      return dim - ((dowAt(dim) - wd + 7) % 7);
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Unix seconds of the transition in `year`. `offsetBefore` is the UTC offset
+ * in force immediately before the change (standard time for a DST start,
+ * DST time for a DST end) — that is the offset the rule's wall time is read
+ * in, and it is what makes 02:00 on 2026-03-08 land at 07:00Z while 02:00 on
+ * 2026-11-01 lands at 06:00Z.
+ */
+export function dstTransitionAt(rule: DstRule, year: number, offsetBefore: number): number | null {
+  const day = ruleDayOfMonth(rule, year);
+  if (day === null) return null;
+  const wall = Date.UTC(year, rule.month - 1, day, rule.hour, rule.minute, rule.second) / 1000;
+  return wall - offsetBefore;
+}
+
+export type ZoneTransitions = { start: number | null; end: number | null };
+
+/**
+ * A dataset's own clock: fixed offset when the file only says tzOffset, and
+ * DST-aware when it also carries the rule bitmaps. This is the source of
+ * truth for the dataset's DST handling — the browser's own timezone is only
+ * the fallback for files that carry no LocalTimeParameters at all.
+ */
+export type DatasetZone = {
+  params: LocalTimeParams;
+  isDST(ts: number): boolean;
+  /** UTC offset in force at `ts`, seconds east. */
+  offsetAt(ts: number): number;
+  /** Wall clock in the dataset's zone at `ts`. */
+  wallClock(ts: number): WallClock;
+  /** `yyyy-MM-dd` in the dataset's zone. */
+  dayKey(ts: number): string;
+  /** `HH:mm` in the dataset's zone. */
+  hourKey(ts: number): string;
+  /** Transition instants covering `year`, or nulls when no rule is present. */
+  transitions(year: number): ZoneTransitions;
+};
+
+export function resolveZone(params: LocalTimeParams | null | undefined): DatasetZone | null {
+  if (!params) return null;
+  const tzOffset = params.tzOffset;
+  const dstOffset = params.dstOffset ?? 0;
+  const startRule = decodeDstRule(params.dstStartRule);
+  const endRule = decodeDstRule(params.dstEndRule);
+  const cache = new Map<number, ZoneTransitions>();
+
+  const transitions = (year: number): ZoneTransitions => {
+    const hit = cache.get(year);
+    if (hit) return hit;
+    const value: ZoneTransitions = {
+      start: startRule ? dstTransitionAt(startRule, year, tzOffset) : null,
+      end: endRule ? dstTransitionAt(endRule, year, tzOffset + dstOffset) : null,
+    };
+    cache.set(year, value);
+    return value;
+  };
+
+  const isDST = (ts: number): boolean => {
+    if (!startRule || !endRule || dstOffset === 0) return false;
+    const year = new Date(ts * 1000).getUTCFullYear();
+    for (let y = year - 1; y <= year + 1; y += 1) {
+      const t = transitions(y);
+      if (t.start === null || t.end === null) continue;
+      // Southern-hemisphere regimes end the DST year before they start it,
+      // so the window may wrap: DST outside [end, start) instead of inside.
+      const inDST = t.start < t.end ? ts >= t.start && ts < t.end : ts < t.end || ts >= t.start;
+      if (inDST) return true;
+    }
+    return false;
+  };
+
+  const offsetAt = (ts: number): number => tzOffset + (isDST(ts) ? dstOffset : 0);
+
+  const wallClock = (ts: number): WallClock => {
+    const d = new Date((ts + offsetAt(ts)) * 1000);
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate(),
+      hour: d.getUTCHours(),
+      minute: d.getUTCMinutes(),
+      dow: d.getUTCDay(),
+    };
+  };
+
+  const dayKey = (ts: number): string => {
+    const w = wallClock(ts);
+    return `${w.year}-${p2(w.month)}-${p2(w.day)}`;
+  };
+
+  return {
+    params,
+    isDST,
+    offsetAt,
+    wallClock,
+    dayKey,
+    hourKey: (ts: number) => {
+      const w = wallClock(ts);
+      return `${p2(w.hour)}:${p2(w.minute)}`;
+    },
+    transitions,
+  };
+}
+
+/** ISO 4217 numeric → the label we are sure of; anything else stays numeric. */
+export function currencyLabel(code: number | null): string | null {
+  if (code === null) return null;
+  if (code === 124) return 'CAD';
+  if (code === 840) return 'USD';
+  return `ISO ${code}`;
+}
+
+/* -------------------------------------------------------------------------
+ * Line-item classification — keys off the NOTE, never off itemKind
+ * ------------------------------------------------------------------------- */
+
+export type BillLineClass =
+  | 'commodity'
+  | 'delivery'
+  | 'regulatory'
+  | 'tax'
+  | 'credit'
+  | 'total'
+  | 'info'
+  | 'other';
+
+const BILL_INFO_NOTE =
+  /\busage\b|meter read|days in bill|loss factor|read date|due date|post date|balance forward/;
+
+/**
+ * Group a line for display and reconciliation. The note is the utility's own
+ * wording (Oakville: "Off Peak-Summer", "H.S.T. # 000000000", "Delivery"),
+ * so matching stays loose on purpose: an unknown wording falls through to
+ * `other` and is still listed verbatim, never silently folded into a total
+ * we would then double-count.
+ */
+export function classifyBillLine(item: BillLineItem): BillLineClass {
+  const note = item.note.toLowerCase();
+  if (BILL_INFO_NOTE.test(note)) return 'info';
+  if (/^total\b|total electricity/.test(note)) return 'total';
+  if (/h\.?s\.?t\.?|g\.?s\.?t\.?|\btax\b/.test(note)) return 'tax';
+  if (item.amount !== null && item.amount < 0) return 'credit';
+  if (/rebate|\bcredit\b/.test(note)) return 'credit';
+  if (/delivery|distribution/.test(note)) return 'delivery';
+  if (/regulatory/.test(note)) return 'regulatory';
+  if (/(off|mid|on)[ -]?peak|tiered|-peak|block|supply|commodity|energy charge/.test(note)) {
+    return 'commodity';
+  }
+  if (item.amount === null || item.amount === 0) return 'info';
+  return 'other';
+}
+
+export type BillTotals = {
+  /** Sum of the commodity lines — what the electricity itself cost. */
+  commodity: number;
+  delivery: number;
+  regulatory: number;
+  tax: number;
+  /** Credits as signed numbers (the Ontario Electricity Rebate is negative). */
+  credit: number;
+  /** Any line we could not classify (listed, never folded into another). */
+  other: number;
+  /** "Total Electricity Charges" when present, else commodity+delivery+reg. */
+  total: number;
+  /** Explicit "Amount Due" when the file states a non-zero one. */
+  amountDue: number | null;
+  /** total + tax — the bill before the rebate, which is what our estimate
+   *  models (Wave B has no rebate field, so the delta is compared here). */
+  preRebate: number;
+  /** preRebate + credit — what the customer actually pays. */
+  payable: number;
+};
+
+export function billTotals(summary: UsageSummary): BillTotals {
+  const t: BillTotals = {
+    commodity: 0,
+    delivery: 0,
+    regulatory: 0,
+    tax: 0,
+    credit: 0,
+    other: 0,
+    total: 0,
+    amountDue: null,
+    preRebate: 0,
+    payable: 0,
+  };
+  let statedTotal: number | null = null;
+  for (const item of summary.items) {
+    if (item.amount === null) continue;
+    switch (classifyBillLine(item)) {
+      case 'commodity': t.commodity += item.amount; break;
+      case 'delivery': t.delivery += item.amount; break;
+      case 'regulatory': t.regulatory += item.amount; break;
+      case 'tax': t.tax += item.amount; break;
+      case 'credit': t.credit += item.amount; break;
+      case 'total': statedTotal = item.amount; break;
+      case 'info':
+        if (item.note.toLowerCase().includes('amount due') && item.amount !== 0) {
+          t.amountDue = item.amount;
+        }
+        break;
+      default: t.other += item.amount;
+    }
+  }
+  t.total = statedTotal ?? t.commodity + t.delivery + t.regulatory;
+  t.preRebate = t.total + t.tax;
+  t.payable = t.preRebate + t.credit;
+  if (t.amountDue === null) t.amountDue = t.payable;
+  return t;
+}
+
+/**
+ * kWh the bill charged for, from the "… Usage" measurement lines (Oakville
+ * stamps one per TOU window; they sum to the billed quantity exactly). Null
+ * when the file says nothing usable — callers fall back to the metered
+ * readings, which are unambiguous, before they ever fall back to
+ * overallConsumptionLastPeriod (whose unit varies by utility: Oakville's
+ * numbers come out in kWh, the Green Button Alliance sample's in Wh).
+ */
+export function billedKwh(summary: UsageSummary): number | null {
+  let sum = 0;
+  let seen = false;
+  for (const item of summary.items) {
+    if (!/usage$/.test(item.note.trim().toLowerCase())) continue;
+    if (!item.measurement) continue;
+    sum += item.measurement.scaled;
+    seen = true;
+  }
+  return seen ? sum : null;
+}
+
+/* -------------------------------------------------------------------------
+ * Estimate vs actual, per billing period (Wave L item 2)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The window this bill actually charges for.
+ *
+ * ESPI's `billingPeriod` is a coarse stamp — Oakville writes 00:00Z on the
+ * read date — while the line items carry the reads themselves
+ * ("Billing Period - Previous/Current Read Date", epoch seconds, uom 27).
+ * When both exist the reads win: reconciling against `billingPeriod` puts
+ * ~33 hours of readings either side of what was billed into the comparison,
+ * which alone moves the estimate several dollars off the bill.
+ *
+ * Falls back to billingPeriod when the file states no reads (every fixture
+ * but Oakville's shape).
+ */
+export function billWindow(summary: UsageSummary): { start: number; end: number } {
+  const readAt = (needle: string): number | null => {
+    for (const item of summary.items) {
+      if (!item.note.toLowerCase().includes(needle)) continue;
+      if (!item.measurement || item.measurement.uom !== 27) continue;
+      const ts = item.measurement.scaled;
+      if (Number.isFinite(ts) && ts > 0) return ts;
+    }
+    return null;
+  };
+  const prev = readAt('previous read date');
+  const cur = readAt('current read date');
+  if (prev !== null && cur !== null && cur > prev) return { start: prev, end: cur };
+  return { start: summary.start, end: summary.start + summary.duration };
+}
+
+/** Share of a period's days that must carry a reading before its numbers
+ *  mean anything: a half-covered period would otherwise look like a huge
+ *  "our rates are wrong" miss when it is really just missing data. */
+export const PERIOD_MIN_COVERAGE = 0.9;
+/** The spec's tolerance: commodity within a dollar, or we say so loudly. */
+export const COMMODITY_MATCH_TOLERANCE = 1;
+
+export type PeriodReconciliation = {
+  summary: UsageSummary;
+  totals: BillTotals;
+  /** Readings whose timestamp falls inside this billing period. */
+  rows: ProcessedPoint[];
+  /** Distinct reading days ÷ period days. */
+  coverage: number;
+  /** Days of the period that carry at least one reading. */
+  coveredDays: number;
+  periodDays: number;
+  meteredKwh: number | null;
+  billedKwh: number | null;
+  commodityActual: number;
+  commodityEstimate: number | null;
+  /** commodityEstimate − commodityActual; null when not comparable. */
+  delta: number | null;
+  comparable: boolean;
+};
+
+function planCostOf(rows: ProcessedPoint[], plan: 'TOU' | 'Tiered' | 'ULO'): number {
+  let sum = 0;
+  for (const r of rows) {
+    sum += plan === 'TOU' ? r.costTOU : plan === 'ULO' ? r.costULO : r.costTiered;
+  }
+  return sum;
+}
+
+/** What our own rates say the given rows cost under `plan`. */
+export function planCostFor(
+  rows: ProcessedPoint[],
+  plan: 'TOU' | 'Tiered' | 'ULO',
+): number {
+  return planCostOf(rows, plan);
+}
+
+/**
+ * Reconcile every UsageSummary against our own priced readings.
+ *
+ * The commodity lines ("Off/Mid/On Peak-Summer") are exactly kWh × the OEB
+ * rate we price with, so on a fully covered period our estimate and their
+ * charge should land within a dollar — if they do not, the rate assumptions
+ * are wrong and the panel says so instead of quietly showing a delta.
+ */
+export function reconcileBillingPeriods(
+  summaries: UsageSummary[],
+  rows: ProcessedPoint[],
+  plan: 'TOU' | 'Tiered' | 'ULO',
+): PeriodReconciliation[] {
+  return summaries.map((summary) => {
+    const { start: begin, end } = billWindow(summary);
+    const inPeriod = rows.filter((r) => r.timestamp >= begin && r.timestamp < end);
+    const periodDays = Math.max(1, Math.round((end - begin) / 86400));
+    const days = new Set(inPeriod.map((r) => r.dayStr));
+    const coverage = Math.min(1, days.size / periodDays);
+    const totals = billTotals(summary);
+    const metered = inPeriod.reduce((sum, r) => sum + r.usage_kwh, 0);
+    const comparable = coverage >= PERIOD_MIN_COVERAGE && inPeriod.length > 0;
+    const estimate = inPeriod.length > 0 ? planCostOf(inPeriod, plan) : null;
+    return {
+      summary,
+      totals,
+      rows: inPeriod,
+      coverage,
+      coveredDays: days.size,
+      periodDays,
+      meteredKwh: inPeriod.length > 0 ? metered : null,
+      billedKwh: billedKwh(summary),
+      commodityActual: totals.commodity,
+      commodityEstimate: estimate,
+      delta: comparable && estimate !== null ? estimate - totals.commodity : null,
+      comparable,
+    };
+  });
+}
+
+/** The bill's own estimate-vs-actual answer, in one place: does our rate
+ *  assumption reproduce their commodity charge for a period we can see? */
+export function commodityVerdict(r: PeriodReconciliation): 'match' | 'off' | 'unknown' {
+  if (r.delta === null) return 'unknown';
+  return Math.abs(r.delta) <= COMMODITY_MATCH_TOLERANCE ? 'match' : 'off';
+}
+
+/* -------------------------------------------------------------------------
+ * Auto-populated True Bill inputs (Wave L item 3)
+ * ------------------------------------------------------------------------- */
+
+export type ChargeFit = {
+  /** Fixed dollars per billing period, when a split is derivable. */
+  flat: number | null;
+  /** Dollars per kWh. */
+  perKwh: number;
+  /** Largest |residual| of the fit, dollars. */
+  maxResidual: number | null;
+  /** Periods the fit was taken over. */
+  periods: number;
+  /** What the prefill actually used: a fixed+variable split, or one blended
+   *  per-kWh rate covering the whole charge. */
+  mode: 'split' | 'blended';
+};
+
+export type DerivedCharges = {
+  charges: ExtraCharges;
+  /** The period the numbers came from. */
+  source: UsageSummary;
+  /** "your XML's May 25, 2026 period" style label for the caption. */
+  label: string;
+  delivery: number;
+  regulatory: number;
+  tax: number;
+  kwh: number;
+  hstPct: number;
+  fit: ChargeFit;
+};
+
+/** `MMM d, yyyy` from a unix stamp, in UTC. */
+export function billPeriodLabel(ts: number, duration: number): string {
+  const start = new Date(ts * 1000);
+  const end = new Date((ts + duration) * 1000);
+  const a = `${MONTH_ABBR[start.getUTCMonth()]} ${start.getUTCDate()}, ${start.getUTCFullYear()}`;
+  const b = `${MONTH_ABBR[end.getUTCMonth()]} ${end.getUTCDate()}`;
+  return duration >= 86400 ? `${a} – ${b}` : a;
+}
+
+const round = (v: number, dp: number) => Number(v.toFixed(dp));
+/** 4 dp is what the field is designed for ("e.g. 0.0125"); keeps cents right. */
+const rate = (v: number) => String(round(v, 4));
+
+/**
+ * Least-squares split of a charge into a fixed part and a $/kWh part across
+ * several billing periods, or null when the periods are too alike (or too
+ * noisy) for the split to mean anything.
+ *
+ * With three Oakville periods the delivery line fits $35.70 + $0.0253/kWh to
+ * ±$0.20; when usage barely moves between periods the slope is noise, and
+ * then we say so and use one blended rate instead of inventing a fixed part.
+ */
+function fitCharge(
+  amounts: number[],
+  kwh: number[],
+): { flat: number; perKwh: number; maxResidual: number } | null {
+  if (amounts.length < 3 || amounts.length !== kwh.length) return null;
+  const n = amounts.length;
+  const meanX = kwh.reduce((a, b) => a + b, 0) / n;
+  const meanY = amounts.reduce((a, b) => a + b, 0) / n;
+  const spread = Math.max(...kwh) - Math.min(...kwh);
+  if (meanX <= 0 || spread < meanX * 0.03) return null; // usage must actually move
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxy += (kwh[i] - meanX) * (amounts[i] - meanY);
+    sxx += (kwh[i] - meanX) ** 2;
+  }
+  if (sxx <= 0) return null;
+  const slope = sxy / sxx;
+  const flat = meanY - slope * meanX;
+  if (slope < 0 || flat < 0) return null;
+  let maxResidual = 0;
+  for (let i = 0; i < n; i += 1) {
+    maxResidual = Math.max(maxResidual, Math.abs(amounts[i] - (flat + slope * kwh[i])));
+  }
+  if (maxResidual > 0.5) return null; // the fit is not telling the truth
+  return { flat, perKwh: slope, maxResidual };
+}
+
+/**
+ * Which quantity a period's charges are a rate *of*.
+ *
+ * The bill's own "… Usage" lines come first: they are what the utility
+ * actually charged for, they exist whether or not we hold readings for that
+ * period, and every charge in the bill is priced off them. A fully covered
+ * stretch of our own readings is next (it is unambiguous Wh → kWh), and
+ * overallConsumptionLastPeriod last — its unit varies by utility, so it only
+ * counts when it is the only thing the file says.
+ */
+function chargeBasisKwh(
+  s: UsageSummary,
+  stats: { coverage: number; meteredKwh: number | null } | undefined,
+): number | null {
+  const billed = billedKwh(s);
+  if (billed !== null && billed > 0) return billed;
+  if (stats && stats.coverage >= PERIOD_MIN_COVERAGE && stats.meteredKwh !== null && stats.meteredKwh > 0) {
+    return stats.meteredKwh;
+  }
+  const c = s.consumption?.scaled ?? null;
+  return c !== null && c > 0 ? c : null;
+}
+
+/** Per-period metered kWh + coverage for the periods in `summaries`. */
+function periodStats(
+  summaries: UsageSummary[],
+  rows: ProcessedPoint[] | undefined,
+): Map<number, { coverage: number; meteredKwh: number | null }> {
+  const out = new Map<number, { coverage: number; meteredKwh: number | null }>();
+  if (!rows) return out;
+  for (const r of reconcileBillingPeriods(summaries, rows, 'TOU')) {
+    out.set(r.summary.start, { coverage: r.coverage, meteredKwh: r.meteredKwh });
+  }
+  return out;
+}
+
+/**
+ * Wave B's four manual fields, derived from the newest UsageSummary so the
+ * user never has to type them.
+ *
+ * Returns null when the file carries no bill, or when that bill states no
+ * charges at all — in either case the fields stay exactly as the user left
+ * them, which is the pre-Wave-L behaviour.
+ */
+export function deriveExtraCharges(
+  summaries: UsageSummary[],
+  rows?: ProcessedPoint[],
+): DerivedCharges | null {
+  if (summaries.length === 0) return null;
+  const source = summaries[summaries.length - 1];
+  const totals = billTotals(source);
+  const stats = periodStats(summaries, rows);
+  const kwhOf = (s: UsageSummary) => chargeBasisKwh(s, stats.get(s.start));
+  const kwh = kwhOf(source);
+  if (kwh === null || kwh <= 0) return null;
+  if (totals.delivery === 0 && totals.regulatory === 0 && totals.tax === 0) return null;
+
+  // The split is fitted across ALL the periods we have (each needs its own
+  // kWh), but the rates come from the newest period's own charges.
+  const pairs: { amount: number; kwh: number }[] = [];
+  for (const s of summaries) {
+    const q = kwhOf(s);
+    if (q === null || q <= 0) continue;
+    pairs.push({ amount: billTotals(s).delivery, kwh: q });
+  }
+  const fit = fitCharge(
+    pairs.map((p) => p.amount),
+    pairs.map((p) => p.kwh),
+  );
+  const deliveryPerKwh = fit ? fit.perKwh : totals.delivery / kwh;
+  const deliveryFlat = fit ? fit.flat : 0;
+  const regulatoryPerKwh = totals.regulatory / kwh;
+  // HST is charged on the pre-tax subtotal (Total Electricity Charges), which
+  // is the same base calculateTrueBill applies HST to — so 13% here and 13%
+  // there describe the same bill.
+  const hstPct = totals.total > 0 ? (totals.tax / totals.total) * 100 : 0;
+
+  const charges: ExtraCharges = {
+    deliveryPerKwh: rate(deliveryPerKwh),
+    deliveryFlat: fit ? String(round(deliveryFlat, 2)) : '',
+    regulatoryPerKwh: rate(regulatoryPerKwh),
+    hstPct: String(round(hstPct, 2)),
+  };
+  return {
+    // The provenance travels WITH the values: whoever stores them can later
+    // tell "still exactly what the file said" from "the user has edited it".
+    charges: {
+      ...charges,
+      xmlSource: {
+        periodStart: source.start,
+        label: billPeriodLabel(source.start, source.duration),
+        values: charges,
+      },
+    },
+    source,
+    label: billPeriodLabel(source.start, source.duration),
+    delivery: totals.delivery,
+    regulatory: totals.regulatory,
+    tax: totals.tax,
+    kwh,
+    hstPct: round(hstPct, 2),
+    fit: {
+      flat: fit ? round(fit.flat, 2) : null,
+      perKwh: round(deliveryPerKwh, 4),
+      maxResidual: fit ? round(fit.maxResidual, 2) : null,
+      periods: pairs.length,
+      mode: fit ? 'split' : 'blended',
+    },
+  };
+}
+
+/** The delivery line's amortized fixed-vs-variable split, when one is
+ *  derivable across the periods we have (Wave L slice 2). */
+export function deliverySplit(
+  summaries: UsageSummary[],
+  rows?: ProcessedPoint[],
+): ChargeFit | null {
+  const stats = periodStats(summaries, rows);
+  const pairs: { amount: number; kwh: number }[] = [];
+  for (const s of summaries) {
+    const q = chargeBasisKwh(s, stats.get(s.start));
+    if (q === null || q <= 0) continue;
+    pairs.push({ amount: billTotals(s).delivery, kwh: q });
+  }
+  const fit = fitCharge(
+    pairs.map((p) => p.amount),
+    pairs.map((p) => p.kwh),
+  );
+  if (!fit) {
+    if (pairs.length === 0) return null;
+    const newest = pairs[pairs.length - 1];
+    return {
+      flat: null,
+      perKwh: round(newest.amount / newest.kwh, 4),
+      maxResidual: null,
+      periods: pairs.length,
+      mode: 'blended',
+    };
+  }
+  return {
+    flat: round(fit.flat, 2),
+    perKwh: round(fit.perKwh, 4),
+    maxResidual: round(fit.maxResidual, 2),
+    periods: pairs.length,
+    mode: 'split',
   };
 }
 
