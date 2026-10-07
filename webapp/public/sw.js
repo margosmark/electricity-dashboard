@@ -15,6 +15,13 @@
  *      immutable    -> cache first: /_next/static, icons, manifest, favicon
  *      /greenbutton/* -> never cached (Wave K: one-shot, stateful, secret)
  *      anything else same-origin -> untouched (browser default)
+ *  - push             -> show the notification the server rendered (Wave N)
+ *  - notificationclick -> focus an open window, else open one at the target
+ *
+ * WHY THE PAYLOAD IS TEXT AND NOT DATA: the account server cannot read the
+ * user's readings (client-side E2EE), so a push can only ever carry
+ * pre-rendered words — a plan name, a date, a rate change. There is no code
+ * path here that renders a number the server computed from usage.
  *
  * WAVE M — PERIODIC BACKGROUND SYNC:
  *  - `periodicsync` (tag `greenbutton-refresh`) fetches the piped feed using
@@ -237,4 +244,68 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else: no handler, browser default.
+});
+
+/* ==========================================================================
+ * Wave N — Web Push.
+ *
+ * Two rules the handlers below exist to enforce:
+ *  - never trust the payload's shape: a push service (or anything that can
+ *    reach the VAPID key) is not a code-reviewer, so every field is read
+ *    defensively and anything unexpected falls back to a safe default;
+ *  - `notificationclick` must close the notification FIRST, so a second tap
+ *    cannot stack duplicates behind a stale one.
+ * ========================================================================== */
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload = null;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = null;
+  }
+
+  const title =
+    payload && typeof payload.title === 'string' && payload.title.trim()
+      ? payload.title.trim().slice(0, 200)
+      : 'Ontario Energy Optimizer';
+  const body =
+    payload && typeof payload.body === 'string' && payload.body.trim() ? payload.body.trim().slice(0, 500) : '';
+  // Same-origin path only: a push must never become an open redirect.
+  const url = payload && typeof payload.url === 'string' && payload.url.startsWith('/') ? payload.url : '/';
+  const topic = payload && typeof payload.topic === 'string' ? payload.topic.slice(0, 40) : 'account';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      // One notification per topic: a second "rates changed" replaces the
+      // first instead of stacking.
+      tag: topic,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const url = typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ('focus' in client && client.focus) {
+          void client.focus();
+          // Same window, right page: navigating beats opening a second tab.
+          if ('navigate' in client && client.navigate) return client.navigate(url);
+          return undefined;
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
 });

@@ -32,8 +32,9 @@ jobs:
     # full upload flow + offline service-worker behaviour via Playwright
     # using a tiny synthetic GreenButton XML (webapp/tests/fixtures), the
     # Wave H full-journey spec (tests/e2e/journey.spec.ts) against the
-    # bundled sample export, and TWO Lighthouse budgets — desktop >= 90 and
-    # mobile >= 85 with CLS <= 0.1 (Wave I).
+    # bundled sample export, the Wave N account gate in both states (feature
+    # off / on, tests/e2e/account_smoke.sh), and TWO Lighthouse budgets —
+    # desktop >= 90 and mobile >= 85 with CLS <= 0.1 (Wave I).
     # No secrets; runner's preinstalled Chrome (no Playwright downloads).
     name: E2E Smoke (Docker boot, HTTP, upload flow, PWA)
     runs-on: ubuntu-latest
@@ -58,6 +59,17 @@ jobs:
         run: docker run -d --rm -p 3100:3000 --name energy-smoke energy-smoke
       - name: HTTP smoke (/, /api/rates, manifest, sw.js, icons)
         run: bash tests/e2e/http_smoke.sh http://127.0.0.1:3100
+      # Wave N — both halves of the account ship criterion, over real HTTP:
+      # the public app carries NO ACCT_* env, so every /account/* route must
+      # 404 (the feature is invisible, not broken), and the same image booted
+      # with ACCT_ENABLED=true must complete register → login → PUT sync →
+      # a second profile → GET sync → stale-rev 409 → logout invalidation.
+      - name: Account gate (feature OFF — the public app is unchanged)
+        run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3100 --expect-disabled
+      - name: Boot the same image as the account server
+        run: docker run -d --rm -p 3101:3000 --name energy-account-smoke -e ACCT_ENABLED=true -e ACCT_DB_PATH=/data/accounts.db energy-smoke
+      - name: Account gate (feature ON — register → sync → second device → logout)
+        run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3101
       - name: Playwright smoke (upload flow, Shift Optimizer, PWA offline)
         run: npx playwright test
         env:
@@ -87,10 +99,12 @@ jobs:
           if-no-files-found: ignore
       - name: Container logs
         if: failure()
-        run: docker logs energy-smoke || true
+        run: |
+          docker logs energy-smoke || true
+          docker logs energy-account-smoke || true
       - name: Teardown
         if: always()
-        run: docker rm -f energy-smoke || true
+        run: docker rm -f energy-smoke energy-account-smoke || true
 
   python:
     name: Python (Parser Tests)

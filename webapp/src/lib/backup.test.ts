@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import {
   BACKUP_SCHEMA,
   BACKUP_VERSION,
+  SUPPORTED_BACKUP_VERSIONS,
   buildBackupDocument,
   serializeBackup,
   parseBackup,
@@ -264,16 +265,129 @@ describe('parseBackup — prototype pollution & unknown keys', () => {
 });
 
 describe('storageValuesFromBackup', () => {
-  it('writes exactly the three localStorage keys the app reads', () => {
+  it('writes exactly the localStorage keys the app reads, and no others', () => {
     const doc: BackupDocument = buildBackupDocument({
       energyData: rows,
       billingDay: 7,
       extraCharges: { deliveryPerKwh: '0.05', deliveryFlat: '', regulatoryPerKwh: '', hstPct: '13' },
+      selectedPlan: 'ULO',
+      isExample: true,
     });
     const values = storageValuesFromBackup(doc);
-    expect(Object.keys(values).sort()).toEqual(['billing_day', 'energy_data', 'extra_charges']);
+    expect(Object.keys(values).sort()).toEqual([
+      'billing_day',
+      'energy_data',
+      'energy_data_is_example',
+      'extra_charges',
+      'selected_plan',
+    ]);
     expect(JSON.parse(values.energy_data)).toEqual(rows);
     expect(values.billing_day).toBe('7');
     expect(JSON.parse(values.extra_charges).deliveryPerKwh).toBe('0.05');
+    expect(values.selected_plan).toBe('ULO');
+    expect(values.energy_data_is_example).toBe('1');
+  });
+
+  it('clears the example flag when the document says these are not demo numbers', () => {
+    const doc = buildBackupDocument({ energyData: rows, billingDay: 1, isExample: false });
+    const values = storageValuesFromBackup(doc);
+    // Empty string = "remove this key" for the writer in useDashboard and in
+    // lib/account/sync — a restored profile must not keep a stale banner.
+    expect(values.energy_data_is_example).toBe('');
+    expect(values.selected_plan).toBeUndefined();
+  });
+});
+
+/* ==========================================================================
+ * Wave N — schema v2: additive fields, previous version still accepted
+ * ========================================================================== */
+
+describe('backup schema v2 (Wave N multi-device sync)', () => {
+  it('stamps v2 and carries the selected plan + example flag', () => {
+    const doc = buildBackupDocument({
+      energyData: rows,
+      billingDay: 7,
+      selectedPlan: 'Tiered',
+      isExample: true,
+      exportedAt: new Date('2026-10-07T12:00:00.000Z'),
+    });
+    expect(doc.version).toBe(2);
+    expect(doc.payload.selected_plan).toBe('Tiered');
+    expect(doc.payload.energy_data_is_example).toBe(true);
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    expect(round.value.payload.selected_plan).toBe('Tiered');
+    expect(round.value.payload.energy_data_is_example).toBe(true);
+  });
+
+  it('accepts a v1 document — the file\'s own additive rule', () => {
+    const v1 = JSON.stringify({
+      schema: BACKUP_SCHEMA,
+      version: 1,
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      payload: { energy_data: rows, billing_day: 3, extra_charges: EMPTY_EXTRA_CHARGES },
+    });
+    const res = parseBackup(v1);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.version).toBe(1);
+    // Absent means absent — a v1 file has no opinion, so it must not invent one.
+    expect(res.value.payload.selected_plan).toBeUndefined();
+    expect(res.value.payload.energy_data_is_example).toBeUndefined();
+  });
+
+  it('still refuses a newer schema version with an upgrade hint', () => {
+    const res = parseBackup(valid({ version: BACKUP_VERSION + 1 }));
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toMatch(/newer version/i);
+  });
+
+  it('refuses a schema this repo never shipped', () => {
+    const res = parseBackup(valid({ version: 0 }));
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toMatch(/version/i);
+  });
+
+  it('the allow-list is exactly what the reader promises — and covers THIS version', () => {
+    // The guard that matters: bumping BACKUP_VERSION without adding the
+    // version we just stopped writing would silently reject our own files,
+    // so the reader's promise and the writer's stamp are asserted together.
+    expect([...SUPPORTED_BACKUP_VERSIONS].sort()).toEqual([1, 2]);
+    expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION)).toBe(true);
+    expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION + 1)).toBe(false);
+  });
+
+  it('rejects a selected_plan that is not a plan id, instead of silently re-pricing', () => {
+    const res = parseBackup(valid({ payload: { energy_data: rows, billing_day: 1, selected_plan: 'FREE' } }));
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toMatch(/selected_plan/);
+  });
+
+  it('rejects a non-boolean example flag', () => {
+    const res = parseBackup(
+      valid({ payload: { energy_data: rows, billing_day: 1, energy_data_is_example: 'yes' } }),
+    );
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toMatch(/energy_data_is_example/);
+  });
+
+  it('still refuses unknown keys and prototype pollution', () => {
+    const res = parseBackup(
+      valid({
+        payload: {
+          energy_data: rows,
+          billing_day: 1,
+          selected_plan: 'TOU',
+          __proto__: { polluted: true },
+        },
+      }),
+    );
+    expect(res.ok).toBe(true);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });

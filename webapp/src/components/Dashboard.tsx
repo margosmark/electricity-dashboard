@@ -25,6 +25,8 @@ import {
 import { UsagePointPicker } from '@/components/UsagePointPicker';
 import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
+import { AccountControls } from '@/components/AccountControls';
+import { AccountTriggers } from '@/components/AccountTriggers';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
@@ -163,6 +165,11 @@ export default function Dashboard() {
   const comparison = useMemo(() => calculateComparison(activeChartData), [activeChartData]);
 
   const anomalies = useMemo(() => detectAnomalies(processedData, filteredData), [processedData, filteredData]);
+
+  // Wave N: anomalies are computed HERE (the data never leaves the browser),
+  // and AccountTriggers is what lets one reach a closed tab — via the
+  // server's caps, never on its own. Renders nothing.
+  const accountTriggers = <AccountTriggers anomalies={anomalies} />;
 
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
 
@@ -321,6 +328,7 @@ export default function Dashboard() {
 
   return (
     <div key="ready" className="space-y-10 text-black relative font-black uppercase">
+      {accountTriggers}
       {/* Persistent OEB rate-staleness alert: rendered in both views until
           /api/rates ships the newer effectiveDate. */}
       <RateStalenessBanner result={staleness} />
@@ -466,7 +474,8 @@ export default function Dashboard() {
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
           <NotificationToggle connected={gbConnected} backgroundSync={backgroundSync} />
-           <GreenButtonSync
+          <AccountControls onDataApplied={() => window.location.reload()} />
+          <GreenButtonSync
              variant="chip"
              status={gbStatus}
              syncing={gbSyncing}

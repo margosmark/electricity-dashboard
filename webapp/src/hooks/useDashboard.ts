@@ -26,7 +26,9 @@ import {
 } from "@/lib/greenbutton/client";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
+  EXAMPLE_DATA_KEY,
 } from "@/lib/backup";
+import { readStoredPlan } from "@/hooks/useSelectedPlan";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
 import { loadExampleReadings } from "@/lib/exampleData";
 // Wave M — one gated entry point for every background refresh, plus the
@@ -50,8 +52,12 @@ function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { 
  * Set while the loaded readings are the bundled example dataset (Wave H item
  * 1). It is a separate key from `energy_data` so a user's own upload always
  * wins, and so clearing it never has to guess what else to delete.
+ *
+ * Declared in `lib/backup.ts` (a restore has to write it, and importing this
+ * hook from there would be a cycle) and re-exported here so every existing
+ * `import { EXAMPLE_DATA_KEY } from "@/hooks/useDashboard"` keeps working.
  */
-export const EXAMPLE_DATA_KEY = "energy_data_is_example";
+export { EXAMPLE_DATA_KEY };
 
 /* -------------------------------------------------------------------------
  * Wave L — the bill half of the feed, kept beside the readings.
@@ -1035,6 +1041,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       energyData: rawData,
       billingDay,
       extraCharges: readStoredExtraCharges(),
+      // Wave N (backup v2): a restore should put back the whole picture, not
+      // just the readings — the plan and the example-data banner are part of
+      // what the user was looking at when they exported.
+      selectedPlan: readStoredPlan(),
+      isExample: exampleData,
       exportedAt: now,
     });
     return { filename: backupFilename(now), text: serializeBackup(doc) };
@@ -1059,9 +1070,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
     try {
       const values = storageValuesFromBackup(parsed.value);
-      localStorage.setItem("energy_data", values.energy_data);
-      localStorage.setItem("billing_day", values.billing_day);
-      localStorage.setItem("extra_charges", values.extra_charges);
+      // Same loop the account sync uses (lib/account/sync.ts): every key the
+      // document knows about, with an empty value meaning "clear this flag".
+      for (const [key, value] of Object.entries(values)) {
+        if (value === "") localStorage.removeItem(key);
+        else localStorage.setItem(key, value);
+      }
     } catch {
       return {
         ok: false,
