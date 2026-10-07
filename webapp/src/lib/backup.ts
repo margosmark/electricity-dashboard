@@ -20,7 +20,7 @@
  *    `__proto__` / `constructor` in the file are never assigned anywhere.
  */
 
-import { EMPTY_EXTRA_CHARGES, type DataPoint, type ExtraCharges } from './energy';
+import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges } from './energy';
 
 /** Marker written into every export; Import refuses files without it. */
 export const BACKUP_SCHEMA = 'ontario-energy-optimizer.backup';
@@ -93,7 +93,10 @@ function whitelistCharges(raw: unknown): ExtraCharges {
   const out: ExtraCharges = { ...EMPTY_EXTRA_CHARGES };
   if (!raw || typeof raw !== 'object') return out;
   const src = raw as Record<string, unknown>;
-  for (const key of Object.keys(EMPTY_EXTRA_CHARGES) as (keyof ExtraCharges)[]) {
+  // The four editable fields, by name — deliberately NOT `xmlSource`: an
+  // imported file must never be able to claim provenance it did not earn,
+  // and unknown keys never reach app state (prototype-pollution rule above).
+  for (const key of EXTRA_CHARGE_FIELDS) {
     const v = src[key];
     if (typeof v === 'string') out[key] = v;
   }

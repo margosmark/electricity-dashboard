@@ -8,12 +8,14 @@
 
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, ChangeEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
   type DataPoint, type RateSet, type UsagePointGroup,
-  getBillingPeriod, parseGreenButtonUsagePoints, selectInitialWindow,
-  EMPTY_EXTRA_CHARGES, type ExtraCharges,
+  type UsageSummary, type LocalTimeParams, type GreenButtonFeed,
+  type ExtraCharges, type ExtraChargeField, type ExtraChargesSource,
+  getBillingPeriod, parseGreenButtonFeed, selectInitialWindow,
+  EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, chargesArePristine,
 } from "@/lib/energy";
 // Wave J owns the merge arithmetic; live sync must not be a second opinion
 // about what a union means (union, incoming wins — see importPlan.ts).
@@ -50,6 +52,93 @@ function isParseDiagnostic(value: unknown): value is Extract<ParseDiagnostic, { 
  * wins, and so clearing it never has to guess what else to delete.
  */
 export const EXAMPLE_DATA_KEY = "energy_data_is_example";
+
+/* -------------------------------------------------------------------------
+ * Wave L — the bill half of the feed, kept beside the readings.
+ *
+ * The XML carries UsageSummary bills and LocalTimeParameters; both are
+ * parsed client-side with the readings and land in localStorage, so the
+ * panel and the auto-filled True Bill inputs survive a reload without ever
+ * re-uploading or asking the server anything.
+ * ------------------------------------------------------------------------- */
+
+export const USAGE_SUMMARIES_KEY = "usage_summaries";
+export const LOCAL_TIME_KEY = "local_time_parameters";
+
+export type BillFeed = {
+  /** Every billing period the parse found, oldest first. */
+  summaries: UsageSummary[];
+  /** The feed's own clock rules, or null when it declared none. */
+  localTime: LocalTimeParams | null;
+  /** File/sync the values came from, for the "sourced from" caption. */
+  source: string | null;
+};
+
+export const EMPTY_BILL_FEED: BillFeed = { summaries: [], localTime: null, source: null };
+
+/** Whitelisted read: whatever is unreadable or of the wrong shape is dropped. */
+export function readStoredBillFeed(): BillFeed {
+  try {
+    const raw = localStorage.getItem(USAGE_SUMMARIES_KEY);
+    const clock = localStorage.getItem(LOCAL_TIME_KEY);
+    const summaries = raw ? (JSON.parse(raw) as UsageSummary[]) : [];
+    const localTime = clock ? (JSON.parse(clock) as LocalTimeParams) : null;
+    if (!Array.isArray(summaries)) return EMPTY_BILL_FEED;
+    const clean = summaries.filter(
+      (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
+    );
+    const okClock =
+      localTime && typeof localTime.tzOffset === "number" ? localTime : null;
+    if (clean.length === 0 && !okClock) return EMPTY_BILL_FEED;
+    return { summaries: clean, localTime: okClock, source: null };
+  } catch {
+    return EMPTY_BILL_FEED;
+  }
+}
+
+/** Persist; a storage failure must never break the UI. */
+export function writeStoredBillFeed(feed: BillFeed): void {
+  try {
+    if (feed.summaries.length > 0) {
+      localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(feed.summaries));
+    } else {
+      localStorage.removeItem(USAGE_SUMMARIES_KEY);
+    }
+    if (feed.localTime) {
+      localStorage.setItem(LOCAL_TIME_KEY, JSON.stringify(feed.localTime));
+    } else {
+      localStorage.removeItem(LOCAL_TIME_KEY);
+    }
+  } catch { /* quota exceeded / private mode: keep the in-memory value */ }
+}
+
+/**
+ * Several parses into one dataset: one row per billing period (a re-upload
+ * of the same export must not duplicate a period), newest clock wins, and a
+ * file that declares no clock never erases the one we already had.
+ */
+export function unionBillFeeds(base: BillFeed, ...incoming: BillFeed[]): BillFeed {
+  const byStart = new Map<number, UsageSummary>();
+  let localTime = base.localTime;
+  let source = base.source;
+  let newest = -1;
+  for (const feed of [base, ...incoming]) {
+    for (const s of feed.summaries) {
+      byStart.set(s.start, s);
+      if (s.start >= newest) {
+        newest = s.start;
+        localTime = feed.localTime ?? localTime;
+        source = feed.source ?? source;
+      }
+    }
+    if (feed.localTime && localTime === null) localTime = feed.localTime;
+  }
+  const summaries = [...byStart.values()].sort((a, b) => a.start - b.start);
+  if (summaries.length === 0 && base.localTime && incoming.every((f) => !f.localTime)) {
+    localTime = base.localTime;
+  }
+  return { summaries, localTime, source };
+}
 
 /** What an Export click downloads: a versioned JSON document + its filename. */
 export type BackupExport = { filename: string; text: string };
@@ -167,6 +256,38 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const [parseIssue, setParseIssue] = useState<ParseDiagnostic | null>(null);
 
+  /**
+   * The bill half of the dataset (Wave L): UsageSummary periods + the
+   * feed's clock rules, seeded from localStorage so a reload keeps the
+   * actual-bill panel without re-parsing the export.
+   */
+  const [billFeed, setBillFeed] = useState<BillFeed>(() => readStoredBillFeed());
+
+  /**
+   * Bills parsed by the file(s) waiting to be imported, held until the user
+   * actually commits them — a picker or merge screen that is cancelled must
+   * not have already swapped the panel over to a bill nobody loaded.
+   */
+  const billFeedsRef = useRef<BillFeed[]>([]);
+
+  /**
+   * `replace` = the dataset is now exactly what was parsed (an upload is the
+   * user's stated truth, same as the readings); `union` = one more source of
+   * truth folded in (a live sync must not delete bills either).
+   */
+  const commitBillFeed = (mode: "replace" | "union") => {
+    const incoming = billFeedsRef.current;
+    billFeedsRef.current = [];
+    setBillFeed((prev) => {
+      const next =
+        mode === "replace"
+          ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
+          : unionBillFeeds(prev, ...incoming);
+      writeStoredBillFeed(next);
+      return next;
+    });
+  };
+
   /* ---------------------------------------------------------------------
    * Green Button live sync (Wave K).
    *
@@ -279,14 +400,24 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const ingestFeedXml = (xml: string): GbSyncOutcome => {
     const base = rawDataRef.current;
-    let groups: UsagePointGroup[];
+    // One pass, everything the bytes carry: readings, UsageSummary bills and
+    // the feed's own clock rules (Wave L).
+    let feed: GreenButtonFeed;
     try {
-      groups = parseGreenButtonUsagePoints(xml);
+      feed = parseGreenButtonFeed(xml);
     } catch {
       return { ok: false, code: "unparseable" };
     }
+    const groups = feed.groups;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
     if (incoming === 0) return { ok: false, code: "no_readings" };
+
+    // Held until the rows below are actually committed (a multi-meter pick
+    // can still be cancelled) and then folded in — a sync never deletes a
+    // bill the feed no longer repeats.
+    billFeedsRef.current = [
+      { summaries: feed.summaries, localTime: feed.localTime, source: "your Green Button feed" },
+    ];
 
     if (groups.length > 1) {
       setPendingUpload({ fileName: "Oakville Hydro (live sync)", groups, origin: "greenbutton" });
@@ -296,13 +427,19 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
     const plan = planImport(base, groups[0].readings);
     // Nothing new: skip the write AND the re-anchor. A 15-minute poll must
-    // not touch storage or move a window the user has panned to.
-    if (plan.identical) return { ok: true, incoming, added: 0, unchanged: true };
+    // not touch storage or move a window the user has panned to. The bill
+    // half still lands: a summary can arrive while the readings look
+    // identical, and unioning the same bill twice is a no-op anyway.
+    if (plan.identical) {
+      commitBillFeed("union");
+      return { ok: true, incoming, added: 0, unchanged: true };
+    }
 
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
     commitReadings(merged);
+    commitBillFeed("union");
     if (hadWindow) {
       setStartDate(keep.start);
       setEndDate(keep.end);
@@ -654,9 +791,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           } satisfies ParseDiagnostic);
         reader.onload = (ev) => {
           const text = (ev.target?.result as string) ?? "";
-          let groups: UsagePointGroup[];
+          let feed: GreenButtonFeed;
           try {
-            groups = parseGreenButtonUsagePoints(text);
+            feed = parseGreenButtonFeed(text);
           } catch (e) {
             // Security refusals (external entities) and malformed markup land
             // here: explain the document instead of repeating the exception.
@@ -673,7 +810,15 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             );
             return;
           }
+          const groups = feed.groups;
           const readings = countReadings(groups);
+          // Wave L: the bill half rides along with the readings and is held
+          // until the user actually imports (see commitBillFeed).
+          billFeedsRef.current.push({
+            summaries: feed.summaries,
+            localTime: feed.localTime,
+            source: file.name,
+          });
           // A single-meter file is pre-picked; a multi-meter one stays null
           // until the review screen asks.
           resolve({
@@ -691,7 +836,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       .then((results) => {
         const total = results.reduce((n, r) => n + countReadings(r.groups), 0);
         if (total === 0) {
-          // Nothing readable: keep the modal open and say exactly why.
+          // Nothing readable: keep the modal open and say exactly why, and
+          // drop the bills parsed out of the same unreadable batch.
+          billFeedsRef.current = [];
           setParseIssue(
             results.map((r) => r.issue).find(Boolean) ?? {
               ok: false,
@@ -706,17 +853,24 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         if (results.length === 1) {
           const only = results[0];
           if (only.groups.length > 1) {
+            // Held until the picker commits: cancelling must leave the bills
+            // the user already had alone.
             setPendingUpload({ fileName: only.name, groups: only.groups });
             setShowUploadModal(false);
             return;
           }
           commitReadings(only.groups[0].readings);
+          // An upload REPLACES: this file is what the user asked to see, so
+          // an unrelated upload also replaces the panel (to nothing, if it
+          // carried no bills) instead of leaving a stranger's bill on screen.
+          commitBillFeed("replace");
           return;
         }
         setPendingMerge(results);
         setShowUploadModal(false);
       })
       .catch((e) => {
+        billFeedsRef.current = [];
         setParseIssue(
           isParseDiagnostic(e)
             ? e
@@ -734,12 +888,19 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   /** Import the rows the merge review screen computed. */
   const chooseMerge = (readings: DataPoint[]) => {
     setPendingMerge(null);
-    if (readings.length > 0) commitReadings(readings);
+    if (readings.length > 0) {
+      commitReadings(readings);
+      // The merged dataset IS those files, bills included (replace).
+      commitBillFeed("replace");
+    } else {
+      billFeedsRef.current = [];
+    }
   };
 
   /** Back out of the merge review without importing anything. */
   const cancelMerge = () => {
     setPendingMerge(null);
+    billFeedsRef.current = [];
     setShowUploadModal(true);
   };
 
@@ -756,14 +917,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     if (readings.length === 0) return;
     if (origin === "greenbutton") {
       commitReadings(mergeForWrite(rawDataRef.current, readings));
+      commitBillFeed("union");
       return;
     }
     commitReadings(readings);
+    commitBillFeed("replace");
   };
 
   /** Back out of the picker without importing anything. */
   const cancelUsagePoint = () => {
     setPendingUpload(null);
+    billFeedsRef.current = [];
     setShowUploadModal(true);
   };
 
@@ -790,6 +954,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         return { ok: false, detail: loaded.detail };
       }
       commitReadings(loaded.readings, "example");
+      // The bundled export carries no bills: an example dataset must not
+      // keep showing a real customer's actual bill next to fake readings.
+      billFeedsRef.current = [EMPTY_BILL_FEED];
+      commitBillFeed("replace");
       return { ok: true };
     } finally {
       setParsing(false);
@@ -805,7 +973,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     try {
       localStorage.removeItem("energy_data");
       localStorage.removeItem(EXAMPLE_DATA_KEY);
+      localStorage.removeItem(USAGE_SUMMARIES_KEY);
+      localStorage.removeItem(LOCAL_TIME_KEY);
     } catch { /* nothing to remove */ }
+    setBillFeed(EMPTY_BILL_FEED);
     setRawData([]);
     setExampleData(false);
     setParseIssue(null);
@@ -943,6 +1114,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   return {
     rawData, rateHistory, loading, parsing,
+    // Wave L: the bill half of the feed (UsageSummary periods + its clock)
+    billFeed,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     viewScope, setViewScope,
@@ -1066,12 +1239,29 @@ export const EXTRA_CHARGES_KEY = "extra_charges";
 function readStoredCharges(raw: string): ExtraCharges {
   const parsed = JSON.parse(raw) as Record<string, unknown>;
   const text = (v: unknown) => (typeof v === "string" ? v : "");
-  return {
+  const out: ExtraCharges = {
     deliveryPerKwh: text(parsed.deliveryPerKwh),
     deliveryFlat: text(parsed.deliveryFlat),
     regulatoryPerKwh: text(parsed.regulatoryPerKwh),
     hstPct: text(parsed.hstPct),
   };
+  // Wave L provenance: kept only when it is well-formed, so a hand-edited or
+  // older backup degrades to "no source" instead of claiming one.
+  const src = parsed.xmlSource as Partial<ExtraChargesSource> | undefined;
+  if (
+    src &&
+    typeof src.periodStart === "number" &&
+    typeof src.label === "string" &&
+    src.values &&
+    EXTRA_CHARGE_FIELDS.every((f) => typeof (src.values as Record<string, unknown>)[f] === "string")
+  ) {
+    out.xmlSource = {
+      periodStart: src.periodStart,
+      label: src.label,
+      values: src.values as Record<ExtraChargeField, string>,
+    };
+  }
+  return out;
 }
 
 /** Whitelisted read of the stored add-ons (missing/unreadable = all empty). */
@@ -1096,7 +1286,7 @@ export function useExtraCharges() {
     return EMPTY_EXTRA_CHARGES;
   });
 
-  const setCharge = (field: keyof ExtraCharges, value: string) => {
+  const setCharge = (field: ExtraChargeField, value: string) => {
     setCharges((prev) => {
       const next: ExtraCharges = { ...prev, [field]: value };
       try {
@@ -1106,6 +1296,23 @@ export function useExtraCharges() {
     });
   };
 
+  /**
+   * Wave L item 3 — drop the file's own numbers into the fields, but only
+   * while they still say what they said when they were stored (untouched, or
+   * still exactly the file's values). The moment a field differs, the user
+   * owns it and no later file may overwrite it.
+   */
+  const applyDerivedIfPristine = useCallback((source: ExtraChargesSource) => {
+    setCharges((prev) => {
+      if (!chargesArePristine(prev)) return prev;
+      const next: ExtraCharges = { ...source.values, xmlSource: source };
+      try {
+        localStorage.setItem(EXTRA_CHARGES_KEY, JSON.stringify(next));
+      } catch { /* quota exceeded: keep the in-memory value */ }
+      return next;
+    });
+  }, []);
+
   const resetCharges = () => {
     setCharges(EMPTY_EXTRA_CHARGES);
     try {
@@ -1113,5 +1320,5 @@ export function useExtraCharges() {
     } catch { /* nothing to remove */ }
   };
 
-  return { charges, setCharge, resetCharges };
+  return { charges, setCharge, resetCharges, applyDerivedIfPristine };
 }

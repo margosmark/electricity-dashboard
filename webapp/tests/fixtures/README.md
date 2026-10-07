@@ -1,9 +1,11 @@
 # Test fixtures — real-world Green Button documents
 
-Parser fixtures for `webapp/src/lib/utilitySamples.test.ts`. The root
+Parser fixtures for `webapp/src/lib/utilitySamples.test.ts` and the Wave L
+bill parser. The root
 `.gitignore` ignores `*.xml` globally (**user meter exports must never enter
 this repo**) with an explicit exception for this directory — everything here
-is a *publicly published* sample, not the app owner's own data.
+is either a *publicly published* sample or generated in-repo; none of it is
+the app owner's own data.
 
 | File | What it is | Provenance |
 |---|---|---|
@@ -13,6 +15,7 @@ is a *publicly published* sample, not the app owner's own data.
 | `utility-alectra-fragment.xml` | **The only genuine Alectra content found publicly**: a single `<IntervalReading>` element exported by an Alectra customer (Savage Data CMD feed) showing Alectra's real child ordering — `cost`, `ReadingQuality/quality`, `timePeriod`, `value 2290000`, `tou 2`. It is a fragment, not an Atom feed, so it documents Alectra structure rather than feed layout. | `github.com/rocketraman/open-green-button-homeassistant/issues/4`. |
 | `green-button-alliance-sample.xml` | Canonical **Green Button Alliance** published sample ("Test GB Data Hourly Nine Days Binned Daily", 216 IntervalReadings) including the `xml-stylesheet` PI, banner comment, and `ElectricPowerUsageSummary`. | `s3-us-west-2.amazonaws.com/technical.greenbuttonalliance.org/library/sample-data/TestGBDataHourlyNineDaysBinnedDaily.xml` (linked from the GBA samples index). |
 | `synthetic.xml` | Small synthetic feed generated for the e2e smoke test (no real meter readings). | Created in-repo by earlier waves. |
+| `usage-summary-synthetic.xml` | **Hand-generated fixture — not any utility's export.** Three 29-day `UsageSummary` bills (2026-05-25 / 06-23 / 07-22) plus a `LocalTimeParameters` entry, built so the per-period lines are self-consistent (total = commodity + delivery + regulatory; HST 13%; rebate −23.5%) and their sums are exactly the figures the 2026-10-07 data audit published: **$1,365.03 total · $311.61 delivery · $177.46 HST · −$320.78 rebate · $45.15 regulatory · $530.74 / $218.71 / $258.82 off/mid/on**. Delivery is laid out as $35.88 fixed + $0.0252/kWh so the amortized split the "actual bill" panel shows is really fitted. | Created in-repo for Wave L (`webapp/src/lib/usageSummary.test.ts`, `webapp/src/components/WaveL.test.tsx`). The app owner's own Oakville Hydro export is used only for the deployed browser check and is **never committed** (last rule below). |
 
 ## What these fixtures caught
 
