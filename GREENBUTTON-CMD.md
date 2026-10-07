@@ -131,6 +131,7 @@ proves it.
 | Someone completing a flow with their own Oakville account | they would only ever store *their own* tokens; the event is logged loudly (`token set replaced by a browser without a session`). Residual nuisance, not a data exposure. |
 | Garbage POSTs to the notify URI | unguessable path token derived from the client secret (`sha256("greenbutton-notify:"+secret)[:32]`); unknown token → 404. |
 | Token endpoint failures mis-classified | `invalid_client` (401) → operator problem, tokens **kept**; `invalid_grant`/`access_denied` (400/403) → grant gone, tokens **wiped** and the UI says "reconnect". |
+| Resource/pointer failures mis-classified (Wave K hardening) | Only an explicit rejection of a *freshly-minted* credential wipes the token set: `invalid_grant`, or `401/403` **after** a forced refresh with no cross-origin hop in between. A 5xx or network error while resolving the ESPI pointer, and a 401 caused by fetch stripping `Authorization` on a cross-origin redirect, report `upstream` (502) with tokens **kept** — a custodian hiccup must never read as a revocation. A relative `<resourceURI>` is resolved against the Authorization resource's URL before it is persisted, so it can never poison later syncs with `Invalid URL`. |
 | Service worker caching an OAuth redirect | `sw.js` skips `/greenbutton/*` entirely. |
 
 TLS: the shim talks plain HTTPS + `client_secret` to the custodian — no mTLS
