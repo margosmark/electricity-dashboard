@@ -1,0 +1,55 @@
+{
+  "wave": "M",
+  "task": "t_b0d80b86",
+  "date": "2026-10-07",
+  "commits": [
+    "4ce9b8f Wave M: background CMD refresh + plan-switch notices, without accounts",
+    "5aa821c Wave M e2e: wait on the h1, not the gb-chip, in the no-authorisation test",
+    "4eca137 Merge pull request #26 from margosmark/electricity/t_b0d80b86-wave-m-background"
+  ],
+  "gates": {
+    "webapp_lint": "pass",
+    "webapp_typecheck": "pass",
+    "webapp_unit_tests": "652 passed (39 files) \u2014 43 new in this wave",
+    "webapp_build": "pass (prebuild stamps public/sw.js)",
+    "root_pytest": "33 passed",
+    "http_smoke_vs_production_build": "OK \u2014 /, /api/rates, manifest, sw.js, icons all 200",
+    "playwright_unconfigured_server": "21 passed, 3 skipped \u2014 mirrors the CI smoke job (the 3 skips are the specs that need a configured shim)",
+    "browser_gate_configured_shim": "BROWSER E2E OK \u2014 4 checks, 24/24 Playwright, from scripts/e2e-greenbutton-browser.sh (mock custodian + next start with GB_* set)",
+    "lighthouse_desktop": "performance 1.00 (budget >= 0.90), CLS 0.002, LCP 700 ms, TBT 0 ms, FCP 224 ms",
+    "lighthouse_mobile": "performance 0.93 (budget >= 0.85), CLS 0 (budget <= 0.1), LCP 3198 ms, TBT 85 ms, FCP 760 ms",
+    "lhci_assert_both_configs": "exit 0",
+    "ci": "BLOCKED, not failed on merits \u2014 GitHub Actions never started a job: 'recent account payments have failed or your spending limit needs to be increased'. Every run on the repo since 2026-10-06T21:00Z fails in ~2 s with 0 steps; last green run 37530464465 (2026-10-06T20:58Z). Re-run after billing is fixed.",
+    "deploy": "DEPLOY_OK at 4eca137 via ~/bin/deploy-energy-dashboard.sh on hermescomputer (git reset --hard origin/main + docker compose up -d --build; energy-dashboard and greenbutton-shim recreated)"
+  },
+  "browser_verification_live": {
+    "url": "https://electricity.markarslan.ca",
+    "when": "2026-10-07T16:09:31.948Z",
+    "documentTitle": "Ontario Energy Optimizer",
+    "permission_prompt_calls_on_load": 0,
+    "permission_state_after_load": "default",
+    "permission_state_before": "unknown",
+    "settings_drawer_rendered_for_visitor": false,
+    "refresh_notice_banner_rendered": false,
+    "gb_chip_state": 0,
+    "sw_serves_periodicsync_handler": true,
+    "sw_serves_staged_feed_cache": true,
+    "sw_version": "oeo-v1-muyavq86",
+    "assertions": {
+      "no_permission_prompt_on_load": true,
+      "no_alert_chrome_for_manual_visitor": true,
+      "service_worker_carrying_wave_m": true
+    },
+    "screenshot": "evidence/wave-m-deployed.png",
+    "ok": true
+  },
+  "browser_verification_configured_stack": {
+    "what": "tests/e2e/background-refresh.spec.ts, run by scripts/e2e-greenbutton-browser.sh against a configured shim + mock custodian",
+    "pull_once_on_tab_restoration": "asserted exactly beforePulls+1 \u2014 visibilitychange AND focus fire together and the shared throttle refuses the second",
+    "switch_banner_follows_the_data": "page.route serves a second feed (overnight-heavy, or weekday-afternoon when ULO already wins) so the best plan really changes; banner data-plan/previous-plan asserted",
+    "banner_stays_dismissed": "dismiss then a second refresh -> banner count 0",
+    "permission_prompt": "spied via addInitScript: 0 calls on load, connect and refresh",
+    "manual_visitor": "notification-toggle count 0, refresh-notice-banner count 0"
+  },
+  "scope_4_asserted": "with no gb_session: no timer, no visibilitychange/focus listener, no periodicSync.register, no storage writes, no banner, no permission request"
+}
