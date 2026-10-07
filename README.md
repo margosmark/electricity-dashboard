@@ -30,7 +30,7 @@ Button XML file from Oakville Hydro. Done.
 | Feature | Where |
 | --- | --- |
 | Three-plan cost comparison (TOU vs Tiered vs ULO) per period | top cards |
-| Auto-refresh from Oakville Hydro (Connect My Data, OAuth2) | toolbar → *Connect Oakville Hydro* (once registered) |
+| Auto-refresh from Oakville Hydro (Connect My Data, OAuth2) | toolbar → *Authorise with Oakville Hydro* (once registered) |
 | Whole-dataset totals: kWh + per-plan cost + best-vs-worst $ gap, *since your first reading* | totals strip |
 | First load opens a data-full window (never a mostly-future billing period) | date range |
 | Usage chart with weekend bars highlighted (daily view) | Chart tab |

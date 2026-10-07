@@ -62,11 +62,51 @@ describe("GreenButtonSync", () => {
     expect(screen.queryByTestId("gb-connect")).toBeNull();
   });
 
-  it("offers Connect when configured but not authorised", () => {
+  it("offers Authorise when configured but not connected", () => {
     const p = props();
     render(<GreenButtonSync {...p} variant="modal" />);
+    expect(screen.getByTestId("gb-connect").textContent).toBe("Authorise with Oakville Hydro");
+    expect(screen.getByTestId("gb-connect-card").getAttribute("data-gb-state")).toBe("disconnected");
     fireEvent.click(screen.getByTestId("gb-connect"));
     expect(p.onConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports the three connection states the card specifies", () => {
+    const { rerender } = render(<GreenButtonSync {...props()} variant="chip" />);
+    expect(screen.getByTestId("gb-chip").getAttribute("data-gb-state")).toBe("disconnected");
+    expect(screen.getByTestId("gb-connect").textContent).toBe("Authorise with Oakville Hydro");
+
+    // Authorised: the shim holds a grant, nothing piped through yet.
+    rerender(
+      <GreenButtonSync {...props({ status: { ...base, connected: true } })} variant="chip" />,
+    );
+    expect(screen.getByTestId("gb-chip").getAttribute("data-gb-state")).toBe("authorised");
+    expect(screen.getByTestId("gb-sync").textContent).toBe("Authorised");
+    expect(screen.getByTestId("gb-sync").getAttribute("title")).toMatch(/Authorised/);
+
+    // Data synced: a feed has actually been piped and ingested.
+    rerender(
+      <GreenButtonSync
+        {...props({
+          status: {
+            ...base,
+            connected: true,
+            lastSyncAt: "2026-10-06T12:00:00.000Z",
+            lastSyncBytes: 2048,
+          },
+        })}
+        variant="chip"
+      />,
+    );
+    expect(screen.getByTestId("gb-chip").getAttribute("data-gb-state")).toBe("synced");
+    expect(screen.getByTestId("gb-sync").textContent).toBe("Live");
+    expect(screen.getByTestId("gb-sync").getAttribute("title")).toMatch(/Synced/);
+  });
+
+  it("says authorised-but-never-synced rather than leaving it blank", () => {
+    render(<GreenButtonSync {...props({ status: { ...base, connected: true } })} variant="modal" />);
+    expect(screen.getByTestId("gb-status").textContent).toMatch(/Authorised/);
+    expect(screen.getByTestId("gb-status").textContent).toMatch(/no data synced yet/i);
   });
 
   it("puts the connect button in the toolbar too", () => {

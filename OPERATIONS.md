@@ -118,6 +118,7 @@ readings. Inspect with `sudo ls -l .greenbutton/`; wipe with the UI's
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
 | Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (26 checks, needs docker only for the second) |
 | Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (30 checks; binds :3940 + :8099, tears itself down) |
+| Re-run the **browser** connect flow | `cd webapp && ./scripts/e2e-greenbutton-browser.sh` — builds, boots a mock custodian + a *configured* shim on :3941, then runs the whole Playwright suite against it: the Authorise button → authorize → callback → localStorage loop with a "no token material in browser storage" assertion, plus `/import` and the journey specs with the feature switched on |
 | Diagnose a "reconnect" complaint | `docker compose logs greenbutton-shim \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
 | Shim unreachable (`/greenbutton/*` 502) | `docker compose ps` (shim stopped?) then `docker compose logs edge-router` |
 | Undo the container split | `git revert` the topology commit + deploy, **or** move `ports:` back to `energy-dashboard`, delete `edge-router`, `docker compose up -d` — the shim's routes still exist inside the app, just without the split |

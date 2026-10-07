@@ -29,8 +29,28 @@ type Props = {
   variant?: "chip" | "modal";
 };
 
+/**
+ * The three states this control reports, as the card specifies them:
+ *
+ *   unconfigured — the utility has not issued credentials; the feature does
+ *                  not exist for this deployment yet.
+ *   disconnected — configured, but this browser holds no authorisation.
+ *   authorised   — the shim holds a grant for this browser, nothing piped yet.
+ *   synced       — a feed has actually been piped through and ingested.
+ *
+ * Exposed as `data-gb-state` on the root so tests (and the browser e2e gate)
+ * assert on the state machine rather than on wording.
+ */
+export type GbUiState = "unconfigured" | "disconnected" | "authorised" | "synced";
+
+export function gbUiState(status: GbStatus | null): GbUiState {
+  if (!status?.configured) return "unconfigured";
+  if (!status.connected) return "disconnected";
+  return status.lastSyncAt ? "synced" : "authorised";
+}
+
 function lastSyncLine(status: GbStatus): string {
-  if (!status.lastSyncAt) return "Never synced";
+  if (!status.lastSyncAt) return "Authorised — no data synced yet";
   const at = new Date(status.lastSyncAt);
   const mb = status.lastSyncBytes !== null ? ` · ${(status.lastSyncBytes / 1024).toFixed(0)} KB` : "";
   return `Synced ${at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${mb}`;
@@ -45,6 +65,7 @@ export function GreenButtonSync({
       return (
         <div
           data-testid="gb-unconfigured"
+          data-gb-state="unconfigured"
           className="mt-4 md:mt-6 border-2 border-dashed border-slate-300 rounded-xl md:rounded-2xl p-4 text-left"
         >
           <div className="text-[11px] md:text-xs font-black uppercase text-slate-500">
@@ -61,10 +82,11 @@ export function GreenButtonSync({
   }
 
   const connected = status.connected;
+  const state = gbUiState(status);
 
   if (variant === "chip") {
     return (
-      <div className="flex items-center gap-1 md:gap-2" data-testid="gb-chip">
+      <div className="flex items-center gap-1 md:gap-2" data-testid="gb-chip" data-gb-state={state}>
         {message && (
           <span
             role="status"
@@ -90,7 +112,9 @@ export function GreenButtonSync({
               className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-green-600 text-white font-black uppercase text-[10px] disabled:opacity-60"
             >
               <RefreshCw size={14} strokeWidth={4} className={syncing ? "animate-spin" : ""} />
-              <span className="hidden md:inline">{syncing ? "Syncing…" : "Live"}</span>
+              <span className="hidden md:inline">
+                {syncing ? "Syncing…" : state === "synced" ? "Live" : "Authorised"}
+              </span>
             </button>
             <button
               type="button"
@@ -114,7 +138,7 @@ export function GreenButtonSync({
             className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-black rounded-xl md:rounded-2xl bg-green-600 text-white shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
           >
             <Link2 size={14} strokeWidth={4} />
-            <span className="hidden md:inline">Connect Oakville Hydro</span>
+            <span className="hidden md:inline">Authorise with Oakville Hydro</span>
           </button>
         )}
       </div>
@@ -125,6 +149,7 @@ export function GreenButtonSync({
   return (
     <div
       data-testid="gb-connect-card"
+      data-gb-state={state}
       className="mt-4 md:mt-6 border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6 text-left bg-slate-50"
     >
       <div className="flex items-center gap-2">
@@ -191,7 +216,7 @@ export function GreenButtonSync({
             onClick={onConnect}
             className="mt-3 min-h-11 w-full py-3 md:py-4 bg-green-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all"
           >
-            Connect Oakville Hydro
+            Authorise with Oakville Hydro
           </button>
         </>
       )}
