@@ -40,6 +40,7 @@ vi.mock("@/lib/account/client", async (importOriginal) => {
 });
 
 import { AccountControls } from "@/components/AccountControls";
+import { useAccount } from "@/hooks/useAccount";
 import * as api from "@/lib/account/client";
 import type { SessionInfo } from "@/lib/account/client";
 import { bytesToBase64, encryptBlob, importSessionKey } from "@/lib/account/crypto";
@@ -116,7 +117,6 @@ const getSync = vi.mocked(api.getSync);
 const putSync = vi.mocked(api.putSync);
 const logout = vi.mocked(api.logout);
 const login = vi.mocked(api.login);
-const putPrefs = vi.mocked(api.putPrefs);
 
 beforeEach(() => {
   localStorage.clear();
@@ -146,9 +146,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+ * `Dashboard` owns the account state machine and passes it to BOTH surfaces
+ * (the Alerts drawer needs the same instance), so the tests mount it the way
+ * the app does: one `useAccount()`, handed down.
+ */
+function TestHarness({
+  defaultOpen = false,
+  openSignal = 0,
+}: {
+  defaultOpen?: boolean;
+  openSignal?: number;
+}) {
+  const account = useAccount();
+  return <AccountControls account={account} defaultOpen={defaultOpen} openSignal={openSignal} />;
+}
+
 /** Mount, then open the drawer (the toggle appears once the probe answers). */
 async function openDrawer() {
-  render(<AccountControls />);
+  render(<TestHarness />);
   const toggle = await screen.findByTestId("account-toggle");
   fireEvent.click(toggle);
   return screen.getByTestId("account-drawer");
@@ -161,7 +177,7 @@ async function openDrawer() {
 describe("when this deployment has no account server", () => {
   it("renders nothing at all after a 404 (the app container)", async () => {
     fetchSession.mockRejectedValue(new api.AccountApiError(404, "not_found"));
-    const { container } = render(<AccountControls />);
+    const { container } = render(<TestHarness />);
     await vi.waitFor(() => expect(fetchSession).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByTestId("account-toggle")).toBeNull();
@@ -169,7 +185,7 @@ describe("when this deployment has no account server", () => {
 
   it("renders nothing at all when the account container is down (502)", async () => {
     fetchSession.mockRejectedValue(new api.AccountApiError(502, "bad_gateway"));
-    const { container } = render(<AccountControls />);
+    const { container } = render(<TestHarness />);
     await vi.waitFor(() => expect(fetchSession).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
   });
@@ -445,62 +461,6 @@ describe("signing out", () => {
 });
 
 /* ------------------------------------------------------------------ *
- * Quiet hours are the READER's night, not UTC's
- * ------------------------------------------------------------------ */
-
-describe("notification preferences", () => {
-  it("corrects a stored UTC offset that does not match this device", async () => {
-    seedSignedInDevice();
-    const deviceOffset = -new Date().getTimezoneOffset();
-    fetchSession.mockResolvedValue(
-      sessionInfo({ authed: true, email: "mark@example.com", kdfSalt: SALT_B64, rev: 2, hasBlob: true }),
-    );
-    // A stored value exactly one hour away from this device: the server
-    // cannot know anyone's timezone, so the client is the only party that
-    // can supply it, and it must do so without being asked.
-    const drifted = { ...PREFS, tzOffset: deviceOffset + 60 };
-    fetchPrefs.mockResolvedValue({
-      prefs: drifted,
-      subscriptionCount: 0,
-      pushConfigured: false,
-      vapidPublicKey: null,
-    });
-    putPrefs.mockResolvedValue({ ok: true, prefs: drifted });
-
-    await openDrawer();
-
-    await vi.waitFor(() => expect(putPrefs).toHaveBeenCalledTimes(1));
-    expect(putPrefs.mock.calls[0][0].tzOffset).toBe(deviceOffset);
-  });
-
-  it("stamps this device's offset on every save, so a fix cannot drift away", async () => {
-    seedSignedInDevice();
-    localStorage.setItem(SYNC_REV_KEY, "2");
-    fetchSession.mockResolvedValue(
-      sessionInfo({ authed: true, email: "mark@example.com", kdfSalt: SALT_B64, rev: 2, hasBlob: true }),
-    );
-    const saved = { ...PREFS, tzOffset: -new Date().getTimezoneOffset() };
-    fetchPrefs.mockResolvedValue({
-      prefs: saved,
-      subscriptionCount: 0,
-      pushConfigured: false,
-      vapidPublicKey: null,
-    });
-    putPrefs.mockResolvedValue({ ok: true, prefs: saved });
-
-    const drawer = await openDrawer();
-    fireEvent.click(screen.getByTestId("account-notifications-toggle"));
-    fireEvent.click(screen.getByTestId("account-topic-oeb_rates"));
-
-    await vi.waitFor(() => expect(putPrefs).toHaveBeenCalledTimes(1));
-    const payload = putPrefs.mock.calls[0][0];
-    expect(payload.tzOffset).toBe(-new Date().getTimezoneOffset());
-    expect(payload.topics).not.toContain("oeb_rates");
-    expect(drawer.getAttribute("data-account-state")).toBe("signed_in");
-  });
-});
-
-/* ------------------------------------------------------------------ *
  * "Back up now" — the explicit path a person can see working
  * ------------------------------------------------------------------ */
 
@@ -545,5 +505,40 @@ describe("the explicit backup button", () => {
     const message = await screen.findByTestId("account-message");
     expect(message.textContent).toMatch(/nothing to back up/i);
     expect(putSync).not.toHaveBeenCalled();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * The push panel moved out — and the hand-off back in
+ * ------------------------------------------------------------------ */
+
+describe("after the push panel moved to the Alerts drawer", () => {
+  it("keeps sign-in / backup / sync and shows no notification settings", async () => {
+    seedLocal();
+    seedSignedInDevice();
+    fetchSession.mockResolvedValue(
+      sessionInfo({ authed: true, email: "mark@example.com", kdfSalt: SALT_B64, rev: 2, hasBlob: true }),
+    );
+    const drawer = await openDrawer();
+
+    expect(screen.getByTestId("account-signed-in")).toBeTruthy();
+    expect(screen.getByTestId("account-sync-now")).toBeTruthy();
+    expect(screen.getByTestId("account-signout")).toBeTruthy();
+    // One entry point is the point: no second bell, no second vocabulary,
+    // and no "alerts live in the bell" pointer line either.
+    expect(screen.queryByTestId("account-notifications")).toBeNull();
+    expect(screen.queryByTestId("account-notifications-toggle")).toBeNull();
+    expect(drawer.textContent).not.toMatch(/notifications (on|off)/i);
+    expect(drawer.textContent).not.toMatch(/alerts? live in/i);
+  });
+
+  it("opens when the Alerts drawer asks it to ('Sign in to use push')", async () => {
+    const { rerender } = render(<TestHarness />);
+    await screen.findByTestId("account-toggle");
+    expect(screen.queryByTestId("account-drawer")).toBeNull();
+
+    // Dashboard bumps the counter; the drawer stays uncontrolled.
+    rerender(<TestHarness openSignal={1} />);
+    expect(screen.getByTestId("account-drawer")).toBeTruthy();
   });
 });

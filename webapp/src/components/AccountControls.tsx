@@ -1,5 +1,10 @@
 /**
- * Wave N — the Account control: sign in, sync, notification preferences.
+ * Wave N — the Account control: sign in, backup, sync.
+ *
+ * The push preferences used to live here as a "Notifications" block; they
+ * moved to the Alerts drawer (`NotificationToggle`), which is the ONE surface
+ * that explains how this app can reach you. This drawer deliberately gains no
+ * pointer line: one entry point is the point.
  *
  * A twin of `BackupControls` in shape (one toolbar toggle, one drawer, Escape
  * and outside-tap to close, `data-testid` on every state a test needs) and
@@ -19,8 +24,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { Bell, BellOff, CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
-import { useAccount, type AccountStatus } from "@/hooks/useAccount";
+import { CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
+import { type AccountApi } from "@/hooks/useAccount";
+import { useAccountFeature } from "@/hooks/useAccountFeature";
 
 const TOGGLE_CLASS =
   "min-h-11 min-w-11 inline-flex items-center justify-center " +
@@ -38,15 +44,30 @@ const INPUT_CLASS =
 const FIELD_LABEL = "block text-[10px] font-black uppercase mb-1";
 
 type Props = {
-  /** Reload after the local dataset changed (import and sync share this). */
-  onDataApplied?: () => void;
+  /**
+   * The single account state machine, owned by `Dashboard`.
+   *
+   * Passed in rather than created here because the Alerts drawer needs the
+   * SAME instance for its push section: a second `useAccount()` would mean a
+   * second `GET /account/session`, a second key derivation and a second
+   * auto-push interval racing over the same localStorage.
+   */
+  account: AccountApi;
   /** Test/demo affordance: render the drawer open on first paint. */
   defaultOpen?: boolean;
+  /**
+   * "Open the drawer now", as a counter — the Alerts drawer's
+   * `Sign in to use push` button bumps it. Uncontrolled on purpose: this
+   * component keeps owning `open`, so `defaultOpen` still means what it
+   * meant, and no new modal is introduced to route one click to another.
+   */
+  openSignal?: number;
 };
 
-export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
-  const account = useAccount({ onDataApplied });
+export function AccountControls({ account, defaultOpen = false, openSignal = 0 }: Props) {
   const { status, busy, message, prompt, recoveryCode } = account;
+  // The feature flag, read from the ONE shared probe — never a second one.
+  const feature = useAccountFeature();
 
   const [open, setOpen] = useState(defaultOpen);
   const [tab, setTab] = useState<"signin" | "signup" | "recover">("signin");
@@ -85,9 +106,21 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [open]);
 
+  // "Sign in to use push" (Alerts drawer) opens THIS drawer. A counter, not
+  // a boolean, so pressing it twice after closing still opens it again.
+  const lastOpenSignal = useRef(0);
+  useEffect(() => {
+    if (openSignal !== 0 && openSignal !== lastOpenSignal.current) {
+      lastOpenSignal.current = openSignal;
+      setOpen(true);
+    }
+  }, [openSignal]);
+
   // Nothing to show until the feature flag probe answers, and nothing at all
-  // when the answer is "this deployment has no account server".
-  if (!status.probed || !status.enabled) return null;
+  // when the answer is "this deployment has no account server". The flag
+  // comes from the shared probe (one GET per page load); `status.probed` says
+  // the state machine has caught up with it.
+  if (!feature.enabled || !status.probed) return null;
 
   const signedIn = status.authed && !status.locked;
 
@@ -288,8 +321,6 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 <CloudUpload size={14} strokeWidth={4} /> Back up now
               </button>
 
-              <NotificationSettings account={account} status={status} />
-
               <button
                 type="button"
                 data-testid="account-signout"
@@ -446,177 +477,6 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
       )}
     </div>
   );
-}
-
-/* -------------------------------------------------------------------------- *
- * Notification preferences — every control writes through `savePrefs`, so the
- * panel can only ever show values the server accepted.
- * -------------------------------------------------------------------------- */
-
-const TOPIC_LABELS: Record<string, string> = {
-  plan_change: "A cheaper plan appears for your usage",
-  oeb_rates: "New Ontario rates are published",
-  data_available: "Your utility posted new data",
-  anomaly: "An unusually expensive day is detected",
-};
-
-const MIN_INTERVAL_TEXT: Record<string, string> = {
-  plan_change: "at most once a day",
-  oeb_rates: "at most once a week",
-  data_available: "at most once a day",
-  anomaly: "at most once a day",
-};
-
-type AccountApi = ReturnType<typeof useAccount>;
-
-function NotificationSettings({ account, status }: { account: AccountApi; status: AccountStatus }) {
-  const prefs = status.prefs;
-  const [cap, setCap] = useState(prefs?.dailyCap ?? 3);
-  const [quiet, setQuiet] = useState(
-    prefs ? `${minutesToTime(prefs.quietStart)}-${minutesToTime(prefs.quietEnd)}` : "22:00-07:00",
-  );
-  const [expanded, setExpanded] = useState(false);
-
-  // Re-seed the local form fields when the SERVER's copy of the preferences
-  // changes (first load, or after a save round-trip). Done during render with
-  // a previous-value guard rather than in an effect — the fields are a draft
-  // of `prefs`, and a render-phase adjustment is how React says "the source
-  // of truth moved" without an extra committed pass.
-  const [seenPrefs, setSeenPrefs] = useState(prefs);
-  if (prefs !== seenPrefs) {
-    setSeenPrefs(prefs);
-    if (prefs) {
-      setCap(prefs.dailyCap);
-      setQuiet(`${minutesToTime(prefs.quietStart)}-${minutesToTime(prefs.quietEnd)}`);
-    }
-  }
-
-  const subscribed = status.subscriptionCount > 0;
-
-  const toggleTopic = (topic: string) => {
-    if (!prefs) return;
-    const topics = prefs.topics.includes(topic)
-      ? prefs.topics.filter((t) => t !== topic)
-      : [...prefs.topics, topic];
-    void account.savePrefs({ ...prefs, topics });
-  };
-
-  const commitLimits = () => {
-    if (!prefs) return;
-    const [start, end] = quiet.split("-");
-    void account.savePrefs({
-      ...prefs,
-      dailyCap: Math.max(0, Math.min(20, Math.round(cap))),
-      quietStart: timeToMinutes(start),
-      quietEnd: timeToMinutes(end),
-    });
-  };
-
-  return (
-    <div className="border-4 border-black rounded-lg p-3" data-testid="account-notifications">
-      <button
-        type="button"
-        data-testid="account-notifications-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between text-[10px]"
-      >
-        <span className="flex items-center gap-2">
-          {subscribed ? <Bell size={14} strokeWidth={4} /> : <BellOff size={14} strokeWidth={4} />}
-          Notifications {subscribed ? "on" : "off"}
-        </span>
-        <span aria-hidden>{expanded ? "−" : "+"}</span>
-      </button>
-
-      {expanded && (
-        <div className="mt-3 flex flex-col gap-3">
-          {!status.pushConfigured && (
-            <div className="text-[9px] text-slate-600 normal-case">
-              This server has no VAPID keys yet, so notifications cannot be delivered.
-            </div>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              data-testid={subscribed ? "account-notify-disable" : "account-notify-enable"}
-              disabled={!status.pushConfigured}
-              onClick={() =>
-                void (subscribed ? account.disableNotifications() : account.enableNotifications())
-              }
-              className={BUTTON_CLASS + (subscribed ? " bg-white" : " bg-emerald-300") + " flex-1"}
-            >
-              {subscribed ? "Turn off" : "Turn on"}
-            </button>
-          </div>
-
-          {prefs && (
-            <>
-              <fieldset>
-                <legend className="text-[9px] font-black uppercase mb-1">Tell me about</legend>
-                {Object.keys(TOPIC_LABELS).map((topic) => (
-                  <label key={topic} className="flex items-start gap-2 text-[9px] normal-case py-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      data-testid={`account-topic-${topic}`}
-                      checked={prefs.topics.includes(topic)}
-                      onChange={() => toggleTopic(topic)}
-                      className="mt-0.5 h-4 w-4 accent-purple-600"
-                    />
-                    <span>
-                      {TOPIC_LABELS[topic]}
-                      <span className="block text-slate-500">{MIN_INTERVAL_TEXT[topic]}</span>
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-[9px]">
-                  <span className="block font-black uppercase mb-1">Per day (max)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={20}
-                    data-testid="account-daily-cap"
-                    value={cap}
-                    onChange={(e) => setCap(Number(e.target.value))}
-                    onBlur={commitLimits}
-                    className={INPUT_CLASS}
-                  />
-                </label>
-                <label className="text-[9px]">
-                  <span className="block font-black uppercase mb-1">Quiet</span>
-                  <input
-                    type="text"
-                    data-testid="account-quiet-hours"
-                    value={quiet}
-                    onChange={(e) => setQuiet(e.target.value)}
-                    onBlur={commitLimits}
-                    className={INPUT_CLASS}
-                    pattern="\d{1,2}:\d{2}-\d{1,2}:\d{2}"
-                    title="HH:MM-HH:MM"
-                  />
-                </label>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function minutesToTime(minutes: number): string {
-  const m = Math.max(0, Math.min(1439, Math.round(minutes)));
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
-
-function timeToMinutes(value: string | undefined): number {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value ?? "");
-  if (!match) return 0;
-  const hours = Math.min(23, Number(match[1]));
-  const mins = Math.min(59, Number(match[2]));
-  return hours * 60 + mins;
 }
 
 export default AccountControls;

@@ -13,11 +13,12 @@ import { act, render, renderHook, screen, cleanup } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 
 import RefreshNoticeBanner from './RefreshNoticeBanner';
-import { useRefreshNotices } from '@/hooks/useRefreshNotices';
+import { pushCoversNotice, useRefreshNotices } from '@/hooks/useRefreshNotices';
 import {
   PLAN_ACK_KEY,
   RATE_ACK_KEY,
   NOTIFICATIONS_ENABLED_KEY,
+  NOTIFIED_KEY,
   buildRefreshNotices,
 } from '@/lib/backgroundRefresh';
 import {
@@ -117,7 +118,9 @@ describe('RefreshNoticeBanner', () => {
     expect(screen.getByTestId('refresh-notice-headline')).toHaveTextContent('Your best plan changed');
     expect(screen.getByTestId('refresh-notice-headline')).toHaveTextContent(/now saves ~\$\d+\.\d{2}\/mo vs/);
     // The privacy tradeoff is printed where the user reads the banner.
-    expect(screen.getByText(/no account, so no email or SMS/i)).toBeInTheDocument();
+    // State-free on purpose: the banner must not need the account state in
+    // `Dashboard`, and the product has no email or SMS in ANY state.
+    expect(screen.getByText(/no email or SMS/i)).toBeInTheDocument();
   });
 
   it('dismisses through the callback with the notice id', async () => {
@@ -188,6 +191,9 @@ describe('useRefreshNotices visibility', () => {
     processedData: processed,
     currentPlan: loser,
     refreshTick: 0,
+    // No push subscription by default: every existing case is "the on-device
+    // channel alone", which is what it was before the merge.
+    pushTopics: [],
     ...overrides,
   });
   /** Renders the hook and hands back the props so a test can advance the tick. */
@@ -288,5 +294,93 @@ describe('useRefreshNotices visibility', () => {
   it('stays silent while the user is already on the best plan', () => {
     const { result } = hook({ currentPlan: totals.bestPlan });
     expect(result.current.notices).toEqual([]);
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * One event ⇒ at most one system notification (the merge's dedup guard)
+ * -------------------------------------------------------------------------- */
+
+describe('the push dedup guard', () => {
+  /** The rate notice alone: `currentPlan` at its best suppresses the plan one. */
+  const rateOnly = () => {
+    const advanced = Dec2025();
+    return { advanced, totals: calculateFullDataTotals(advanced)! };
+  };
+
+  const rateHook = (pushTopics: string[]) => {
+    const { advanced, totals } = rateOnly();
+    // First sight of a rate date only records a baseline (no notice), so seed
+    // the acknowledgement the way an established browser has it.
+    localStorage.setItem(RATE_ACK_KEY, '2024-11-01');
+    return renderHook(() =>
+      useRefreshNotices({
+        connected: true,
+        totals,
+        processedData: advanced,
+        currentPlan: totals.bestPlan,
+        refreshTick: 0,
+        pushTopics,
+      }),
+    );
+  };
+
+  it('knows which topics a push would already deliver', () => {
+    // `oeb_rates` has a live producer (the server's rates poll) …
+    expect(pushCoversNotice('rate-change', ['oeb_rates'])).toBe(true);
+    expect(pushCoversNotice('rate-change', ['plan_change'])).toBe(false);
+    // … `plan_change` does not yet, so push cannot be what tells the user
+    // about it — the on-device alert stays until that producer lands.
+    expect(pushCoversNotice('plan-change', ['plan_change'])).toBe(false);
+    expect(pushCoversNotice('plan-change', ['oeb_rates'])).toBe(false);
+    // No subscription ⇒ push covers nothing.
+    expect(pushCoversNotice('rate-change', [])).toBe(false);
+  });
+
+  it('lets push own the event when its topic is subscribed: no double pop', () => {
+    localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, '1');
+    FakeNotification.permission = 'granted';
+
+    const { result } = rateHook(['oeb_rates']);
+
+    // The notice still exists — the banner always renders — but the system
+    // notification does not: push (governed by the cap and quiet hours)
+    // already carries it.
+    expect(result.current.notices.map((n) => n.kind)).toEqual(['rate-change']);
+    expect(FakeNotification.raised).toEqual([]);
+    // It is still marked as told, so turning push off later does not
+    // retro-notify an event the user has already been given.
+    expect(localStorage.getItem(NOTIFIED_KEY)).toBe(result.current.notices[0].id);
+  });
+
+  it('keeps the on-device alert when push does not cover the topic', () => {
+    localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, '1');
+    FakeNotification.permission = 'granted';
+
+    const { result } = rateHook([]);
+
+    expect(FakeNotification.raised).toHaveLength(1);
+    expect(result.current.notices).toHaveLength(1);
+  });
+
+  it('never suppresses a topic with no producer (plan_change today)', () => {
+    localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, '1');
+    FakeNotification.permission = 'granted';
+
+    const processed = June2025();
+    const tot = calculateFullDataTotals(processed)!;
+    renderHook(() =>
+      useRefreshNotices({
+        connected: true,
+        totals: tot,
+        processedData: processed,
+        currentPlan: (['Tiered', 'TOU', 'ULO'] as const).find((p) => p !== tot.bestPlan)!,
+        refreshTick: 0,
+        // Subscribed to it anyway — but nothing emits it, so nothing pushed.
+        pushTopics: ['plan_change'],
+      }),
+    );
+
+    expect(FakeNotification.raised).toHaveLength(1);
   });
 });

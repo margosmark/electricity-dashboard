@@ -11,8 +11,12 @@
  * there; this component only renders whatever it is handed, which is why the
  * e2e can drive it by writing an acknowledgement and letting a refresh run.
  *
- * The honesty line is not decoration: without an account server nothing in
- * here can reach the user by email or SMS. On-device only.
+ * The honesty line is not decoration, and it is deliberately STATE-FREE: this
+ * banner lives in `Dashboard`, which must not have to hold the account state
+ * just to stay truthful, and the sentence it replaces ("no account, so no
+ * email or SMS") went false the moment someone signed in with push on. The
+ * product has no email and no SMS in any state, so the line can simply say
+ * that.
  */
 
 "use client";
@@ -51,7 +55,7 @@ function PlanNotice({
           {notice.detail} · Recomputed across your whole dataset after the latest refresh.
         </p>
         <p className="text-[9px] md:text-[10px] font-black uppercase text-emerald-950/70">
-          Alerts stay in this browser — no account, so no email or SMS.
+          No email or SMS — this app never sends either.
         </p>
       </div>
       <div className="flex flex-wrap gap-2 ml-auto">

@@ -32,6 +32,7 @@ import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import { NotificationToggle } from '@/components/NotificationToggle';
+import { useAccount } from '@/hooks/useAccount';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import ChartView from '@/components/ChartView';
 import InsightsView from '@/components/InsightsView';
@@ -61,6 +62,17 @@ export default function Dashboard() {
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
+
+  /* --- Wave N + the Alerts merge: ONE account state machine -------------
+   * Both the account drawer and the Alerts drawer need it, and a second
+   * `useAccount()` would mean a second `GET /account/session`, a second key
+   * derivation and a second auto-push interval over the same localStorage.
+   * It is created HERE, once, and handed down.
+   */
+  const account = useAccount({ onDataApplied: () => window.location.reload() });
+  /** Bumped by the Alerts drawer's "Sign in to use push" — opens the account
+   *  drawer. A counter, not a boolean, so it works twice in a row. */
+  const [accountOpenSignal, setAccountOpenSignal] = React.useState(0);
 
   const [showFloorHelp, setShowFloorHelp] = React.useState(false);
   // Wave H item 2: the plan is a stored fact shared with the header chip,
@@ -213,12 +225,22 @@ export default function Dashboard() {
    * manual-DMD-only browser gets an empty array and no storage writes.
    */
   const gbConnected = gbStatus?.connected === true;
+  /** Topics a live push subscription would already deliver — see
+   *  `useRefreshNotices`: one event, at most one system notification. */
+  const pushTopics = React.useMemo(
+    () =>
+      account.status.subscriptionCount > 0 && account.status.prefs
+        ? account.status.prefs.topics
+        : [],
+    [account.status.subscriptionCount, account.status.prefs],
+  );
   const { notices: refreshNotices, dismiss: dismissRefreshNotice } = useRefreshNotices({
     connected: gbConnected,
     totals,
     processedData,
     currentPlan: userPlan,
     refreshTick: gbRefreshTick,
+    pushTopics,
   });
 
   // Ranked ToU-shift recommendations. Analyzes the FULL loaded dataset (not
@@ -473,8 +495,13 @@ export default function Dashboard() {
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
-          <NotificationToggle connected={gbConnected} backgroundSync={backgroundSync} />
-          <AccountControls onDataApplied={() => window.location.reload()} />
+          <NotificationToggle
+            connected={gbConnected}
+            backgroundSync={backgroundSync}
+            account={account}
+            onSignIn={() => setAccountOpenSignal((n) => n + 1)}
+          />
+          <AccountControls account={account} openSignal={accountOpenSignal} />
           <GreenButtonSync
              variant="chip"
              status={gbStatus}

@@ -38,6 +38,7 @@ import {
   importSessionKey,
 } from "@/lib/account/crypto";
 import * as sync from "@/lib/account/sync";
+import { acquireSession, releaseSession } from "@/hooks/useAccountFeature";
 import { requestBrowserPermission } from "@/lib/notifications";
 import { parseBackup, serializeBackup } from "@/lib/backup";
 
@@ -302,7 +303,15 @@ export function useAccount(options: Options = {}) {
     [loadKeyIfPresent, reconcile],
   );
 
-  const probe = useCallback(async () => {
+  /**
+   * Re-read the session from the server.
+   *
+   * Deliberately NOT the shared page-load probe: that one is held for as
+   * long as the page is open and is shared with the bell gate and the
+   * account drawer (`hooks/useAccountFeature.ts`). Something calling
+   * `refresh` explicitly wants a NEW answer, so it fetches for itself.
+   */
+  const refresh = useCallback(async () => {
     try {
       await applySessionInfo(await api.fetchSession());
     } catch {
@@ -317,11 +326,30 @@ export function useAccount(options: Options = {}) {
   useEffect(() => {
     // Once per mount: the probe is the feature flag — 404/502/unreachable all
     // mean "this deployment has no account system", so the controls stay off
-    // the page. The async IIFE is the `useRateStaleness` shape: no state can
-    // be touched before the first suspension point.
-    void (async () => {
-      await probe();
-    })();
+    // the page. It is the SHARED probe: `acquireSession()` hands back the
+    // same in-flight `GET /account/session` the bell gate reads, so a page
+    // load makes exactly one of them (three consumers, one request).
+    const session = acquireSession();
+    let live = true;
+    void session
+      .then((info) => {
+        if (!live) return;
+        if (info === null) {
+          setStatus({ ...INITIAL, probed: true, enabled: false });
+          return null;
+        }
+        return applySessionInfo(info);
+      })
+      .catch(() => {
+        if (live) setStatus({ ...INITIAL, probed: true, enabled: false });
+      });
+    return () => {
+      // Release on UNMOUNT, not when the answer lands: consumers that mount
+      // later in the same page load must reuse it, and the NEXT page (or the
+      // next test) must ask again rather than read a stale answer.
+      live = false;
+      releaseSession();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -601,7 +629,7 @@ export function useAccount(options: Options = {}) {
   const enableNotifications = useCallback(async (): Promise<boolean> => {
     const publicKey = status.pushConfigured ? status.vapidPublicKey : null;
     if (!publicKey) {
-      say("error", "This server has no VAPID keys, so notifications are not enabled.");
+      say("error", "This server has no VAPID keys yet, so push cannot be delivered.");
       return false;
     }
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -618,8 +646,8 @@ export function useAccount(options: Options = {}) {
         say(
           "error",
           permission === "unsupported"
-            ? "This browser cannot show notifications."
-            : "Notifications were blocked in the browser.",
+            ? "This browser cannot raise notifications."
+            : "The browser blocked notifications for this site \u2014 allow them for this site in your browser settings.",
         );
         return false;
       }
@@ -638,10 +666,10 @@ export function useAccount(options: Options = {}) {
         keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
       });
       setStatus((s) => ({ ...s, subscriptionCount: res.subscriptions }));
-      say("ok", "Notifications enabled.");
+      say("ok", "Push on.");
       return true;
     } catch (e) {
-      say("error", `Could not enable notifications: ${e instanceof Error ? e.message : String(e)}`);
+      say("error", `Could not turn on push: ${e instanceof Error ? e.message : String(e)}`);
       return false;
     }
   }, [say, status.pushConfigured, status.vapidPublicKey]);
@@ -658,9 +686,9 @@ export function useAccount(options: Options = {}) {
         }
       }
       setStatus((s) => ({ ...s, subscriptionCount: 0 }));
-      say("ok", "Notifications turned off.");
+      say("ok", "Push off.");
     } catch {
-      say("error", "Could not turn notifications off.");
+      say("error", "Could not turn push off.");
     }
   }, [say]);
 
@@ -673,9 +701,9 @@ export function useAccount(options: Options = {}) {
         // who is not on UTC.
         const res = await api.putPrefs({ ...prefs, tzOffset: -new Date().getTimezoneOffset() });
         setStatus((s) => ({ ...s, prefs: res.prefs }));
-        say("ok", "Notification preferences saved.");
+        say("ok", "Push preferences saved.");
       } catch {
-        say("error", "Could not save notification preferences.");
+        say("error", "Could not save push preferences.");
       } finally {
         setBusy(false);
       }
@@ -695,7 +723,7 @@ export function useAccount(options: Options = {}) {
     notify: say,
     dismissMessage: () => setMessage(null),
     dismissRecoveryCode: () => setRecoveryCode(null),
-    refresh: probe,
+    refresh,
     signIn,
     signUp,
     signOut,
@@ -712,6 +740,17 @@ export function useAccount(options: Options = {}) {
 }
 
 /* -------------------------------------------------------------------------- */
+
+/**
+ * The account state machine, as a prop.
+ *
+ * `Dashboard` owns exactly ONE instance and hands it to the two surfaces that
+ * need it — `AccountControls` (sign in / backup / sync) and
+ * `NotificationToggle` (the merged Alerts drawer, which owns the push
+ * channel). Two instances would mean two probes, two key derivations, two
+ * auto-push intervals and two writes racing over the same localStorage.
+ */
+export type AccountApi = ReturnType<typeof useAccount>;
 
 /** Human-readable auth failures, one per server code — no raw codes in UI. */
 function describeAuthError(code: string): string {

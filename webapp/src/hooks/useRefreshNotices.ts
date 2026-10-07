@@ -18,6 +18,12 @@
  * consequently has NO setState in it: its two jobs are exactly the ones
  * effects exist for — writing to an external system, and firing one alert.
  *
+ * ONE EVENT, AT MOST ONE SYSTEM NOTIFICATION: the effect below also skips
+ * `showNotification` for a notice whose topic a live push subscription
+ * already covers (`pushTopics`), because push is the channel governed by the
+ * daily cap and quiet hours — firing both would double-pop AND bypass those
+ * rules. The banner always renders; it is not a system notification.
+ *
  * GATE: `connected` (the `gb_session` cookie) short-circuits everything. A
  * manual-DMD-only browser gets an empty array and no storage writes at all —
  * scope 4 of the card, enforced inside `buildRefreshNotices` so the rule
@@ -38,6 +44,40 @@ import {
   type RefreshNotice,
 } from '@/lib/backgroundRefresh';
 import { showNotification } from '@/lib/notifications';
+import { topicHasProducer } from '@/lib/account/topics';
+
+const NO_PUSH_TOPICS: string[] = [];
+
+/**
+ * Which push topic each notice kind would raise.
+ *
+ * The dedup guard below asks "would push already tell the user about this?"
+ * — and a topic with no producer cannot, so `plan_change` (Wave M's
+ * detector, which posts nothing) keeps its on-device alert until its
+ * producer lands. Remove nothing here by hand: `topicHasProducer` is the
+ * same table the drawer renders its disabled checkbox rows from.
+ */
+const NOTICE_TOPIC: Record<RefreshNotice['kind'], string> = {
+  'plan-change': 'plan_change',
+  'rate-change': 'oeb_rates',
+};
+
+/**
+ * Is this notice already covered by a live push subscription?
+ *
+ * One event must reach the user at most ONCE as a system notification: push
+ * is the channel governed by the daily cap and quiet hours, so letting the
+ * on-device alert fire alongside it would double-pop AND bypass those rules.
+ * The banner always renders either way — it is not a system notification.
+ *
+ * Stated consequence, not hidden: if the server suppresses the push (cap or
+ * quiet hours) the user gets the banner and no system notification. That is
+ * what the cap and the quiet hours asked for.
+ */
+export function pushCoversNotice(kind: RefreshNotice['kind'], pushTopics: string[]): boolean {
+  const topic = NOTICE_TOPIC[kind];
+  return topicHasProducer(topic) && pushTopics.includes(topic);
+}
 
 function readKey(key: string): string | null {
   try {
@@ -69,8 +109,15 @@ export function useRefreshNotices(input: {
   currentPlan: PlanId;
   /** Incremented by useEnergyData after every background refresh. */
   refreshTick: number;
+  /**
+   * Topics a live, subscribed push would already deliver (empty when push is
+   * off). Read from the shared account state, so turning push on mid-session
+   * is picked up without a reload.
+   */
+  pushTopics?: string[];
 }): RefreshNoticeState {
   const { connected, totals, processedData, currentPlan, refreshTick } = input;
+  const pushTopics = input.pushTopics ?? NO_PUSH_TOPICS;
 
   // Bumped only from an event handler (a dismissal), never from an effect.
   const [revision, setRevision] = useState(0);
@@ -117,11 +164,15 @@ export function useRefreshNotices(input: {
     for (const notice of derived.notices) {
       const notified = notifiedRef.current;
       if (!notified || notified.has(notice.id)) continue;
+      // Mark it EITHER way: push already told the user (or is about to), so
+      // turning push off again must not retro-notify an event they have
+      // already been told about.
       notified.add(notice.id);
       writeKey(NOTIFIED_KEY, notice.id);
+      if (pushCoversNotice(notice.kind, pushTopics)) continue;
       showNotification(notificationPayload(notice));
     }
-  }, [derived]);
+  }, [derived, pushTopics]);
 
   const dismiss = useCallback(
     (id: string) => {
