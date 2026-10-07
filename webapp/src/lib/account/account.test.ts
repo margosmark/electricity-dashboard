@@ -21,6 +21,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { resetAccountConfigCache, getAccountConfig, MAX_SYNC_BYTES } from "./config";
 import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS } from "./db";
 import { resetAccountServices } from "./services";
+import { resetRateLimits, LIMITS } from "./ratelimit";
 import { decide, inQuietHours, localDayStart } from "./push";
 import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, newRecoveryCode, normalizeRecoveryCode } from "./auth";
 
@@ -32,6 +33,7 @@ import * as syncRoute from "@/app/account/sync/route";
 import * as notifyRoute from "@/app/account/notify/route";
 import * as internalNotifyRoute from "@/app/account/internal/notify/route";
 import * as prefsRoute from "@/app/account/push/preferences/route";
+import * as subscribeRoute from "@/app/account/push/subscribe/route";
 
 const BASE = "https://electricity.markarslan.ca";
 
@@ -76,6 +78,10 @@ beforeEach(() => {
   rmSync(`${process.env.ACCT_DB_PATH!}-wal`, { force: true });
   rmSync(`${process.env.ACCT_DB_PATH!}-shm`, { force: true });
   resetAccountConfigCache();
+  // The attempt budget is process state, not database state: a fresh DB with
+  // stale buckets would make the rate-limit cases pass or fail for the wrong
+  // reason (and would let one test's failures leak into the next one's).
+  resetRateLimits();
 });
 
 afterEach(() => {
@@ -548,6 +554,76 @@ describe("session-authed notify", () => {
     expect(ok.status).toBe(200);
     expect((await ok.json()) as { sent: number }).toMatchObject({ sent: 0 });
   });
+
+  it("reaches the CALLER's account only — never every account (round-1 H1)", async () => {
+    const ann = await register("ann@example.com");
+    const bob = await register("bob@example.com");
+    const db = openDb(getAccountConfig().dbPath);
+    const idOf = (email: string) =>
+      (db.prepare("SELECT id FROM accounts WHERE email = ?").get(email) as { id: number }).id;
+    const annId = idOf("ann@example.com");
+    const bobId = idOf("bob@example.com");
+
+    // BOTH accounts subscribe. Under the old `fanOut(cfg, db, payload)` — no
+    // target argument — one POST from Ann produced a send attempt against
+    // Bob's endpoint with Ann's usage-derived text in it.
+    for (const id of [annId, bobId]) {
+      db.prepare(
+        "INSERT INTO push_subs (account_id, endpoint, p256dh, auth, created_at, failures) VALUES (?, ?, ?, ?, ?, 0)",
+      ).run(id, `https://push.example/device-${id}`, "p256dh", "auth", Date.now());
+    }
+
+    const res = await notifyRoute.POST(
+      post(
+        `${BASE}/account/notify`,
+        { topic: "anomaly", title: "Unusual usage on Oct 3", body: "42 kWh that day — about 2.3x the usual." },
+        ann.cookie,
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { sent: number }).toMatchObject({ sent: 0 });
+
+    const rows = () =>
+      db.prepare("SELECT account_id FROM notify_log ORDER BY id").all() as { account_id: number }[];
+    // Exactly one decision was made, and it was Ann's: no log row, no send
+    // attempt, no interval consumed on Bob's side.
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].account_id).toBe(annId);
+
+    // Bob's own notification is decided from scratch afterwards.
+    const bobRes = await notifyRoute.POST(
+      post(`${BASE}/account/notify`, { topic: "anomaly", title: "Something else" }, bob.cookie),
+    );
+    expect(bobRes.status).toBe(200);
+    expect(rows().filter((r) => r.account_id === bobId)).toHaveLength(1);
+    expect(rows().filter((r) => r.account_id === annId)).toHaveLength(1);
+  });
+
+  it("refuses a SERVER-origin topic from a browser session", async () => {
+    const { cookie } = await register();
+    const res = await notifyRoute.POST(
+      post(`${BASE}/account/notify`, { topic: "oeb_rates", title: "New rates" }, cookie),
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_topic");
+    // Nothing was decided, so nothing was logged against the caller's cap.
+    const db = openDb(getAccountConfig().dbPath);
+    expect((db.prepare("SELECT COUNT(*) AS n FROM notify_log").get() as { n: number }).n).toBe(0);
+  });
+
+  it("refuses a CLIENT-origin topic on the internal (shim) route", async () => {
+    await register("internal@example.com");
+    const res = await internalNotifyRoute.POST(
+      post(
+        `${BASE}/account/internal/notify`,
+        { topic: "anomaly", title: "not the shim's business" },
+        undefined,
+        { "x-account-internal": "internal-token-for-tests" },
+      ),
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_topic");
+  });
 });
 
 /* ==========================================================================
@@ -774,6 +850,182 @@ describe("auth primitives", () => {
     const row = db.prepare("SELECT token_hash FROM sessions").get() as { token_hash: string };
     expect(row.token_hash).not.toBe(token);
     expect(row.token_hash).toBe(createHash("sha256").update(token).digest("hex"));
+  });
+});
+
+/* ==========================================================================
+ * Attempt budget — the three unauthenticated endpoints (round-1 M2)
+ * ========================================================================== */
+
+describe("attempt budget", () => {
+  const badLogin = (email: string) =>
+    loginRoute.POST(post(`${BASE}/account/login`, { email, password: "definitely-not-it" }));
+
+  it("answers 401 for each guess, then 429 with Retry-After once the address budget is spent", async () => {
+    await register("budget@example.com");
+    const capacity = LIMITS.loginIdentity.capacity;
+    for (let i = 0; i < capacity; i++) {
+      const res = await badLogin("budget@example.com");
+      expect(res.status).toBe(401);
+    }
+    const blocked = await badLogin("budget@example.com");
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).toBeTruthy();
+    const payload = (await blocked.json()) as { error: string; retryAfterSeconds: number };
+    expect(payload.error).toBe("rate_limited");
+    expect(payload.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    // The answer is a wait, not a lockout: a different address is unaffected
+    // and the budget refills instead of demanding an operator.
+    const other = await badLogin("somebody-else@example.com");
+    expect(other.status).toBe(401);
+  });
+
+  it("refuses BEFORE the argon2 work, not after it", async () => {
+    await register("fast@example.com");
+    for (let i = 0; i < LIMITS.loginIdentity.capacity; i++) await badLogin("fast@example.com");
+
+    const t0 = process.hrtime.bigint();
+    const blocked = await badLogin("fast@example.com");
+    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    expect(blocked.status).toBe(429);
+    // A verification costs ~17 ms; a refused one costs nothing measurable.
+    expect(ms).toBeLessThan(5);
+  });
+
+  it("hands the address budget back when the password is correct", async () => {
+    await register("recovers@example.com");
+    for (let i = 0; i < LIMITS.loginIdentity.capacity - 1; i++) {
+      expect((await badLogin("recovers@example.com")).status).toBe(401);
+    }
+    const ok = await loginRoute.POST(
+      post(`${BASE}/account/login`, { email: "recovers@example.com", password: "correct-horse-battery" }),
+    );
+    expect(ok.status).toBe(200);
+    // Budget refunded: the next mistake is a plain 401 again, not a 429.
+    expect((await badLogin("recovers@example.com")).status).toBe(401);
+  });
+
+  it("budgets /account/recover and /account/register too", async () => {
+    await register("recovery-budget@example.com", "correct-horse-battery", true);
+    const recover = () =>
+      import("@/app/account/recover/route").then((m) =>
+        m.POST(
+          post(`${BASE}/account/recover`, {
+            email: "recovery-budget@example.com",
+            recoveryCode: "AAAAA-BBBBB-CCCCC-DDDDD",
+            newPassword: "a-brand-new-password",
+          }),
+        ),
+      );
+    for (let i = 0; i < LIMITS.recoverIdentity.capacity; i++) {
+      expect((await recover()).status).toBe(401);
+    }
+    expect((await recover()).status).toBe(429);
+
+    // Registration: a duplicate e-mail is a cheap 409 that still counts.
+    const duplicate = () =>
+      registerRoute.POST(
+        post(`${BASE}/account/register`, { email: "recovery-budget@example.com", password: "correct-horse-battery" }),
+      );
+    for (let i = 0; i < LIMITS.registerGlobal.capacity; i++) {
+      expect((await duplicate()).status).toBe(409);
+    }
+    expect((await duplicate()).status).toBe(429);
+  });
+});
+
+/* ==========================================================================
+ * Session rotation — a token may only be minted where it is applied (L1)
+ * ========================================================================== */
+
+describe("session rotation", () => {
+  it("never rotates on a route that cannot set the cookie, and always does on /account/session", async () => {
+    const { cookie } = await register();
+    const db = openDb(getAccountConfig().dbPath);
+    const age = () =>
+      db.prepare("UPDATE sessions SET last_seen_at = ?").run(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const syncGet = () =>
+      syncRoute.GET(new Request(`${BASE}/account/sync`, { headers: { cookie: cookie! } }));
+
+    age();
+    const first = await syncGet();
+    expect(first.status).toBe(200);
+    // A rotation would have handed back a replacement; `sync` never does.
+    expect(first.headers.get("set-cookie")).toBeNull();
+    // …and the proof that no orphaned row was left behind: the SAME cookie
+    // still authenticates on the next request.
+    expect((await syncGet()).status).toBe(200);
+
+    age();
+    const probe = await sessionRoute.GET(
+      new Request(`${BASE}/account/session`, { headers: { cookie: cookie! } }),
+    );
+    expect(probe.status).toBe(200);
+    const rotated = sessionCookie(probe);
+    expect(rotated).toBeTruthy();
+    expect(`acct_session=${rotated}`).not.toBe(cookie);
+
+    expect(
+      (await syncRoute.GET(
+        new Request(`${BASE}/account/sync`, { headers: { cookie: `acct_session=${rotated}` } }),
+      )).status,
+    ).toBe(200);
+    // The old value was replaced, not duplicated: it is dead now.
+    expect((await syncGet()).status).toBe(401);
+  });
+});
+
+/* ==========================================================================
+ * Push endpoints are bound to the account that registered them (L2)
+ * ========================================================================== */
+
+describe("push endpoint ownership", () => {
+  const subBody = (endpoint: string) => ({ endpoint, keys: { p256dh: "p256dh-key", auth: "auth-key" } });
+
+  it("refuses to re-point an endpoint another account already owns", async () => {
+    process.env.VAPID_PUBLIC_KEY = "test-public-key";
+    process.env.VAPID_PRIVATE_KEY = "test-private-key";
+    resetAccountConfigCache();
+    try {
+      const ann = await register("ann-own@example.com");
+      const bob = await register("bob-own@example.com");
+      const db = openDb(getAccountConfig().dbPath);
+      const ownerOf = (endpoint: string) =>
+        (db.prepare("SELECT account_id FROM push_subs WHERE endpoint = ?").get(endpoint) as
+          | { account_id: number }
+          | undefined)?.account_id ?? null;
+      const endpoint = "https://push.example/one-device";
+
+      expect((await subscribeRoute.POST(post(`${BASE}/account/push/subscribe`, subBody(endpoint), ann.cookie))).status)
+        .toBe(201);
+
+      const stolen = await subscribeRoute.POST(
+        post(`${BASE}/account/push/subscribe`, subBody(endpoint), bob.cookie),
+      );
+      expect(stolen.status).toBe(409);
+      expect(((await stolen.json()) as { error: string }).error).toBe("endpoint_taken");
+      expect(ownerOf(endpoint)).toBe(
+        (db.prepare("SELECT id FROM accounts WHERE email = ?").get("ann-own@example.com") as { id: number }).id,
+      );
+
+      // The owner may still refresh her own keys…
+      expect((await subscribeRoute.POST(post(`${BASE}/account/push/subscribe`, subBody(endpoint), ann.cookie))).status)
+        .toBe(201);
+      // …and somebody else's DELETE cannot remove her subscription either.
+      const removed = await subscribeRoute.DELETE(
+        new Request(`${BASE}/account/push/subscribe`, {
+          method: "DELETE",
+          headers: { "content-type": "application/json", origin: BASE, cookie: bob.cookie! },
+          body: JSON.stringify({ endpoint }),
+        }),
+      );
+      expect(removed.status).toBe(200);
+      expect(ownerOf(endpoint)).not.toBeNull();
+    } finally {
+      delete process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PRIVATE_KEY;
+      resetAccountConfigCache();
+    }
   });
 });
 

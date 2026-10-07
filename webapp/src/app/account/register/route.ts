@@ -4,8 +4,15 @@
  * No third-party identity provider, no e-mail verification, no invitation
  * loop: this is a self-hosted, family-scale tool and pretending otherwise
  * would mean standing up an IdP for two users (scope fence from the card).
- * The deployment sits behind the Pangolin PIN gate, and `ACCT_MAX_ACCOUNTS`
- * caps how many accounts a single unauthenticated caller can create.
+ * `ACCT_MAX_ACCOUNTS` caps how many accounts exist at all, and this handler
+ * refuses after a bounded number of attempts per source (see
+ * `lib/account/ratelimit.ts`).
+ *
+ * The Pangolin PIN gate is NOT counted as a first lock here: measured from
+ * the public internet on 2026-10-07 with no cookies, `GET /` answered 200
+ * straight through (`x-edge-location: default`, `x-gb-process: app`) with no
+ * challenge, so this endpoint is the only one an unauthenticated stranger
+ * meets. That measurement is recorded in SECURITY.md §5 rather than assumed.
  *
  * Response carries three things the browser cannot get any other way:
  *
@@ -30,6 +37,7 @@ import {
   applySessionCookie,
   getDb,
   isConfig,
+  rateLimitError,
   readJsonSmall,
   rejectCrossOrigin,
   requireEnabled,
@@ -42,6 +50,7 @@ import {
   normalizeEmail,
   validatePassword,
 } from "@/lib/account/auth";
+import { checkAttempts, refundAttempts, registerAttempts, spendAttempts } from "@/lib/account/ratelimit";
 
 export async function POST(request: Request): Promise<Response> {
   const cfg = requireEnabled();
@@ -57,11 +66,19 @@ export async function POST(request: Request): Promise<Response> {
   const password = validatePassword((body.value as { password?: unknown } | null)?.password);
   if (!password.ok) return accountError(400, "invalid_password", password.error);
 
+  // Registration is the ONLY unauthenticated endpoint that creates state, so
+  // it gets the same brake as login — a stranger does not get an unbounded
+  // number of attempts at the account ceiling (see `ratelimit.ts`).
+  const attempts = registerAttempts(request);
+  const verdict = checkAttempts(attempts);
+  if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
+
   const hasLocalData = (body.value as { hasLocalData?: unknown } | null)?.hasLocalData === true;
 
   const db = getDb(cfg);
   const count = (db.prepare("SELECT COUNT(*) AS n FROM accounts").get() as { n: number }).n;
   if (count >= cfg.maxAccounts) {
+    spendAttempts(attempts);
     return accountError(
       403,
       "account_limit",
@@ -73,6 +90,7 @@ export async function POST(request: Request): Promise<Response> {
     // is NOT applied here — registration must tell you the name is taken,
     // otherwise the flow is unusable. There is no e-mail to send a
     // "someone tried to register" notice through anyway.
+    spendAttempts(attempts);
     return accountError(409, "email_taken", "An account already exists for that e-mail address.");
   }
 
@@ -91,8 +109,12 @@ export async function POST(request: Request): Promise<Response> {
       recoveryHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null,
     });
   } catch {
+    spendAttempts(attempts);
     return accountError(409, "email_taken", "An account already exists for that e-mail address.");
   }
+
+  // A completed registration hands the budget back — see `refundAttempts`.
+  refundAttempts(attempts);
 
   const session = newSessionToken();
   insertSession(db, session.hash, accountId, cfg.sessionTtlMs);

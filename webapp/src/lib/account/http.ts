@@ -54,6 +54,28 @@ export function accountError(status: number, error: string, detail?: string): Ne
 }
 
 /**
+ * 429 with a machine-readable `Retry-After`.
+ *
+ * The number appears three times on purpose: as the header (what HTTP
+ * clients read), as `retryAfterSeconds` (what our `fetch` wrapper can pass
+ * on without parsing headers), and inside `detail` (what a human reads).
+ * `ratelimit.ts#peek` never answers below 1 second.
+ */
+export function rateLimitError(retryAfterSeconds: number): NextResponse {
+  const seconds = Math.max(1, Math.ceil(retryAfterSeconds));
+  const res = accountJson(
+    {
+      error: "rate_limited",
+      detail: `Too many attempts. Try again in ${seconds} second${seconds === 1 ? "" : "s"}.`,
+      retryAfterSeconds: seconds,
+    },
+    { status: 429 },
+  );
+  res.headers.set("retry-after", String(seconds));
+  return res;
+}
+
+/**
  * Gate 1. Returns the config when this process is the account server,
  * otherwise a 404 Response the caller returns as-is.
  *
@@ -165,6 +187,24 @@ export type Authenticated = {
   extended: boolean;
 };
 
+/**
+ * Rotation is OPT-IN per route, and the default must stay `false`.
+ *
+ * Rotating mints a new token, deletes the old row and hands the new value
+ * back for the caller to put in a `Set-Cookie`. A route that forgets to do
+ * that hands the browser a cookie whose row no longer exists: the next
+ * request 401s as "session expired" and an orphaned, live session row sits
+ * in the database that nobody holds a token for. That is exactly the defect
+ * security review round 1 found (L1), so the safe failure is now the default:
+ * only `GET /account/session` — the one route that both rotates and applies
+ * the cookie — passes `{ rotate: true }`.
+ *
+ * Everything else still slides the row's expiry (`touchSession`), so a busy
+ * session never expires server-side; it simply keeps the same token until
+ * the next session probe refreshes it.
+ */
+export type SessionGateOptions = { rotate?: boolean };
+
 /* --------------------------------------------------------------------------
  * Union guards — the two "gate returned a response" shapes, so route handlers
  * read as `if (!isOk(auth)) return auth;` instead of duck-typing NextResponse.
@@ -181,12 +221,17 @@ export function isAuth(value: Authenticated | NextResponse): value is Authentica
 /**
  * Resolve the session cookie to an account.
  *
- * Rotation: a session untouched for more than a day is re-minted, so the
- * value in the browser is never the value it held last month. Rotation
- * happens on a request that was already authenticated with the old value,
- * so it cannot be used to enumerate sessions.
+ * Rotation (opt-in, `options.rotate`): a session untouched for more than a
+ * day is re-minted, so the value in the browser is never the value it held
+ * last month. Rotation happens on a request that was already authenticated
+ * with the old value, so it cannot be used to enumerate sessions — and only
+ * a route that writes the resulting `Set-Cookie` may ask for it.
  */
-export function requireSession(request: Request, cfg: AccountConfig): Authenticated | NextResponse {
+export function requireSession(
+  request: Request,
+  cfg: AccountConfig,
+  options: SessionGateOptions = {},
+): Authenticated | NextResponse {
   const token = readCookie(request, SESSION_COOKIE);
   if (!token) return accountError(401, "session_required");
 
@@ -203,7 +248,9 @@ export function requireSession(request: Request, cfg: AccountConfig): Authentica
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   let rotatedToken: string | null = null;
-  const stale = now - row.last_seen_at > dayMs;
+  // Rotation only where the caller asked for it AND can apply it — see
+  // `SessionGateOptions`.
+  const stale = options.rotate === true && now - row.last_seen_at > dayMs;
 
   let sessionHash = row.token_hash;
   if (stale) {

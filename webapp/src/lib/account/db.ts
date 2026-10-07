@@ -14,9 +14,24 @@
  *           KDF salt (a salt is not a secret), the ciphertext blob, push
  *           subscription endpoints, notification preferences, an audit log.
  *   never    readings, plaintext, passwords, session tokens in the clear,
- *           or anything derived from the user's usage. Under client-side
- *           E2EE (see `lib/account/crypto.ts` on the browser side) the
- *           ciphertext column is opaque to every line of this file.
+ *           or the dataset in any form. Under client-side E2EE (see
+ *           `lib/account/crypto.ts` on the browser side) the ciphertext
+ *           column is opaque to every line of this file.
+ *
+ * THE ONE CARVE-OUT, STATED BECAUSE THE REVIEW DEMANDED IT (M3): the
+ * `notify_log.title` column holds the title of a notification, and a
+ * client-origin notification (`plan_change`, `anomaly`) is text the user's
+ * own device composed from their own data — so that column can encode a
+ * usage-derived FACT ("Unusual usage on 3 Oct"). That is the entire content
+ * of such a notification: one line, <= 200 characters per event, written by
+ * the same `logNotify` that records every send and suppression, and it is a
+ * verdict, never a reading, a series, or anything the server could compute a
+ * total from. The notification BODY (which may say "42 kWh, 2.3x usual") is
+ * relayed to the browser and is NOT stored — `logNotify` writes title +
+ * outcome only. The alternative (strip the numbers) was considered and
+ * rejected: a push that cannot say what happened is a worse promise than an
+ * honest one, and the boundary is documented in SECURITY.md §5 instead of
+ * being implied by silence here.
  *
  * Every write is a prepared statement over bound parameters — no string
  * concatenation reaches SQL anywhere in this module.
@@ -154,6 +169,45 @@ export type NotifyTopic = (typeof NOTIFY_TOPICS)[number];
 
 export function isNotifyTopic(value: unknown): value is NotifyTopic {
   return typeof value === "string" && (NOTIFY_TOPICS as readonly string[]).includes(value);
+}
+
+/**
+ * The same four topics, partitioned by WHO IS ALLOWED TO EMIT THEM.
+ *
+ * This is the trigger table from WAVE-N-DESIGN.md §7 as a type guard rather
+ * than as prose. Under client-side E2EE the split is not cosmetic:
+ *
+ *   client-origin  `plan_change`, `anomaly` — computed in the browser from
+ *                  `energy_data`, which the server cannot read. Emitted by
+ *                  `POST /account/notify`, which is SESSION-authenticated and
+ *                  fans out to the CALLER ONLY.
+ *   server-origin  `oeb_rates`, `data_available` — computed from public state
+ *                  (the app's rate payload, the shim's scalars). Emitted by
+ *                  the internal, edge-denied, token-checked route and by the
+ *                  rate watcher, which are the only two places allowed to fan
+ *                  out to every account.
+ *
+ * A browser may not claim a server-origin topic (it would be announcing
+ * something it cannot observe), and the internal route may not accept a
+ * client-origin one (it would be relaying usage-derived text it has no
+ * business originating). Enforcing both directions is what keeps "who fans
+ * out to whom" from ever being decided by whichever route forgot to pass an
+ * argument again.
+ */
+export const CLIENT_NOTIFY_TOPICS = ["plan_change", "anomaly"] as const;
+export const SERVER_NOTIFY_TOPICS = ["oeb_rates", "data_available"] as const;
+
+export function isClientNotifyTopic(value: unknown): value is (typeof CLIENT_NOTIFY_TOPICS)[number] {
+  return typeof value === "string" && (CLIENT_NOTIFY_TOPICS as readonly string[]).includes(value);
+}
+
+export function isServerNotifyTopic(value: unknown): value is (typeof SERVER_NOTIFY_TOPICS)[number] {
+  return typeof value === "string" && (SERVER_NOTIFY_TOPICS as readonly string[]).includes(value);
+}
+
+/** Human-readable list for a 400 body (kept next to the guards it mirrors). */
+export function topicList(topics: readonly string[]): string {
+  return topics.join(", ");
 }
 
 /**
@@ -352,6 +406,24 @@ export function listSubscriptions(db: DatabaseSync, accountId: number): PushSubR
   return db.prepare("SELECT * FROM push_subs WHERE account_id = ?").all(accountId) as unknown as PushSubRow[];
 }
 
+/**
+ * A subscription is owned by the account that created it, and an endpoint is
+ * NOT a secret: it is a URL the device received from a push service. So the
+ * ownership check lives in the SQL — a session that learns somebody else's
+ * endpoint must not be able to re-point it at its own account (that would
+ * both steal the victim's notifications and send the attacker's to them).
+ *
+ * The route additionally reports the conflict as 409 so the user is told
+ * their device is already registered elsewhere, rather than getting a 201
+ * for a subscription that did not move.
+ */
+export function findSubscriptionOwner(db: DatabaseSync, endpoint: string): number | null {
+  const row = db.prepare("SELECT account_id FROM push_subs WHERE endpoint = ?").get(endpoint) as
+    | { account_id: number }
+    | undefined;
+  return row ? row.account_id : null;
+}
+
 export function upsertSubscription(
   db: DatabaseSync,
   accountId: number,
@@ -361,8 +433,8 @@ export function upsertSubscription(
     `INSERT INTO push_subs (account_id, endpoint, p256dh, auth, created_at, failures)
      VALUES (?, ?, ?, ?, ?, 0)
      ON CONFLICT(endpoint) DO UPDATE SET
-       account_id = excluded.account_id, p256dh = excluded.p256dh,
-       auth = excluded.auth, failures = 0`,
+       p256dh = excluded.p256dh, auth = excluded.auth, failures = 0
+     WHERE push_subs.account_id = excluded.account_id`,
   ).run(accountId, input.endpoint, input.p256dh, input.auth, Date.now());
 }
 

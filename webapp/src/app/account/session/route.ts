@@ -30,7 +30,9 @@ export async function GET(request: Request): Promise<Response> {
   const cfg = requireEnabled();
   if (!isConfig(cfg)) return cfg;
 
-  const auth = requireSession(request, cfg);
+  // The ONE route that rotates: it is also the only one that writes the new
+  // value back to `Set-Cookie` (bottom of this handler, `SessionGateOptions`).
+  const auth = requireSession(request, cfg, { rotate: true });
   if (!isAuth(auth)) {
     // Signed out is a 200, not a 401: "the feature exists, you are not in
     // it" is a different answer from "the feature does not exist", and the

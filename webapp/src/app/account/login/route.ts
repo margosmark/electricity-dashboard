@@ -22,6 +22,7 @@ import {
   applySessionCookie,
   getDb,
   isConfig,
+  rateLimitError,
   readJsonSmall,
   rejectCrossOrigin,
   requireEnabled,
@@ -33,6 +34,7 @@ import {
   validatePassword,
   verifyPassword,
 } from "@/lib/account/auth";
+import { checkAttempts, loginAttempts, refundIdentity, spendAttempts } from "@/lib/account/ratelimit";
 
 export async function POST(request: Request): Promise<Response> {
   const cfg = requireEnabled();
@@ -48,6 +50,13 @@ export async function POST(request: Request): Promise<Response> {
   const password = validatePassword((body.value as { password?: unknown } | null)?.password);
   if (!password.ok) return accountError(400, "invalid_password", password.error);
 
+  // Budget first, argon2 second: refusing before the 17 ms hash is the whole
+  // point (see `ratelimit.ts`). Every bucket must still hold a token, and the
+  // answer says how long to wait instead of pretending the password changed.
+  const attempts = loginAttempts(email.value, request);
+  const verdict = checkAttempts(attempts);
+  if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
+
   const db = getDb(cfg);
   const account = findAccountByEmail(db, email.value);
   const ok = account
@@ -55,9 +64,14 @@ export async function POST(request: Request): Promise<Response> {
     : await timingEqualize(password.value);
 
   if (!account || !ok) {
+    // Charge every bucket: this attempt happened, whatever it was aimed at.
+    spendAttempts(attempts);
     // One message for both failure modes — see property (1) above.
     return accountError(401, "invalid_credentials", "That e-mail address and password do not match.");
   }
+  // Correct password: that address was not being guessed, so its bucket is
+  // handed back. The IP and global buckets keep their state on purpose.
+  refundIdentity(attempts);
 
   pruneSessions(db);
   const session = newSessionToken();

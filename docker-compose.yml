@@ -77,10 +77,17 @@ services:
 
 
   # Wave N: the account server. Same image as everything else, different
-  # process — the ONLY container that sees ACCT_* (argon2 password verifiers,
-  # session rows, the SQLite file) and VAPID_* (the push signing key). The
-  # public app gets neither, which is the whole reason this is a separate
-  # service rather than a set of routes in `energy-dashboard`.
+  # process — the container that holds the account database, the argon2
+  # password verifiers, the session rows and the VAPID_* push signing key.
+  # The public app gets none of that, which is the whole reason this is a
+  # separate service rather than a set of routes in `energy-dashboard`.
+  #
+  # "The only container that sees ACCT_*" would be false and the topology
+  # test agrees: `greenbutton-shim` is deliberately given exactly two
+  # account variables (ACCT_NOTIFY_URL, ACCT_INTERNAL_TOKEN, above) so it can
+  # call the internal fan-out over the compose network. What it does NOT get
+  # is ACCT_ENABLED, ACCT_DB_PATH or anything that opens the database — the
+  # claim that matters is "only this container can read account data".
   #
   # Off by default: `ACCT_ENABLED` is false for THIS service and absent from
   # `energy-dashboard` altogether, so every `/account/*` handler answers 404

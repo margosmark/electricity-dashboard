@@ -22,6 +22,16 @@
  * closed tab. The third client-side trigger, `plan_change`, is deliberately
  * NOT here: it belongs to Wave M's plan detector, which posts the same shape
  * to the same endpoint and is capped by the same server-side rules.
+ *
+ * WHAT LEAVES THIS DEVICE (stated because the card demanded it, SECURITY.md
+ * §5): the payload is pre-rendered text — a title ("Unusual usage on Oct 3")
+ * and one sentence that may include the day's total and the ratio. The
+ * server relays it, enforces the caps on it, and stores topic + title +
+ * outcome in `notify_log`; it never receives the readings, the series, or
+ * anything it could total them into. The alternative — stripping the figures
+ * so nothing derived from usage crosses at all — would leave a notification
+ * that says something is wrong without saying what, and a date is already
+ * usage-derived. We chose the honest boundary over the silent one.
  */
 
 "use client";

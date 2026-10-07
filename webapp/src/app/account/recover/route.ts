@@ -34,6 +34,7 @@ import {
   applySessionCookie,
   getDb,
   isConfig,
+  rateLimitError,
   readJsonSmall,
   rejectCrossOrigin,
   requireEnabled,
@@ -48,6 +49,7 @@ import {
   validatePassword,
   verifyRecoveryCode,
 } from "@/lib/account/auth";
+import { checkAttempts, recoverAttempts, refundIdentity, spendAttempts } from "@/lib/account/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +68,12 @@ export async function POST(request: Request): Promise<Response> {
   const password = validatePassword(value.newPassword);
   if (!password.ok) return accountError(400, "invalid_password", password.error);
 
+  // Same brake as login, tighter: this is an argon2 loop against a 100-bit
+  // code — unguessable, but free to run if it is never slowed down.
+  const attempts = recoverAttempts(email.value, request);
+  const verdict = checkAttempts(attempts);
+  if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
+
   const db = getDb(cfg);
   const account = findAccountByEmail(db, email.value);
   const codeOk = account?.recovery_hash
@@ -75,8 +83,10 @@ export async function POST(request: Request): Promise<Response> {
       await verifyRecoveryCode(DUMMY_PASSWORD_HASH, value.recoveryCode);
 
   if (!account || !codeOk) {
+    spendAttempts(attempts);
     return accountError(401, "invalid_recovery", "That e-mail address and recovery code do not match.");
   }
+  refundIdentity(attempts);
 
   const hadBlob = Boolean(getBlob(db, account.id));
   await writePasswordHash(db, account.id, await hashPassword(password.value));

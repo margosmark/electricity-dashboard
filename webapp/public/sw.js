@@ -24,8 +24,28 @@
  *
  * WHY THE PAYLOAD IS TEXT AND NOT DATA: the account server cannot read the
  * user's readings (client-side E2EE), so a push can only ever carry
- * pre-rendered words — a plan name, a date, a rate change. There is no code
- * path here that renders a number the server computed from usage.
+ * pre-rendered words — a plan name, a date, a rate change. Nothing in this
+ * file computes, parses or re-renders any of it: the worker displays the
+ * string it was handed, and `notificationclick` only navigates same-origin.
+ *
+ * WHERE THAT TEXT CAME FROM — two sources, not the same trust
+ * (the full statement is SECURITY.md §5, "what a notification may carry"):
+ *
+ *  - SERVER-origin (`oeb_rates`, `data_available`): composed by the account
+ *    server from public state — the app's rate payload, the shim's scalars.
+ *    No reading is involved at any point.
+ *  - CLIENT-origin (`anomaly`, `plan_change`): composed by the user's OWN
+ *    browser from their own `energy_data` and handed to the server to relay,
+ *    because under E2EE the server cannot compute it. A body from this
+ *    source may therefore contain a figure the browser chose to include
+ *    ("42 kWh, about 2.3x the usual"). The server relayed that string
+ *    verbatim and stored only topic + title + outcome; it never derived,
+ *    computed, or persisted a total of its own.
+ *
+ * So the honest version of "no number from usage renders here" is: this
+ * worker never derives one, and no number the SERVER computed from usage
+ * can reach here. A number the user's own device wrote and asked to send
+ * can — that is the trade the E2EE boundary was documented to allow.
  *
  * WAVE M — PERIODIC BACKGROUND SYNC:
  *  - `periodicsync` (tag `greenbutton-refresh`) fetches the piped feed using

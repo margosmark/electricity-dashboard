@@ -152,10 +152,13 @@ tab is visible. Nothing is stored server-side between those calls.
 ## Account server (Wave N) — multi-device sync + Web Push
 
 A fourth container (`account-server`), same image, started by `docker compose
-up -d`. It is the only process given `ACCT_*` (argon2 verifiers, session rows,
-the SQLite file) and `VAPID_*` (the push signing key); the dashboard container
-gets neither, which is why `/account/*` answers **404** on the public app
-process by design. **The feature is off until you turn it on:** `ACCT_ENABLED`
+up -d`. It is the only process that holds the account database — argon2
+verifiers, session rows, the SQLite file — plus `VAPID_*` (the push signing
+key); the dashboard container gets none of that, which is why `/account/*`
+answers **404** on the public app process by design. (The shim is the one
+deliberate exception to "only this container sees `ACCT_*`": it gets
+`ACCT_NOTIFY_URL` + `ACCT_INTERNAL_TOKEN` and nothing that opens the
+database.) **The feature is off until you turn it on:** `ACCT_ENABLED`
 defaults to `false`, so a deploy of this change is a no-op for the site. To
 enable it (and to disable it again), set `ACCT_ENABLED=true` in the untracked
 `.env` and `docker compose up -d account-server`; the data file stays on disk
@@ -216,9 +219,48 @@ subscription silently (pushes fail and are dropped as dead on a 410). After a
 rotation, sign in → Notifications → turn off, then on, on each device.
 
 **Account ceiling.** `ACCT_MAX_ACCOUNTS` (default 10) bounds registration —
-registration is deliberately unauthenticated (no invite loop), so this is the
-second lock after the Pangolin PIN gate. Hitting it returns `403
+registration is deliberately unauthenticated (no invite loop), so the cap plus
+the attempt budget below are what actually bound it. Hitting it returns `403
 account_limit`.
+
+**Attempt budget.** `login`, `recover` and `register` refuse after a bounded
+number of attempts (token buckets per e-mail, per source address and
+process-wide — `webapp/src/lib/account/ratelimit.ts`), answering `429` with a
+`Retry-After` header instead of a generic error. Operational notes:
+
+- Counters are **in the account-server process**. `docker compose restart
+  account-server` clears them; that is a convenience for you and not a hole,
+  because nobody else can restart it.
+- A user who mistypes their password eight times in fifteen minutes sees
+  `429 rate_limited` for up to a minute or two. It is a refillable budget,
+  not a lockout: no state, no unlock procedure, no operator action.
+- If you ever need to see why a request was refused, the body carries
+  `retryAfterSeconds` and the header carries the same number.
+
+### Removing an account (undoes `ACCT_MAX_ACCOUNTS` squatting)
+
+Registration is open, so a stranger who reaches the endpoint can occupy all
+ten slots with junk e-mail addresses. The attempt budget makes that slow, the
+cap makes it finite, and this makes it reversible — `sessions`, `blobs`,
+`push_subs` and `push_prefs` all carry `ON DELETE CASCADE`, so one statement
+cleans the whole account:
+
+```bash
+cd ~/electricity-dashboard
+docker compose stop account-server
+# -cmd is not decoration: sqlite3 starts with foreign_keys OFF, so without
+# the PRAGMA this DELETE would leave orphaned sessions/blobs/subscriptions.
+sudo sqlite3 -cmd "PRAGMA foreign_keys=ON;" .account/accounts.db \
+  "DELETE FROM accounts WHERE email = 'squatter@example.com';"
+docker compose start account-server
+sudo sqlite3 .account/accounts.db "SELECT id, email, datetime(created_at/1000,'unixepoch') FROM accounts;"
+```
+
+Nothing else needs doing: the squatter never held a session that survives the
+delete, their ciphertext (if any) goes with the row, and their push
+subscriptions are dropped by the cascade. To free every slot at once,
+`DELETE FROM accounts;` — every other device keeps its local `localStorage`
+copy, because the server copy is the only thing being removed.
 
 ## Rate data updates
 
