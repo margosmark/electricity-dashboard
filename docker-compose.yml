@@ -68,8 +68,17 @@ services:
 
   # Path split. Holds no application code and no secrets; it only decides
   # which of the two containers answers. XFP = the scheme the edge saw.
+  #
+  # The template is BAKEN INTO THE IMAGE (ops/edge/Dockerfile), not mounted,
+  # so changing it changes the image ID and `docker compose up -d --build`
+  # recreates the router. A bind mount would let a config edit sit on disk
+  # while the running nginx keeps the old policy. Upstream freshness is
+  # handled separately, inside the config (per-request DNS resolution).
   edge-router:
-    image: nginx:1.29-alpine
+    build:
+      context: ./ops/edge
+      dockerfile: Dockerfile
+    image: electricity-dashboard-edge-router:latest
     container_name: edge-router
     restart: always
     ports:
@@ -86,8 +95,6 @@ services:
         max-file: "3"
     environment:
       XFP: ${GB_EDGE_XFP:-https}
-    volumes:
-      - ./ops/edge/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
       - energy-dashboard
       - greenbutton-shim

@@ -22,7 +22,12 @@ import {
   resolveResourceUri,
   s256Challenge,
 } from "@/lib/greenbutton/oauth";
-import { getConfig, resetConfigCache, getNotifyToken } from "@/lib/greenbutton/config";
+import {
+  getConfig,
+  resetConfigCache,
+  getNotifyToken,
+  getProcessIdentity,
+} from "@/lib/greenbutton/config";
 import { newState, consumeState, markSync, getSyncMeta, resetSessionState, markDataAvailable } from "@/lib/greenbutton/session";
 
 let dir: string;
@@ -353,5 +358,50 @@ describe("token file location", () => {
     // Local dev default is repo-local and gitignored; the deploy overrides it
     // to a host path — see OPERATIONS.md.
     expect(cfg.tokenFile).toBe("./.greenbutton/tokens.json");
+  });
+});
+
+describe("process identity (x-gb-process)", () => {
+  afterEach(() => {
+    delete process.env.GB_TOKEN_FILE;
+    delete process.env.GB_CLIENT_ID;
+    delete process.env.GB_CLIENT_SECRET;
+    resetConfigCache();
+  });
+
+  it("says `app` for a process nobody pointed at a token file", () => {
+    // energy-dashboard gets NO GB_* env at all (docker-compose.yml), so it
+    // keeps the in-repo default. It must never claim to be the shim — that
+    // claim is what the old per-location header made, and it was wrong in
+    // production while the split was inverted (security finding H1).
+    delete process.env.GB_TOKEN_FILE;
+    resetConfigCache();
+    expect(getConfig().tokenFile).toBe("./.greenbutton/tokens.json");
+    expect(getProcessIdentity()).toBe("app");
+  });
+
+  it("says `shim` from the mounted token file — credentials or not", () => {
+    process.env.GB_TOKEN_FILE = "/var/lib/greenbutton/tokens.json";
+    resetConfigCache();
+    expect(getProcessIdentity()).toBe("shim");
+  });
+
+  it("is decided by the token file, not by whether credentials arrived", () => {
+    // Both containers report configured:false until Oakville issues the
+    // secret, so `configured` cannot tell them apart; only the deployment
+    // contract (who was handed the token file) can.
+    process.env.GB_TOKEN_FILE = "/var/lib/greenbutton/tokens.json";
+    process.env.GB_CLIENT_ID = "cid";
+    process.env.GB_CLIENT_SECRET = "super-secret";
+    resetConfigCache();
+    expect(getConfig().configured).toBe(true);
+    expect(getProcessIdentity()).toBe("shim");
+
+    delete process.env.GB_TOKEN_FILE;
+    delete process.env.GB_CLIENT_ID;
+    delete process.env.GB_CLIENT_SECRET;
+    resetConfigCache();
+    expect(getConfig().configured).toBe(false);
+    expect(getProcessIdentity()).toBe("app");
   });
 });
