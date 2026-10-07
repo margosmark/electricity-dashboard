@@ -8,12 +8,17 @@
 #   docker compose -p gb-topo -f ops/edge/topology-test.compose.yml up -d
 #
 # Deliberate differences from production, and why they are safe:
-#   * image is reused, never built   — .110 has GBs of headroom, not more
-#   * GB_* points at the mock        — no Oakville credentials needed yet
-#   * XFP=http                      — the router is reached over plain http
-#   * no GB_NOTIFY_TOKEN            — so the token is derived from the mock
-#                                     client secret, which is what the e2e
-#                                     script computes on its side
+#   * images are reused, never built   — .110 has GBs of headroom, not more
+#     (both must already exist: see the image checks in
+#     webapp/scripts/e2e-greenbutton-topology.sh)
+#   * GB_* points at the mock          — no Oakville credentials needed yet
+#   * XFP=http                        — the router is reached over plain http
+#   * no GB_NOTIFY_TOKEN              — so the token is derived from the mock
+#                                       client secret, which is what the e2e
+#                                       script computes on its side
+#   * router: the BUILT edge-router image (same ops/edge/Dockerfile production
+#     uses), so the gate exercises the config that actually ships instead of a
+#     bind-mounted copy of it.
 
 services:
   # Public app, exactly as in production: no Green Button environment at all.
@@ -66,15 +71,13 @@ services:
       - "8099:8099"
 
   router:
-    image: nginx:1.29-alpine
+    image: electricity-dashboard-edge-router:latest
     container_name: gb-topo-router
     restart: "no"
     ports:
       - "3940:80"
     environment:
       XFP: http
-    volumes:
-      - ./default.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
       - energy-dashboard
       - greenbutton-shim

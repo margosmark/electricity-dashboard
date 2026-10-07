@@ -755,5 +755,38 @@ describe("gb_session lifetime", () => {
     );
     expect(stale.status).toBe(401);
     expect((await json(stale)).error).toBe("session_required");
+    });
+    });
+
+    describe("x-gb-process — who actually produced the body", () => {
+  it("follows this process's config, never the route that was requested", async () => {
+    // This suite points GB_TOKEN_FILE at the token dir, i.e. it runs as the
+    // shim. The header must say so…
+    const asShim = await statusGET(appRequest("/greenbutton/status"));
+    expect(asShim.status).toBe(200);
+    expect(asShim.headers.get("x-gb-process")).toBe("shim");
+
+    // …and the SAME handler must say `app` the moment the process stops being
+    // handed a token file. Same path, same code, different container — which
+    // is precisely the distinction a header derived from the location (the
+    // old X-Edge-Upstream) can never make: it stayed `shim` while the app
+    // container was answering (security finding H1, 2026-10-07).
+    const saved = process.env.GB_TOKEN_FILE;
+    try {
+      delete process.env.GB_TOKEN_FILE;
+      resetConfigCache();
+      const asApp = await statusGET(appRequest("/greenbutton/status"));
+      expect(asApp.headers.get("x-gb-process")).toBe("app");
+      expect(asApp.status).toBe(200);
+    } finally {
+      if (saved !== undefined) process.env.GB_TOKEN_FILE = saved;
+      resetConfigCache();
+    }
+  });
+
+  it("rides on the JSON responses the handlers build", async () => {
+    const res = await statusGET(appRequest("/greenbutton/status"));
+    expect(res.headers.get("x-gb-process")).toBe("shim");
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });

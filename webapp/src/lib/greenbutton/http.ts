@@ -12,7 +12,7 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getConfig } from "./config";
+import { getConfig, getProcessIdentity } from "./config";
 import { getTokenStore, type TokenSet } from "./tokens";
 
 export const SESSION_COOKIE = "gb_session";
@@ -136,7 +136,16 @@ export function jsonError(status: number, error: string, detail?: string): NextR
 }
 
 export function jsonResponse(body: unknown): NextResponse {
-  return NextResponse.json(body, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(body, {
+    headers: {
+      "Cache-Control": "no-store",
+      // Who produced this body — read from this process's own config inside
+      // the handler, not from the route that was requested. The two containers
+      // run the same code, so this value only differs because their env does;
+      // that is what makes it a check instead of a restatement of the URL.
+      "x-gb-process": getProcessIdentity(),
+    },
+  });
 }
 
 /** Redirect back into the app with a machine-readable result flag. */

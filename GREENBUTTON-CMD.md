@@ -22,8 +22,8 @@ they agree on what a merge means.
 
 | Gate | State |
 | --- | --- |
-| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (602 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 29/29 checks against a live `next start` + mock custodian) |
-| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router: 42/42; see §5) |
+| Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (609 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 29/29 checks against a live `next start` + mock custodian) |
+| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router — including a recreate of both upstreams under a running router: 46/46; see §5) |
 | Edge routes `/greenbutton/*` to this host | **DONE — verified empirically** (the edge forwards *every* path to `:3939`, so the split is made on-box; see §5) |
 | Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
 | Production loop with Mark's real account | **BLOCKED on §6** |
@@ -200,21 +200,39 @@ container could only be reached by making the split *on this host*:
 
 `ops/edge/default.conf.template` is the whole routing policy; it also turns
 `proxy_buffering` **off** for `/greenbutton*` so the ESPI feed still streams
-byte for byte through the extra hop.
+byte for byte through the extra hop. It is baked into the router's image
+(`ops/edge/Dockerfile`) rather than bind-mounted, so editing it and running
+`docker compose up -d --build` actually recreates the router.
 
-**Proof, from the public URL:**
+**Proof, from the public URL — two headers, two questions:**
 
 ```
-$ curl -sSI https://electricity.markarslan.ca/greenbutton/status | grep -i x-edge-upstream
-X-Edge-Upstream: shim
-$ curl -sSI https://electricity.markarslan.ca/ | grep -i x-edge-upstream
-X-Edge-Upstream: app
+$ curl -sSI https://electricity.markarslan.ca/greenbutton/status | grep -iE 'x-edge-location|x-gb-process'
+X-Edge-Location: greenbutton
+x-gb-process: shim
+$ curl -sSI https://electricity.markarslan.ca/ | grep -iE 'x-edge-location|x-gb-process'
+X-Edge-Location: default
+x-gb-process: app
 ```
+
+`X-Edge-Location` is *which location nginx matched*; `x-gb-process` is *which
+container produced the body*, read from that process's own config
+(`getProcessIdentity`, derived from `GB_TOKEN_FILE`). They must agree —
+`greenbutton`+`app` or `default`+`shim` means the split is inverted.
+
+The single header this replaced, `X-Edge-Upstream`, was set per **location**
+and therefore proved nothing: it read `shim` while the app container was
+serving the request, for the 31 minutes on 2026-10-07 when nginx's
+startup-time upstream cache had the split backwards (security finding H1 —
+the secret-bearing container was serving the public dashboard and the OAuth
+flow ran in the secret-less one).
 
 The same assertions are checks in `webapp/scripts/e2e-greenbutton-topology.sh`,
 which brings the whole three-container shape up on port 3940 (never touching
-the live 3939), closes the OAuth loop against the mock custodian and replays
-all 26 loop checks through the router: **30/30**.
+the live 3939), **recreates both upstreams underneath a still-running router**
+— the H1 regression: nginx must follow the names, not the addresses it
+remembers — closes the OAuth loop against the mock custodian and replays all
+29 loop checks through the router: **46/46**.
 
 Why not go further and extract the shim into a minimal non-Next service? The
 split already puts the grant outside the public web app's process, which was
@@ -341,15 +359,15 @@ parsing always client-side. If the stateless pattern is ever preferred
 
 ```bash
 cd webapp
-npm run lint && npm run typecheck && npm run test   # 602 tests
+npm run lint && npm run typecheck && npm run test   # 609 tests
 npm run build
 
 # End-to-end OAuth loop against a mock custodian (29 checks):
 ./scripts/e2e-greenbutton-loop.sh
 
-# Same loop through the CONTAINERISED router topology (42 checks: 4 routing
-# + 3 access-log canary + 6 security-header assertions + the 29 above).
-# Needs docker; binds :3940, never :3939:
+# Same loop through the CONTAINERISED router topology (46 checks: 4 routing
+# + 4 upstream-recreate + 3 access-log canary + 6 security-header assertions
+# + the 29 above). Needs docker; binds :3940, never :3939:
 ./scripts/e2e-greenbutton-topology.sh
 
 # Just the Wave K suites:

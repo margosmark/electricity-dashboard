@@ -63,14 +63,16 @@ edge-router :3939 ─┬─ /greenbutton* → greenbutton-shim   (creds + token 
 
 The router is there because the upstream edge forwards *every* path of the
 domain to this host — the `/greenbutton/*` split has to happen on-box. Each
-response carries `X-Edge-Upstream: app|shim` so you can see which container
-answered from the public URL.
+response carries `x-gb-process: app|shim` — set by the serving process from
+its own config — alongside the router's `X-Edge-Location`, so you can see
+which container answered from the public URL *and* catch it when the two
+disagree.
 
 Gates:
 
 ```bash
 webapp/scripts/e2e-greenbutton-loop.sh          # 29 checks, real `next start`
-webapp/scripts/e2e-greenbutton-topology.sh      # 42 checks, through the router
+webapp/scripts/e2e-greenbutton-topology.sh      # 46 checks, through the router
 ```
 
 Full design notes, the registration payload and the security model live in
