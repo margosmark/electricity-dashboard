@@ -16,7 +16,6 @@ export type GbStatus = {
   lastSyncBytes: number | null;
   dataAvailableSince: string | null;
   redirectUri: string;
-  notificationUri: string;
 };
 
 export type GbUsageResult =

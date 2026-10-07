@@ -52,7 +52,10 @@ export function readCookie(request: Request, name: string): string | null {
 }
 
 /** Constant-time comparison that tolerates length mismatches. */
-function secretEquals(a: string | null | undefined, b: string | null | undefined): boolean {
+export function secretEquals(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
   if (!a || !b) return false;
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
