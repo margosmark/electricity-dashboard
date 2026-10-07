@@ -179,6 +179,15 @@ check "push preferences without a session → 401" $([ "$code" = "401" ] && echo
 # --- 7. Notify fan-out is session-gated -------------------------------------
 code=$(req - POST /account/notify '{"topic":"plan_change","title":"x"}')
 check "POST /account/notify without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
+# The topic split is part of the contract (SECURITY.md §5.11): a browser may
+# emit only the client-origin half of the trigger table, and it reaches only
+# its own account. Both halves are asserted here because a fan-out that
+# reaches the wrong account is invisible to every other check in this script.
+code=$(req "$JAR" POST /account/notify '{"topic":"anomaly","title":"Unusual usage"}')
+check "POST /account/notify (client-origin topic, own session) → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
+code=$(req "$JAR" POST /account/notify '{"topic":"oeb_rates","title":"x"}')
+check "a browser may not claim a server-origin topic → 400 invalid_topic" \
+  $([ "$code" = "400" ] && [ "$(jget '.error')" = "invalid_topic" ] && echo 0 || echo 1)
 
 # --- 8. Logout invalidates the SESSION, not just the cookie -----------------
 code=$(req "$JAR" POST /account/logout)

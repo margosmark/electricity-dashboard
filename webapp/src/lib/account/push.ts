@@ -111,9 +111,24 @@ export function decide(
 }
 
 /**
- * Fan one notification out to an account (or every account when `accountId`
- * is null — family scale, and the two server-origin triggers are broadcast
- * by nature).
+ * WHO gets a notification. Required, and it is a union rather than an
+ * optional argument on purpose.
+ *
+ * Round 1 of the security review found `POST /account/notify` calling
+ * `fanOut(cfg, db, payload)` with the target simply *missing* — which, under
+ * an optional parameter, silently meant "every account on this server": one
+ * signed-in session could push its own usage-derived text to everyone else's
+ * phone and burn their daily cap doing it. Making the caller state the target
+ * turns that omission into a type error instead of a broadcast.
+ *
+ * `{ scope: "all" }` is still real — the two SERVER-origin triggers (new OEB
+ * rates, new CMD data) are true for every account by nature, and only the
+ * internal, edge-denied, token-checked route and the rate watcher may use it.
+ */
+export type NotifyTarget = { scope: "account"; accountId: number } | { scope: "all" };
+
+/**
+ * Fan one notification out to the accounts a `NotifyTarget` names.
  *
  * Returns how many subscriptions were actually delivered to. A suppressed
  * notification returns 0 with the outcome logged; a failure to reach a push
@@ -124,11 +139,12 @@ export async function fanOut(
   cfg: AccountConfig,
   db: DatabaseSync,
   payload: NotifyPayload,
-  accountId?: number,
+  target: NotifyTarget,
 ): Promise<{ sent: number; suppressed: string | null }> {
-  const targets = accountId === null || accountId === undefined
-    ? (db.prepare("SELECT id FROM accounts").all() as unknown as { id: number }[])
-    : [{ id: accountId }];
+  const targets =
+    target.scope === "all"
+      ? (db.prepare("SELECT id FROM accounts").all() as unknown as { id: number }[])
+      : [{ id: target.accountId }];
 
   let sent = 0;
   let suppressed: string | null = null;

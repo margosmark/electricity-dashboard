@@ -114,6 +114,67 @@ container that serves the public site can never fake (see
 | 5.8 | Uploads are explicit: a device that already has data and an empty account is **prompted**, never silently uploaded (and the drawer stays open until it is answered); a stale `baseRev` comes back 409 and becomes a choice instead of an overwrite. The body read is capped at 5 MB. | *(tested — `AccountControls.test.tsx`, `account.test.ts`)* |
 | 5.9 | The shim→account fan-out lives at `/account/internal/*`, which nginx `deny all`s before any upstream; it exists only on the compose network and still requires the shared `ACCT_INTERNAL_TOKEN`. | *(config — see `ops/edge/default.conf.template`; the containerised topology gate is `webapp/scripts/e2e-greenbutton-topology.sh`)* |
 | 5.10 | Push is opt-in per device and per topic: `Notification.requestPermission()` only after a user gesture; the worker renders the server's title/body as notification text and **never follows a cross-origin URL** carried in a payload; sends are capped per topic, per day, and in quiet hours, with every send logged. | *(tested — `security.test.tsx`, `account.test.ts`)* |
+| 5.11 | **A client-origin notification reaches its own account only.** `POST /account/notify` passes the session's account id as an explicit `NotifyTarget`; `fanOut` cannot be called without naming a target, and `{ scope: "all" }` is reachable only from the internal, edge-denied route and the rate watcher. A browser may also emit only `plan_change`/`anomaly` — never the server's topics. | *(tested — `account.test.ts` "session-authed notify", two accounts)* |
+| 5.12 | **The three unauthenticated endpoints have an attempt budget** (`login`, `recover`, `register`): a token bucket per e-mail address, per source address and process-wide, checked *before* the argon2 work and answered as 429 + `Retry-After`. A correct password hands the address bucket back. | *(tested — `ratelimit.test.ts`, `account.test.ts`)* |
+| 5.13 | **A push endpoint is not a credential and not a secret**, so it is bound to the account that registered it: presenting an endpoint another account already owns is 409, and the SQL refuses to re-point it (`upsertSubscription`). | *(tested — `account.test.ts`)* |
+
+### What a notification may carry (the trade, written out)
+
+The card and the PM ruling both required this to be stated rather than
+assumed, and round 1 of the review found it implied instead:
+
+- **The server never sees the dataset.** No readings, no series, no total it
+  computed itself — `energy_data` is ciphertext end to end (5.4).
+- **A client-origin notification is text the user's own device wrote.** For
+  `anomaly` / `plan_change` the browser composes a title and one sentence
+  (which may say *"42 kWh, about 2.3x the usual"*) and asks the server to
+  relay it, because under E2EE the server cannot compute it. The server sees
+  topic, title and body **in flight**, and stores topic + title + outcome in
+  `notify_log` — a title can therefore encode a coarse usage-derived fact
+  ("Unusual usage on 3 Oct"). That is one line per event for a topic the
+  user can turn off; it is a verdict, never a reading.
+- **A server-origin notification is built from public state** (the app's
+  rate payload, the shim's scalars) and touches no user data at all.
+- **The rejected alternative:** strip every figure so nothing derived from
+  usage crosses at all. Rejected because a date is already usage-derived and
+  a push that says "something is wrong" without saying what is a worse
+  promise than an honest one. The boundary above is the replacement for the
+  silence.
+
+### Attempt budget, and what is NOT counted on
+
+`POST /account/login`, `/account/recover` and `/account/register` refuse
+after a bounded number of attempts (`lib/account/ratelimit.ts`: token
+buckets per e-mail address, per source address, and process-wide; 429 with
+`Retry-After`), and the check runs *before* the 17 ms argon2 hash so a loop
+is refused rather than served. Counters live in the account-server process
+(a single Node process); a restart clears them, which costs an attacker
+nothing they can use and costs a legitimate user nothing at all.
+
+**The Pangolin PIN gate is not part of this.** Measured from the public
+internet on 2026-10-07 with no cookies: `GET /` answered `200` directly
+(`x-edge-location: default`, `x-gb-process: app`), with no challenge, no
+redirect and no interstitial, and `/account/*` reached the same nginx the
+rest of the site uses. Whatever PIN gate exists is not observable from
+outside, so `/account/*` must be treated as the only lock. If that changes,
+re-measure and amend this paragraph rather than deleting it.
+
+**`ACCT_MAX_ACCOUNTS` squatting** is bounded by three things: the cap itself
+(default 10), the per-source registration budget above, and the fact that
+every account row carries the e-mail address it was made with. An operator
+undoes a squat with one statement — `OPERATIONS.md` → *Removing an account* —
+which cascades to sessions, blobs, subscriptions and preferences.
+
+### Residual: a push endpoint is an outbound URL we call
+
+Subscriptions are `https:` (or `webpush:`) URLs, so an authenticated user
+can make the account container `POST` to an arbitrary HTTPS address — blind,
+body capped at the payload size, rate-capped by the notification policy, and
+unable to reach `file:`, `http://169.254…` or any docker-internal service
+(`validEndpoint` rejects every non-HTTPS scheme). We accept this: it is the
+Web Push protocol as designed, and the fix that would remove it (a
+push-service host allow-list) breaks self-hosted push services for no gain
+at family scale. It is recorded here so nobody has to rediscover it.
 
 ## 6. When you change something here
 
@@ -143,3 +204,11 @@ container that serves the public site can never fake (see
    secrets only from `lib/account/config.ts`, and land a case in
    `webapp/tests/e2e/account_smoke.sh` — that gate runs against a booted
    container in CI, in both the feature-off and feature-on states.
+9. Added a notification topic, or changed who may emit one? → it belongs in
+   `CLIENT_NOTIFY_TOPICS` or `SERVER_NOTIFY_TOPICS` (`lib/account/db.ts`),
+   both `notify/route.ts` guards, `push.ts#NotifyTarget`, and the §5
+   "what a notification may carry" paragraph above. A topic that reaches a
+   route which is not allowed to emit it must fail a test, not a review.
+10. Changed a session-affecting route? → only `GET /account/session` may ask
+   `requireSession()` to rotate; every other route must keep the default, or
+   it will mint a token nobody sets as a cookie (§5 note, round-1 L1).

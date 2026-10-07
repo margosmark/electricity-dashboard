@@ -69,8 +69,15 @@ export type AccountConfig = {
    *
    * Registration is unauthenticated by design — no invite system, no SMTP —
    * and a 5 MB blob per account is a disk-fill vector on an open endpoint.
-   * A tiny cap turns that into a bounded cost: the deployment sits behind
-   * the Pangolin PIN gate anyway, this is the second lock.
+   * A tiny cap turns that into a bounded cost: at most `maxAccounts` rows
+   * exist whatever anyone does, and `OPERATIONS.md` shows the one SQL
+   * statement that removes a squatter.
+   *
+   * NOTE (round-1 review, M2): the Pangolin PIN gate is NOT counted on here.
+   * Measured from the public internet on 2026-10-07 with no cookies, `GET /`
+   * answered 200 straight through with no challenge, so the first lock is not
+   * observable from outside and this cap plus the per-source attempt budget
+   * (`lib/account/ratelimit.ts`) are what actually bound the endpoint.
    */
   maxAccounts: number;
 };

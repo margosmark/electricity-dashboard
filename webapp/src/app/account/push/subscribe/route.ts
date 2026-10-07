@@ -4,14 +4,17 @@
  * A subscription is an endpoint + two keys the browser generated; it is not
  * a credential for anything else, and it is per-account rather than
  * per-device (a phone that re-subscribes replaces its own endpoint, because
- * the endpoint string is what identifies it).
+ * the endpoint string is what identifies it). An endpoint is NOT a secret,
+ * so ownership is checked before it is written: presenting an endpoint that
+ * already belongs to another account is a 409, never a re-pointing (L2 in
+ * the round-1 review).
  *
  * `POST` requires the VAPID keys to exist: answering 201 to a subscription
  * we can never deliver to would be a lie the user only discovers weeks
  * later, when a notification does not arrive.
  */
 
-import { deleteSubscription, listSubscriptions, upsertSubscription } from "@/lib/account/db";
+import { deleteSubscription, findSubscriptionOwner, listSubscriptions, upsertSubscription } from "@/lib/account/db";
 import {
   accountError,
   accountJson,
@@ -67,16 +70,28 @@ export async function POST(request: Request): Promise<Response> {
     return accountError(400, "invalid_subscription", "keys.p256dh and keys.auth are required.");
   }
 
-  upsertSubscription(getDb(cfg), auth.account.id, {
+  const db = getDb(cfg);
+  // An endpoint identifies a DEVICE, not a person, and it is not a secret —
+  // so a session that presents somebody else's endpoint gets an explicit
+  // refusal instead of quietly stealing (or un-stealing) their subscription.
+  // The SQL in `upsertSubscription` enforces the same rule; this is the
+  // version a human can read.
+  const owner = findSubscriptionOwner(db, value.endpoint);
+  if (owner !== null && owner !== auth.account.id) {
+    return accountError(
+      409,
+      "endpoint_taken",
+      "That push endpoint is already registered to another account on this server. Sign out there (or unsubscribe) first.",
+    );
+  }
+
+  upsertSubscription(db, auth.account.id, {
     endpoint: value.endpoint,
     p256dh: value.keys!.p256dh as string,
     auth: value.keys!.auth as string,
   });
 
-  return accountJson(
-    { ok: true, subscriptions: listSubscriptions(getDb(cfg), auth.account.id).length },
-    { status: 201 },
-  );
+  return accountJson({ ok: true, subscriptions: listSubscriptions(db, auth.account.id).length }, { status: 201 });
 }
 
 export async function DELETE(request: Request): Promise<Response> {

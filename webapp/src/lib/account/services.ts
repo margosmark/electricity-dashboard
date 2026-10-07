@@ -101,13 +101,20 @@ export async function checkRates(cfg: AccountConfig, fetchImpl = fetch): Promise
   setMeta(db, "rates_source_version", version);
   if (seen === null) return "baseline";
 
-  await fanOut(cfg, db, {
-    topic: "oeb_rates",
-    title: "New electricity rates in the app",
-    body: latestEffective
-      ? `Ontario rates were updated — newest set effective ${latestEffective}.`
-      : "Ontario rates were updated — open the dashboard to re-price your usage.",
-    url: "/",
-  });
+  await fanOut(
+    cfg,
+    db,
+    {
+      topic: "oeb_rates",
+      title: "New electricity rates in the app",
+      body: latestEffective
+        ? `Ontario rates were updated — newest set effective ${latestEffective}.`
+        : "Ontario rates were updated — open the dashboard to re-price your usage.",
+      url: "/",
+    },
+    // True for every account on this box, and one of only two callers
+    // allowed to say so (`push.ts#NotifyTarget`).
+    { scope: "all" },
+  );
   return "changed";
 }

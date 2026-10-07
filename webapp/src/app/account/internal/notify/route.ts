@@ -16,10 +16,14 @@
  * `data_available` trigger.
  *
  * Broadcast by nature: the notification says "your utility posted new data",
- * which is true for every account on this server.
+ * which is true for every account on this server — so this is one of the two
+ * callers allowed to pass `{ scope: "all" }` to `fanOut`. It may only do that
+ * for a SERVER-origin topic: accepting `anomaly`/`plan_change` here would
+ * mean this endpoint originating usage-derived text nobody's browser asked
+ * for (`db.ts#SERVER_NOTIFY_TOPICS`).
  */
 
-import { isNotifyTopic, type NotifyTopic } from "@/lib/account/db";
+import { SERVER_NOTIFY_TOPICS, isServerNotifyTopic, topicList, type NotifyTopic } from "@/lib/account/db";
 import {
   accountError,
   accountJson,
@@ -45,16 +49,23 @@ export async function POST(request: Request): Promise<Response> {
   if (!body.ok) return accountError(body.status, "bad_request", body.error);
   const value = (body.value ?? {}) as { topic?: unknown; title?: unknown; body?: unknown; url?: unknown };
 
-  if (!isNotifyTopic(value.topic)) return accountError(400, "invalid_topic", "unknown topic");
+  if (!isServerNotifyTopic(value.topic)) {
+    return accountError(400, "invalid_topic", `topic must be one of: ${topicList(SERVER_NOTIFY_TOPICS)}.`);
+  }
   const title = typeof value.title === "string" && value.title.trim() ? value.title.trim().slice(0, 200) : null;
   if (!title) return accountError(400, "invalid_payload", "title is required");
 
-  const result = await fanOut(cfg, getDb(cfg), {
-    topic: value.topic as NotifyTopic,
-    title,
-    body: typeof value.body === "string" ? value.body.slice(0, 500) : title,
-    url: typeof value.url === "string" && value.url.startsWith("/") ? value.url : "/",
-  });
+  const result = await fanOut(
+    cfg,
+    getDb(cfg),
+    {
+      topic: value.topic as NotifyTopic,
+      title,
+      body: typeof value.body === "string" ? value.body.slice(0, 500) : title,
+      url: typeof value.url === "string" && value.url.startsWith("/") ? value.url : "/",
+    },
+    { scope: "all" },
+  );
 
   return accountJson({ ok: true, sent: result.sent, suppressed: result.suppressed });
 }
