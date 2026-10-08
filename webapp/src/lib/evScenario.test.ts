@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { processRawData, type DataPoint, type ProcessedPoint, type RateSet } from './energy';
 import {
+  anchorBand,
   buildEvScenario,
   detectEvCandidate,
   CHARGING_NIGHTS_PER_MONTH,
   EV_MIN_KW,
+  type EvPlan,
 } from './evScenario';
 
 const RATES: RateSet = {
@@ -19,10 +21,19 @@ const RATES: RateSet = {
  * DST transition, so every day really does have 24 hours).
  */
 function hourly(days: number, kwhAt: (d: Date) => number): ProcessedPoint[] {
+  return hourlyFrom(new Date(2026, 5, 1), days, kwhAt);
+}
+
+/**
+ * Hourly rows for `days` calendar days starting at `start` — the start date
+ * pins the Ontario rate SEASON (winter is Nov 1 – Apr 30), which is the whole
+ * point of the anchor fixtures below.
+ */
+function hourlyFrom(start: Date, days: number, kwhAt: (d: Date) => number): ProcessedPoint[] {
   const raw: DataPoint[] = [];
   for (let day = 0; day < days; day++) {
     for (let h = 0; h < 24; h++) {
-      const d = new Date(2026, 5, 1 + day, h, 0, 0);
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + day, h, 0, 0);
       raw.push({ timestamp: Math.floor(d.getTime() / 1000), usage_kwh: kwhAt(d) });
     }
   }
@@ -127,14 +138,26 @@ function atCadence(
   stepMinutes: number,
   hourKwh: (d: Date) => number,
 ): ProcessedPoint[] {
+  return atCadenceFrom(new Date(2026, 5, 1), days, stepMinutes, hourKwh);
+}
+
+/** {@link atCadence} for an arbitrary start date (rate-season fixtures). */
+function atCadenceFrom(
+  start: Date,
+  days: number,
+  stepMinutes: number,
+  hourKwh: (d: Date) => number,
+): ProcessedPoint[] {
   const perHour = 60 / stepMinutes;
   const raw: DataPoint[] = [];
   for (let day = 0; day < days; day++) {
     for (let h = 0; h < 24; h++) {
-      const hourTotal = hourKwh(new Date(2026, 5, 1 + day, h, 0, 0));
+      const hourTotal = hourKwh(new Date(start.getFullYear(), start.getMonth(), start.getDate() + day, h, 0, 0));
       for (let k = 0; k < perHour; k++) {
         raw.push({
-          timestamp: Math.floor(new Date(2026, 5, 1 + day, h, k * stepMinutes, 0).getTime() / 1000),
+          timestamp: Math.floor(
+            new Date(start.getFullYear(), start.getMonth(), start.getDate() + day, h, k * stepMinutes, 0).getTime() / 1000,
+          ),
           usage_kwh: hourTotal / perHour,
         });
       }
@@ -382,5 +405,318 @@ describe('buildEvScenario', () => {
       const s = buildEvScenario({ rows: flat, rates: RATES, dailyKwh: 10 });
       expect(s.peakExposure).toBeNull();
     });
+  });
+});
+
+/* ========================================================================== *
+ * EV v2 — "when do you charge?" — the hour anchor + stay-vs-move counterfactual
+ *
+ * The shipped card had no hour to price against: with no detected night block
+ * it fell back to each plan's WORST case, so a household that charges at 19:00
+ * (a ULO On-Peak hour) was shown a number computed for somebody else's clock.
+ * These fixtures pin the three things the anchor had to add:
+ *
+ *   1. the STAY side is priced at the anchor hour on the CURRENT plan, read
+ *      back from the readings' own period charges — so winter/summer and
+ *      weekday/weekend windows come out of the data, never a static table;
+ *   2. the MOVE is modelled as a ±1 h habit spread, not one knife-edge hour;
+ *   3. the credit is ONE number split into shift + plan, and the three-plan
+ *      comparison pays the same credit once — never twice.
+ * ========================================================================== */
+
+const ALL_PLANS: EvPlan[] = ['TOU', 'Tiered', 'ULO'];
+
+/** Mon 2026-01-05 for 28 days: WINTER (Nov 1 – Apr 30), 20 weekdays + 8 weekend days, no holiday. */
+const WINTER = new Date(2026, 0, 5);
+/** Mon 2026-06-01 for 28 days: SUMMER, the same 20/8 weekday shape, no holiday. */
+const SUMMER = new Date(2026, 5, 1);
+
+/**
+ * The complaint itself as a fixture: a house that charges in the EVENING, so
+ * detectEvCandidate finds nothing charging-shaped in the night and the shipped
+ * code had no hour at all to price against.
+ */
+function eveningCharger(start: Date, days: number, evHours = [19, 20], ev = 3.0) {
+  const set = new Set(evHours);
+  return hourlyFrom(start, days, (d) => (set.has(d.getHours()) ? 0.4 + ev : 0.4));
+}
+
+describe('anchorBand', () => {
+  it('wraps the ±1 h habit-drift band around the clock', () => {
+    expect(anchorBand(19)).toEqual([18, 19, 20]);
+    expect(anchorBand(0)).toEqual([23, 0, 1]);
+    expect(anchorBand(23)).toEqual([22, 23, 0]);
+    expect(anchorBand(7)).toEqual([6, 7, 8]);
+  });
+});
+
+describe('charge-hour anchor: stay at 7 PM vs move to midnight', () => {
+  /** Winter weekday 18:00 = On-Peak 20.3¢ (17:00–19:00), weekend = Off-Peak. */
+  const WINTER_RATE_18 = (20 * 20.3 + 8 * 9.8) / 28;
+  /** Summer weekday 18:00 = Mid-Peak 15.7¢ (11:00–17:00 is on-peak, so not 18). */
+  const SUMMER_RATE_18 = (20 * 15.7 + 8 * 9.8) / 28;
+  /** 19:00 and 20:00 are Off-Peak in BOTH seasons: TOU on-peak ENDS at 19:00. */
+  const RATE_19_20 = 9.8;
+  /** ULO weekday 16:00–21:00 = On-Peak 39.1¢, weekends 9.8¢ — no season. */
+  const ULO_RATE_16_21 = (20 * 39.1 + 8 * 9.8) / 28;
+
+  const winterEvening = () => eveningCharger(WINTER, 28);
+  const winterMove = (overrides: Partial<Parameters<typeof buildEvScenario>[0]> = {}) =>
+    buildEvScenario({
+      rows: winterEvening(),
+      rates: RATES,
+      dailyKwh: 10,
+      currentPlan: 'TOU',
+      chargeHour: 19,
+      chargeHourSource: 'user',
+      ...overrides,
+    });
+
+  it('prices the stay side at the anchor hour from the readings — winter windows, not a table', () => {
+    const rows = winterEvening();
+    // The 7 PM block is OUTSIDE the night window, so detection honestly says
+    // "nothing charging-shaped" — the household's answer is what we have.
+    expect(detectEvCandidate(rows)).toBeNull();
+
+    const s = winterMove();
+    const cm = s.chargeMove!;
+    expect(cm).not.toBeNull();
+    expect(cm.hour).toBe(19);
+    expect(cm.source).toBe('user');
+    expect(cm.band).toEqual([18, 19, 20]);
+    expect(cm.bandLabel).toBe('18:00–21:00');
+    expect(cm.stayBasis).toBe('band');
+    expect(cm.stayHours).toEqual([18, 19, 20]);
+    expect(cm.seasons).toEqual(['Winter']);
+
+    const stayRate = (WINTER_RATE_18 + RATE_19_20 + RATE_19_20) / 3;
+    expect(cm.stayRateCents).toBeCloseTo(stayRate, 6);
+    // The kWh are spread evenly across the ±1 h band, not dumped on one hour.
+    expect(cm.stayCostPerCharge).toBeCloseTo((10 * stayRate) / 100, 6);
+    expect(cm.stayCostPerMonth).toBeCloseTo(cm.stayCostPerCharge * CHARGING_NIGHTS_PER_MONTH, 6);
+    // Evidence line carries the per-hour rates it blended.
+    expect(cm.stayBreakdown.map((b) => b.hour)).toEqual([18, 19, 20]);
+    expect(cm.stayBreakdown[0].rateCents).toBeCloseTo(WINTER_RATE_18, 9);
+    expect(cm.stayBreakdown[1].rateCents).toBeCloseTo(RATE_19_20, 9);
+    expect(cm.stayBreakdown[2].rateCents).toBeCloseTo(RATE_19_20, 9);
+    expect(cm.stayBreakdown[0].categories).toContain('On-Peak');
+    expect(cm.stayBreakdown[1].categories).toEqual(['Off-Peak']);
+    expect(cm.stayBreakdown.reduce((a, b) => a + b.share, 0)).toBeCloseTo(1, 9);
+    expect(cm.detail).toContain('18:00');
+    expect(s.assumptions.join(' ')).toContain('one hour either side for habit drift');
+  });
+
+  it('answers the actual question — stay vs move, split into shift + plan', () => {
+    const cm = winterMove().chargeMove!;
+    const stay = (10 * ((WINTER_RATE_18 + 2 * RATE_19_20) / 3)) / 100;
+    const uloAtAnchor = (10 * ULO_RATE_16_21) / 100;
+    const move = (10 * 3.9) / 100;
+
+    expect(cm.stayCostPerCharge).toBeCloseTo(stay, 6);
+    expect(cm.uloAtAnchorCostPerCharge).toBeCloseTo(uloAtAnchor, 6);
+    // The move side IS the card's $/charge on ULO — one credit, two views.
+    expect(cm.moveCostPerCharge).toBeCloseTo(move, 6);
+    expect(cm.moveCostPerMonth).toBeCloseTo(move * CHARGING_NIGHTS_PER_MONTH, 6);
+
+    // THE SKEW: at 19:00 ULO is On-Peak, so changing PLAN alone loses money…
+    expect(cm.planSavingPerMonth).toBeLessThan(0);
+    expect(cm.planSavingPerCharge).toBeCloseTo(stay - uloAtAnchor, 6);
+    // …and moving the HOUR is where the money is.
+    expect(cm.shiftSavingPerMonth).toBeGreaterThan(0);
+    expect(cm.shiftSavingPerCharge).toBeCloseTo(uloAtAnchor - move, 6);
+    // The three numbers add up exactly: total = plan + shift (never both paid).
+    expect(cm.totalSavingPerCharge).toBeCloseTo(stay - move, 6);
+    expect(cm.totalSavingPerMonth).toBeCloseTo(cm.planSavingPerMonth + cm.shiftSavingPerMonth, 6);
+    expect(cm.totalSavingPerMonth).toBeCloseTo(cm.stayCostPerMonth - cm.moveCostPerMonth, 6);
+    expect(cm.totalSavingPerMonth).toBeGreaterThan(0);
+  });
+
+  it('is season-aware: the same anchor prices differently in Nov–Apr than in May–Oct', () => {
+    const winter = winterMove().chargeMove!;
+    const summer = buildEvScenario({
+      rows: eveningCharger(SUMMER, 28),
+      rates: RATES,
+      dailyKwh: 10,
+      currentPlan: 'TOU',
+      chargeHour: 19,
+      chargeHourSource: 'user',
+    }).chargeMove!;
+
+    expect(winter.seasons).toEqual(['Winter']);
+    expect(summer.seasons).toEqual(['Summer']);
+    expect(winter.stayBreakdown[0].rateCents).toBeCloseTo(WINTER_RATE_18, 6); // On-Peak 20.3¢
+    expect(summer.stayBreakdown[0].rateCents).toBeCloseTo(SUMMER_RATE_18, 6); // Mid-Peak 15.7¢
+    // Winter's counterfactual bill for STAYING PUT is the bigger one.
+    expect(winter.stayCostPerMonth).toBeGreaterThan(summer.stayCostPerMonth);
+    expect(winter.stayCostPerMonth).toBeCloseTo(
+      (10 * ((WINTER_RATE_18 + 2 * RATE_19_20) / 3) * CHARGING_NIGHTS_PER_MONTH) / 100,
+      6,
+    );
+    expect(summer.stayCostPerMonth).toBeCloseTo(
+      (10 * ((SUMMER_RATE_18 + 2 * RATE_19_20) / 3) * CHARGING_NIGHTS_PER_MONTH) / 100,
+      6,
+    );
+    // ULO has no season: its windows are the same in January and June.
+    expect(summer.uloAtAnchorRateCents).toBeCloseTo(ULO_RATE_16_21, 6);
+    expect(winter.uloAtAnchorRateCents).toBeCloseTo(ULO_RATE_16_21, 6);
+  });
+
+  it('never credits the same kWh twice: the three-plan comparison pays it once', () => {
+    const s = winterMove();
+    const cm = s.chargeMove!;
+    const pc = s.planComparison!;
+    expect(pc.days).toBe(28);
+
+    for (const plan of ALL_PLANS) {
+      // "Today" in the comparison IS the stay side of the anchor — same hours,
+      // same rate, so the two views can never disagree or double-credit.
+      expect(pc.currentEvCost[plan]).toBeCloseTo(
+        cm.stayCostPerChargeByPlan[plan] * pc.days,
+        6,
+      );
+      // The credit the comparison books (baseline − shifted) is exactly
+      // stay − overnight for those same hours: one credit, once.
+      expect(pc.baseline[plan] - pc.withChargeOnOvernight[plan]).toBeCloseTo(
+        pc.currentEvCost[plan] - pc.overnightEvCost[plan],
+        6,
+      );
+    }
+    // …and on ULO that credit is the anchor's own stay-vs-move, scaled up.
+    expect(pc.baseline.ULO - pc.withChargeOnOvernight.ULO).toBeCloseTo(
+      (cm.stayCostPerChargeByPlan.ULO - cm.moveCostPerCharge) * pc.days,
+      6,
+    );
+    // …and the move side is the same money the comparison credits.
+    expect(pc.overnightEvCost.ULO).toBeCloseTo(cm.moveCostPerCharge * pc.days, 6);
+  });
+
+  it('differs from the shipped "assume the worst / assume overnight" number', () => {
+    const s = winterMove();
+    const pc = s.planComparison!;
+    // What the shipped build printed with no hour to price against: each
+    // plan's WORST case (TOU on-peak 20.3¢, ULO on-peak 39.1¢).
+    const shippedTou = (pc.evKwh * 20.3) / 100;
+    const shippedUloDelta = (pc.evKwh * (39.1 - 3.9)) / 100;
+    expect(pc.currentEvCost.TOU).toBeCloseTo((pc.evKwh * s.chargeMove!.stayRateCents) / 100, 6);
+    expect(pc.currentEvCost.TOU).toBeLessThan(shippedTou);
+    // The ULO "savings from shifting" shrinks, because 19:00 is not 39.1¢ today.
+    const actualUloDelta = pc.baseline.ULO - pc.withChargeOnOvernight.ULO;
+    expect(actualUloDelta).toBeGreaterThan(0);
+    expect(actualUloDelta).toBeLessThan(shippedUloDelta);
+  });
+
+  it('says "already optimal" when the anchor sits inside 23:00–07:00 — no fake shift saving', () => {
+    const onUlo = winterMove({ currentPlan: 'ULO', chargeHour: 0 }).chargeMove!;
+    expect(onUlo.band).toEqual([23, 0, 1]);
+    expect(onUlo.alreadyOvernight).toBe(true);
+    // Every band hour is already at ULO's overnight rate: the shift is worth
+    // exactly nothing and we say so instead of inventing a saving.
+    expect(onUlo.shiftSavingPerMonth).toBeCloseTo(0, 9);
+    expect(onUlo.totalSavingPerMonth).toBeCloseTo(0, 9);
+
+    // On Time-of-Use the same hours are a PLAN difference, not a shift —
+    // and it is labelled as one rather than booked as a move.
+    const onTou = winterMove({ currentPlan: 'TOU', chargeHour: 0 }).chargeMove!;
+    expect(onTou.alreadyOvernight).toBe(true);
+    expect(onTou.shiftSavingPerMonth).toBeCloseTo(0, 9);
+    expect(onTou.totalSavingPerMonth).toBeCloseTo(onTou.planSavingPerMonth, 6);
+    expect(onTou.totalSavingPerMonth).toBeGreaterThan(0);
+  });
+
+  it('falls back to an upper bound when the dataset has no readings at the anchor hour', () => {
+    const rows = hourlyFrom(WINTER, 28, () => 0.4).filter(
+      (r) => ![18, 19, 20].includes(r.dateObj.getHours()),
+    );
+    const s = buildEvScenario({
+      rows,
+      rates: RATES,
+      dailyKwh: 10,
+      currentPlan: 'TOU',
+      chargeHour: 19,
+      chargeHourSource: 'user',
+    });
+    const cm = s.chargeMove!;
+    expect(cm.stayBasis).toBe('worst-case');
+    expect(cm.stayRateCents).toBe(20.3); // TOU's most expensive rate, not a guess
+    expect(cm.stayBreakdown.every((b) => b.upperBound)).toBe(true);
+    expect(s.assumptions.join(' ')).toContain('upper bound');
+  });
+
+  it('lets the household’s own hour override the overnight block we detected', () => {
+    const rows = houseWithNightBlock(20, [23, 0, 1], 3.0); // block 23:00–02:00
+    const candidate = detectEvCandidate(rows);
+    expect(candidate).not.toBeNull();
+
+    const s = buildEvScenario({
+      rows,
+      rates: RATES,
+      dailyKwh: 10.2,
+      candidate,
+      currentPlan: 'TOU',
+      chargeHour: 19,
+      chargeHourSource: 'user',
+    });
+    const cm = s.chargeMove!;
+    expect(cm.stayBasis).toBe('band');
+    expect(cm.stayHours).toEqual([18, 19, 20]);
+    expect(cm.stayLabel).not.toContain('23:00');
+    // The block is no longer the price basis for "today".
+    const pc = s.planComparison!;
+    expect(pc.currentEvCost.TOU).toBeCloseTo((pc.evKwh * cm.stayRateCents) / 100, 6);
+  });
+
+  it('prefills the anchor from the block it detected, and prices today with that block', () => {
+    const rows = houseWithNightBlock(20, [23, 0, 1], 3.0);
+    const candidate = detectEvCandidate(rows);
+    const s = buildEvScenario({ rows, rates: RATES, dailyKwh: 10.2, candidate, currentPlan: 'TOU' });
+    const cm = s.chargeMove!;
+    expect(cm.source).toBe('detected');
+    expect(cm.hour).toBe(23);
+    expect(cm.stayBasis).toBe('block');
+    expect(cm.stayHours).toEqual([23, 0, 1]);
+    expect(cm.stayLabel).toBe('23:00–02:00');
+    expect(cm.alreadyOvernight).toBe(true);
+    // 23:00–02:00 is ULO Overnight already: nothing to shift, and it says so.
+    expect(cm.shiftSavingPerMonth).toBeCloseTo(0, 9);
+    expect(cm.totalSavingPerMonth).toBeGreaterThan(0); // …the PLAN difference is real
+    const pc = s.planComparison!;
+    expect(pc.currentEvCost.TOU).toBeCloseTo((pc.evKwh * cm.stayRateCents) / 100, 6);
+    expect(pc.currentEvCost.ULO).toBeCloseTo((pc.evKwh * 3.9) / 100, 4);
+  });
+
+  it('gives the same anchor rate from an hourly and a 15-minute feed', () => {
+    const evSet = new Set([19, 20]);
+    const day = (d: Date) => (evSet.has(d.getHours()) ? 3.4 : 0.4);
+    const run = (rows: ProcessedPoint[]) =>
+      buildEvScenario({
+        rows,
+        rates: RATES,
+        dailyKwh: 10,
+        currentPlan: 'TOU',
+        chargeHour: 19,
+        chargeHourSource: 'user',
+      }).chargeMove!;
+    const fromHourly = run(hourlyFrom(WINTER, 14, day));
+    const fromQuarter = run(atCadenceFrom(WINTER, 14, 15, day));
+    expect(fromQuarter.stayRateCents).toBeCloseTo(fromHourly.stayRateCents, 9);
+    expect(fromQuarter.uloAtAnchorRateCents).toBeCloseTo(fromHourly.uloAtAnchorRateCents, 9);
+    expect(fromQuarter.stayCostPerMonth).toBeCloseTo(fromHourly.stayCostPerMonth, 9);
+    expect(fromQuarter.seasons).toEqual(['Winter']);
+  });
+
+  it('shows no comparison at all when we know neither an hour nor a block', () => {
+    const s = buildEvScenario({ rows: eveningCharger(WINTER, 28), rates: RATES, dailyKwh: 10 });
+    expect(s.candidate).toBeNull();
+    expect(s.chargeMove).toBeNull();
+    // …and the three-plan comparison keeps the shipped worst-case fallback.
+    const pc = s.planComparison!;
+    expect(pc.currentEvCost.TOU).toBeCloseTo((pc.evKwh * 20.3) / 100, 6);
+    expect(s.assumptions.join(' ')).toContain('upper bound');
+  });
+
+  it('is null until the household tags a nightly kWh', () => {
+    const s = winterMove({ dailyKwh: 0 });
+    expect(s.ready).toBe(false);
+    expect(s.chargeMove).toBeNull();
   });
 });
