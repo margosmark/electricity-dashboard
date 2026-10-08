@@ -1,0 +1,187 @@
+{
+  "wave": "EV-2 (hour anchor + counterfactual bill)",
+  "started": "2026-10-08T03:29:11.683Z",
+  "finished": "2026-10-08T03:29:26.272Z",
+  "base": "http://127.0.0.1:3111/",
+  "summary": {
+    "total": 24,
+    "passed": 24,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "fixture uploads through the import modal",
+      "ok": true,
+      "detail": "28 days × 24 h = 672 readings"
+    },
+    {
+      "name": "all readings landed in localStorage",
+      "ok": true,
+      "detail": "672 readings"
+    },
+    {
+      "name": "Insights tab renders the EV card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hour wheel starts UNANSWERED (a 7 PM charge is invisible to night detection)",
+      "ok": true,
+      "detail": "wheel value \"\""
+    },
+    {
+      "name": "the card does not pretend it found a charging block",
+      "ok": true,
+      "detail": "data-source=none"
+    },
+    {
+      "name": "card asks the hour question instead of guessing one",
+      "ok": true,
+      "detail": "Answer When do you usually charge? above — we will price staying at that hour on Time-of-Use against moving the same kWh to 23:00–07:00 on Ultra-Low Overnight."
+    },
+    {
+      "name": "stay-vs-move comparison appears for 19:00",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stay side prices the anchor at WINTER rates read from the readings",
+      "ok": true,
+      "detail": "12.30¢/kWh → $36.90/mo (summer would be 11.20¢ → $33.61/mo)"
+    },
+    {
+      "name": "stay side names the ±1 h band it blended",
+      "ok": true,
+      "detail": "Stay put · Time-of-Use18:00–21:00 · 12.3¢/kWh/month$36.90$1.23 a charge"
+    },
+    {
+      "name": "assumptions say the season the rates came from",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "move side prices 23:00–07:00 on ULO overnight",
+      "ok": true,
+      "detail": "3.9¢/kWh → $11.70/mo"
+    },
+    {
+      "name": "total is stay − move",
+      "ok": true,
+      "detail": "$36.90 − $11.70 = $25.20/mo"
+    },
+    {
+      "name": "and it splits into shift + plan, which add up",
+      "ok": true,
+      "detail": "+$80.49/mo shift, -55.29/mo plan → $25.20/mo"
+    },
+    {
+      "name": "three-plan ULO delta differs from the shipped assume-overnight version",
+      "ok": true,
+      "detail": "shipped −$98.56 vs today → anchored −$75.12 vs today"
+    },
+    {
+      "name": "evidence line lists the hours and windows it blended",
+      "ok": true,
+      "detail": "Priced from your own readings at 18:00–21:00: 18:00 On-Peak + Off-Peak 17.3¢ · 19:00 Off-Peak 9.8¢ · 20:00 Off-Peak 9.8¢."
+    },
+    {
+      "name": "stay side re-prices on the plan the switcher selected",
+      "ok": true,
+      "detail": "ULO: 30.73¢/kWh → $92.19/mo"
+    },
+    {
+      "name": "on ULO the plan half of the answer is zero (it is already the plan)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "comparison fits a 390px phone",
+      "ok": true,
+      "detail": "width 302px"
+    },
+    {
+      "name": "real Oakville export uploads",
+      "ok": true,
+      "detail": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml"
+    },
+    {
+      "name": "real readings landed in localStorage",
+      "ok": true,
+      "detail": "17539 readings"
+    },
+    {
+      "name": "Insights tab renders the EV card on real data",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hour wheel is present on the real data",
+      "ok": true,
+      "detail": "value \"22\""
+    },
+    {
+      "name": "the card prices a comparison OR says it still needs the hour — never both, never neither",
+      "ok": true,
+      "detail": "{\"move\":true,\"empty\":false}"
+    },
+    {
+      "name": "7 PM counterfactual renders on the real export",
+      "ok": true,
+      "detail": "Staying at 18:00–21:00 on Time-of-Use costs $31.70/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $20.00/mo better off every"
+    }
+  ],
+  "facts": {
+    "synthetic": {
+      "fixture": {
+        "startIso": "2026-01-05T00:00:00-05:00",
+        "days": 28,
+        "weekdays": 20,
+        "weekends": 8,
+        "typedKwh": 10,
+        "chargeHour": "19"
+      },
+      "expected": {
+        "stayRateCents": 12.300000000000002,
+        "summerStayRateCents": 11.204761904761904,
+        "uloAtAnchorCents": 30.728571428571428,
+        "stayPerMonth": "36.90",
+        "summerStayPerMonth": "33.61",
+        "movePerMonth": "11.70",
+        "totalPerMonth": "25.20",
+        "shiftPerMonth": "80.49",
+        "planPerMonth": "-55.29",
+        "evKwh": 280,
+        "shippedUloDelta": 98.56,
+        "actualUloDelta": 75.12,
+        "uloStayPerMonth": "92.19",
+        "uloStayRateCents": 30.728571428571428
+      },
+      "rendered": {
+        "stay": "Stay put · Time-of-Use18:00–21:00 · 12.3¢/kWh/month$36.90$1.23 a charge",
+        "move": "Move · Ultra-Low Overnight23:00–07:00 · 3.9¢/kWh/month$11.70$0.39 a charge",
+        "result": "Staying at 18:00–21:00 on Time-of-Use costs $36.90/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $25.20/mo better off every month.Of that: +$80.49/mo for moving the hour, −$55.29/mo for changing plan at your hour. The two add up to the total and are never counted twice.Priced from your own readings at 18:00–21:00: 18:00 On-Peak + Off-Peak 17.3¢ · 19:00 Off-Peak 9.8¢ · 20:00 Off-Peak 9.8¢.",
+        "comparison": "Whole loaded dataset with 280 kWh of charging moved to 23:00–07:0028 days of dataTime-of-UseToday $50.68$43.68−$7.00 vs todayTieredToday $52.42$52.42no change from shiftingUltra-Low OvernightToday $89.59$14.47−$75.12 vs today",
+        "stayOnUlo": "Stay put · Ultra-Low Overnight18:00–21:00 · 30.7¢/kWh/month$92.19$3.07 a charge"
+      },
+      "shots": [
+        "wave-ev-winter-7pm-desktop.png",
+        "wave-ev-winter-7pm-mobile.png"
+      ]
+    },
+    "real": {
+      "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+      "readings": 17539,
+      "dataSource": "detected",
+      "wheelPrefilled": "22",
+      "at7pm": {
+        "stay": "Stay put · Time-of-Use18:00–21:00 · 10.6¢/kWh/month$31.70$1.06 a charge",
+        "move": "Move · Ultra-Low Overnight23:00–07:00 · 3.9¢/kWh/month$11.70$0.39 a charge",
+        "result": "Staying at 18:00–21:00 on Time-of-Use costs $31.70/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $20.00/mo better off every month.Of that: +$64.30/mo for moving the hour, −$44.29/mo for changing plan at your hour. The two add up to the total and are never counted twice.Priced from your own readings at 18:00–21:00: 18:00 Mid-Peak + Off-Peak + On-Peak 13.2¢ · 19:00 Off-Peak 9.2¢ · 20:00 Off-Peak 9.2¢.",
+        "comparison": "Whole loaded dataset with 7310 kWh of charging moved to 23:00–07:00731 days of dataTime-of-UseToday $4491.67$4435.55−$56.11 vs todayTieredToday $4754.30$4818.17+$63.87 vs todayUltra-Low OvernightToday $5010.23$3443.51−$1566.72 vs today"
+      },
+      "shots": [
+        "wave-ev-oakville-7pm.png"
+      ]
+    }
+  }
+}
