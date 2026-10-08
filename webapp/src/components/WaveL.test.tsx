@@ -20,10 +20,13 @@ import { ActualBillPanel } from './ActualBillPanel';
 import { TrueBillEstimate } from './TrueBillEstimate';
 import { EXTRA_CHARGES_KEY } from '@/hooks/useDashboard';
 import {
+  EMPTY_EXTRA_CHARGES,
   billTotals,
   billWindow,
   billedKwh,
+  calculateTrueBill,
   parseUsageSummaries,
+  planCostFor,
   type ProcessedPoint,
   type RateSet,
 } from '@/lib/energy';
@@ -239,6 +242,61 @@ describe('True Bill inputs auto-populated from the file', () => {
     expect(Math.abs(estimate - 524.32)).toBeLessThan(1);
     expect(box.textContent).toContain('$415.28'); // what was actually payable
     expect(box.textContent).toContain('−$109.04'); // the rebate, reported not hidden
+  });
+
+  it('prices Tiered the way the plan card does — threshold and all', () => {
+    // Only the August stretch of the 2026-07-22 period: 19 days × ~91 kWh
+    // runs well past the 600 kWh summer threshold prorated to those days, so
+    // Tiered has to carry tier 2. The per-reading `costTiered` this fixture
+    // carries is 0 (tier-1 pricing of an empty field), which is exactly what
+    // used to make the vs-actual figure disagree with the card above it.
+    const rows = rowsFor(2).filter((r) => r.dayStr >= '2026-08-01');
+    expect(rows).toHaveLength(19);
+    const kwh = rows.reduce((n, r) => n + r.usage_kwh, 0);
+    const days = new Set(rows.map((r) => r.dayStr)).size;
+
+    render(
+      <TrueBillEstimate
+        plan="Tiered"
+        startDate="2026-08-01"
+        endDate="2026-08-19"
+        windowData={rows}
+        summaries={summaries}
+        allData={rows}
+      />,
+    );
+
+    // The card's own figure (monthly buckets) and `planCostFor` — the number
+    // the vs-actual row prices with — are ONE number, and it is the tier-2 one.
+    const cardVariable = Number(
+      (screen.getByTestId('variable-estimate').textContent || '').replace('$', ''),
+    );
+    const th = 600 * (days / 30.4);
+    // the card prints cents, so compare it at cents
+    expect(cardVariable).toBeCloseTo(planCostFor(rows, 'Tiered'), 2);
+    expect(cardVariable).toBeCloseTo(th * 0.12 + (kwh - th) * 0.142, 2);
+    expect(cardVariable).toBeGreaterThan(kwh * 0.12); // tier 1 only would be lower
+
+    // …so the true-bill estimate is the card's variable cost plus the pre-filled
+    // add-ons, to the cent.
+    const estimate = Number(
+      (screen.getByTestId('true-bill-vs-actual').textContent || '').match(
+        /Your estimate\$([\d.]+)/,
+      )?.[1],
+    );
+    const expected = calculateTrueBill({
+      variableCost: planCostFor(rows, 'Tiered'),
+      totalKwh: kwh,
+      months: 1, // the vs-actual row sizes months from the bill's own 29-day window
+      charges: {
+        ...EMPTY_EXTRA_CHARGES,
+        deliveryPerKwh: '0.0252',
+        deliveryFlat: '35.88',
+        regulatoryPerKwh: '0.0054',
+        hstPct: '13',
+      },
+    })!;
+    expect(estimate).toBeCloseTo(expected.total, 2);
   });
 
   it('lets a typed value win for good — clearing does not resurrect the file’s number', async () => {

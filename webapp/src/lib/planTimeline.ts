@@ -40,6 +40,7 @@ import {
   billTotals,
   billWindow,
   classifyBillLine,
+  planCostFor,
   summaryStatesMoney,
   type BillLineClass,
   type BillLineItem,
@@ -351,35 +352,13 @@ export type PeriodAlternatives = {
 };
 
 /**
- * Tiered commodity with the month-bucket threshold logic the plan cards and
- * `aggregateChartData` already use (thresholds prorated by the month's
- * covered days / 30.4): a period spanning two calendar months is split the
- * way the LDC bills it, and tier-2 kicks in only above the threshold.
+ * Tiered commodity with the month-bucket threshold rule the plan cards use —
+ * now literally `planCostFor` from `energy.ts`, which is where that rule
+ * lives. A period spanning two calendar months is split the way the LDC bills
+ * it, and tier-2 kicks in only above the threshold.
  */
 function tieredCommodity(rows: ProcessedPoint[]): number {
-  if (rows.length === 0) return 0;
-  const buckets = new Map<string, ProcessedPoint[]>();
-  for (const r of rows) {
-    const key = r.dayStr.slice(0, 7);
-    const list = buckets.get(key);
-    if (list) list.push(r);
-    else buckets.set(key, [r]);
-  }
-  let total = 0;
-  for (const list of buckets.values()) {
-    const first = list[0];
-    if (!first) continue;
-    let usage = 0;
-    for (const r of list) usage += r.usage_kwh;
-    const days = new Set(list.map((r) => r.dayStr)).size;
-    const t = first.activeRateSet.tiered;
-    const th = (first.isWinter ? t.thresholdWinter : t.thresholdSummer) * (days / 30.4);
-    total +=
-      usage <= th
-        ? usage * (t.tier1 / 100)
-        : th * (t.tier1 / 100) + (usage - th) * (t.tier2 / 100);
-  }
-  return total;
+  return planCostFor(rows, 'Tiered');
 }
 
 /**
@@ -387,7 +366,9 @@ function tieredCommodity(rows: ProcessedPoint[]): number {
  * period, as a full-bill number.
  *
  * Only the commodity is repriced — that is the one part of the bill a plan
- * switch moves. Delivery, regulatory and any other billed line are held at
+ * switch moves. Tiered comes from `planCostFor`, the app's single month-scoped
+ * threshold rule (this module used to carry its own copy of it). Delivery,
+ * regulatory and any other billed line are held at
  * their ACTUAL values; HST and the Ontario Electricity Rebate are scaled at
  * this bill's own effective rates (tax ÷ total, credit ÷ total), so the
  * modeled figure sits on exactly the same footing as the $ figure it is
