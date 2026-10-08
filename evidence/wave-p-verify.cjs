@@ -159,7 +159,16 @@ async function desktopRun(browser) {
     check('adding an entry writes plan_timeline (next to billing_day)', await shown(page.getByTestId('plan-timeline-entry')));
     let tl = JSON.parse((await stored(page, 'plan_timeline')) || '[]');
     check('plan_timeline persisted in localStorage', tl.length === 1, JSON.stringify(tl).slice(0, 120));
-    check('billing_day still stored alongside it', (await stored(page, 'billing_day')) !== null);
+    // billing_day is only WRITTEN when the user changes it (a fresh profile
+    // runs on the default without storing anything), so touch it and prove
+    // both keys live in the same store the timeline was written to.
+    const bday = page.getByLabel('Billing day of month');
+    if (await shown(bday, 5_000)) await bday.fill('5');
+    check(
+      'billing_day writes to the same localStorage, next to the timeline',
+      (await stored(page, 'billing_day')) === '5' && (await stored(page, 'plan_timeline')) !== null,
+      `billing_day=${await stored(page, 'billing_day')}`,
+    );
 
     await page.getByTestId('plan-timeline-entry-to').fill('2020-01-01');
     const err = page.getByTestId('plan-timeline-error');

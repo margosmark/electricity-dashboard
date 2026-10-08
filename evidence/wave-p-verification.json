@@ -1,0 +1,202 @@
+{
+  "wave": "P",
+  "base": "http://10.10.11.110:3939/",
+  "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "xmlSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "at": "2026-10-08T03:37:08.772Z",
+  "total": 38,
+  "passed": 38,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "real 24-period export loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "usage_summaries: 24 billing periods",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "the periods are the real 2024-08-26 … 2026-07-22",
+      "ok": true,
+      "detail": "2024-08-26 … 2026-07-22"
+    },
+    {
+      "name": "audited Total Electricity Charges $442.10 for 2026-07-22",
+      "ok": true,
+      "detail": "$442.10"
+    },
+    {
+      "name": "no request carried the XML (parse stayed in the browser)",
+      "ok": true,
+      "detail": "19 requests, methods: GET"
+    },
+    {
+      "name": "plan-type timeline panel is visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "all 24 periods are fingerprinted",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "detection sequence: TOU×3 · Tiered×5 · TOU×5 · Tiered×6 · TOU×5",
+      "ok": true,
+      "detail": "OOOTTTTTOOOOOTTTTTTOOOOO"
+    },
+    {
+      "name": "every period detected from bill lines (no guesses)",
+      "ok": true,
+      "detail": "detected"
+    },
+    {
+      "name": "Tiered row shows the BLOCK line as evidence",
+      "ok": true,
+      "detail": "Lines we matched: BLOCK 1 - Winter · BLOCK 1 - Winter Usage"
+    },
+    {
+      "name": "TOU row shows the Peak-Summer line as evidence",
+      "ok": true,
+      "detail": "Lines we matched: On Peak-Summer · Off Peak-Summer · Mid Peak-Summer · +3 more"
+    },
+    {
+      "name": "adding an entry writes plan_timeline (next to billing_day)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plan_timeline persisted in localStorage",
+      "ok": true,
+      "detail": "[{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"TOU\",\"from\":\"2026-10-07\",\"to\":\"2026-10-07\"}]"
+    },
+    {
+      "name": "billing_day writes to the same localStorage, next to the timeline",
+      "ok": true,
+      "detail": "billing_day=5"
+    },
+    {
+      "name": "an end date before the start is refused, with a message",
+      "ok": true,
+      "detail": "Every entry needs a real start and end day, with the start on or before the end."
+    },
+    {
+      "name": "nothing invalid ever reaches storage",
+      "ok": true,
+      "detail": "{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"TOU\",\"from\":\"2026-10-07\",\"to\":\"2026-10-07\"}"
+    },
+    {
+      "name": "editing plan + range persists",
+      "ok": true,
+      "detail": "{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"Tiered\",\"from\":\"2024-01-01\",\"to\":\"2024-06-30\"}"
+    },
+    {
+      "name": "a declaration outside the file does not disturb detection",
+      "ok": true,
+      "detail": "TOU"
+    },
+    {
+      "name": "removing empties the timeline again",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "switch track record is visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "one row per billing period (24)",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "headline counts 22 modeled-and-trusted periods of 24",
+      "ok": true,
+      "detail": "across 22 counted periods of 24 in this file"
+    },
+    {
+      "name": "audited net saving headline = $251.89",
+      "ok": true,
+      "detail": "$251.89"
+    },
+    {
+      "name": "per-plan breakdown: TOU 11 periods $210.25 saved · Tiered 11 periods $41.64 saved",
+      "ok": true,
+      "detail": "Time-of-Use: 11 periods · $210.25 savedTiered: 11 periods · $41.64 saved"
+    },
+    {
+      "name": "exactly 2 periods honestly skipped (no readings / 67% cover)",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "skip reasons name the coverage, not a number",
+      "ok": true,
+      "detail": "not modeled — no readings in this browser fall inside this period. you paid $287.11. | not modeled — readings cover 20 of 30 days (67%, 90% needed). you paid $2"
+    },
+    {
+      "name": "all 22 modeled rows reproduce their own bill (✓, counted)",
+      "ok": true,
+      "detail": "✓=22 excluded=0"
+    },
+    {
+      "name": "2026-07-22 row is on TOU",
+      "ok": true,
+      "detail": "TOU"
+    },
+    {
+      "name": "paid $395.68 in 2026-07-22",
+      "ok": true,
+      "detail": "$395.68"
+    },
+    {
+      "name": "Tiered modeled ABOVE the bill ($428.87)",
+      "ok": true,
+      "detail": "Tiered · modeled$428.87"
+    },
+    {
+      "name": "ULO modeled ABOVE the bill ($463.67) — his load is NOT overnight-heavy",
+      "ok": true,
+      "detail": "Ultra-Low Overnight · modeled$463.67"
+    },
+    {
+      "name": "negative saving shown honestly (−$33.19 = already cheapest)",
+      "ok": true,
+      "detail": "−$33.19"
+    },
+    {
+      "name": "every alternative cell is labelled modeled",
+      "ok": true,
+      "detail": "2 labels"
+    },
+    {
+      "name": "3 biggest-miss callouts",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "timeline visible on a 390x844 phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "track record visible on the phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "add-entry button is touch-sized (>=44px)",
+      "ok": true,
+      "detail": "102x44"
+    }
+  ]
+}
