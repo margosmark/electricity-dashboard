@@ -184,7 +184,7 @@ describe('PlanBands — Wave P slice 5, the annotation layer on the money chart'
     // behind the bars: the band must precede the bar rectangle in the DOM
     const band = container.querySelector('path.recharts-reference-area-rect');
     const bar = container.querySelector('.recharts-bar-rectangle');
-    expect(!!band && !!bar).toBe(true);
+    if (!band || !bar) throw new Error('expected both a plan band and a bar in the chart');
     expect(band.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
