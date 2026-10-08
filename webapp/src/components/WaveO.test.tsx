@@ -193,6 +193,12 @@ describe('period deltas', () => {
     render(<MoneySection summaries={summaries} allData={allRows} plan="TOU" />);
     const table = await screen.findByTestId('money-deltas-table');
     expect(within(table).getByText(/Baseline · May 25, 2026/)).toBeInTheDocument();
+    // Every later column is the change from the period in the column to its
+    // left, so the header only needs the destination: "Δ → Jun 23, 2026".
+    expect(within(table).getByText(/Δ → Jun 23, 2026/)).toBeInTheDocument();
+    // Three periods fit one screen; the sideways-scroll note only appears
+    // once the table is genuinely wider than a page (>6 columns).
+    expect(screen.queryByTestId('money-deltas-scroll-hint')).not.toBeInTheDocument();
     const payableRow = within(table).getByTestId('money-delta-payable');
     const cells = payableRow.querySelectorAll('td');
     // Baseline column = period 1's own figure …
