@@ -1,8 +1,8 @@
 {
   "wave": "EV-2 (hour anchor + counterfactual bill)",
-  "started": "2026-10-08T03:29:11.683Z",
-  "finished": "2026-10-08T03:29:26.272Z",
-  "base": "http://127.0.0.1:3111/",
+  "started": "2026-10-08T03:41:43.111Z",
+  "finished": "2026-10-08T03:41:54.934Z",
+  "base": "http://10.10.11.110:3939/",
   "summary": {
     "total": 24,
     "passed": 24,
@@ -127,7 +127,7 @@
     {
       "name": "7 PM counterfactual renders on the real export",
       "ok": true,
-      "detail": "Staying at 18:00–21:00 on Time-of-Use costs $31.70/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $20.00/mo better off every"
+      "detail": "Staying at 18:00–21:00 on Time-of-Use costs $30.22/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $18.52/mo better off every"
     }
   ],
   "facts": {
@@ -174,10 +174,10 @@
       "dataSource": "detected",
       "wheelPrefilled": "22",
       "at7pm": {
-        "stay": "Stay put · Time-of-Use18:00–21:00 · 10.6¢/kWh/month$31.70$1.06 a charge",
+        "stay": "Stay put · Time-of-Use18:00–21:00 · 10.1¢/kWh/month$30.22$1.01 a charge",
         "move": "Move · Ultra-Low Overnight23:00–07:00 · 3.9¢/kWh/month$11.70$0.39 a charge",
-        "result": "Staying at 18:00–21:00 on Time-of-Use costs $31.70/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $20.00/mo better off every month.Of that: +$64.30/mo for moving the hour, −$44.29/mo for changing plan at your hour. The two add up to the total and are never counted twice.Priced from your own readings at 18:00–21:00: 18:00 Mid-Peak + Off-Peak + On-Peak 13.2¢ · 19:00 Off-Peak 9.2¢ · 20:00 Off-Peak 9.2¢.",
-        "comparison": "Whole loaded dataset with 7310 kWh of charging moved to 23:00–07:00731 days of dataTime-of-UseToday $4491.67$4435.55−$56.11 vs todayTieredToday $4754.30$4818.17+$63.87 vs todayUltra-Low OvernightToday $5010.23$3443.51−$1566.72 vs today"
+        "result": "Staying at 18:00–21:00 on Time-of-Use costs $30.22/mo. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs $11.70/mo — $18.52/mo better off every month.Of that: +$63.77/mo for moving the hour, −$45.26/mo for changing plan at your hour. The two add up to the total and are never counted twice.Priced from your own readings at 18:00–21:00: 18:00 Mid-Peak + Off-Peak + On-Peak 12.8¢ · 19:00 Off-Peak 8.7¢ · 20:00 Off-Peak 8.7¢.",
+        "comparison": "Whole loaded dataset with 7310 kWh of charging moved to 23:00–07:00731 days of dataTime-of-UseToday $4282.01$4262.12−$19.89 vs todayTieredToday $4521.58$4621.26+$99.68 vs todayUltra-Low OvernightToday $4961.59$3407.67−$1553.92 vs today"
       },
       "shots": [
         "wave-ev-oakville-7pm.png"
