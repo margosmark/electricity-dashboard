@@ -107,7 +107,7 @@ browser-local app that never uploads any of it:
 | `billing_day` | `updateBillingDay` | `getBillingPeriod` anchors |
 | `selected_plan` | `useSelectedPlan` (nav switcher, plan cards) | `useSelectedPlan` — the switcher AND the header chip read one store |
 | `extra_charges` | True-bill fields | `useExtraCharges` |
-| `estimate_ledger` | `useEstimateLedger` (the open period's claim + every claim a bill has since scored) | `lib/estimateLedger` — settles on load, so a new export closes its own windows |
+| `open_estimate_ledger` | `useEstimateLedger` (the open period's claim + every claim a bill has since scored) | `lib/estimateLedger` — settles on load, so a new export closes its own windows |
 
 ## Accessibility (standing gate)
 

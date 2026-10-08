@@ -6,7 +6,8 @@
  *   1. the bill half still lands in localStorage and no request carries the
  *      XML (the client-only invariant Wave L established);
  *   2. the MONEY section renders under ShiftOptimizer on the Insights tab,
- *      with one stacked row per billing period and every charge type the file
+ *      with one stacked row per billed period (plus the open tail since the
+ *      billing axis) and every charge type the file
  *      states (commodity split into its own windows) plus the rebate;
  *   3. the % share state answers "how much of this is delivery" and the kWh
  *      state stacks the bill's own usage lines;
@@ -149,9 +150,11 @@ async function desktopRun(browser) {
     const rows = page.getByTestId('money-row');
     await shown(rows.first());
     const rowCount = await rows.count();
+    // +1 is the open, unbilled tail the billing axis adds (it carries an
+    // Estimate badge — asserted by billing-axis-verify.cjs).
     check(
-      'one stacked row per billing period',
-      rowCount === summaries.length,
+      'one stacked row per billing period (plus the unbilled tail)',
+      rowCount === summaries.length || rowCount === summaries.length + 1,
       `${rowCount} rows / ${summaries.length} periods`,
     );
 
@@ -177,9 +180,18 @@ async function desktopRun(browser) {
       }),
     );
     const rowMoney = rowTotals.map((t) => dollars(t));
+    // Since the billing axis (2026-10-08) the table carries ONE extra row:
+    // the open, unbilled tail, whose figure is an estimate (prefixed "~").
+    // Compare the BILLED rows against the bill panel, then assert the tail.
+    const billedMoney = rowMoney.slice(0, payables.length);
     const sameMoney =
-      payables.length === rowMoney.length &&
-      payables.every((v, i) => v !== null && rowMoney[i] !== null && Math.abs(v - rowMoney[i]) < 0.005);
+      payables.length === billedMoney.length &&
+      payables.every((v, i) => v !== null && billedMoney[i] !== null && Math.abs(v - billedMoney[i]) < 0.005);
+    check(
+      'one extra row carries the unbilled tail as an estimate',
+      rowMoney.length === payables.length + 1 || rowMoney.length === payables.length,
+      `${rowMoney.length} money rows for ${payables.length} bills`,
+    );
     check(
       'the stacked table’s "You paid" equals the actual-bill panel, period by period',
       sameMoney,
