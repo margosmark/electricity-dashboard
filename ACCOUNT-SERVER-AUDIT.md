@@ -202,7 +202,8 @@ sentence in the audit file is the one that stays authoritative either way.
 The card asked: *if residual account code exists on `main` but is not routable,
 delete it or document why it stays.*
 
-**There is none to delete** (§1 — every grep is 0). So the deliberate choice is
+**There is none to delete** (§1 — every *account-code* grep is 0: paths,
+`acct_session`, `ACCT_ENABLED`, `VAPID`). So the deliberate choice is
 about the branches, and it is: **keep them.**
 
 - They are **not on `main`**, so they are not a supply-chain surface for
