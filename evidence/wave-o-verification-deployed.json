@@ -2,7 +2,7 @@
   "wave": "O",
   "base": "http://10.10.11.110:3939/",
   "xml": "doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
-  "at": "2026-10-08T03:59:29.810Z",
+  "at": "2026-10-08T04:10:18.322Z",
   "total": 33,
   "passed": 33,
   "failed": 0,
@@ -70,7 +70,7 @@
     {
       "name": "the % share state prints percentages, not dollars",
       "ok": true,
-      "detail": "14.6%"
+      "detail": "32.7%"
     },
     {
       "name": "non-commodity share is shown as a number",
