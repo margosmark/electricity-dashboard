@@ -4,7 +4,11 @@ Scope: the deployed app at https://electricity.markarslan.ca/ — a Next.js
 frontend that parses **untrusted files in the browser** (Green Button XML from
 a utility portal, JSON backups picked from disk) and a service worker that
 decides what may be cached. There is no account system and **no server-side
-user data**: readings live only in `localStorage`. Alongside it runs the
+user data** on this branch or in this deployment: readings live only in
+`localStorage` — the optional account server that would change this exists as
+built-but-unmerged branch code and is parked, and the full state of that is
+recorded in one place, [ACCOUNT-SERVER-AUDIT.md](ACCOUNT-SERVER-AUDIT.md).
+Alongside it runs the
 Green Button Connect My Data shim (`/greenbutton/*`), which holds OAuth
 *credentials* — a client secret and one token file — but never a reading.
 
