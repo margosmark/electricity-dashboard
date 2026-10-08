@@ -1,0 +1,156 @@
+{
+  "wave": "billing-axis",
+  "base": "http://10.10.11.110:3939/",
+  "xml": "doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
+  "at": "2026-10-08T14:41:43.751Z",
+  "total": 29,
+  "passed": 29,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "real export loaded (readings + totals strip)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the file’s billing periods parsed in the browser",
+      "ok": true,
+      "detail": "3 periods"
+    },
+    {
+      "name": "no request carried the XML (parse stayed in the browser)",
+      "ok": true,
+      "detail": "19 requests"
+    },
+    {
+      "name": "first load opens the file’s own period (the unbilled tail), not a calendar month",
+      "ok": true,
+      "detail": "window 2026-08-20 → 2026-10-01 / expected 2026-08-20 → 2026-10-01"
+    },
+    {
+      "name": "previous steps to the last REAL billed period",
+      "ok": true,
+      "detail": "2026-07-22 → 2026-08-20 / billed 2026-07-22 → 2026-08-20"
+    },
+    {
+      "name": "next returns to the open tail",
+      "ok": true,
+      "detail": "2026-08-20 → 2026-10-01"
+    },
+    {
+      "name": "the last next clamps instead of wrapping to the oldest bill",
+      "ok": true,
+      "detail": "2026-08-20 → 2026-10-01"
+    },
+    {
+      "name": "OPEN PERIOD panel renders on Insights",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "“billed through” is the last bill’s own end date",
+      "ok": true,
+      "detail": "2026-08-20 / expected 2026-08-20"
+    },
+    {
+      "name": "“billed through: $X actual” equals the actual-bill panel’s own figure",
+      "ok": true,
+      "detail": "$395.68 vs panel $395.68"
+    },
+    {
+      "name": "“unbilled since” is the day after the last bill was read",
+      "ok": true,
+      "detail": "2026-08-20"
+    },
+    {
+      "name": "the unbilled figure is an ESTIMATE of commodity only",
+      "ok": true,
+      "detail": "$425.56 estimated commodity"
+    },
+    {
+      "name": "delivery / regulatory / HST are declared NOT billed yet",
+      "ok": true,
+      "detail": "Only the electricity itself is estimated here. Delivery, regulatory and HST for these days are not billed yet — they do not exist as charges until the utility issues the bill, so this panel will not invent them."
+    },
+    {
+      "name": "one chart row per billed period PLUS the open period",
+      "ok": true,
+      "detail": "4 rows / 3 bills"
+    },
+    {
+      "name": "exactly one row carries the Estimate badge",
+      "ok": true,
+      "detail": "ESTIMATE"
+    },
+    {
+      "name": "the chart says hatched bars are not bills",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the open bar is actually drawn with the hatch pattern",
+      "ok": true,
+      "detail": "3 hatched shapes"
+    },
+    {
+      "name": "the delta table flags the open column",
+      "ok": true,
+      "detail": "ESTIMATE"
+    },
+    {
+      "name": "the open column prints estimates, not changes",
+      "ok": true,
+      "detail": "5 estimated cells"
+    },
+    {
+      "name": "the claim is recorded in open_estimate_ledger",
+      "ok": true,
+      "detail": "open=1 closed=0"
+    },
+    {
+      "name": "the recorded window starts where the last bill was read",
+      "ok": true,
+      "detail": "2026-08-20, $425.56 over 3447.5 kWh (TOU)"
+    },
+    {
+      "name": "nothing has been billed for it yet, and the panel says so",
+      "ok": true,
+      "detail": "waiting for a bill to close the window"
+    },
+    {
+      "name": "a settled claim prints its accuracy once",
+      "ok": true,
+      "detail": "95% accurate"
+    },
+    {
+      "name": "the accuracy figure is a percentage",
+      "ok": true,
+      "detail": "95% accurate"
+    },
+    {
+      "name": "the settled claim names both numbers",
+      "ok": true,
+      "detail": "Jul 22, 2026 – Aug 20 — we said $341.25, Oakville billed $325.00 (+$16.25): 95.0% accurate."
+    },
+    {
+      "name": "OPEN PERIOD panel visible on a 390x844 phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "the estimate badge is readable on a phone",
+      "ok": true,
+      "detail": "173x31"
+    },
+    {
+      "name": "the wide table scrolls inside its own box",
+      "ok": true,
+      "detail": "{\"scroll\":350,\"client\":350}"
+    }
+  ]
+}
