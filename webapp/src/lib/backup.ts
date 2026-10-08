@@ -21,6 +21,7 @@
  */
 
 import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges } from './energy';
+import { isValidPlanTimelineEntry, type PlanTimelineEntry } from './planTimeline';
 
 /** Marker written into every export; Import refuses files without it. */
 export const BACKUP_SCHEMA = 'ontario-energy-optimizer.backup';
@@ -39,6 +40,10 @@ export type BackupPayload = {
   billing_day: number;
   /** Local bill add-ons typed by the user (delivery / regulatory / HST). */
   extra_charges: ExtraCharges;
+  /** The user's plan-type timeline (Wave P), when they have one. Optional:
+   *  documents built before Wave P (or without entries) simply lack the key,
+   *  and the reader treats its absence as an empty timeline. */
+  plan_timeline?: PlanTimelineEntry[];
 };
 
 export type BackupDocument = {
@@ -53,6 +58,8 @@ export type BackupInput = {
   energyData: DataPoint[];
   billingDay: number;
   extraCharges?: ExtraCharges;
+  /** Declared plan periods to carry across a restore. */
+  planTimeline?: PlanTimelineEntry[];
   exportedAt?: Date;
 };
 
@@ -60,6 +67,10 @@ export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string
 
 /** Build the document an Export click writes to disk. */
 export function buildBackupDocument(input: BackupInput): BackupDocument {
+  // Filter, don't trust: storage is an external source as far as this
+  // function is concerned, and a document with an invalid entry could never
+  // be parsed back by its own importer.
+  const planTimeline = (input.planTimeline ?? []).filter(isValidPlanTimelineEntry);
   return {
     schema: BACKUP_SCHEMA,
     version: BACKUP_VERSION,
@@ -68,6 +79,7 @@ export function buildBackupDocument(input: BackupInput): BackupDocument {
       energy_data: input.energyData.map((d) => ({ timestamp: d.timestamp, usage_kwh: d.usage_kwh })),
       billing_day: normalizeBillingDay(input.billingDay),
       extra_charges: whitelistCharges(input.extraCharges),
+      ...(planTimeline.length > 0 ? { plan_timeline: planTimeline } : {}),
     },
   };
 }
@@ -186,13 +198,45 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
 
   const extraCharges = whitelistCharges(p.extra_charges);
 
+  // plan_timeline is optional (Wave P) but STRICT when present: a restore is
+  // not the place to silently drop the periods the user typed in. Absence
+  // stays absence, so documents from before Wave P round-trip unchanged.
+  let planTimeline: PlanTimelineEntry[] | undefined;
+  if (p.plan_timeline !== undefined && p.plan_timeline !== null) {
+    if (!Array.isArray(p.plan_timeline)) {
+      return {
+        ok: false,
+        error: `That backup has an invalid plan_timeline (got ${describe(p.plan_timeline)}, expected an array of {id, plan, from, to}).`,
+      };
+    }
+    planTimeline = [];
+    for (let i = 0; i < p.plan_timeline.length; i++) {
+      const candidate = p.plan_timeline[i];
+      if (!isValidPlanTimelineEntry(candidate)) {
+        return {
+          ok: false,
+          error:
+            `That backup's plan_timeline entry ${i + 1} is invalid — each entry needs an id, a plan ` +
+            `(TOU, Tiered or ULO) and from/to days in yyyy-MM-dd with from on or before to ` +
+            `(got ${JSON.stringify(candidate)}).`,
+        };
+      }
+      planTimeline.push(candidate);
+    }
+  }
+
   return {
     ok: true,
     value: {
       schema: BACKUP_SCHEMA,
       version,
       exportedAt: typeof doc.exportedAt === 'string' ? doc.exportedAt : '',
-      payload: { energy_data: energyData.value, billing_day: billingDay, extra_charges: extraCharges },
+      payload: {
+        energy_data: energyData.value,
+        billing_day: billingDay,
+        extra_charges: extraCharges,
+        ...(planTimeline ? { plan_timeline: planTimeline } : {}),
+      },
     },
   };
 }
@@ -231,13 +275,15 @@ function describe(v: unknown): string {
 }
 
 /**
- * The exact localStorage writes an import performs — same three keys the app
- * already reads on boot, so a restore is indistinguishable from a re-upload.
+ * The exact localStorage writes an import performs — the same keys the app
+ * already reads on boot (readings, billing day, bill add-ons, and the Wave P
+ * plan timeline), so a restore is indistinguishable from a re-upload.
  */
 export function storageValuesFromBackup(doc: BackupDocument): Record<string, string> {
   return {
     energy_data: JSON.stringify(doc.payload.energy_data),
     billing_day: String(doc.payload.billing_day),
     extra_charges: JSON.stringify(doc.payload.extra_charges),
+    plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
   };
 }

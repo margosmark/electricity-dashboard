@@ -17,6 +17,8 @@ import { type ZoomLevel } from '@/hooks/useDashboard';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
+import { PlanTimelineEditor } from '@/components/PlanTimelineEditor';
+import { SwitchTrackRecord } from '@/components/SwitchTrackRecord';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import type { BillProjection } from '@/lib/billProjection';
 import type { WfhShare } from '@/lib/energy';
@@ -306,6 +308,11 @@ export default function ChartView({
       />
 
       <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />
+
+      {/* Wave P: what plan each period was billed under (detected from the
+          bill, filled in by you), then the audited switch track record. */}
+      <PlanTimelineEditor summaries={summaries} />
+      <SwitchTrackRecord summaries={summaries} allData={allData} />
 
       {comparison && (
         <div className="bg-black text-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-yellow-400 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase">
