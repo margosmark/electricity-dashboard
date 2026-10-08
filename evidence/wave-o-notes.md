@@ -154,16 +154,29 @@ bill to draw.
    `reconcileBillingPeriods` still use `planCostFor` — pre-existing, out of
    scope here, filed as its own card.
 
+## What landed on top of this wave, after it merged
+
+Two follow-ups went in against the same chart, both re-verified here:
+
+- **PR #33 — Wave P slice 5**: the plan-type timeline's period bands and a
+  `Plan` column drawn onto this stacked chart (the overlay Wave P's notes
+  deferred to Wave O). `MoneyStackedChart` / `MoneySection` gained the band
+  props; the slice set, toggles and key above are unchanged.
+- **PR #34 — delta-table polish**: headers now name only the destination
+  period (`Δ → Jun 23, 2026`, ~15% narrower) and a note appears past 6
+  columns, because the deployed 24-period screenshot showed the right-hand
+  columns cut off with nothing to say they existed.
+
 ## Gates run locally
 
 | Gate | Result |
 |---|---|
 | `npm run lint` / `npm run typecheck` | clean |
-| `npm run test` | **820 / 820** (48 files) on the tree rebased onto `main` (Wave P + Wave EV-2 included) |
+| `npm run test` | **825 / 825** (48 files) on `main` after Wave P's slice-5 overlay (#33) and the delta-table polish (#34) landed |
 | `npm run build` | ok (`sw.js` VERSION restored to `oeo-v1-local` afterwards) |
 | `evidence/wave-o-verify.cjs` on the 3-period Oakville XML | **33 / 33** (re-run on the rebased build) |
 | `evidence/wave-o-verify.cjs -long` on the 24-period export | **33 / 33** (re-run on the rebased build) |
-| **deployed** — `WAVE_O_BASE_URL=http://10.10.11.110:3939/`, both files | **33 / 33** + **33 / 33** (`wave-o-verification-deployed.json`, `wave-o-verification-long-deployed.json`), stack at `e0a0efa` |
+| **deployed** — `WAVE_O_BASE_URL=http://10.10.11.110:3939/`, both files, twice | **33 / 33** + **33 / 33** at `e0a0efa`, and **33 / 33** + **33 / 33** again at `59a0954` (with Wave P's plan-type bands on this chart and the delta-table polish) |
 | 390 × 844 mobile pass | included above: 0 px page overflow, 44 px toggles, charts/tables scroll inside their own boxes |
 | CI | **cannot start jobs, repo-wide and pre-existing**: every run on `main` and on every branch finishes in 3–5 s with all jobs failed and *zero steps* (e.g. run 37724113959, `E2E Smoke` / `Frontend` / `Python`, `steps: []`). Local gates above are the evidence, as for Waves L/P. |
 
