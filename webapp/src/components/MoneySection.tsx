@@ -23,11 +23,14 @@ import { useMemo } from 'react';
 import { Banknote } from 'lucide-react';
 
 import { deriveExtraCharges, hasExtraCharges, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
+import { buildBillingAxis } from '@/lib/billingAxis';
 import { useExtraCharges } from '@/hooks/useDashboard';
+import { useEstimateLedger, type OpenClaim } from '@/hooks/useEstimateLedger';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import { planAnnotations } from '@/lib/planTimeline';
-import { buildPeriodStacks, periodDeltaRows, planOverlay, type PlanId } from '@/lib/moneyViz';
+import { buildAxisStacks, periodDeltaRows, planOverlay, type PlanId } from '@/lib/moneyViz';
 import MoneyStackedChart from '@/components/MoneyStackedChart';
+import OpenPeriodPanel from '@/components/OpenPeriodPanel';
 import PeriodDeltaTable from '@/components/PeriodDeltaTable';
 import HourCostHistogram from '@/components/HourCostHistogram';
 import BillWaterfall from '@/components/BillWaterfall';
@@ -59,10 +62,37 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
     return deriveExtraCharges(summaries, allData)?.charges ?? null;
   }, [storedCharges, summaries, allData]);
 
-  const stacks = useMemo(
-    () => buildPeriodStacks(summaries, allData),
+  // The timeline itself: the file's OWN billing periods (de-duped across
+  // exports, holes between them kept visible) plus the open tail past the
+  // last bill. Everything below — the stacks, the deltas, the panel — reads
+  // this one list, so the chart and the table can never disagree about what
+  // a period is.
+  const axis = useMemo(
+    () => buildBillingAxis({ summaries, rows: allData }),
     [summaries, allData],
   );
+  const stacks = useMemo(() => buildAxisStacks(axis, allData, plan), [axis, allData, plan]);
+  const openStack = useMemo(
+    () => stacks.find((s) => s.kind === 'open') ?? null,
+    [stacks],
+  );
+  const lastBilled = useMemo(
+    () => [...stacks].reverse().find((s) => s.kind === 'billed') ?? null,
+    [stacks],
+  );
+  // What this browser is claiming about the unbilled tail — the ledger keeps
+  // it so a later export can score it (see lib/estimateLedger).
+  const claim: OpenClaim | null = useMemo(() => {
+    if (!openStack || openStack.totals.payable <= 0) return null;
+    return {
+      windowStart: openStack.start,
+      windowEnd: openStack.end,
+      plan,
+      estimated: openStack.totals.payable,
+      meteredKwh: openStack.usageTotal ?? 0,
+    };
+  }, [openStack, plan]);
+  const ledger = useEstimateLedger(claim, summaries);
   const deltaTable = useMemo(() => periodDeltaRows(stacks), [stacks]);
   const overlay = useMemo(
     () => planOverlay(summaries, allData, charges),
@@ -112,6 +142,12 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
         </div>
       ) : (
         <>
+          <OpenPeriodPanel
+            open={openStack}
+            lastBilled={lastBilled}
+            ledger={ledger}
+            axisNote={axis.note}
+          />
           <MoneyStackedChart stacks={stacks} overlay={overlay} planAnnotations={annotations} />
           <PeriodDeltaTable table={deltaTable} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">

@@ -37,10 +37,12 @@ import {
   calculateComparison,
   calculateTrueBill,
   classifyBillLine,
+  planCostFor,
   type ExtraCharges,
   type ProcessedPoint,
   type UsageSummary,
 } from './energy';
+import { type BillingAxis } from './billingAxis';
 
 /* ==========================================================================
  * Slices — one vocabulary for the stacked chart, the tooltip and the table
@@ -80,6 +82,9 @@ export const COST_SLICE_ORDER: CostSliceKey[] = [
   'credit',
 ];
 
+/** The kicker over the open-period panel. */
+export const ESTIMATE_KEY_LABEL = 'Money your meter has used, not yet a bill';
+
 export const COST_SLICE_META: Record<
   CostSliceKey,
   { label: string; short: string; color: string }
@@ -111,12 +116,21 @@ export function commodityWindowOf(note: string): CostSliceKey {
 
 export type UsageSliceKey = 'offPeak' | 'midPeak' | 'onPeak' | 'commodityOther';
 
+/** What one period's bar is made of — billed, a hole, or the open tail. */
+export type PeriodStackKind = 'billed' | 'gap' | 'open' | 'derived';
+
 /** What one billing period's bar is made of. */
 export type PeriodStack = {
+  /** Which slice of the axis this bar is. Everything but `billed` is flagged. */
+  kind: PeriodStackKind;
   /** billingPeriod.start — also the map key callers use. */
   start: number;
-  /** `yyyy-MM-dd` of the billed window (the meter reads, when the file has them). */
+  /** Window end (unix seconds, exclusive) — the open period's "so far". */
+  end: number;
+  /** `yyyy-MM-dd` of the billed window's first day. */
   startDate: string;
+  /** `yyyy-MM-dd` of its LAST day — what "billed through" prints. */
+  endDate: string;
   /** "May 25, 2026 – Jun 23" — the same label ActualBillPanel prints. */
   label: string;
   /** Short label for an axis: "May 25". */
@@ -137,7 +151,12 @@ export type PeriodStack = {
   /** Distinct reading days ÷ billed days — the same gate Wave L reconciles on. */
   coverage: number;
   totals: ReturnType<typeof billTotals>;
-  summary: UsageSummary;
+  /** The bill itself — null for every period that is not one (gap / open). */
+  summary: UsageSummary | null;
+  /** True when the money here is our own estimate, never a bill. */
+  estimated: boolean;
+  /** The axis's edge-case flag (a <25-day or >40-day period), or null. */
+  flag: 'short' | 'long' | null;
 };
 
 const zeroCostSlices = (): Record<CostSliceKey, number> => ({
@@ -212,12 +231,16 @@ export function buildPeriodStacks(
       ? usage.offPeak + usage.midPeak + usage.onPeak + usage.commodityOther
       : null;
 
+    const days = summary.days;
     return {
+      kind: 'billed' as const,
       start: summary.start,
+      end: summary.start + summary.duration,
       startDate: summary.startDate,
+      endDate: summary.endDate,
       label: billPeriodLabel(summary.start, summary.duration),
       shortLabel: billPeriodLabel(summary.start, summary.duration).split(' – ')[0],
-      days: summary.days,
+      days,
       cost,
       usage: usageSeen ? usage : null,
       usageTotal,
@@ -225,8 +248,127 @@ export function buildPeriodStacks(
       coverage: Math.min(1, coveredDays / periodDays),
       totals: billTotals(summary),
       summary,
+      estimated: false,
+      // 25–40 days is an ordinary bill; anything outside that is flagged in
+      // the data (the axis computes the same flag from billingPeriod).
+      flag: days < 25 ? 'short' : days > 40 ? 'long' : null,
     };
   });
+}
+
+/* ==========================================================================
+ * The axis's other periods — the open tail and the holes between bills
+ * ========================================================================== */
+
+/**
+ * One stack per axis period, in timeline order: the billed ones exactly as
+ * `buildPeriodStacks` builds them, plus the two kinds of period that are NOT
+ * a bill.
+ *
+ *   `open`  — readings past the last bill, priced with THIS app's plan. Only
+ *             the commodity charge is estimated: delivery, regulatory and HST
+ *             for that window do not exist yet, so they are left at zero and
+ *             every surface that draws this bar says "not billed yet". The
+ *             stack's `totals` therefore describe an ESTIMATE of what the
+ *             electricity cost, never a payable amount.
+ *   `gap` / `derived` — no bill, no money. They keep their place in the
+ *             timeline (and their readings, for coverage) so a hole between
+ *             two bills cannot silently read as "you paid $0".
+ */
+export function buildAxisStacks(
+  axis: BillingAxis,
+  rows: ProcessedPoint[],
+  plan: PlanId,
+): PeriodStack[] {
+  return axis.periods.map((period) => {
+    if (period.kind === 'billed' && period.summary) {
+      const [stack] = buildPeriodStacks([period.summary], rows);
+      return { ...stack, flag: period.flag };
+    }
+    const inPeriod = rows.filter(
+      (r) => r.timestamp >= period.start && r.timestamp < period.end,
+    );
+    const coveredDays = new Set(inPeriod.map((r) => r.dayStr)).size;
+    const periodDays = Math.max(1, Math.round((period.end - period.start) / 86400));
+    const base: PeriodStack = {
+      kind: period.kind,
+      start: period.start,
+      end: period.end,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      label: period.label,
+      shortLabel: period.shortLabel,
+      days: period.days,
+      cost: zeroCostSlices(),
+      usage: null,
+      usageTotal: null,
+      rows: inPeriod,
+      coverage: Math.min(1, coveredDays / periodDays),
+      totals: {
+        commodity: 0,
+        delivery: 0,
+        regulatory: 0,
+        tax: 0,
+        credit: 0,
+        other: 0,
+        total: 0,
+        amountDue: null,
+        preRebate: 0,
+        payable: 0,
+      },
+      summary: null,
+      estimated: period.kind === 'open',
+      flag: period.flag,
+    };
+
+    if (inPeriod.length === 0) return base;
+
+    // Metered energy is real for EVERY kind of period: a hole between two
+    // bills still has kWh flowing through the meter, and the kWh view is the
+    // one place that can say so. Money, below, is a different question.
+    const usage = zeroUsageSlices();
+    const isOpen = period.kind === 'open';
+
+    if (plan === 'TOU') {
+      for (const r of inPeriod) {
+        const key: UsageSliceKey =
+          r.touCategory === 'Off-Peak'
+            ? 'offPeak'
+            : r.touCategory === 'Mid-Peak'
+              ? 'midPeak'
+              : r.touCategory === 'On-Peak'
+                ? 'onPeak'
+                : 'commodityOther';
+        usage[key] += r.usage_kwh;
+        // The open period's ONLY money: commodity, priced the way the plan
+        // cards price the same readings. Delivery, regulatory and HST for
+        // those days are left at zero — they are not charges yet.
+        if (isOpen) base.cost[key] += r.costTOU;
+      }
+    } else {
+      usage.commodityOther = inPeriod.reduce((n, r) => n + r.usage_kwh, 0);
+      if (isOpen) base.cost.commodityOther = planCostFor(inPeriod, plan);
+    }
+
+    base.usage = usage;
+    base.usageTotal = Object.values(usage).reduce((n, v) => n + v, 0);
+
+    if (!isOpen) return base;
+
+    base.totals = {
+      ...base.totals,
+      commodity: estimateFromSlices(base.cost),
+      total: estimateFromSlices(base.cost),
+      preRebate: estimateFromSlices(base.cost),
+      payable: estimateFromSlices(base.cost),
+    };
+    return base;
+  });
+}
+
+/** The estimated commodity of a stack, from its own slices (never retyped). */
+function estimateFromSlices(cost: Record<CostSliceKey, number>): number {
+  return round2(cost.offPeak + cost.midPeak + cost.onPeak + cost.commodityOther);
 }
 
 /* ==========================================================================
@@ -245,10 +387,19 @@ export type DeltaRow = {
   deltas: (number | null)[];
 };
 
+export type DeltaColumn = {
+  start: number;
+  label: string;
+  /** Which slice of the axis the column is — drives the header's badge. */
+  kind: PeriodStackKind;
+  /** True when this column's numbers are an estimate, not a bill. */
+  estimated: boolean;
+};
+
 export type DeltaTable = {
   rows: DeltaRow[];
   /** Period labels, oldest first. */
-  columns: { start: number; label: string }[];
+  columns: DeltaColumn[];
   /** False when there is nothing to compare yet (one period, or none). */
   hasComparison: boolean;
   /** Why there is no comparison, when `hasComparison` is false. */
@@ -278,12 +429,23 @@ const DELTA_LABELS: Record<DeltaRowKey, string> = {
  * which is the honest output the spec asks for.
  */
 export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
-  const columns = stacks.map((s) => ({ start: s.start, label: s.shortLabel }));
+  const columns: DeltaColumn[] = stacks.map((s) => ({
+    start: s.start,
+    label: s.shortLabel,
+    kind: s.kind,
+    estimated: s.estimated,
+  }));
   const keys: DeltaRowKey[] = [
     ...COST_SLICE_ORDER.filter((k) => stacks.some((s) => Math.abs(s.cost[k]) > 0.005)),
     'total',
     'payable',
   ];
+
+  // A change is only meaningful between two REAL bills. Stepping across a
+  // hole (no bill) or into the open period (an estimate) would print a delta
+  // that describes nothing, so those boundaries carry null and the table
+  // prints "—" there while still showing the estimate itself.
+  const billable = stacks.map((s) => s.kind === 'billed');
 
   const rows: DeltaRow[] = keys.map((key) => {
     const values = stacks.map((s) =>
@@ -294,21 +456,29 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
           : s.cost[key as CostSliceKey],
     );
     const deltas: (number | null)[] = values.map((v, i) =>
-      i === 0 ? null : round2(v - values[i - 1]),
+      i === 0 || !billable[i] || !billable[i - 1] ? null : round2(v - values[i - 1]),
     );
     return { key, label: DELTA_LABELS[key], values: values.map(round2), deltas };
   });
 
+  const flagged = stacks.filter((s) => s.kind !== 'billed');
+  const notBills =
+    'Columns marked with a badge are not bills: an estimate of what has not been billed yet, or days no bill in this file covers — no change is computed across them.';
+  const billedCount = billable.filter(Boolean).length;
   return {
     rows,
     columns,
-    hasComparison: stacks.length > 1,
+    hasComparison: billedCount > 1,
     note:
       stacks.length === 0
         ? 'No billing periods in this file.'
-        : stacks.length === 1
-          ? 'Only one billing period here — every number in it is the baseline, so there is nothing to compare against yet.'
-          : 'Change versus the period immediately before it. The first column is the baseline period’s own figure.',
+        : billedCount <= 1
+          ? `Only one billing period here — every number in it is the baseline, so there is nothing to compare against yet.${
+              flagged.length > 0 ? ` ${notBills}` : ''
+            }`
+          : flagged.length > 0
+            ? `Change versus the period immediately before it, real bill against real bill. ${notBills}`
+            : 'Change versus the period immediately before it. The first column is the baseline period’s own figure.',
   };
 }
 
@@ -342,8 +512,13 @@ export type ShareBreakdown = {
  * the percentage it hands back rather than as a negative share.
  */
 export function shareBreakdown(stacks: PeriodStack[]): ShareBreakdown | null {
-  if (stacks.length === 0) return null;
-  const sum = (read: (s: PeriodStack) => number) => stacks.reduce((n, s) => n + read(s), 0);
+  // Shares answer "what is my bill made of", so only REAL bills count: the
+  // open period is an estimate and a hole between bills is not money at all.
+  // Including either would move every percentage away from the bills that
+  // were actually charged.
+  const billed = stacks.filter((s) => s.kind === 'billed');
+  if (billed.length === 0) return null;
+  const sum = (read: (s: PeriodStack) => number) => billed.reduce((n, s) => n + read(s), 0);
   const gross = sum((s) =>
     COST_SLICE_ORDER.reduce((n, k) => n + Math.max(0, s.cost[k]), 0),
   );
@@ -361,7 +536,7 @@ export function shareBreakdown(stacks: PeriodStack[]): ShareBreakdown | null {
     nonCommodityPct: pct(sum((s) => s.cost.delivery + s.cost.regulatory)),
     rebatePct: pct(credit),
     payable: round2(sum((s) => s.totals.payable)),
-    periods: stacks.length,
+    periods: billed.length,
   };
 }
 
@@ -732,7 +907,10 @@ export function planOverlay(
   const rowsIn = coveredPeriods.flatMap((s) => s.rows);
   const totalKwh = rowsIn.reduce((n, r) => n + r.usage_kwh, 0);
   const days = coveredPeriods.reduce(
-    (n, s) => n + (s.summary.duration / 86400),
+    // Every stack here comes from buildPeriodStacks, so `summary` is set —
+    // the fallback keeps the arithmetic total if a caller passes stacks built
+    // straight off the axis instead.
+    (n, s) => n + ((s.summary?.duration ?? s.days * 86400) / 86400),
     0,
   );
   // calculateTrueBill's flat delivery is per month; use the exact fraction so
