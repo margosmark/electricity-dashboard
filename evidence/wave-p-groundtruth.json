@@ -1,0 +1,1831 @@
+{
+  "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "sha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "readings": 17539,
+  "readingsFrom": "2024-10-06T05:00:00.000Z",
+  "readingsTo": "2026-10-06T23:00:00.000Z",
+  "periodCount": 24,
+  "planSequence": [
+    "TOU",
+    "TOU",
+    "TOU",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "TOU",
+    "TOU",
+    "TOU",
+    "TOU",
+    "TOU",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "Tiered",
+    "TOU",
+    "TOU",
+    "TOU",
+    "TOU",
+    "TOU"
+  ],
+  "known": 24,
+  "modeled": 22,
+  "skipped": 2,
+  "overpaid": -251.89,
+  "byPlan": [
+    {
+      "plan": "TOU",
+      "periods": 11,
+      "overpaid": -210.25
+    },
+    {
+      "plan": "Tiered",
+      "periods": 11,
+      "overpaid": -41.64
+    }
+  ],
+  "callouts": [
+    {
+      "start": "2025-09-25",
+      "saving": 7.6
+    },
+    {
+      "start": "2026-03-26",
+      "saving": 2.79
+    },
+    {
+      "start": "2024-10-25",
+      "saving": 2.27
+    }
+  ],
+  "rows": [
+    {
+      "start": "2024-08-26",
+      "days": 30,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 0,
+      "coveredDays": 0,
+      "coverage": 0,
+      "actual": 287.11,
+      "totalCharges": 306.42,
+      "commodityActual": 202.18,
+      "delivery": 92.19,
+      "reg": 12.05,
+      "tax": 39.83,
+      "credit": -59.14,
+      "meteredKwh": 0,
+      "billedKwh": 1927.5900000000001,
+      "touKwh": {
+        "off": 0,
+        "mid": 0,
+        "on": 0
+      },
+      "uloKwh": {
+        "overnight": 0,
+        "weekend": 0,
+        "mid": 0,
+        "on": 0
+      },
+      "commodityModel": {
+        "TOU": 0,
+        "Tiered": 0,
+        "ULO": 0
+      },
+      "windowSpan": {
+        "days": 30,
+        "from": "2024-08-26",
+        "to": "2024-09-25",
+        "summaryDays": 30
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1727240448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1724648448
+        }
+      ],
+      "billedBuckets": {
+        "Off Peak-Summer Usage": 1368.5,
+        "Mid Peak-Summer Usage": 310.7,
+        "On Peak-Summer Usage": 248.4
+      },
+      "commodityLines": [
+        "On Peak-Summer=45.21",
+        "Mid Peak-Summer=37.91",
+        "Off Peak-Summer=119.06"
+      ],
+      "modeled": null,
+      "bestPlan": null,
+      "saving": null,
+      "modelDelta": null,
+      "skipped": "no readings in this browser fall inside this period",
+      "evidence": [
+        "On Peak-Summer",
+        "Mid Peak-Summer"
+      ]
+    },
+    {
+      "start": "2024-09-25",
+      "days": 30,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 457,
+      "coveredDays": 20,
+      "coverage": 0.667,
+      "actual": 228.83,
+      "totalCharges": 244.22,
+      "commodityActual": 156.16,
+      "delivery": 78.72,
+      "reg": 9.34,
+      "tax": 31.74,
+      "credit": -47.13,
+      "meteredKwh": 836.6,
+      "billedKwh": 1485.739984,
+      "touKwh": {
+        "off": 600.1,
+        "mid": 126,
+        "on": 110.4
+      },
+      "uloKwh": {
+        "overnight": 268.6,
+        "weekend": 227.6,
+        "mid": 223.3,
+        "on": 117.1
+      },
+      "commodityModel": {
+        "TOU": 87.69,
+        "Tiered": 95.89,
+        "ULO": 88.06
+      },
+      "windowSpan": {
+        "days": 30,
+        "from": "2024-09-25",
+        "to": "2024-10-25",
+        "summaryDays": 30
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1729832448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1727240448
+        }
+      ],
+      "billedBuckets": {
+        "On Peak-Summer Usage": 195.5,
+        "Mid Peak-Summer Usage": 238.3,
+        "Off Peak-Summer Usage": 1052
+      },
+      "commodityLines": [
+        "Mid Peak-Summer=29.07",
+        "Off Peak-Summer=91.52",
+        "On Peak-Summer=35.57"
+      ],
+      "modeled": null,
+      "bestPlan": null,
+      "saving": null,
+      "modelDelta": null,
+      "skipped": "readings cover 20 of 30 days (67%, 90% needed)",
+      "evidence": [
+        "Mid Peak-Summer",
+        "Off Peak-Summer"
+      ]
+    },
+    {
+      "start": "2024-10-25",
+      "days": 31,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 744,
+      "coveredDays": 32,
+      "coverage": 1,
+      "actual": 158.67,
+      "totalCharges": 161.19,
+      "commodityActual": 92.5,
+      "delivery": 62.74,
+      "reg": 5.95,
+      "tax": 20.96,
+      "credit": -23.48,
+      "meteredKwh": 933,
+      "billedKwh": 932.839984,
+      "touKwh": {
+        "off": 633.3,
+        "mid": 147.8,
+        "on": 151.8
+      },
+      "uloKwh": {
+        "overnight": 265.1,
+        "weekend": 251,
+        "mid": 288.3,
+        "on": 128.6
+      },
+      "commodityModel": {
+        "TOU": 92.56,
+        "Tiered": 90.19,
+        "ULO": 98.82
+      },
+      "windowSpan": {
+        "days": 31,
+        "from": "2024-10-25",
+        "to": "2024-11-25",
+        "summaryDays": 31
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1730437248
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1729832448
+        }
+      ],
+      "billedBuckets": {
+        "Mid Peak-Summer Usage": 35.5,
+        "On Peak-Winter Usage": 119.2,
+        "On Peak-Summer Usage": 32.6,
+        "Off Peak-Winter Usage": 491,
+        "Off Peak-Summer Usage": 142.2,
+        "Mid Peak-Winter Usage": 112.4
+      },
+      "commodityLines": [
+        "Mid Peak-Winter=13.71",
+        "On Peak-Winter=18.83",
+        "On Peak-Summer=5.94",
+        "Off Peak-Summer=12.37",
+        "Mid Peak-Summer=4.33",
+        "Off Peak-Winter=37.32"
+      ],
+      "modeled": {
+        "TOU": 158.73,
+        "Tiered": 156.4,
+        "ULO": 164.89
+      },
+      "bestPlan": "Tiered",
+      "saving": 2.27,
+      "modelDelta": 0.06,
+      "skipped": null,
+      "evidence": [
+        "Mid Peak-Winter",
+        "On Peak-Winter"
+      ]
+    },
+    {
+      "start": "2024-11-25",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 151.48,
+      "totalCharges": 151.63,
+      "commodityActual": 85.69,
+      "delivery": 60.06,
+      "reg": 5.88,
+      "tax": 19.71,
+      "credit": -19.86,
+      "meteredKwh": 922,
+      "billedKwh": 921.420032,
+      "touKwh": {
+        "off": 597.2,
+        "mid": 151.6,
+        "on": 173.2
+      },
+      "uloKwh": {
+        "overnight": 248.2,
+        "weekend": 211.7,
+        "mid": 300.7,
+        "on": 161.4
+      },
+      "commodityModel": {
+        "TOU": 91.24,
+        "Tiered": 85.74,
+        "ULO": 105.55
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2024-11-25",
+        "to": "2024-12-24",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1735016448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1732510848
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 921.4
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=85.69"
+      ],
+      "modeled": {
+        "TOU": 157.03,
+        "Tiered": 151.53,
+        "ULO": 171.32
+      },
+      "bestPlan": "TOU",
+      "saving": -5.55,
+      "modelDelta": 0.05,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2024-12-24",
+      "days": 31,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 744,
+      "coveredDays": 32,
+      "coverage": 1,
+      "actual": 161.98,
+      "totalCharges": 162.14,
+      "commodityActual": 93.13,
+      "delivery": 62.56,
+      "reg": 6.45,
+      "tax": 21.08,
+      "credit": -21.24,
+      "meteredKwh": 1001.5,
+      "billedKwh": 1001.420032,
+      "touKwh": {
+        "off": 675.4,
+        "mid": 155.3,
+        "on": 170.8
+      },
+      "uloKwh": {
+        "overnight": 278.9,
+        "weekend": 260.3,
+        "mid": 297.5,
+        "on": 164.8
+      },
+      "commodityModel": {
+        "TOU": 97.26,
+        "Tiered": 93.14,
+        "ULO": 110.69
+      },
+      "windowSpan": {
+        "days": 31,
+        "from": "2024-12-24",
+        "to": "2025-01-24",
+        "summaryDays": 31
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1737694848
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1735016448
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 1001.4
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=93.13"
+      ],
+      "modeled": {
+        "TOU": 166.11,
+        "Tiered": 161.99,
+        "ULO": 179.52
+      },
+      "bestPlan": "TOU",
+      "saving": -4.13,
+      "modelDelta": 0.01,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2025-01-24",
+      "days": 32,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 768,
+      "coveredDays": 33,
+      "coverage": 1,
+      "actual": 169.42,
+      "totalCharges": 169.59,
+      "commodityActual": 98.22,
+      "delivery": 64.53,
+      "reg": 6.84,
+      "tax": 22.05,
+      "credit": -22.22,
+      "meteredKwh": 1054.9,
+      "billedKwh": 1055.21,
+      "touKwh": {
+        "off": 714.2,
+        "mid": 155,
+        "on": 185.6
+      },
+      "uloKwh": {
+        "overnight": 307.5,
+        "weekend": 257.8,
+        "mid": 326.6,
+        "on": 163
+      },
+      "commodityModel": {
+        "TOU": 102.52,
+        "Tiered": 98.1,
+        "ULO": 114.34
+      },
+      "windowSpan": {
+        "days": 32,
+        "from": "2025-01-24",
+        "to": "2025-02-25",
+        "summaryDays": 32
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1740459648
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1737694848
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 1050,
+        "BLOCK 2 - Winter Usage": 5.2
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=97.65",
+        "BLOCK 2 - Winter=0.57"
+      ],
+      "modeled": {
+        "TOU": 173.72,
+        "Tiered": 169.3,
+        "ULO": 185.53
+      },
+      "bestPlan": "TOU",
+      "saving": -4.3,
+      "modelDelta": -0.12,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 2 - Winter"
+      ]
+    },
+    {
+      "start": "2025-02-25",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 156.97,
+      "totalCharges": 157.13,
+      "commodityActual": 91.67,
+      "delivery": 59.12,
+      "reg": 6.34,
+      "tax": 20.42,
+      "credit": -20.58,
+      "meteredKwh": 980.3,
+      "billedKwh": 980.39,
+      "touKwh": {
+        "off": 634.2,
+        "mid": 166.3,
+        "on": 179.8
+      },
+      "uloKwh": {
+        "overnight": 278.2,
+        "weekend": 222.6,
+        "mid": 320.5,
+        "on": 159.1
+      },
+      "commodityModel": {
+        "TOU": 96.9,
+        "Tiered": 91.17,
+        "ULO": 108.98
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2025-02-25",
+        "to": "2025-03-26",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1742965248
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1740459648
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 951,
+        "BLOCK 2 - Winter Usage": 29.4
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=88.44",
+        "BLOCK 2 - Winter=3.23"
+      ],
+      "modeled": {
+        "TOU": 162.19,
+        "Tiered": 156.47,
+        "ULO": 174.26
+      },
+      "bestPlan": "TOU",
+      "saving": -5.22,
+      "modelDelta": -0.5,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 2 - Winter"
+      ]
+    },
+    {
+      "start": "2025-03-26",
+      "days": 30,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 720,
+      "coveredDays": 31,
+      "coverage": 1,
+      "actual": 148.82,
+      "totalCharges": 148.97,
+      "commodityActual": 85.07,
+      "delivery": 57.96,
+      "reg": 5.94,
+      "tax": 19.37,
+      "credit": -19.52,
+      "meteredKwh": 914.2,
+      "billedKwh": 914.739968,
+      "touKwh": {
+        "off": 600.5,
+        "mid": 153.9,
+        "on": 159.9
+      },
+      "uloKwh": {
+        "overnight": 272.8,
+        "weekend": 201.6,
+        "mid": 300.4,
+        "on": 139.4
+      },
+      "commodityModel": {
+        "TOU": 89.67,
+        "Tiered": 85.02,
+        "ULO": 99.2
+      },
+      "windowSpan": {
+        "days": 30,
+        "from": "2025-03-26",
+        "to": "2025-04-25",
+        "summaryDays": 30
+      },
+      "readItems": [],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 914.7
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=85.07"
+      ],
+      "modeled": {
+        "TOU": 153.41,
+        "Tiered": 148.77,
+        "ULO": 162.93
+      },
+      "bestPlan": "TOU",
+      "saving": -4.59,
+      "modelDelta": -0.05,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2025-04-25",
+      "days": 32,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 768,
+      "coveredDays": 33,
+      "coverage": 1,
+      "actual": 208.18,
+      "totalCharges": 208.39,
+      "commodityActual": 128.58,
+      "delivery": 71.23,
+      "reg": 8.58,
+      "tax": 27.09,
+      "credit": -27.3,
+      "meteredKwh": 1337.1,
+      "billedKwh": 1335.300016,
+      "touKwh": {
+        "off": 906.7,
+        "mid": 227.4,
+        "on": 203
+      },
+      "uloKwh": {
+        "overnight": 404.8,
+        "weekend": 326.2,
+        "mid": 399.4,
+        "on": 206.8
+      },
+      "commodityModel": {
+        "TOU": 128.73,
+        "Tiered": 134.67,
+        "ULO": 143.57
+      },
+      "windowSpan": {
+        "days": 32,
+        "from": "2025-04-25",
+        "to": "2025-05-27",
+        "summaryDays": 32
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1748322048
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1745557248
+        }
+      ],
+      "billedBuckets": {
+        "Off Peak-Winter Usage": 169.7,
+        "Mid Peak-Winter Usage": 42.6,
+        "On Peak-Summer Usage": 164.9,
+        "Mid Peak-Summer Usage": 184.8,
+        "On Peak-Winter Usage": 38.1,
+        "Off Peak-Summer Usage": 735.2
+      },
+      "commodityLines": [
+        "On Peak-Summer=26.06",
+        "On Peak-Winter=6.01",
+        "Off Peak-Summer=55.88",
+        "Off Peak-Winter=12.89",
+        "Mid Peak-Winter=5.20",
+        "Mid Peak-Summer=22.54"
+      ],
+      "modeled": {
+        "TOU": 208.33,
+        "Tiered": 214.26,
+        "ULO": 223.15
+      },
+      "bestPlan": "Tiered",
+      "saving": -6.08,
+      "modelDelta": 0.15,
+      "skipped": null,
+      "evidence": [
+        "On Peak-Summer",
+        "On Peak-Winter"
+      ]
+    },
+    {
+      "start": "2025-05-27",
+      "days": 29,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 277.39,
+      "totalCharges": 277.66,
+      "commodityActual": 182.41,
+      "delivery": 83,
+      "reg": 12.25,
+      "tax": 36.1,
+      "credit": -36.37,
+      "meteredKwh": 1932.2,
+      "billedKwh": 1929.980048,
+      "touKwh": {
+        "off": 1359.3,
+        "mid": 312.4,
+        "on": 260.6
+      },
+      "uloKwh": {
+        "overnight": 586.5,
+        "weekend": 449.2,
+        "mid": 542.8,
+        "on": 353.8
+      },
+      "commodityModel": {
+        "TOU": 182.58,
+        "Tiered": 202.48,
+        "ULO": 217.26
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2025-05-27",
+        "to": "2025-06-25",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1750827648
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1748322048
+        }
+      ],
+      "billedBuckets": {
+        "On Peak-Summer Usage": 260.6,
+        "Mid Peak-Summer Usage": 312.4,
+        "Off Peak-Summer Usage": 1357
+      },
+      "commodityLines": [
+        "Mid Peak-Summer=38.11",
+        "On Peak-Summer=41.17",
+        "Off Peak-Summer=103.13"
+      ],
+      "modeled": {
+        "TOU": 277.56,
+        "Tiered": 297.44,
+        "ULO": 312.2
+      },
+      "bestPlan": "Tiered",
+      "saving": -20.05,
+      "modelDelta": 0.17,
+      "skipped": null,
+      "evidence": [
+        "Mid Peak-Summer",
+        "On Peak-Summer"
+      ]
+    },
+    {
+      "start": "2025-06-25",
+      "days": 30,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 720,
+      "coveredDays": 31,
+      "coverage": 1,
+      "actual": 378.62,
+      "totalCharges": 379,
+      "commodityActual": 258.03,
+      "delivery": 103.94,
+      "reg": 17.03,
+      "tax": 49.27,
+      "credit": -49.65,
+      "meteredKwh": 2692.6,
+      "billedKwh": 2694.0599679999996,
+      "touKwh": {
+        "off": 1849.4,
+        "mid": 440.7,
+        "on": 402.5
+      },
+      "uloKwh": {
+        "overnight": 763.8,
+        "weekend": 679,
+        "mid": 739.3,
+        "on": 510.5
+      },
+      "commodityModel": {
+        "TOU": 257.91,
+        "Tiered": 285.79,
+        "ULO": 308.16
+      },
+      "windowSpan": {
+        "days": 30,
+        "from": "2025-06-25",
+        "to": "2025-07-25",
+        "summaryDays": 30
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1753419648
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1750827648
+        }
+      ],
+      "billedBuckets": {
+        "Off Peak-Summer Usage": 1850.9,
+        "Mid Peak-Summer Usage": 440.7,
+        "On Peak-Summer Usage": 402.4
+      },
+      "commodityLines": [
+        "On Peak-Summer=63.59",
+        "Mid Peak-Summer=53.77",
+        "Off Peak-Summer=140.67"
+      ],
+      "modeled": {
+        "TOU": 378.5,
+        "Tiered": 406.35,
+        "ULO": 428.7
+      },
+      "bestPlan": "Tiered",
+      "saving": -27.73,
+      "modelDelta": -0.12,
+      "skipped": null,
+      "evidence": [
+        "On Peak-Summer",
+        "Mid Peak-Summer"
+      ]
+    },
+    {
+      "start": "2025-07-25",
+      "days": 32,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 768,
+      "coveredDays": 33,
+      "coverage": 1,
+      "actual": 431.64,
+      "totalCharges": 432.07,
+      "commodityActual": 295.81,
+      "delivery": 116.69,
+      "reg": 19.57,
+      "tax": 56.17,
+      "credit": -56.6,
+      "meteredKwh": 3101.1,
+      "billedKwh": 3101.0499839999998,
+      "touKwh": {
+        "off": 2155,
+        "mid": 484.9,
+        "on": 461.3
+      },
+      "uloKwh": {
+        "overnight": 899.6,
+        "weekend": 838.8,
+        "mid": 844.5,
+        "on": 518.3
+      },
+      "commodityModel": {
+        "TOU": 295.81,
+        "Tiered": 330.05,
+        "ULO": 339.15
+      },
+      "windowSpan": {
+        "days": 32,
+        "from": "2025-07-25",
+        "to": "2025-08-26",
+        "summaryDays": 32
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1756184448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1753419648
+        }
+      ],
+      "billedBuckets": {
+        "Mid Peak-Summer Usage": 484.9,
+        "On Peak-Summer Usage": 461.3,
+        "Off Peak-Summer Usage": 2154.9
+      },
+      "commodityLines": [
+        "Off Peak-Summer=163.77",
+        "On Peak-Summer=72.88",
+        "Mid Peak-Summer=59.16"
+      ],
+      "modeled": {
+        "TOU": 431.64,
+        "Tiered": 465.85,
+        "ULO": 474.94
+      },
+      "bestPlan": "Tiered",
+      "saving": -34.21,
+      "modelDelta": 0,
+      "skipped": null,
+      "evidence": [
+        "Off Peak-Summer",
+        "On Peak-Summer"
+      ]
+    },
+    {
+      "start": "2025-08-26",
+      "days": 30,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 720,
+      "coveredDays": 31,
+      "coverage": 1,
+      "actual": 337.58,
+      "totalCharges": 337.92,
+      "commodityActual": 227.33,
+      "delivery": 95.59,
+      "reg": 15,
+      "tax": 43.93,
+      "credit": -44.27,
+      "meteredKwh": 2369.3,
+      "billedKwh": 2369.4000319999996,
+      "touKwh": {
+        "off": 1616,
+        "mid": 403.4,
+        "on": 349.9
+      },
+      "uloKwh": {
+        "overnight": 733.4,
+        "weekend": 573.9,
+        "mid": 658.6,
+        "on": 403.4
+      },
+      "commodityModel": {
+        "TOU": 227.32,
+        "Tiered": 250.23,
+        "ULO": 259.08
+      },
+      "windowSpan": {
+        "days": 30,
+        "from": "2025-08-26",
+        "to": "2025-09-25",
+        "summaryDays": 30
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1758776448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1756184448
+        }
+      ],
+      "billedBuckets": {
+        "Off Peak-Summer Usage": 1616.1,
+        "Mid Peak-Summer Usage": 403.4,
+        "On Peak-Summer Usage": 349.9
+      },
+      "commodityLines": [
+        "Mid Peak-Summer=49.22",
+        "On Peak-Summer=55.29",
+        "Off Peak-Summer=122.82"
+      ],
+      "modeled": {
+        "TOU": 337.57,
+        "Tiered": 360.45,
+        "ULO": 369.3
+      },
+      "bestPlan": "Tiered",
+      "saving": -22.87,
+      "modelDelta": -0.01,
+      "skipped": null,
+      "evidence": [
+        "Mid Peak-Summer",
+        "On Peak-Summer"
+      ]
+    },
+    {
+      "start": "2025-09-25",
+      "days": 32,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 768,
+      "coveredDays": 33,
+      "coverage": 1,
+      "actual": 234.11,
+      "totalCharges": 234.35,
+      "commodityActual": 149.82,
+      "delivery": 75.18,
+      "reg": 9.35,
+      "tax": 30.46,
+      "credit": -30.7,
+      "meteredKwh": 1456.9,
+      "billedKwh": 1459.569984,
+      "touKwh": {
+        "off": 960.1,
+        "mid": 256.8,
+        "on": 240
+      },
+      "uloKwh": {
+        "overnight": 422,
+        "weekend": 361.2,
+        "mid": 451.9,
+        "on": 221.9
+      },
+      "commodityModel": {
+        "TOU": 142.22,
+        "Tiered": 149.19,
+        "ULO": 157.4
+      },
+      "windowSpan": {
+        "days": 32,
+        "from": "2025-09-25",
+        "to": "2025-10-27",
+        "summaryDays": 32
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1761541248
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1758776448
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1- Summer Usage": 631,
+        "BLOCK 2 - Summer Usage": 828.6
+      },
+      "commodityLines": [
+        "BLOCK 1- Summer=58.68",
+        "BLOCK 2 - Summer=91.14"
+      ],
+      "modeled": {
+        "TOU": 226.51,
+        "Tiered": 233.48,
+        "ULO": 241.69
+      },
+      "bestPlan": "TOU",
+      "saving": 7.6,
+      "modelDelta": -0.63,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1- Summer",
+        "BLOCK 2 - Summer"
+      ]
+    },
+    {
+      "start": "2025-10-27",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 155.59,
+      "totalCharges": 170.77,
+      "commodityActual": 107.02,
+      "delivery": 57.81,
+      "reg": 5.94,
+      "tax": 22.2,
+      "credit": -37.38,
+      "meteredKwh": 917.1,
+      "billedKwh": 918.78,
+      "touKwh": {
+        "off": 597.6,
+        "mid": 152.6,
+        "on": 166.9
+      },
+      "uloKwh": {
+        "overnight": 265.2,
+        "weekend": 215.6,
+        "mid": 294.1,
+        "on": 142.2
+      },
+      "commodityModel": {
+        "TOU": 111.48,
+        "Tiered": 106.43,
+        "ULO": 126.41
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2025-10-27",
+        "to": "2025-11-25",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1761973248
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1761541248
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 2 - Summer Usage": 58.8,
+        "BLOCK 1 - Winter Usage": 762,
+        "BLOCK 1- Summer Usage": 98
+      },
+      "commodityLines": [
+        "BLOCK 2 - Summer=6.47",
+        "BLOCK 1 - Winter=91.44",
+        "BLOCK 1- Summer=9.11"
+      ],
+      "modeled": {
+        "TOU": 159.65,
+        "Tiered": 155.05,
+        "ULO": 173.25
+      },
+      "bestPlan": "TOU",
+      "saving": -4.06,
+      "modelDelta": -0.54,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 2 - Summer",
+        "BLOCK 1 - Winter"
+      ]
+    },
+    {
+      "start": "2025-11-25",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 155.85,
+      "totalCharges": 174.13,
+      "commodityActual": 110.3,
+      "delivery": 57.87,
+      "reg": 5.96,
+      "tax": 22.64,
+      "credit": -40.92,
+      "meteredKwh": 918.7,
+      "billedKwh": 919.169984,
+      "touKwh": {
+        "off": 582,
+        "mid": 166.6,
+        "on": 170.1
+      },
+      "uloKwh": {
+        "overnight": 261.5,
+        "weekend": 182.8,
+        "mid": 308.8,
+        "on": 165.6
+      },
+      "commodityModel": {
+        "TOU": 117.72,
+        "Tiered": 110.24,
+        "ULO": 141.33
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2025-11-25",
+        "to": "2025-12-24",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1766552448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1764046848
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 919.2
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=110.30"
+      ],
+      "modeled": {
+        "TOU": 162.49,
+        "Tiered": 155.8,
+        "ULO": 183.62
+      },
+      "bestPlan": "TOU",
+      "saving": -6.64,
+      "modelDelta": -0.05,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2025-12-24",
+      "days": 34,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 816,
+      "coveredDays": 35,
+      "coverage": 1,
+      "actual": 182.26,
+      "totalCharges": 203.65,
+      "commodityActual": 129.38,
+      "delivery": 67.88,
+      "reg": 6.39,
+      "tax": 26.47,
+      "credit": -47.86,
+      "meteredKwh": 1078.3,
+      "billedKwh": 1078.2000639999999,
+      "touKwh": {
+        "off": 754,
+        "mid": 155.4,
+        "on": 168.9
+      },
+      "uloKwh": {
+        "overnight": 301.4,
+        "weekend": 322.5,
+        "mid": 302.9,
+        "on": 151.6
+      },
+      "commodityModel": {
+        "TOU": 132.57,
+        "Tiered": 129.39,
+        "ULO": 150.17
+      },
+      "windowSpan": {
+        "days": 34,
+        "from": "2025-12-24",
+        "to": "2026-01-27",
+        "summaryDays": 34
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1769490048
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1766552448
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 1078.2
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=129.38"
+      ],
+      "modeled": {
+        "TOU": 185.11,
+        "Tiered": 182.27,
+        "ULO": 200.86
+      },
+      "bestPlan": "TOU",
+      "saving": -2.85,
+      "modelDelta": 0.01,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2026-01-27",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 141.34,
+      "totalCharges": 157.92,
+      "commodityActual": 97.93,
+      "delivery": 55.25,
+      "reg": 4.74,
+      "tax": 20.53,
+      "credit": -37.11,
+      "meteredKwh": 816.2,
+      "billedKwh": 816.12,
+      "touKwh": {
+        "off": 531.9,
+        "mid": 132.9,
+        "on": 151.3
+      },
+      "uloKwh": {
+        "overnight": 237.9,
+        "weekend": 186,
+        "mid": 269.7,
+        "on": 122.5
+      },
+      "commodityModel": {
+        "TOU": 103.72,
+        "Tiered": 97.94,
+        "ULO": 117.77
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-01-27",
+        "to": "2026-02-25",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1771995648
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1769490048
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 816.1
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=97.93"
+      ],
+      "modeled": {
+        "TOU": 146.52,
+        "Tiered": 141.35,
+        "ULO": 159.09
+      },
+      "bestPlan": "TOU",
+      "saving": -5.18,
+      "modelDelta": 0.01,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2026-02-25",
+      "days": 29,
+      "plan": "Tiered",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 158.55,
+      "totalCharges": 177.15,
+      "commodityActual": 112.82,
+      "delivery": 58.94,
+      "reg": 5.39,
+      "tax": 23.03,
+      "credit": -41.63,
+      "meteredKwh": 940.1,
+      "billedKwh": 940.16,
+      "touKwh": {
+        "off": 601.4,
+        "mid": 160.6,
+        "on": 178.1
+      },
+      "uloKwh": {
+        "overnight": 266.7,
+        "weekend": 204.7,
+        "mid": 317.7,
+        "on": 151
+      },
+      "commodityModel": {
+        "TOU": 120.31,
+        "Tiered": 113.13,
+        "ULO": 139.38
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-02-25",
+        "to": "2026-03-26",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1774501248
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1771995648
+        }
+      ],
+      "billedBuckets": {
+        "BLOCK 1 - Winter Usage": 940.2
+      },
+      "commodityLines": [
+        "BLOCK 1 - Winter=112.82"
+      ],
+      "modeled": {
+        "TOU": 165.25,
+        "Tiered": 158.83,
+        "ULO": 182.32
+      },
+      "bestPlan": "TOU",
+      "saving": -6.7,
+      "modelDelta": 0.28,
+      "skipped": null,
+      "evidence": [
+        "BLOCK 1 - Winter",
+        "BLOCK 1 - Winter Usage"
+      ]
+    },
+    {
+      "start": "2026-03-26",
+      "days": 29,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 186.4,
+      "totalCharges": 208.26,
+      "commodityActual": 139,
+      "delivery": 62.95,
+      "reg": 6.31,
+      "tax": 27.08,
+      "credit": -48.94,
+      "meteredKwh": 1108.1,
+      "billedKwh": 1107.889984,
+      "touKwh": {
+        "off": 741.7,
+        "mid": 174.7,
+        "on": 191.6
+      },
+      "uloKwh": {
+        "overnight": 325.2,
+        "weekend": 275.3,
+        "mid": 352.2,
+        "on": 155.4
+      },
+      "commodityModel": {
+        "TOU": 139.02,
+        "Tiered": 135.88,
+        "ULO": 155.72
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-03-26",
+        "to": "2026-04-24",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1777006848
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1774501248
+        }
+      ],
+      "billedBuckets": {
+        "On Peak-Winter Usage": 191.6,
+        "Off Peak-Winter Usage": 741.5,
+        "Mid Peak-Winter Usage": 174.7
+      },
+      "commodityLines": [
+        "Off Peak-Winter=72.67",
+        "Mid Peak-Winter=27.43",
+        "On Peak-Winter=38.90"
+      ],
+      "modeled": {
+        "TOU": 186.42,
+        "Tiered": 183.61,
+        "ULO": 201.36
+      },
+      "bestPlan": "Tiered",
+      "saving": 2.79,
+      "modelDelta": 0.02,
+      "skipped": null,
+      "evidence": [
+        "Off Peak-Winter",
+        "Mid Peak-Winter"
+      ]
+    },
+    {
+      "start": "2026-04-24",
+      "days": 31,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 744,
+      "coveredDays": 32,
+      "coverage": 1,
+      "actual": 256.9,
+      "totalCharges": 287.05,
+      "commodityActual": 199.01,
+      "delivery": 78.77,
+      "reg": 9.27,
+      "tax": 37.31,
+      "credit": -67.46,
+      "meteredKwh": 1629,
+      "billedKwh": 1638.309984,
+      "touKwh": {
+        "off": 1156.4,
+        "mid": 242.7,
+        "on": 229.9
+      },
+      "uloKwh": {
+        "overnight": 488,
+        "weekend": 474.5,
+        "mid": 447.4,
+        "on": 219
+      },
+      "commodityModel": {
+        "TOU": 198.1,
+        "Tiered": 215.1,
+        "ULO": 221.42
+      },
+      "windowSpan": {
+        "days": 31,
+        "from": "2026-04-24",
+        "to": "2026-05-25",
+        "summaryDays": 31
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1777611648
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1777006848
+        }
+      ],
+      "billedBuckets": {
+        "On Peak-Summer Usage": 176.5,
+        "On Peak-Winter Usage": 53.4,
+        "Mid Peak-Winter Usage": 52.7,
+        "Off Peak-Winter Usage": 190.3,
+        "Off Peak-Summer Usage": 975.4,
+        "Mid Peak-Summer Usage": 189.9
+      },
+      "commodityLines": [
+        "On Peak-Summer=35.83",
+        "Mid Peak-Winter=8.28",
+        "Off Peak-Winter=18.65",
+        "Mid Peak-Summer=29.82",
+        "On Peak-Winter=10.84",
+        "Off Peak-Summer=95.59"
+      ],
+      "modeled": {
+        "TOU": 256.08,
+        "Tiered": 271.3,
+        "ULO": 276.96
+      },
+      "bestPlan": "Tiered",
+      "saving": -14.4,
+      "modelDelta": -0.82,
+      "skipped": null,
+      "evidence": [
+        "On Peak-Summer",
+        "Mid Peak-Winter"
+      ]
+    },
+    {
+      "start": "2026-05-25",
+      "days": 29,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 406.65,
+      "totalCharges": 454.35,
+      "commodityActual": 336.54,
+      "delivery": 102.99,
+      "reg": 14.82,
+      "tax": 59.07,
+      "credit": -106.77,
+      "meteredKwh": 2652.8,
+      "billedKwh": 2651.699936,
+      "touKwh": {
+        "off": 1711.7,
+        "mid": 479.5,
+        "on": 461.6
+      },
+      "uloKwh": {
+        "overnight": 814.7,
+        "weekend": 534.8,
+        "mid": 842.5,
+        "on": 460.7
+      },
+      "commodityModel": {
+        "TOU": 336.73,
+        "Tiered": 363.67,
+        "ULO": 396.61
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-05-25",
+        "to": "2026-06-23",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1782190848
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1779685248
+        }
+      ],
+      "billedBuckets": {
+        "Mid Peak-Summer Usage": 478.9,
+        "On Peak-Summer Usage": 461.1,
+        "Off Peak-Summer Usage": 1711.6
+      },
+      "commodityLines": [
+        "Off Peak-Summer=167.74",
+        "Mid Peak-Summer=75.19",
+        "On Peak-Summer=93.61"
+      ],
+      "modeled": {
+        "TOU": 406.82,
+        "Tiered": 430.93,
+        "ULO": 460.42
+      },
+      "bestPlan": "Tiered",
+      "saving": -24.28,
+      "modelDelta": 0.17,
+      "skipped": null,
+      "evidence": [
+        "Off Peak-Summer",
+        "Mid Peak-Summer"
+      ]
+    },
+    {
+      "start": "2026-06-23",
+      "days": 29,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 419.38,
+      "totalCharges": 468.58,
+      "commodityActual": 346.73,
+      "delivery": 106.28,
+      "reg": 15.57,
+      "tax": 60.92,
+      "credit": -110.12,
+      "meteredKwh": 2789.3,
+      "billedKwh": 2790.380064,
+      "touKwh": {
+        "off": 1888.9,
+        "mid": 462.3,
+        "on": 438.1
+      },
+      "uloKwh": {
+        "overnight": 808.7,
+        "weekend": 679.7,
+        "mid": 783.1,
+        "on": 517.8
+      },
+      "commodityModel": {
+        "TOU": 346.62,
+        "Tiered": 383.05,
+        "ULO": 423.55
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-06-23",
+        "to": "2026-07-22",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1784696448
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1782190848
+        }
+      ],
+      "billedBuckets": {
+        "Mid Peak-Summer Usage": 462.3,
+        "Off Peak-Summer Usage": 1890.1,
+        "On Peak-Summer Usage": 438.1
+      },
+      "commodityLines": [
+        "Off Peak-Summer=185.22",
+        "On Peak-Summer=88.93",
+        "Mid Peak-Summer=72.58"
+      ],
+      "modeled": {
+        "TOU": 419.28,
+        "Tiered": 451.89,
+        "ULO": 488.13
+      },
+      "bestPlan": "Tiered",
+      "saving": -32.51,
+      "modelDelta": -0.1,
+      "skipped": null,
+      "evidence": [
+        "Off Peak-Summer",
+        "On Peak-Summer"
+      ]
+    },
+    {
+      "start": "2026-07-22",
+      "days": 29,
+      "plan": "TOU",
+      "origin": "detected",
+      "rowsInPeriod": 696,
+      "coveredDays": 30,
+      "coverage": 1,
+      "actual": 395.68,
+      "totalCharges": 442.1,
+      "commodityActual": 325,
+      "delivery": 102.34,
+      "reg": 14.76,
+      "tax": 57.47,
+      "credit": -103.89,
+      "meteredKwh": 2641.6,
+      "billedKwh": 2641.66,
+      "touKwh": {
+        "off": 1814,
+        "mid": 451.8,
+        "on": 375.8
+      },
+      "uloKwh": {
+        "overnight": 777.9,
+        "weekend": 649.9,
+        "mid": 716.4,
+        "on": 497.4
+      },
+      "commodityModel": {
+        "TOU": 324.99,
+        "Tiered": 362.08,
+        "ULO": 400.97
+      },
+      "windowSpan": {
+        "days": 29,
+        "from": "2026-07-22",
+        "to": "2026-08-20",
+        "summaryDays": 29
+      },
+      "readItems": [
+        {
+          "note": "Billing Period - Current Read Date",
+          "uom": 27,
+          "scaled": 1787202048
+        },
+        {
+          "note": "Billing Period - Previous Read Date",
+          "uom": 27,
+          "scaled": 1784696448
+        }
+      ],
+      "billedBuckets": {
+        "On Peak-Summer Usage": 375.8,
+        "Mid Peak-Summer Usage": 451.8,
+        "Off Peak-Summer Usage": 1814.1
+      },
+      "commodityLines": [
+        "On Peak-Summer=76.28",
+        "Off Peak-Summer=177.78",
+        "Mid Peak-Summer=70.94"
+      ],
+      "modeled": {
+        "TOU": 395.67,
+        "Tiered": 428.87,
+        "ULO": 463.67
+      },
+      "bestPlan": "Tiered",
+      "saving": -33.19,
+      "modelDelta": -0.01,
+      "skipped": null,
+      "evidence": [
+        "On Peak-Summer",
+        "Off Peak-Summer"
+      ]
+    }
+  ]
+}
