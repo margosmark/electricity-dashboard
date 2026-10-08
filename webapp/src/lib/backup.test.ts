@@ -20,6 +20,7 @@ import {
   type BackupDocument,
 } from './backup';
 import { EMPTY_EXTRA_CHARGES, type DataPoint } from './energy';
+import { type PlanTimelineEntry } from './planTimeline';
 
 const rows: DataPoint[] = [
   { timestamp: 1704067200, usage_kwh: 1.5 },
@@ -264,16 +265,99 @@ describe('parseBackup — prototype pollution & unknown keys', () => {
 });
 
 describe('storageValuesFromBackup', () => {
-  it('writes exactly the three localStorage keys the app reads', () => {
+  it('writes exactly the localStorage keys the app reads', () => {
     const doc: BackupDocument = buildBackupDocument({
       energyData: rows,
       billingDay: 7,
       extraCharges: { deliveryPerKwh: '0.05', deliveryFlat: '', regulatoryPerKwh: '', hstPct: '13' },
     });
     const values = storageValuesFromBackup(doc);
-    expect(Object.keys(values).sort()).toEqual(['billing_day', 'energy_data', 'extra_charges']);
+    expect(Object.keys(values).sort()).toEqual([
+      'billing_day', 'energy_data', 'extra_charges', 'plan_timeline',
+    ]);
     expect(JSON.parse(values.energy_data)).toEqual(rows);
     expect(values.billing_day).toBe('7');
     expect(JSON.parse(values.extra_charges).deliveryPerKwh).toBe('0.05');
+    expect(JSON.parse(values.plan_timeline)).toEqual([]);
+  });
+});
+
+/* ------------------------------------------- plan timeline (Wave P) ------ */
+
+describe('plan_timeline in the backup', () => {
+  const timelineEntry: PlanTimelineEntry = {
+    id: 'a1',
+    plan: 'Tiered',
+    from: '2024-11-25',
+    to: '2025-03-24',
+  };
+
+  it('is carried through export → parse → localStorage writes', () => {
+    const doc = buildBackupDocument({
+      energyData: rows,
+      billingDay: 7,
+      planTimeline: [timelineEntry],
+      exportedAt: new Date(0),
+    });
+    expect(doc.payload.plan_timeline).toEqual([timelineEntry]);
+
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    expect(round.value.payload.plan_timeline).toEqual([timelineEntry]);
+
+    const values = storageValuesFromBackup(round.value);
+    expect(JSON.parse(values.plan_timeline)).toEqual([timelineEntry]);
+  });
+
+  it('is absent — not empty — in documents that predate the feature', () => {
+    const doc = buildBackupDocument({ energyData: rows, billingDay: 7 });
+    expect(doc.payload.plan_timeline).toBeUndefined();
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    expect(round.value.payload.plan_timeline).toBeUndefined();
+  });
+
+  it('is dropped from the export when an entry is invalid (never unparseable)', () => {
+    const doc = buildBackupDocument({
+      energyData: rows,
+      billingDay: 7,
+      planTimeline: [timelineEntry, { id: 'bad', plan: 'Solar', from: '2024-01-01', to: '2024-02-01' }] as never,
+    });
+    expect(doc.payload.plan_timeline).toEqual([timelineEntry]);
+    expect(parseBackup(serializeBackup(doc)).ok).toBe(true);
+  });
+
+  it('is rejected loudly — entry by entry — when an import is malformed', () => {
+    const withBadEntry = valid({
+      payload: {
+        energy_data: rows,
+        billing_day: 1,
+        plan_timeline: [{ id: 'x', plan: 'Solar', from: '2024-01-01', to: '2024-02-01' }],
+      },
+    });
+    const res = parseBackup(withBadEntry);
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error).toMatch(/plan_timeline entry 1/);
+
+    const notArray = valid({
+      payload: { energy_data: rows, billing_day: 1, plan_timeline: { a: 1 } },
+    });
+    const res2 = parseBackup(notArray);
+    expect(res2.ok).toBe(false);
+    if (res2.ok) return;
+    expect(res2.error).toMatch(/invalid plan_timeline/);
+  });
+
+  it('round-trips a valid imported timeline unchanged', () => {
+    const doc = valid({
+      payload: { energy_data: rows, billing_day: 1, plan_timeline: [timelineEntry] },
+    });
+    const res = parseBackup(doc);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.payload.plan_timeline).toEqual([timelineEntry]);
   });
 });
