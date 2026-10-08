@@ -1,0 +1,176 @@
+{
+  "wave": "O",
+  "base": "http://127.0.0.1:3100/",
+  "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "at": "2026-10-08T03:56:50.225Z",
+  "total": 33,
+  "passed": 33,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "empty profile opens the upload modal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "real Oakville readings loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the file’s billing periods were parsed in the browser",
+      "ok": true,
+      "detail": "24 periods"
+    },
+    {
+      "name": "no request carried the XML (parse stayed in the browser)",
+      "ok": true,
+      "detail": "21 requests, methods: GET"
+    },
+    {
+      "name": "the actual-bill panel shows a payable per period",
+      "ok": true,
+      "detail": "287.11 · 228.83 · 158.67 · 151.48 · 161.98 · 169.42 · 156.97 · 148.82 · 208.18 · 277.39 · 378.62 · 431.64 · 337.58 · 234.11 · 155.59 · 155.85 · 182.26 · 141.34 · 158.55 · 186.4 · 256.9 · 406.65 · 419.38 · 395.68"
+    },
+    {
+      "name": "MONEY section renders on Insights",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "it sits under ShiftOptimizer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "one stacked row per billing period",
+      "ok": true,
+      "detail": "24 rows / 24 periods"
+    },
+    {
+      "name": "every charge type the file states is stacked (TOU windows + delivery + regulatory + HST)",
+      "ok": true,
+      "detail": "Commodity · off-peakCommodity · mid-peakCommodity · on-peakCommodity · not split by windowDeliveryRegulatoryHSTOntario Electricity RebateOntario Electricity Rebate — below the line"
+    },
+    {
+      "name": "the rebate slice is present and marked below the zero line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the stacked chart actually draws bars",
+      "ok": true,
+      "detail": "146 rects"
+    },
+    {
+      "name": "the stacked table’s \"You paid\" equals the actual-bill panel, period by period",
+      "ok": true,
+      "detail": "bill: 287.11 · 228.83 · 158.67 · 151.48 · 161.98 · 169.42 · 156.97 · 148.82 · 208.18 · 277.39 · 378.62 · 431.64 · 337.58 · 234.11 · 155.59 · 155.85 · 182.26 · 141.34 · 158.55 · 186.4 · 256.9 · 406.65 · 419.38 · 395.68 | money: 287.11 · 228.83 · 158.67 · 151.48 · 161.98 · 169.42 · 156.97 · 148.82 · 208.18 · 277.39 · 378.62 · 431.64 · 337.58 · 234.11 · 155.59 · 155.85 · 182.26 · 141.34 · 158.55 · 186.4 · 256.9 · 406.65 · 419.38 · 395.68"
+    },
+    {
+      "name": "the % share state prints percentages, not dollars",
+      "ok": true,
+      "detail": "10.9%"
+    },
+    {
+      "name": "non-commodity share is shown as a number",
+      "ok": true,
+      "detail": "29.9%"
+    },
+    {
+      "name": "the charge shares add to 100% (nothing stacked twice)",
+      "ok": true,
+      "detail": "58.6 + 29.9 + 11.5 = 100.0%"
+    },
+    {
+      "name": "the share caption is explicit that the rebate is excluded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the kWh state rewrites the heading",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the kWh state stacks the bill’s own usage lines (or says the file has none)",
+      "ok": true,
+      "detail": "1,927.6 kWh"
+    },
+    {
+      "name": "the overlay names all three plans against what was actually paid",
+      "ok": true,
+      "detail": "Time-of-Use $4976.26 · Tiered $5148.74 · Ultra-Low Overnight $5544.49 · you paid $5273.46"
+    },
+    {
+      "name": "TOU / Tiered / ULO lines overlay the stacked bars",
+      "ok": true,
+      "detail": "4 reference lines"
+    },
+    {
+      "name": "every overlay figure is a full amount due, in the same league as the bill",
+      "ok": true,
+      "detail": "4976.26 · 5148.74 · 5544.49 · 5273.46"
+    },
+    {
+      "name": "the period-over-period table renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the first column is labelled a baseline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a delta is shown for every period after the first",
+      "ok": true,
+      "detail": "23 deltas"
+    },
+    {
+      "name": "the ¢/kWh-by-hour histogram renders with a window average",
+      "ok": true,
+      "detail": "11.1¢"
+    },
+    {
+      "name": "the attribution waterfall renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the waterfall lands on the actual-bill panel’s own payable figure",
+      "ok": true,
+      "detail": "waterfall=$395.68 panel=$395.68"
+    },
+    {
+      "name": "the waterfall walks commodity → delivery → regulatory → HST → rebate → amount due",
+      "ok": true,
+      "detail": "Commodity$325.00→ $325.00Delivery$102.34→ $427.34Regulatory$14.76→ $442.10Total electricity charges$442.10→ $442.10HST$57.47→ $499.57OEB rebate$103.89→ $395.68Amount due$395.68→ $395.68"
+    },
+    {
+      "name": "MONEY section visible on a 390x844 phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mode toggles are touch-sized (>=44px)",
+      "ok": true,
+      "detail": "75x44"
+    },
+    {
+      "name": "wide tables scroll inside their own box",
+      "ok": true,
+      "detail": "{\"scroll\":350,\"client\":350}"
+    },
+    {
+      "name": "the stacked chart has a usable width on a phone",
+      "ok": true,
+      "detail": "520px"
+    }
+  ]
+}

@@ -11,7 +11,7 @@
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { AlertTriangle } from 'lucide-react';
-import { type Anomaly, type HeatmapData, type ProcessedPoint, type RateSet } from '@/lib/energy';
+import { type Anomaly, type HeatmapData, type ProcessedPoint, type RateSet, type UsageSummary } from '@/lib/energy';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import ShiftOptimizer from '@/components/ShiftOptimizer';
 import ShiftVerificationCard from '@/components/ShiftVerificationCard';
@@ -34,6 +34,15 @@ const YearOverYearPanel = dynamic(() => import('@/components/YearOverYearPanel')
   loading: () => null,
 });
 
+/**
+ * Wave O — the MONEY section. Same treatment for the same reason: it is the
+ * other Recharts entry point on this tab, and a first visit to Insights has
+ * no bill to draw until one has been imported.
+ */
+const MoneySection = dynamic(() => import('@/components/MoneySection'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export type InsightsViewProps = {
   anomalies: Anomaly[];
@@ -58,6 +67,8 @@ export type InsightsViewProps = {
    * per household, and it is not always Time-of-Use.
    */
   plan?: PlanId;
+  /** Bill periods parsed out of the imported file (Wave L) — the money views. */
+  summaries: UsageSummary[];
 };
 
 export default function InsightsView({
@@ -69,6 +80,7 @@ export default function InsightsView({
   verification,
   rates,
   plan = DEFAULT_PLAN,
+  summaries,
 }: InsightsViewProps) {
   return (
     <div className="print-compact space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
@@ -78,6 +90,9 @@ export default function InsightsView({
 
       {/* Ranked ToU-shift recommendations (recurring On-Peak blocks) */}
       <ShiftOptimizer analysis={shiftAnalysis} />
+
+      {/* What the bill itself was made of — only when the file carries one. */}
+      <MoneySection summaries={summaries} allData={processedData} plan={plan} />
 
       {/* Did the last week's shift actually show up? */}
       <ShiftVerificationCard verification={verification} />
