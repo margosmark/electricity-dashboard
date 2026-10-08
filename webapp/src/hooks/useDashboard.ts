@@ -27,6 +27,8 @@ import {
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
 } from "@/lib/backup";
+// Wave P — the plan timeline travels with the backup, next to billing_day.
+import { readStoredTimeline } from "@/hooks/usePlanTimeline";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
 import { loadExampleReadings } from "@/lib/exampleData";
 // Wave M — one gated entry point for every background refresh, plus the
@@ -1024,9 +1026,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   /**
    * Serialize everything this browser holds (readings, billing day, bill
-   * add-ons) into a versioned JSON document. Returns null when there is
-   * nothing to back up — the drawer reports that instead of writing an empty
-   * file that would wipe data if restored.
+   * add-ons, plan timeline) into a versioned JSON document. Returns null when
+   * there is nothing to back up — the drawer reports that instead of writing
+   * an empty file that would wipe data if restored.
    */
   const exportBackup = (): BackupExport | null => {
     if (rawData.length === 0) return null;
@@ -1035,6 +1037,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       energyData: rawData,
       billingDay,
       extraCharges: readStoredExtraCharges(),
+      planTimeline: readStoredTimeline(),
       exportedAt: now,
     });
     return { filename: backupFilename(now), text: serializeBackup(doc) };
@@ -1062,6 +1065,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       localStorage.setItem("energy_data", values.energy_data);
       localStorage.setItem("billing_day", values.billing_day);
       localStorage.setItem("extra_charges", values.extra_charges);
+      localStorage.setItem("plan_timeline", values.plan_timeline);
     } catch {
       return {
         ok: false,
