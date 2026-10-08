@@ -188,6 +188,13 @@ stacked branches → an explicit enable decision (`ACCT_ENABLED=true` + `VAPID_*
 in the untracked `.env`) → `t_49579c75` proves the four-container topology and
 the first tab-closed push.
 
+**Merge-order rule for the two paragraphs this PR edits:** PR #28 rewrites the
+*same* opening paragraphs of `SECURITY.md` and `ARCHITECTURE.md` (it describes
+the account server as present). **If PR #28 ever merges, its wording wins** and
+the two scoped sentences here resolve to it — that is the correct order, because
+by then the account server will exist. Whichever lands second rebases; the
+sentence in the audit file is the one that stays authoritative either way.
+
 ---
 
 ## 7. The deliberate choice on residual code
