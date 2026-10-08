@@ -911,8 +911,10 @@ export type InitialWindow = {
   scope: InitialWindowScope;
 };
 
-/** A window is "mostly empty" below this share of its calendar days carrying a reading. */
-const MIN_WINDOW_COVERAGE = 0.5;
+/** A window is "mostly empty" below this share of its calendar days carrying a reading.
+ *  Exported because the billing-axis window picker applies the SAME gate —
+ *  one number for "is this window worth opening", not two that can drift. */
+export const MIN_WINDOW_COVERAGE = 0.5;
 
 /**
  * Pick the window a freshly loaded dataset should open in.

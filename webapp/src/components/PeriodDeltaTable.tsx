@@ -62,6 +62,18 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
               {table.columns.map((c, i) => (
                 <th key={c.start} className="py-2 px-3 text-right uppercase whitespace-nowrap">
                   {i === 0 ? `Baseline · ${c.label}` : `Δ → ${c.label}`}
+                  {/* A column that is not a real bill says so in the header,
+                      so no number under it can be read as a charge. */}
+                  {c.kind !== 'billed' && (
+                    <span
+                      data-testid="money-column-flag"
+                      className={`ml-1 inline-block border-2 border-black px-1 rounded text-[8px] ${
+                        c.estimated ? 'bg-yellow-400' : 'bg-slate-200'
+                      }`}
+                    >
+                      {c.estimated ? 'Estimate' : 'No bill'}
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -90,15 +102,46 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                   </td>
                   {row.values.map((value, i) => {
                     const delta = row.deltas[i];
+                    const column = table.columns[i];
+                    const flagged = column && column.kind !== 'billed';
                     return (
                       <td key={i} className="py-1.5 px-3 text-right tabular-nums">
                         {i === 0 || baselineOnly ? (
                           <span className="text-black">{money(value)}</span>
-                        ) : (
+                        ) : !flagged ? (
                           <span className={changeClass(delta)} data-testid="money-delta-value">
                             {delta !== null && delta > 0 ? '+' : ''}
                             {money(delta ?? 0)}
                           </span>
+                        ) : column.kind === 'gap' ? (
+                          /* No bill covers these days: there is no change to
+                             report, and printing $0.00 would claim one. */
+                          <span className="text-slate-400" title="No bill in this file covers these days">
+                            —
+                          </span>
+                        ) : (
+                          /* The open period: the number itself, marked as an
+                             estimate, because a delta against an unbilled
+                             window would be two wrongs. A charge that does
+                             not exist yet (delivery, HST) prints a dash
+                             rather than "~$0.00", which would read like an
+                             estimate of zero. */
+                          value === 0 ? (
+                            <span
+                              className="text-slate-400"
+                              title="Not billed yet — no charge exists for this window"
+                            >
+                              —
+                            </span>
+                          ) : (
+                            <span
+                              className="text-amber-700 font-black"
+                              data-testid="money-delta-estimate"
+                              title="Estimated, not billed yet"
+                            >
+                              ~{money(value)}
+                            </span>
+                          )
                         )}
                       </td>
                     );
