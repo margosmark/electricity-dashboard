@@ -1,7 +1,6 @@
 # Wave P — plan-type timeline, per-period alternatives, and the audited switch track record
 
-**What shipped** (slices 1–4; the money-chart overlay is slice 5, in the
-second pass once Wave O merges):
+**What shipped** — all five slices:
 
 | # | Slice | Where |
 |---|---|---|
@@ -9,11 +8,12 @@ second pass once Wave O merges):
 | 2 | User-editable timeline, persisted next to `billing_day`, carried by the backup | `components/PlanTimelineEditor.tsx`, `hooks/usePlanTimeline.ts`, `lib/backup.ts` |
 | 3 | Per-period alternative modeling with the rate set in force during the period | `lib/planTimeline.ts` — `modelPeriod` |
 | 4 | Switch-decision track record (paid vs modeled vs best saving, audited totals) | `components/SwitchTrackRecord.tsx` — mounted under "Your actual bill" on the Chart tab |
+| 5 | Plan-type overlay on Wave O's money chart (banded + labelled periods + table column) | `components/PlanBands.tsx`, `planAnnotations()`, wired in `MoneySection`/`MoneyStackedChart` (#33) |
 
 ## The numbers a reviewer should check
 
-From `wave-p-verification.json` — **38/38** on the deployed stack
-(`http://10.10.11.110:3939`, deploy `6f0f63b`) with Mark's real
+From `wave-p-verification.json` — **48/48** on the deployed stack
+(`http://10.10.11.110:3939`, deploy `dc83ed9`) with Mark's real
 **24-period export** (sha256 `e292de50…`, pinned by the script before it
 runs anything; the file itself is never committed):
 
@@ -38,12 +38,19 @@ runs anything; the file itself is never committed):
   ULO **$463.67**, saving shown as **−$33.19** (already the cheapest);
 - mobile 390×844: no horizontal overflow, 44px touch targets.
 
+Slice 5 (on the money chart): **24 bands behind the 24 bars, in the
+detected sequence** `OOOTTTTT OOOOO TTTTTT OOOOO`, each tinted and labelled
+TOU/TIERED (text on the chart, plus a **Plan column** in the numbers table
+reading `Time-of-Use / Tiered` in the same order) — rendered on both the
+dollar and share views, desktop and the 390px phone, no overflow.
+
 Rerun:
-`NODE_PATH=$PWD/webapp/node_modules WAVE_P_XML=/path/to/export.xml WAVE_P_BASE_URL=http://10.10.11.110:3939/ node evidence/wave-p-verify.cjs` → 38/38.
+`NODE_PATH=$PWD/webapp/node_modules WAVE_P_XML=/path/to/export.xml WAVE_P_BASE_URL=http://10.10.11.110:3939/ node evidence/wave-p-verify.cjs` → 48/48.
 
 Screens: `wave-p-timeline-desktop.png`, `wave-p-track-record-desktop.png`,
 `wave-p-desktop-full.png`, `wave-p-timeline-mobile.png`,
-`wave-p-track-record-mobile.png`.
+`wave-p-track-record-mobile.png`, `wave-p-money-bands-desktop.png`,
+`wave-p-money-bands-mobile.png`.
 
 ## Finding 1 — the 2024-11-01 rate set was carrying 2023-11-01 prices
 

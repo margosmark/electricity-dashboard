@@ -3,9 +3,9 @@
   "base": "http://10.10.11.110:3939/",
   "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
   "xmlSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
-  "at": "2026-10-08T03:37:08.772Z",
-  "total": 38,
-  "passed": 38,
+  "at": "2026-10-08T04:06:07.451Z",
+  "total": 48,
+  "passed": 48,
   "failed": 0,
   "checks": [
     {
@@ -71,7 +71,7 @@
     {
       "name": "plan_timeline persisted in localStorage",
       "ok": true,
-      "detail": "[{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"TOU\",\"from\":\"2026-10-07\",\"to\":\"2026-10-07\"}]"
+      "detail": "[{\"id\":\"muz0ki1o-xhp7nkj\",\"plan\":\"TOU\",\"from\":\"2026-10-08\",\"to\":\"2026-10-08\"}]"
     },
     {
       "name": "billing_day writes to the same localStorage, next to the timeline",
@@ -86,12 +86,12 @@
     {
       "name": "nothing invalid ever reaches storage",
       "ok": true,
-      "detail": "{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"TOU\",\"from\":\"2026-10-07\",\"to\":\"2026-10-07\"}"
+      "detail": "{\"id\":\"muz0ki1o-xhp7nkj\",\"plan\":\"TOU\",\"from\":\"2026-10-08\",\"to\":\"2026-10-08\"}"
     },
     {
       "name": "editing plan + range persists",
       "ok": true,
-      "detail": "{\"id\":\"muyziy4b-xb1mdg6\",\"plan\":\"Tiered\",\"from\":\"2024-01-01\",\"to\":\"2024-06-30\"}"
+      "detail": "{\"id\":\"muz0ki1o-xhp7nkj\",\"plan\":\"Tiered\",\"from\":\"2024-01-01\",\"to\":\"2024-06-30\"}"
     },
     {
       "name": "a declaration outside the file does not disturb detection",
@@ -179,6 +179,41 @@
       "detail": "3"
     },
     {
+      "name": "money section visible on the Insights tab",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "money chart renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "a plan band behind every one of the 24 periods",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "band sequence matches the detected timeline (TOU×3 Tiered×5 TOU×5 Tiered×6 TOU×5)",
+      "ok": true,
+      "detail": "OOOTTTTTOOOOOTTTTTTOOOOO"
+    },
+    {
+      "name": "bands carry TEXT labels on the chart",
+      "ok": true,
+      "detail": "Aug 26, 2024Dec 24, 2024Apr 25, 2025Aug 26, 2025Dec 24, 2025Apr 24, 2026$-200$0$"
+    },
+    {
+      "name": "Plan column in the numbers table (the accessible path)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "24 plan cells in sequence (Time-of-Use / Tiered)",
+      "ok": true,
+      "detail": "24: Time-of-Use, Time-of-Use, Time-of-Use, Tiered, Tiered, Tiered …"
+    },
+    {
       "name": "timeline visible on a 390x844 phone",
       "ok": true,
       "detail": ""
@@ -197,6 +232,21 @@
       "name": "add-entry button is touch-sized (>=44px)",
       "ok": true,
       "detail": "102x44"
+    },
+    {
+      "name": "money chart renders on the phone",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "24 plan bands on the phone",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "no horizontal overflow on Insights with the bands",
+      "ok": true,
+      "detail": "0px"
     }
   ]
 }
