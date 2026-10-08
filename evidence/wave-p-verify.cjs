@@ -250,6 +250,38 @@ async function desktopRun(browser) {
 
     await page.getByTestId('switch-track-record').screenshot({ path: path.join(OUT, 'wave-p-track-record-desktop.png') });
     await page.screenshot({ path: path.join(OUT, 'wave-p-desktop-full.png'), fullPage: true });
+
+    // ---- slice 5: the plan-type overlay on Wave O's money chart ----------
+    await page.getByRole('button', { name: 'INSIGHTS' }).click();
+    check('money section visible on the Insights tab', await shown(page.getByTestId('money-section')));
+    const chart = page.getByTestId('money-chart');
+    check('money chart renders', await shown(chart, 30_000));
+    const bandNodes = page.locator('[data-testid^="plan-band-"]');
+    const bandCount = await bandNodes.count();
+    check('a plan band behind every one of the 24 periods', bandCount === 24, `${bandCount}`);
+    const bandPlans = [];
+    for (let i = 0; i < bandCount; i += 1) {
+      bandPlans.push(await bandNodes.nth(i).getAttribute('data-plan'));
+    }
+    check(
+      'band sequence matches the detected timeline (TOU×3 Tiered×5 TOU×5 Tiered×6 TOU×5)',
+      JSON.stringify(bandPlans) === JSON.stringify(PLAN_SEQUENCE),
+      bandPlans.map((x) => (x === 'Tiered' ? 'T' : 'O')).join(''),
+    );
+    const chartText = flat(await chart.textContent());
+    check('bands carry TEXT labels on the chart', /TOU/.test(chartText) && /TIERED/.test(chartText), chartText.slice(0, 80));
+    check('Plan column in the numbers table (the accessible path)', await shown(page.getByTestId('money-plan-head')));
+    const planCells = page.getByTestId('money-plan-cell');
+    const cellCount = await planCells.count();
+    const cellTexts = [];
+    for (let i = 0; i < cellCount; i += 1) cellTexts.push(flat(await planCells.nth(i).textContent()));
+    const expectedCells = PLAN_SEQUENCE.map((x) => (x === 'TOU' ? 'Time-of-Use' : 'Tiered'));
+    check(
+      '24 plan cells in sequence (Time-of-Use / Tiered)',
+      cellCount === 24 && JSON.stringify(cellTexts) === JSON.stringify(expectedCells),
+      `${cellCount}: ${cellTexts.slice(0, 6).join(', ')} …`,
+    );
+    await page.getByTestId('money-section').screenshot({ path: path.join(OUT, 'wave-p-money-bands-desktop.png') });
   } finally {
     await ctx.close();
   }
@@ -270,6 +302,17 @@ async function mobileRun(browser) {
     await page.getByTestId('plan-timeline').scrollIntoViewIfNeeded();
     await page.getByTestId('plan-timeline').screenshot({ path: path.join(OUT, 'wave-p-timeline-mobile.png') });
     await page.getByTestId('switch-track-record').screenshot({ path: path.join(OUT, 'wave-p-track-record-mobile.png') });
+
+    // slice 5 on the phone: same bands, same column
+    await page.getByRole('button', { name: 'INSIGHTS' }).click();
+    check('money chart renders on the phone', await shown(page.getByTestId('money-chart'), 30_000));
+    const mobileBands = await page.locator('[data-testid^="plan-band-"]').count();
+    check('24 plan bands on the phone', mobileBands === 24, `${mobileBands}`);
+    const overflowInsights = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    check('no horizontal overflow on Insights with the bands', overflowInsights <= 0, `${overflowInsights}px`);
+    await page.getByTestId('money-section').screenshot({ path: path.join(OUT, 'wave-p-money-bands-mobile.png') });
   } finally {
     await ctx.close();
   }
