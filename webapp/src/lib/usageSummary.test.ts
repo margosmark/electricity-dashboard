@@ -61,11 +61,13 @@ const rateSet: RateSet = {
   ulo: { overnight: 3.9, weekendOffPeak: 9.8, midPeak: 15.7, onPeak: 39.1 },
 };
 
-/** One reading per day across a period, at a fixed total plan cost. */
+/** One reading per day across a period, at a fixed total plan cost (and a
+ *  fixed kWh per day — Tiered needs real usage to reach its threshold). */
 function rowsFor(
   summary: UsageSummary,
   totalCost: number,
   days: number,
+  kwhPerDay = 1,
 ): ProcessedPoint[] {
   const { start } = billWindow(summary);
   const out: ProcessedPoint[] = [];
@@ -73,7 +75,7 @@ function rowsFor(
     const timestamp = start + i * 86400 + 3600;
     out.push({
       timestamp,
-      usage_kwh: 1,
+      usage_kwh: kwhPerDay,
       dateObj: new Date(timestamp * 1000),
       dayStr: new Date(timestamp * 1000).toISOString().slice(0, 10),
       hourStr: '01:00',
@@ -81,7 +83,7 @@ function rowsFor(
       uloCategory: 'Overnight',
       isWinter: false,
       costTOU: totalCost / days,
-      costTiered: 0,
+      costTiered: kwhPerDay * 0.12, // tier 1 only — the field is never summed
       costULO: 0,
       activeRateSet: rateSet,
     });
@@ -377,6 +379,24 @@ describe('estimate vs actual, per billing period', () => {
     expect(rec.delta).toBeNull();
     expect(commodityVerdict(rec)).toBe('unknown');
     expect(rec.commodityEstimate).not.toBeNull(); // we did price it — we just won't compare
+  });
+
+  it('prices Tiered with the month-scoped tier-2 threshold, not tier 1', () => {
+    // 2,900 kWh over the 2026-07-22 period (10 days in July, 19 in August).
+    // Each month's threshold is prorated to the days the readings cover, so
+    // most of it bills at tier 2 (14.2¢) — the per-reading `costTiered` field
+    // is tier 1 only and would say 2,900 × 12¢ = $348.00.
+    const p2 = summaries[2];
+    const rows = rowsFor(p2, 0, p2.days, 100);
+    const rec = reconcileBillingPeriods([p2], rows, 'Tiered')[0];
+    const thJul = 600 * (10 / 30.4);
+    const thAug = 600 * (19 / 30.4);
+    const expected =
+      thJul * 0.12 + (1000 - thJul) * 0.142 + thAug * 0.12 + (1900 - thAug) * 0.142;
+    expect(rec.commodityEstimate).toBeCloseTo(expected, 6);
+    expect(Math.round(rec.commodityEstimate! * 100) / 100).toBe(399.21);
+    expect(rec.commodityEstimate).not.toBeCloseTo(2900 * 0.12, 1);
+    expect(rec.meteredKwh).toBeCloseTo(2900, 6);
   });
 });
 

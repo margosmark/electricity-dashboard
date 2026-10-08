@@ -26,6 +26,7 @@ import { fmtCents, periodLabel, t } from '@/i18n';
 import {
   aggregateChartData,
   calculateComparison,
+  tieredRateCentsFor,
   type ProcessedPoint,
   type RateSet,
 } from './energy';
@@ -333,19 +334,23 @@ export type EvScenario = {
   assumptions: string[];
 };
 
-/** The rate a charge lands on under each plan when it runs 23:00–07:00. */
-function overnightRateCents(plan: EvPlan, rates: RateSet): number {
+/** The rate a charge lands on under each plan when it runs 23:00–07:00.
+ *  `tieredRateCents` is the window's own blended tiered rate — Tiered has no
+ *  overnight window, so the rate is simply what that plan costs here. */
+function overnightRateCents(plan: EvPlan, rates: RateSet, tieredRateCents: number): number {
   if (plan === 'TOU') return rates.tou.offPeak;
   if (plan === 'ULO') return rates.ulo.overnight;
-  return rates.tiered.tier1;
+  return tieredRateCents;
 }
 
 /** The rate the same charge pays today if we cannot see where it charges. */
-function worstCaseRateCents(plan: EvPlan, rates: RateSet): number {
+function worstCaseRateCents(plan: EvPlan, rates: RateSet, tieredRateCents: number): number {
   if (plan === 'TOU') return rates.tou.onPeak;
   if (plan === 'ULO') return rates.ulo.onPeak;
-  // Tiered has no time-of-use windows: time shifting never moves this bill.
-  return rates.tiered.tier1;
+  // Tiered has no time-of-use windows: time shifting never moves this bill,
+  // so the "worst case" is the same blended tiered rate, not the tier-1
+  // floor (which would be the best case, not the worst).
+  return tieredRateCents;
 }
 
 const PLANS: EvPlan[] = ['TOU', 'Tiered', 'ULO'];
@@ -401,19 +406,21 @@ function priceStayHours(input: {
   basis: StayBasis;
   currentPlan: EvPlan;
   rates: RateSet;
+  /** The window's own blended tiered rate — every Tiered figure shares it. */
+  tieredRateCents: number;
 }): {
   rateCents: Record<EvPlan, number>;
   breakdown: EvHourPrice[];
   seasons: Array<'Winter' | 'Summer'>;
 } {
-  const { rows, hours, basis, currentPlan, rates } = input;
+  const { rows, hours, basis, currentPlan, rates, tieredRateCents } = input;
 
   if (hours.length === 0) {
     return {
       rateCents: {
-        TOU: worstCaseRateCents('TOU', rates),
-        Tiered: worstCaseRateCents('Tiered', rates),
-        ULO: worstCaseRateCents('ULO', rates),
+        TOU: worstCaseRateCents('TOU', rates, tieredRateCents),
+        Tiered: worstCaseRateCents('Tiered', rates, tieredRateCents),
+        ULO: worstCaseRateCents('ULO', rates, tieredRateCents),
       },
       breakdown: [],
       seasons: [],
@@ -434,7 +441,10 @@ function priceStayHours(input: {
     }
     a.kwh += r.usage_kwh;
     a.cost.TOU += r.costTOU;
-    a.cost.Tiered += r.costTiered;
+    // Tiered is priced at the WINDOW's blended rate, not the per-reading
+    // tier-1 field: these kWh sit inside a month that is (usually) already
+    // over its threshold, so tier 1 would understate what the charge costs.
+    a.cost.Tiered += (r.usage_kwh * tieredRateCents) / 100;
     a.cost.ULO += r.costULO;
     const cat = planCategoryOf(r, currentPlan);
     a.categories.set(cat, (a.categories.get(cat) ?? 0) + r.usage_kwh);
@@ -454,7 +464,8 @@ function priceStayHours(input: {
   const rateCents = {} as Record<EvPlan, number>;
   for (const plan of PLANS) {
     let rate = 0;
-    for (const h of hours) rate += weightOf(h) * (rateAt(h, plan) ?? worstCaseRateCents(plan, rates));
+    for (const h of hours)
+      rate += weightOf(h) * (rateAt(h, plan) ?? worstCaseRateCents(plan, rates, tieredRateCents));
     rateCents[plan] = rate;
   }
 
@@ -462,7 +473,7 @@ function priceStayHours(input: {
     const own = rateAt(h, currentPlan);
     return {
       hour: h,
-      rateCents: own ?? worstCaseRateCents(currentPlan, rates),
+      rateCents: own ?? worstCaseRateCents(currentPlan, rates, tieredRateCents),
       categories:
         own === null
           ? ['no readings']
@@ -598,9 +609,19 @@ export function buildEvScenario(input: {
   const candidate =
     input.candidate !== undefined ? input.candidate : detectEvCandidate(rows);
 
+  // ONE Tiered number for the whole scenario: the window's own blended tiered
+  // rate (month-scoped tier-2 threshold, ÷ this window's kWh). The stay side,
+  // the overnight side and the plan cards all read from it, so "moving hours
+  // cannot change what Tiered costs" stays exactly true while the figure
+  // itself is the rate the household actually pays — not the tier-1 floor.
+  const tieredRateCents =
+    rates === null
+      ? 0
+      : ((rows.length > 0 ? tieredRateCentsFor(rows) : null) ?? rates.tiered.tier1);
+
   const prices = {} as Record<EvPlan, EvPlanPrice>;
   for (const plan of PLANS) {
-    const rateCents = rates ? overnightRateCents(plan, rates) : 0;
+    const rateCents = rates ? overnightRateCents(plan, rates, tieredRateCents) : 0;
     const perCharge = dailyKwh * (rateCents / 100);
     prices[plan] = {
       rateCents,
@@ -712,6 +733,7 @@ export function buildEvScenario(input: {
     basis: stayBasis,
     currentPlan,
     rates: activeRates,
+    tieredRateCents,
   });
   // A band we have no readings for at all is not a measured band — every hour
   // in it fell back to the plan's worst case, so call the basis what it is
@@ -790,7 +812,8 @@ export function buildEvScenario(input: {
       const currentRate = pricing.rateCents[plan];
 
       currentEvCost[plan] = evKwh * (currentRate / 100);
-      overnightEvCost[plan] = evKwh * (overnightRateCents(plan, activeRates) / 100);
+      overnightEvCost[plan] =
+        evKwh * (overnightRateCents(plan, activeRates, tieredRateCents) / 100);
       withChargeOnOvernight[plan] =
         baselineTotals[plan] - currentEvCost[plan] + overnightEvCost[plan];
     }

@@ -41,6 +41,7 @@ import {
   classifyBillLine,
   planCostFor,
   summaryStatesMoney,
+  tieredRateCentsFor,
   type ExtraCharges,
   type ProcessedPoint,
   type UsageSummary,
@@ -673,11 +674,18 @@ export type HourCostProfile = {
 /**
  * Average commodity ¢/kWh for each hour of the day.
  *
- * Cost is the plan on screen (`costTOU` / `costTiered` / `costULO`), because
- * "what does 4pm cost me" is plan-dependent; usage is the same readings the
- * heatmap buckets. Only commodity is modelled — delivery, regulatory and HST
- * arrive once per billing period, so there is no per-hour version of them to
- * plot, and the caption says exactly that.
+ * Cost is the plan on screen, because "what does 4pm cost me" is
+ * plan-dependent; usage is the same readings the heatmap buckets. Only
+ * commodity is modelled — delivery, regulatory and HST arrive once per billing
+ * period, so there is no per-hour version of them to plot, and the caption
+ * says exactly that.
+ *
+ * Tiered is priced at the WINDOW's own tiered rate (`tieredRateCentsFor`),
+ * not at the per-reading tier-1 field: a tiered plan has no time dimension, so
+ * every hour costs the same blended number, and the 24 buckets add back up to
+ * exactly what the plan card charges for this window. Summing `costTiered`
+ * instead made the histogram the one figure on screen that disagreed with the
+ * plan card over a threshold month.
  */
 export function hourCostProfile(
   rows: ProcessedPoint[],
@@ -703,11 +711,18 @@ export function hourCostProfile(
     windows: {},
   }));
 
+  const tieredRateCents = plan === 'Tiered' ? tieredRateCentsFor(rows) : null;
+
   for (const r of rows) {
     const parsed = Number(r.hourStr.slice(0, 2));
     const bucket = buckets[Number.isInteger(parsed) && parsed >= 0 && parsed < 24 ? parsed : 0];
     bucket.kwh += r.usage_kwh;
-    bucket.cost += plan === 'TOU' ? r.costTOU : plan === 'Tiered' ? r.costTiered : r.costULO;
+    bucket.cost +=
+      tieredRateCents !== null
+        ? (r.usage_kwh * tieredRateCents) / 100
+        : plan === 'TOU'
+          ? r.costTOU
+          : r.costULO;
     // Colour comes from the TOU window the reading was priced in — only
     // meaningful on a TOU bill, which is the only plan with windows.
     if (plan === 'TOU') bucket.windows[r.touCategory] = (bucket.windows[r.touCategory] ?? 0) + 1;
@@ -1035,10 +1050,10 @@ export function planOverlay(
 
   // Price the three plans the way the plan cards do: through the monthly
   // buckets, where the tiered tier-2 threshold is applied and scaled by the
-  // days actually covered. Summing the per-reading `costTiered` instead
-  // (what `planCostFor` does — `processRawData` fills it with tier 1 only)
-  // put Tiered $8 UNDER the real TOU bill on Mark's July period, contradicting
-  // both the plan cards and Wave P's track record for the same period.
+  // days actually covered — the same rule `planCostFor` now applies everywhere
+  // (the per-reading `costTiered` is tier 1 only, and pricing the overlay with
+  // it put Tiered $8 UNDER the real TOU bill on Mark's July period, contradicting
+  // both the plan cards and Wave P's track record for the same period).
   const costs = calculateComparison(aggregateChartData(rowsIn, 'monthly'));
   if (!costs) {
     return {

@@ -8,16 +8,18 @@
  *    national default;
  *  - it prices commodity only, exactly like every other figure in the app —
  *    delivery, regulatory and HST never enter this file;
+ *  - each window is priced with the shared `planCostFor`, so Tiered carries
+ *    the month-scoped tier-2 threshold instead of the per-reading tier-1 field;
  *  - it never claims to be the bill. It is a projection and says so.
  *
  * `today` is always a parameter, never `Date.now()`, so the gate is testable.
  */
 
 import { endOfMonth, format, getDate, startOfMonth } from 'date-fns';
-import type { ProcessedPoint } from './energy';
 // Wave U — captions/gate notes come from the catalog at call time; month
 // names follow the active locale (fmtDate is date-fns bound to it).
 import { fmtDate, fmtMoney, t } from '@/i18n';
+import { planCostFor, type ProcessedPoint } from './energy';
 
 export type BillPlan = 'TOU' | 'Tiered' | 'ULO';
 
@@ -61,12 +63,6 @@ export type BillProjection = {
   /** Why the banner is not showing a number yet. */
   gateNote: string;
 };
-
-function costOf(r: ProcessedPoint, plan: BillPlan): number {
-  if (plan === 'TOU') return r.costTOU;
-  if (plan === 'ULO') return r.costULO;
-  return r.costTiered;
-}
 
 export function projectMonthBill(
   rows: ProcessedPoint[],
@@ -121,14 +117,17 @@ export function projectMonthBill(
 
   const daysCovered = new Set<string>();
   let mtdKwh = 0;
-  let mtdCost = 0;
+  const mtdRows: ProcessedPoint[] = [];
   for (const r of rows) {
     if (r.dayStr.slice(0, 7) !== monthKey) continue;
     if (r.dayStr > dataThrough) continue;
     daysCovered.add(r.dayStr);
     mtdKwh += r.usage_kwh;
-    mtdCost += costOf(r, plan);
+    mtdRows.push(r);
   }
+  // Priced as a window, not reading by reading: on Tiered the per-reading
+  // `costTiered` is tier 1 only, and a summer month is over the threshold.
+  const mtdCost = planCostFor(mtdRows, plan);
 
   const recentEnd = dataEnd;
   const recentStart = new Date(recentEnd);
@@ -140,13 +139,14 @@ export function projectMonthBill(
 
   const recentDaysSet = new Set<string>();
   let recentKwh = 0;
-  let recentCost = 0;
+  const recentRows: ProcessedPoint[] = [];
   for (const r of rows) {
     if (r.dayStr < recentFloor || r.dayStr > dataThrough) continue;
     recentDaysSet.add(r.dayStr);
     recentKwh += r.usage_kwh;
-    recentCost += costOf(r, plan);
+    recentRows.push(r);
   }
+  const recentCost = planCostFor(recentRows, plan);
   const recentDays = recentDaysSet.size;
 
   const monthDaysCovered = daysCovered.size;

@@ -884,6 +884,11 @@ export function processRawData(
     const isWinter = w.month >= 11 || w.month <= 4;
     const costTOU = d.usage_kwh * (rates.tou[getTouRateKey(touCategory)] / 100);
     const costULO = d.usage_kwh * (rates.ulo[getUloRateKey(uloCategory)] / 100);
+    // Tier 1 only — deliberately. A reading has no tier of its own; the tier-2
+    // threshold is a volume allowance for a MONTH, so it can only be applied
+    // to a window. Nothing prices a window by summing this field: see
+    // `tieredCostFor` / `planCostFor` above. This column is the per-reading
+    // tier-1 rate, and it is what the CSV export publishes.
     const costTiered = d.usage_kwh * (rates.tiered.tier1 / 100);
     return {
       ...d,
@@ -925,18 +930,88 @@ export function getFilteredForZoom(
   return filteredData;
 }
 
+/* ==========================================================================
+ * Tiered pricing — one rule, one implementation
+ *
+ * A tiered bill is a property of a WINDOW, never of a reading: the tier-2
+ * threshold is a volume allowance for a month of usage, so a single reading
+ * has no tier of its own. `processRawData` still fills `costTiered` with the
+ * tier-1 price — that is the honest per-reading rate and it is what the CSV
+ * exports — but nothing may SUM that field to price a window.
+ *
+ * The rule, in one place: bucket the window's rows by calendar month, prorate
+ * that month's threshold by the days the rows actually cover, charge tier 1 up
+ * to it and tier 2 on the excess. The plan cards (`aggregateChartData` +
+ * `calculateComparison`) have always done this; every other Tiered number in
+ * the app now goes through `tieredCostFor` / `planCostFor` instead of summing
+ * per-reading fields.
+ * ========================================================================== */
+
+/** Tier 1 up to the day-prorated month threshold, tier 2 on the excess. */
+function tieredCostOfBucket(usage: number, days: number, sample: ProcessedPoint): number {
+  const t = sample.activeRateSet.tiered;
+  const th = (sample.isWinter ? t.thresholdWinter : t.thresholdSummer) * (days / 30.4);
+  if (usage <= th) return usage * (t.tier1 / 100);
+  return th * (t.tier1 / 100) + (usage - th) * (t.tier2 / 100);
+}
+
+type MonthBucket = { usage: number; days: Set<string>; first: ProcessedPoint };
+
+/** Group a window's rows by calendar month (dayStr's own clock), first-seen order. */
+function monthBuckets(rows: ProcessedPoint[]): Map<string, MonthBucket> {
+  const out = new Map<string, MonthBucket>();
+  for (const r of rows) {
+    const key = r.dayStr.slice(0, 7);
+    let b = out.get(key);
+    if (!b) {
+      b = { usage: 0, days: new Set(), first: r };
+      out.set(key, b);
+    }
+    b.usage += r.usage_kwh;
+    b.days.add(r.dayStr);
+  }
+  return out;
+}
+
+/** What `rows` cost under Tiered — THE Tiered total, month-scoped threshold. */
+export function tieredCostFor(rows: ProcessedPoint[]): number {
+  let total = 0;
+  for (const b of monthBuckets(rows).values()) {
+    total += tieredCostOfBucket(b.usage, b.days.size, b.first);
+  }
+  return total;
+}
+
+/**
+ * The window's own Tiered rate, ¢/kWh: total ÷ kWh of the same rows, so
+ * pricing any reading or hour at it sums back to `tieredCostFor(rows)` exactly.
+ * Tiered has no time dimension — every hour genuinely costs this one number.
+ * null when the window carries no energy.
+ */
+export function tieredRateCentsFor(rows: ProcessedPoint[]): number | null {
+  if (rows.length === 0) return null;
+  let kwh = 0;
+  for (const r of rows) kwh += r.usage_kwh;
+  if (kwh <= 0) return null;
+  return (tieredCostFor(rows) / kwh) * 100;
+}
+
 export function aggregateChartData(
   data: ProcessedPoint[],
   zoomLevel: string,
 ): ChartDataItem[] {
   if (zoomLevel === 'hourly') {
+    // The hourly view has no month to threshold against, so it prices every
+    // reading at the WINDOW's own tiered rate. That keeps the Tiered total
+    // identical at every zoom level instead of silently dropping to tier 1.
+    const tieredRateCents = tieredRateCentsFor(data);
     return data.map((d) => ({
       label: d.hourStr,
       usage: d.usage_kwh,
       key: d.hourStr,
       costTOU: d.costTOU,
       costULO: d.costULO,
-      costTiered: d.costTiered,
+      costTiered: tieredRateCents === null ? d.costTiered : (d.usage_kwh * tieredRateCents) / 100,
     }));
   }
 
@@ -1001,14 +1076,7 @@ export function aggregateChartData(
   return Array.from(map.values())
     .map((v) => {
       const r = v.first;
-      const days = v.days.size;
-      const th =
-        (r.isWinter ? r.activeRateSet.tiered.thresholdWinter : r.activeRateSet.tiered.thresholdSummer) *
-        (days / 30.4);
-      const costTiered =
-        v.usage <= th
-          ? v.usage * (r.activeRateSet.tiered.tier1 / 100)
-          : th * (r.activeRateSet.tiered.tier1 / 100) + (v.usage - th) * (r.activeRateSet.tiered.tier2 / 100);
+      const costTiered = tieredCostOfBucket(v.usage, v.days.size, r);
       return { label: v.label, usage: v.usage, key: v.key, costTOU: v.costTOU, costULO: v.costULO, costTiered };
     })
     .sort((a, b) => a.key.localeCompare(b.key));
@@ -1156,10 +1224,12 @@ export type FullDataTotals = {
 /**
  * Cost of EVERY reading in the dataset under each of the three plans.
  *
- * The per-plan sums reuse the monthly buckets the chart's monthly zoom uses
- * (aggregateChartData + calculateComparison), so tiered tier-2 thresholds stay
- * month-scoped and this strip always agrees with the plan cards. Independent
- * of the visible date window — that is the point of the strip.
+ * This is the statement every plan sum in the app now shares: the per-plan
+ * figures come from the monthly buckets the chart's monthly zoom uses
+ * (aggregateChartData + calculateComparison), so the tiered tier-2 threshold
+ * stays month-scoped and this strip always agrees with the plan cards, the
+ * True Bill card, the reconciliation panel and the projection banner.
+ * Independent of the visible date window — that is the point of the strip.
  */
 export function calculateFullDataTotals(processedData: ProcessedPoint[]): FullDataTotals | null {
   if (processedData.length === 0) return null;
@@ -1323,12 +1393,12 @@ export function calculateAlwaysOnFloor(
   // Per-interval kWh → kW, so the ×24 h/day below is cadence-independent.
   const kw = basePerInterval / inferIntervalHours(rows);
 
-  let cost = 0;
   let kwh = 0;
-  for (const r of rows) {
-    cost += plan === 'TOU' ? r.costTOU : plan === 'ULO' ? r.costULO : r.costTiered;
-    kwh += r.usage_kwh;
-  }
+  for (const r of rows) kwh += r.usage_kwh;
+  // A window total, so it goes through the shared plan pricing: on Tiered the
+  // per-reading `costTiered` is tier 1 only and would understate the rate this
+  // household actually pays across the window.
+  const cost = planCostFor(rows, plan);
   // The rate this household really pays, across the hours it really used.
   const blendedRateCents = kwh > 0 ? (cost / kwh) * 100 : rows[0].activeRateSet.tou.offPeak;
 
@@ -2347,15 +2417,28 @@ export type PeriodReconciliation = {
   comparable: boolean;
 };
 
+/**
+ * What our own rates say the given rows cost under `plan`.
+ *
+ * TOU and ULO are per-reading sums (every reading carries its own window's
+ * price). Tiered is not: it goes through `tieredCostFor`, the month-scoped
+ * threshold in the monthly buckets, because a tiered bill is a property of a
+ * window — summing the per-reading `costTiered` (tier 1 only) prices any
+ * window over the threshold too cheaply.
+ */
 function planCostOf(rows: ProcessedPoint[], plan: 'TOU' | 'Tiered' | 'ULO'): number {
+  if (plan === 'Tiered') return tieredCostFor(rows);
   let sum = 0;
-  for (const r of rows) {
-    sum += plan === 'TOU' ? r.costTOU : plan === 'ULO' ? r.costULO : r.costTiered;
-  }
+  for (const r of rows) sum += plan === 'TOU' ? r.costTOU : r.costULO;
   return sum;
 }
 
-/** What our own rates say the given rows cost under `plan`. */
+/**
+ * What our own rates say the given rows cost under `plan` — the one shared
+ * answer for a window: True Bill's vs-actual figure, the commodity
+ * reconciliation, the always-on floor, the month projection and the weekly
+ * shift check all ask this instead of summing per-reading cost fields.
+ */
 export function planCostFor(
   rows: ProcessedPoint[],
   plan: 'TOU' | 'Tiered' | 'ULO',
