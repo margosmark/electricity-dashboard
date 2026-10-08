@@ -20,7 +20,7 @@ nothing about it is on `main`.**
 | Surface | State | How I know |
 | --- | --- | --- |
 | Repo `main` (`b290721`) | **Zero** account code, routes, env or dependencies | `git ls-tree` / `git grep` over `origin/main`: 0 hits for `account/`, `acct_session`, `ACCT_ENABLED`, `VAPID` |
-| Branches | A **complete, twice-security-reviewed build** — 3 branches, 1 PR | PR **#28 OPEN** @ `9c682f8`, 4 commits, 53 files, **+8676 / −208**; 2 stacked branches off its head |
+| Branches | A **complete, twice-security-reviewed build** — 3 Wave N branches, 1 of them in a PR | PR **#28 OPEN** @ `9c682f8`, 4 commits, 53 files, **+8676 / −208**; 2 stacked branches off its head, no PR |
 | Deployment (`.110` + public origin) | **Not deployed.** 3 containers, not 4; `/account/*` 404 | `docker ps`, `.env` key names, and 4 live HTTP probes below |
 | Docs on `main` | Truthful today; previously unscoped | This file + one scoped sentence each in `SECURITY.md` / `ARCHITECTURE.md` |
 
@@ -173,8 +173,9 @@ closed* — and it **stays parked until Mark explicitly requests it.**
 Park means, concretely:
 
 1. `main` stays account-free (it already is — nothing had to be removed).
-2. PR **#28 stays open and unmerged**, labelled **PARKED** in its own thread so
-   nobody merges it by reflex. The two stacked branches stay pushed as the
+2. PR **#28 stays open and unmerged**, labelled **PARKED** in its own thread
+   ([comment on #28](https://github.com/margosmark/electricity-dashboard/pull/28#issuecomment-6050871939))
+   so nobody merges it by reflex. The two stacked branches stay pushed as the
    reviewed continuation.
 3. `t_49579c75` (deploy + containerised topology gate) stays **blocked**; it
    cannot run until there is something to deploy.
