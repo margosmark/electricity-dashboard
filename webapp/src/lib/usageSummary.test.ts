@@ -211,6 +211,42 @@ describe('the real Oakville bill, parsed', () => {
     const s = { ...summaries[0], items: summaries[0].items.filter((i) => !/read date/i.test(i.note)) };
     expect(billWindow(s)).toEqual({ start: s.start, end: s.start + s.duration });
   });
+
+  it('rejects a read span that does not describe this period (rate-straddling bill)', () => {
+    // Oakville writes the Nov 1 / May 1 season boundary of a straddling bill
+    // as a read pair, so "previous → current" spans only the first season
+    // block (~7 days) instead of the billed period. Taking that at face value
+    // silently truncates every downstream comparison — Wave P found three
+    // such bills in the 24-period export, each modeling ~80% low while still
+    // reporting "full coverage". Reads win only when their span matches the
+    // billed period (within a day); otherwise the coarse stamp is safer.
+    const base = summaries[0];
+    const prev = base.items.find((i) => /previous read date/i.test(i.note));
+    expect(prev).toBeDefined();
+    const straddler: UsageSummary = {
+      ...base,
+      items: base.items.map((i) =>
+        /current read date/i.test(i.note) && i.measurement
+          ? { ...i, measurement: { ...i.measurement, scaled: (prev?.measurement?.scaled ?? 0) + 7 * 86400 } }
+          : i,
+      ),
+    };
+    expect(billWindow(straddler)).toEqual({ start: base.start, end: base.start + base.duration });
+
+    // A day of clock skew on an otherwise-matching span still wins — that is
+    // exactly what BILL_WINDOW_TOLERANCE exists for.
+    const skewed: UsageSummary = {
+      ...base,
+      items: base.items.map((i) =>
+        /current read date/i.test(i.note) && i.measurement
+          ? { ...i, measurement: { ...i.measurement, scaled: i.measurement.scaled + 3600 } }
+          : i,
+      ),
+    };
+    const w = billWindow(skewed);
+    expect(w.start).toBe(base.start + 18048);
+    expect(w.end - w.start).toBe(base.duration + 3600);
+  });
 });
 
 /* ----------------------------------------------------------- tolerance --- */

@@ -398,6 +398,16 @@ export function modelPeriod(summary: UsageSummary, allRows: ProcessedPoint[]): P
  * 4. The switch-decision track record
  * -------------------------------------------------------------------------- */
 
+/** A row's modeled numbers only COUNT toward the report totals when the
+ *  model can reproduce the bill it claims to explain — re-pricing the plan
+ *  you WERE on must land back on that bill within this tolerance (the same
+ *  $1 the commodity cross-check accepts). Wider misses are still shown, with
+ *  their delta, but excluded from every total: an unfaithful reconstruction
+ *  must not invent savings (the real 24-period export has bills whose reads
+ *  straddle a rate change — before billWindow learned to reject them, those
+ *  rows claimed a $145 "saving" that was really missing readings). */
+export const MODEL_TRUST_TOLERANCE = 1;
+
 export type SwitchPeriodRow = {
   summary: UsageSummary;
   /** "May 25 – Jun 23, 2026" — the bill's own period label. */
@@ -422,6 +432,13 @@ export type SwitchPeriodRow = {
   modelDelta: number | null;
   /** Why nothing was modeled (null when it was). */
   skipped: string | null;
+  /** True when the saving is trustworthy enough to enter the totals:
+   *  known plan + covered period + model reproduces the bill within
+   *  MODEL_TRUST_TOLERANCE. */
+  counted: boolean;
+  /** Non-null when a saving was computed but is NOT counted (the model
+   *  misses this bill) — carries the reason for the row's badge. */
+  excluded: string | null;
 };
 
 export type SwitchPlanTotal = {
@@ -435,8 +452,13 @@ export type SwitchReport = {
   rows: SwitchPeriodRow[];
   /** Rows whose plan is known (detected or declared). */
   known: number;
-  /** Rows with a known plan AND a covered period — the ones that count. */
+  /** Rows with a known plan AND a covered period (savings computed). */
   modeled: number;
+  /** Of those, rows whose model reproduces the bill — the only ones the
+   *  totals are built from. */
+  counted: number;
+  /** Rows with a computed saving that is shown but not counted (model miss). */
+  untrusted: number;
   /** Rows skipped from modeling (no / insufficient readings in period). */
   skipped: number;
   /** Σ saving over `modeled` rows; null when nothing could be modeled. */
@@ -480,6 +502,8 @@ export function buildSwitchReport(
       saving: null,
       modelDelta: null,
       skipped: null,
+      counted: false,
+      excluded: null,
     };
 
     if (!model.comparable) {
@@ -508,25 +532,34 @@ export function buildSwitchReport(
         bestPlan = p;
       }
     }
+    const modelDelta = model.payable[assignment.plan] - totals.payable;
+    const trusted = Math.abs(modelDelta) <= MODEL_TRUST_TOLERANCE;
     return {
       ...base,
       modeled: model.payable,
       bestPlan,
       saving: totals.payable - bestPayable,
-      modelDelta: model.payable[assignment.plan] - totals.payable,
+      modelDelta,
+      counted: trusted,
+      excluded: trusted
+        ? null
+        : `the model re-prices this plan to a bill ${modelDelta < 0 ? '' : '+'}$${Math.abs(modelDelta).toFixed(2)} away from what Oakville actually charged`,
     };
   });
 
   const known = rows.filter((r) => r.plan !== 'unknown').length;
   const modeledRows = rows.filter((r) => r.saving !== null);
+  // The totals are built ONLY from rows whose model reproduces their own
+  // bill — everything else is displayed with its reason, never summed.
+  const countedRows = modeledRows.filter((r) => r.counted);
   const skipped = rows.filter((r) => r.skipped !== null).length;
 
-  const overpaid = modeledRows.length > 0
-    ? modeledRows.reduce((sum, r) => sum + (r.saving ?? 0), 0)
+  const overpaid = countedRows.length > 0
+    ? countedRows.reduce((sum, r) => sum + (r.saving ?? 0), 0)
     : null;
 
   const byPlan: SwitchPlanTotal[] = PLAN_TYPES.map((plan) => {
-    const list = modeledRows.filter((r) => r.plan === plan);
+    const list = countedRows.filter((r) => r.plan === plan);
     return {
       plan,
       periods: list.length,
@@ -534,11 +567,21 @@ export function buildSwitchReport(
     };
   }).filter((g) => g.periods > 0);
 
-  const callouts = modeledRows
+  const callouts = countedRows
     .filter((r) => (r.saving ?? 0) > 0)
     .slice()
     .sort((a, b) => (b.saving ?? 0) - (a.saving ?? 0))
     .slice(0, 3);
 
-  return { rows, known, modeled: modeledRows.length, skipped, overpaid, byPlan, callouts };
+  return {
+    rows,
+    known,
+    modeled: modeledRows.length,
+    counted: countedRows.length,
+    untrusted: modeledRows.length - countedRows.length,
+    skipped,
+    overpaid,
+    byPlan,
+    callouts,
+  };
 }
