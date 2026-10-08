@@ -18,6 +18,7 @@ import ShiftVerificationCard from '@/components/ShiftVerificationCard';
 import EvScenarioCard from '@/components/EvScenarioCard';
 import type { TouShiftAnalysis } from '@/lib/touShift';
 import type { ShiftVerification } from '@/lib/shiftVerification';
+import { type PlanId, DEFAULT_PLAN } from '@/hooks/useSelectedPlan';
 
 /**
  * Wave I item 4 — the second Recharts entry point.
@@ -51,6 +52,12 @@ export type InsightsViewProps = {
   verification: ShiftVerification;
   /** Rate schedule in force — the EV card prices three plans with it. */
   rates: RateSet | null;
+  /**
+   * The plan the household has selected. The EV card's "stay put" side is
+   * priced on it — "what am I paying at 19:00 today?" has one right answer
+   * per household, and it is not always Time-of-Use.
+   */
+  plan?: PlanId;
 };
 
 export default function InsightsView({
@@ -61,6 +68,7 @@ export default function InsightsView({
   shiftAnalysis,
   verification,
   rates,
+  plan = DEFAULT_PLAN,
 }: InsightsViewProps) {
   return (
     <div className="print-compact space-y-6 md:space-y-10 animate-in fade-in duration-500 font-black text-black uppercase" data-testid="insights-view">
@@ -75,7 +83,7 @@ export default function InsightsView({
       <ShiftVerificationCard verification={verification} />
 
       {/* EV charging scenario — the household's own kWh, priced three ways. */}
-      <EvScenarioCard rows={processedData} rates={rates} />
+      <EvScenarioCard rows={processedData} rates={rates} plan={plan} />
 
       <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
          <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase"><AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} /><h3 className="text-2xl md:text-4xl">Usage Anomalies</h3></div>
