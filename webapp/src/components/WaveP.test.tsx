@@ -271,7 +271,7 @@ describe('SwitchTrackRecord', () => {
     render(<SwitchTrackRecord summaries={[TOU_SUMMARY]} allData={juneRows} />);
 
     expect(screen.getByTestId('switch-overpaid-total')).toHaveTextContent(money(report.overpaid ?? 0));
-    expect(screen.getByTestId('switch-headline-sub')).toHaveTextContent('across 1 modeled period of 1');
+    expect(screen.getByTestId('switch-headline-sub')).toHaveTextContent('across 1 counted period of 1');
     const byPlan = screen.getByTestId('switch-by-plan');
     expect(byPlan).toHaveTextContent('Time-of-Use: 1 period');
     expect(byPlan).toHaveTextContent(money(report.byPlan[0]?.overpaid ?? 0));
@@ -291,6 +291,24 @@ describe('SwitchTrackRecord', () => {
     expect(screen.queryByTestId('switch-overpaid-total')).not.toBeInTheDocument();
   });
 
+  it('shows a saving the model cannot back, but keeps it out of the total', () => {
+    // commodity mispriced by ~$100: the model cannot reproduce this bill
+    const bad = makeRows('2026-06-01', 29, {
+      usage: 90,
+      costTOU: (touTotals.commodity - 100) / 29,
+      costULO: touTotals.commodity / 29 / 4,
+    });
+    render(<SwitchTrackRecord summaries={[TOU_SUMMARY]} allData={bad} />);
+    const row = screen.getByTestId('switch-row-2026-06-01');
+    expect(within(row).getByTestId('switch-saving')).toBeInTheDocument(); // shown…
+    expect(within(row).getByTestId('switch-model-check')).toHaveTextContent(
+      /excluded from the total/,
+    );
+    // …but not counted: nothing trustworthy to headline
+    expect(screen.getByTestId('switch-headline-empty')).toHaveTextContent('0 of 1 periods');
+    expect(screen.queryByTestId('switch-overpaid-total')).not.toBeInTheDocument();
+  });
+
   it('skips a period the readings do not cover, honestly', () => {
     const uncovered = makeSummary('2026-08-01', 29, [
       line('Off Peak-Summer', 50),
@@ -305,11 +323,26 @@ describe('SwitchTrackRecord', () => {
   });
 
   it('keeps a declaration in the row and counts it in the total', () => {
-    writeStoredTimeline([entry('Tiered', '2026-07-01', '2026-07-30')]);
-    const report = buildSwitchReport([UNKNOWN_SUMMARY], julyRows, [
-      entry('Tiered', '2026-07-01', '2026-07-30'),
+    // A bill whose commodity line fingerprints no plan ("Flat Energy
+    // Charge") — detection says unknown, YOUR Tiered entry is the answer,
+    // and because the readings reconstruct this bill to within $1 the saving
+    // counts toward the headline total.
+    const declaredSummary = makeSummary('2026-07-01', 29, [
+      line('Flat Energy Charge', 20),
+      line('Delivery', 5, 4),
+      line('Total Electricity Charges', 25),
     ]);
-    render(<SwitchTrackRecord summaries={[UNKNOWN_SUMMARY]} allData={julyRows} />);
+    const declaredRows = makeRows('2026-07-01', 29, {
+      usage: 166 / 29,
+      costTOU: 20 / 29,
+      costULO: 5 / 29,
+    });
+    const timeline = [entry('Tiered', '2026-07-01', '2026-07-30')];
+    writeStoredTimeline(timeline);
+    const report = buildSwitchReport([declaredSummary], declaredRows, timeline);
+    expect(report.rows[0].counted).toBe(true);
+
+    render(<SwitchTrackRecord summaries={[declaredSummary]} allData={declaredRows} />);
 
     const row = screen.getByTestId('switch-row-2026-07-01');
     expect(row).toHaveAttribute('data-plan', 'Tiered');
@@ -318,6 +351,7 @@ describe('SwitchTrackRecord', () => {
       money(report.rows[0].saving ?? 0),
     );
     expect(screen.getByTestId('switch-overpaid-total')).toHaveTextContent(money(report.overpaid ?? 0));
+    expect(screen.getByTestId('switch-headline-sub')).toHaveTextContent('across 1 counted period');
   });
 
   it('flags a declaration that contradicts the bill on the row too', () => {

@@ -25,6 +25,7 @@ import { useMemo } from 'react';
 import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import {
+  MODEL_TRUST_TOLERANCE,
   buildSwitchReport,
   type PlanType,
   type SwitchPeriodRow,
@@ -150,14 +151,14 @@ function Row({ row }: { row: SwitchPeriodRow }) {
         <div
           data-testid="switch-model-check"
           className={`mt-2 inline-block px-2 py-1 rounded border-2 text-[9px] md:text-[10px] font-black ${
-            Math.abs(row.modelDelta) <= 1
+            Math.abs(row.modelDelta) <= MODEL_TRUST_TOLERANCE
               ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
               : 'border-amber-600 bg-amber-50 text-amber-800'
           }`}
         >
-          {Math.abs(row.modelDelta) <= 1
-            ? `Model check ✓ — re-pricing your plan lands back on this bill within ${money(Math.abs(row.modelDelta))}`
-            : `Model check Δ ${money(row.modelDelta)} — the reconstruction misses this bill, treat the modeled figures as approximate`}
+          {Math.abs(row.modelDelta) <= MODEL_TRUST_TOLERANCE
+            ? `Model check ✓ — re-pricing your plan lands back on this bill within ${money(Math.abs(row.modelDelta))} · counted`
+            : `Model check Δ ${money(row.modelDelta)} — ${row.excluded} · shown, excluded from the total`}
         </div>
       )}
     </div>
@@ -173,8 +174,8 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
 
   if (summaries.length === 0) return null;
 
-  const { overpaid, byPlan, modeled, known, skipped, callouts, rows } = report;
-  const excluded = rows.length - known;
+  const { overpaid, byPlan, counted, untrusted, known, skipped, callouts, rows } = report;
+  const unknownPlan = rows.length - known;
 
   return (
     <section
@@ -198,8 +199,9 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
       <div className="mt-4 md:mt-6 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6">
         {overpaid === null ? (
           <div data-testid="switch-headline-empty" className="text-[11px] md:text-sm font-black">
-            Not enough covered periods to audit yet — {modeled} of {rows.length} periods have both
-            a known plan type and {Math.round(PERIOD_MIN_COVERAGE * 100)}% readings coverage.
+            Not enough trustworthy periods to audit yet — {counted} of {rows.length} periods have a
+            known plan type, {Math.round(PERIOD_MIN_COVERAGE * 100)}% readings coverage, and a model
+            that re-prices their own bill within $1.
           </div>
         ) : (
           <>
@@ -208,7 +210,7 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
                 ? byPlan.length === 1 && byPlan[0]
                   ? `Over-paid by staying on ${PLAN_LABEL[byPlan[0].plan]}`
                   : 'Over-paid by staying the course'
-                : 'Held the cheapest plan — net saving'}
+                : 'Net saving — your actual plans beat every alternative'}
             </div>
             <div
               data-testid="switch-overpaid-total"
@@ -216,18 +218,22 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
                 overpaid > 0 ? 'text-yellow-400' : 'text-emerald-400'
               }`}
             >
-              {money(overpaid)}
+              {/* positive = over-paid (what it cost you); negative = the
+                  alternatives would have cost MORE, so show the saving as a
+                  positive number instead of a confusing minus. */}
+              {money(overpaid > 0 ? overpaid : -overpaid)}
             </div>
             <div className="mt-1 text-[10px] md:text-xs font-black" data-testid="switch-headline-sub">
-              across {modeled} modeled period{modeled === 1 ? '' : 's'} of {rows.length} in this
+              across {counted} counted period{counted === 1 ? '' : 's'} of {rows.length} in this
               file
+              {untrusted > 0 ? ` · ${untrusted} modeled but excluded (model miss > $1)` : ''}
             </div>
             <ul className="mt-2 md:mt-3 space-y-1" data-testid="switch-by-plan">
               {byPlan.map((g) => (
                 <li key={g.plan} className="text-[10px] md:text-xs font-black">
                   {PLAN_LABEL[g.plan]}: {g.periods} period{g.periods === 1 ? '' : 's'} ·{' '}
                   <span className={g.overpaid > 0 ? 'text-yellow-400' : 'text-emerald-400'}>
-                    {money(g.overpaid)}
+                    {money(g.overpaid > 0 ? g.overpaid : -g.overpaid)}
                   </span>{' '}
                   {g.overpaid > 0 ? 'over-paid' : 'saved'}
                 </li>
@@ -273,7 +279,11 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
         </p>
         <p>
           {known} of {rows.length} periods have a known plan type
-          {excluded > 0 ? ` (${excluded} excluded from the total — declare them above)` : ''}
+          {unknownPlan > 0 ? ` (${unknownPlan} excluded — declare them above)` : ''} · {counted}{' '}
+          counted into the total
+          {untrusted > 0
+            ? ` · ${untrusted} shown but excluded (the model misses their bill by more than $1)`
+            : ''}
           {skipped > 0 ? ` · ${skipped} skipped for low readings coverage` : ''}.
         </p>
       </div>

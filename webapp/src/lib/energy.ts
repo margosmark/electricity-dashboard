@@ -2128,9 +2128,28 @@ export function billWindow(summary: UsageSummary): { start: number; end: number 
   };
   const prev = readAt('previous read date');
   const cur = readAt('current read date');
-  if (prev !== null && cur !== null && cur > prev) return { start: prev, end: cur };
+  if (prev !== null && cur !== null && cur > prev) {
+    // Reads describe THIS period or they are not this period's reads. A bill
+    // that straddles a rate change (Oakville writes the Nov 1 / May 1 season
+    // boundary as a read) hands out a sub-period span of 5-8 days; taking it
+    // at face value silently truncates every downstream comparison to the
+    // first season block (Wave P found three such bills in the 24-period
+    // export — commodity modeled ~80% low with full "coverage"). The reads
+    // win only when their span matches the billed period; otherwise fall
+    // back to the coarse billingPeriod stamp, whose day-granular start is
+    // still exact for these bills.
+    if (Math.abs(cur - prev - summary.duration) <= BILL_WINDOW_TOLERANCE) {
+      return { start: prev, end: cur };
+    }
+    return { start: summary.start, end: summary.start + summary.duration };
+  }
   return { start: summary.start, end: summary.start + summary.duration };
 }
+
+/** How far a read span may sit from the billed period and still win: the
+ *  reads carry the hour of day, billingPeriod only midnight UTC, so a day of
+ *  slack covers clock skew without letting a 7-day season block pass. */
+export const BILL_WINDOW_TOLERANCE = 86400;
 
 /** Share of a period's days that must carry a reading before its numbers
  *  mean anything: a half-covered period would otherwise look like a huge

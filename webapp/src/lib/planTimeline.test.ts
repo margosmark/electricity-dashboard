@@ -427,6 +427,36 @@ describe('buildSwitchReport — the audited switch track record', () => {
     expect(report.callouts.map((c) => c.summary.startDate)).toEqual(['2026-06-01']);
   });
 
+  it('shows — but never counts — a row whose model cannot reproduce its bill', () => {
+    // Deliberately wrong commodity pricing: the reconstruction misses the
+    // bill by ~$110, so the saving is displayed with its delta and kept out
+    // of every total (a model that cannot explain what you paid must not
+    // invent what you would have paid).
+    const badRows = makeRows('2026-06-01', 29, {
+      usage: 90,
+      costTOU: (totals.commodity - 100) / 29, // $100 short of the bill
+      costULO: totals.commodity / 29 / 4,
+    });
+    const report = buildSwitchReport([touSummary], badRows, []);
+    const row = report.rows[0];
+    expect(row.saving).not.toBeNull(); // still shown
+    expect(row.counted).toBe(false);
+    expect(row.excluded).toMatch(/away from what Oakville actually charged/);
+    expect(report.modeled).toBe(1);
+    expect(report.counted).toBe(0);
+    expect(report.untrusted).toBe(1);
+    expect(report.overpaid).toBeNull(); // nothing trustworthy to total
+    expect(report.byPlan).toEqual([]);
+    expect(report.callouts).toEqual([]);
+
+    // …and the trusted twin of the same period IS counted.
+    const good = buildSwitchReport([touSummary], rows, []);
+    expect(good.rows[0].counted).toBe(true);
+    expect(good.rows[0].excluded).toBeNull();
+    expect(good.counted).toBe(1);
+    expect(good.overpaid).not.toBeNull();
+  });
+
   it('returns null overpaid (not zero) when nothing could be modeled', () => {
     const report = buildSwitchReport([noReadingsSummary], [], []);
     expect(report.overpaid).toBeNull();
