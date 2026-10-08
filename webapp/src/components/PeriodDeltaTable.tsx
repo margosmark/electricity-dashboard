@@ -50,7 +50,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           className="w-full text-[10px] md:text-xs font-black"
           /* One column per transition: 24 periods need real room, so the
              table scrolls instead of squashing every figure to a sliver. */
-          style={{ minWidth: 220 + table.columns.length * 110 }}
+          style={{ minWidth: 200 + table.columns.length * 96 }}
           data-testid="money-deltas-table"
         >
           <caption className="sr-only">
@@ -60,8 +60,8 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
             <tr className="border-b-4 border-black text-left">
               <th className="py-2 pr-3 uppercase">Charge</th>
               {table.columns.map((c, i) => (
-                <th key={c.start} className="py-2 px-3 text-right uppercase">
-                  {i === 0 ? `Baseline · ${c.label}` : `Δ ${table.columns[i - 1].label} → ${c.label}`}
+                <th key={c.start} className="py-2 px-3 text-right uppercase whitespace-nowrap">
+                  {i === 0 ? `Baseline · ${c.label}` : `Δ → ${c.label}`}
                 </th>
               ))}
             </tr>
@@ -109,6 +109,17 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           </tbody>
         </table>
       </div>
+
+      {/* A 24-period table cannot fit on one screen; say so rather than
+          leaving a column looking amputated at the right edge. */}
+      {table.columns.length > 6 && (
+        <div
+          data-testid="money-deltas-scroll-hint"
+          className="mt-1 text-[9px] font-bold text-slate-400 normal-case"
+        >
+          {table.columns.length} periods wide — scroll the table sideways for every change.
+        </div>
+      )}
 
       {baselineOnly && (
         <div
