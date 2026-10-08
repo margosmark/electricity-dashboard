@@ -35,6 +35,9 @@ import {
   type PlanId,
   type PlanOverlay,
 } from '@/lib/moneyViz';
+import PlanBands from '@/components/PlanBands';
+import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
+import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
 
 type Mode = 'dollars' | 'share' | 'usage';
 
@@ -125,13 +128,46 @@ export type MoneyStackedChartProps = {
   stacks: PeriodStack[];
   /** Modelled plan lines over the covered periods (may be `ready: false`). */
   overlay: PlanOverlay;
+  /**
+   * Wave P slice 5 — the plan each period was ACTUALLY billed under
+   * (detected from the bill, or declared in the timeline). Omitting it (or
+   * an empty array) draws no bands and no table column, which is exactly
+   * what a feed without bills must do.
+   */
+  planAnnotations?: PeriodPlanAnnotation[];
 };
 
-export default function MoneyStackedChart({ stacks, overlay }: MoneyStackedChartProps) {
+export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: MoneyStackedChartProps) {
   const [mode, setMode] = useState<Mode>('dollars');
   const [showOverlay, setShowOverlay] = useState(true);
 
   const share = useMemo(() => shareBreakdown(stacks), [stacks]);
+
+  // Wave P: one band per period with a known plan, keyed by the chart's own
+  // category value (the period label) so the annotation rides the bars in
+  // every mode. Unknown periods are skipped — nothing honest to tint.
+  const planByStart = useMemo(
+    () => new Map((planAnnotations ?? []).map((a) => [a.start, a])),
+    [planAnnotations],
+  );
+  const bands = useMemo(
+    () =>
+      stacks
+        .map((s) => {
+          const a = planByStart.get(s.start);
+          if (!a || a.plan === 'unknown') return null;
+          return { key: s.shortLabel, plan: a.plan, origin: a.origin };
+        })
+        .filter((b): b is NonNullable<typeof b> => b !== null),
+    [stacks, planByStart],
+  );
+  const hasPlanColumn = (planAnnotations ?? []).length > 0;
+  /** The plan cell for a row keyed by period start — same lookup as bands. */
+  const planLabelFor = (start: number): string => {
+    const a = planByStart.get(Number(start));
+    if (!a || a.plan === 'unknown') return 'Unknown';
+    return PLAN_LABEL[a.plan];
+  };
 
   const costKeys = useMemo(
     () => present(stacks, COST_SLICE_ORDER, (s, k) => s.cost[k as keyof PeriodStack['cost']]),
@@ -378,6 +414,11 @@ export default function MoneyStackedChart({ stacks, overlay }: MoneyStackedChart
                 cursor={{ fill: '#000', opacity: 0.05 }}
                 content={<CompositionTooltip mode={mode} />}
               />
+              {/* Wave P — plan-type background bands (before the bars, so
+                  they paint behind them). */}
+              {bands.length > 0 && (
+                <PlanBands layout={isShare ? 'vertical' : 'horizontal'} bands={bands} />
+              )}
               {activeKeys.map((k) => (
                 <Bar
                   key={k}
@@ -546,6 +587,11 @@ export default function MoneyStackedChart({ stacks, overlay }: MoneyStackedChart
           <thead>
             <tr className="border-b-4 border-black text-left">
               <th className="py-1 pr-2 uppercase">Period</th>
+              {hasPlanColumn && (
+                <th className="py-1 pr-2 uppercase" data-testid="money-plan-head">
+                  Plan
+                </th>
+              )}
               {activeKeys.map((k) => (
                 <th key={k} className="py-1 px-2 uppercase text-right">
                   {COST_SLICE_META[k as keyof typeof COST_SLICE_META].short}
@@ -561,6 +607,11 @@ export default function MoneyStackedChart({ stacks, overlay }: MoneyStackedChart
             {rows.map((r) => (
               <tr key={r.key} className="border-b-2 border-black/20" data-testid="money-row">
                 <td className="py-1 pr-2 whitespace-nowrap">{r.label}</td>
+                {hasPlanColumn && (
+                  <td className="py-1 pr-2 whitespace-nowrap" data-testid="money-plan-cell">
+                    {planLabelFor(Number(r.key))}
+                  </td>
+                )}
                 {activeKeys.map((k) => {
                   const v = Number(r[k] ?? 0);
                   return (

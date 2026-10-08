@@ -33,6 +33,7 @@ import {
   PLAN_TIMELINE_KEY,
   assignPeriodPlan,
   buildSwitchReport,
+  planAnnotations,
   declarationFor,
   detectPlanType,
   isIsoDay,
@@ -278,6 +279,18 @@ describe('plan timeline — user declarations', () => {
     expect(fighting.origin).toBe('detected');
     expect(fighting.conflict).toBe(true);
     expect(fighting.declared?.plan).toBe('Tiered');
+  });
+
+  it('planAnnotations maps every period for the chart overlay', () => {
+    const annotations = planAnnotations(fixtureSummaries, []);
+    expect(annotations).toHaveLength(3);
+    expect(annotations.every((a) => a.plan === 'TOU' && a.origin === 'detected')).toBe(true);
+    expect(annotations.map((a) => a.start)).toEqual(fixtureSummaries.map((s) => s.start));
+    // a declaration never contradicts the chart: detection still wins there
+    const withDeclaration = planAnnotations(fixtureSummaries, [
+      { id: 'x', plan: 'Tiered', from: '2026-05-25', to: '2026-06-30' },
+    ]);
+    expect(withDeclaration.map((a) => a.plan)).toEqual(['TOU', 'TOU', 'TOU']);
   });
 
   it('falls back to the declaration when the lines say nothing', () => {

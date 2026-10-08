@@ -17,6 +17,11 @@ import { fileURLToPath } from 'node:url';
 
 import { PlanTimelineEditor } from './PlanTimelineEditor';
 import { SwitchTrackRecord } from './SwitchTrackRecord';
+import { PlanBands, PLAN_BAND_STYLE } from './PlanBands';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
+import MoneyStackedChart from './MoneyStackedChart';
+import { buildPeriodStacks, planOverlay } from '@/lib/moneyViz';
+import { planAnnotations } from '@/lib/planTimeline';
 import { resetPlanTimelineStore, writeStoredTimeline } from '@/hooks/usePlanTimeline';
 import {
   buildSwitchReport,
@@ -137,6 +142,102 @@ const entry = (plan: PlanTimelineEntry['plan'], from: string, to: string): PlanT
 beforeEach(() => {
   localStorage.clear();
   resetPlanTimelineStore();
+});
+
+/* ============================ the overlay, wired to Wave O's stack ======= */
+
+describe('money chart × plan timeline (slice 5)', () => {
+  const stacks = buildPeriodStacks(fixtureSummaries, []);
+  const overlay = planOverlay(fixtureSummaries, [], null);
+
+  it('carries the detected plan into the chart table as a Plan column', () => {
+    render(
+      <MoneyStackedChart
+        stacks={stacks}
+        overlay={overlay}
+        planAnnotations={planAnnotations(fixtureSummaries, [])}
+      />,
+    );
+    expect(screen.getByTestId('money-plan-head')).toBeInTheDocument();
+    const cells = screen.getAllByTestId('money-plan-cell');
+    expect(cells).toHaveLength(3); // every fixture period is TOU
+    expect(cells.every((c) => c.textContent === 'Time-of-Use')).toBe(true);
+    expect(screen.getAllByTestId('money-row')).toHaveLength(3);
+  });
+
+  it('draws no plan furniture when the feed carries no annotations', () => {
+    render(<MoneyStackedChart stacks={stacks} overlay={overlay} />);
+    expect(screen.queryByTestId('money-plan-head')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('money-plan-cell')).toHaveLength(0);
+    expect(screen.getAllByTestId('money-row')).toHaveLength(3); // chart itself intact
+  });
+});
+
+/* ================================================ the chart overlay ====== */
+
+describe('PlanBands — Wave P slice 5, the annotation layer on the money chart', () => {
+  const data = [
+    { label: 'May 25', total: 400 },
+    { label: 'Jun 23', total: 420 },
+    { label: 'Jul 22', total: 396 },
+  ];
+
+  it('tints and labels known-plan periods behind the bars, unknown gets nothing', () => {
+    const { container } = render(
+      <BarChart width={640} height={320} data={data}>
+        <XAxis type="category" dataKey="label" />
+        <YAxis type="number" />
+        <PlanBands
+          layout="horizontal"
+          bands={[
+            { key: 'May 25', plan: 'TOU', origin: 'detected' },
+            { key: 'Jun 23', plan: 'Tiered', origin: 'declared' },
+            // 'Jul 22' deliberately absent: unknown plan → no band
+          ]}
+        />
+        <Bar dataKey="total" fill="#000" />
+      </BarChart>,
+    );
+
+    // Recharts draws a reference area as a path, not a <rect>.
+    const bands = [...container.querySelectorAll('path.recharts-reference-area-rect')];
+    const fills = bands.map((b) => b.getAttribute('fill'));
+    expect(fills).toContain(PLAN_BAND_STYLE.TOU.fill);
+    expect(fills).toContain(PLAN_BAND_STYLE.Tiered.fill);
+    expect(fills).not.toContain(PLAN_BAND_STYLE.ULO.fill);
+    expect(container.querySelector('[data-testid="plan-band-May 25"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="plan-band-Jul 22"]')).toBeNull();
+
+    // the labels are TEXT on the chart, not just colour
+    expect(screen.getAllByText('TOU').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('TIERED').length).toBeGreaterThan(0);
+    expect(screen.queryByText('ULO')).not.toBeInTheDocument();
+
+    // behind the bars: the band must precede the bar rectangle in the DOM
+    const band = container.querySelector('path.recharts-reference-area-rect');
+    const bar = container.querySelector('.recharts-bar-rectangle');
+    if (!band || !bar) throw new Error('expected both a plan band and a bar in the chart');
+    expect(band.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('flips the bands onto the y axis for the 100%-share (vertical) layout', () => {
+    const { container } = render(
+      <BarChart width={640} height={320} data={data} layout="vertical">
+        <XAxis type="number" />
+        <YAxis type="category" dataKey="label" orientation="left" />
+        <PlanBands
+          layout="vertical"
+          bands={[{ key: 'Jul 22', plan: 'ULO', origin: 'detected' }]}
+        />
+        <Bar dataKey="total" fill="#000" />
+      </BarChart>,
+    );
+    const fills = [...container.querySelectorAll('path.recharts-reference-area-rect')].map((r) =>
+      r.getAttribute('fill'),
+    );
+    expect(fills).toContain(PLAN_BAND_STYLE.ULO.fill);
+    expect(screen.getAllByText('ULO').length).toBeGreaterThan(0);
+  });
 });
 
 /* ======================================================= the editor ====== */

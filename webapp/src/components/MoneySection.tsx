@@ -24,6 +24,8 @@ import { Banknote } from 'lucide-react';
 
 import { deriveExtraCharges, hasExtraCharges, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
 import { useExtraCharges } from '@/hooks/useDashboard';
+import { usePlanTimeline } from '@/hooks/usePlanTimeline';
+import { planAnnotations } from '@/lib/planTimeline';
 import { buildPeriodStacks, periodDeltaRows, planOverlay, type PlanId } from '@/lib/moneyViz';
 import MoneyStackedChart from '@/components/MoneyStackedChart';
 import PeriodDeltaTable from '@/components/PeriodDeltaTable';
@@ -41,6 +43,13 @@ export type MoneySectionProps = {
 
 export default function MoneySection({ summaries, allData, plan }: MoneySectionProps) {
   const { charges: storedCharges } = useExtraCharges();
+  // Wave P: which plan each period was billed under (detected from the bill,
+  // filled in by the timeline) — the chart's background bands + table column.
+  const [timeline] = usePlanTimeline();
+  const annotations = useMemo(
+    () => planAnnotations(summaries, timeline),
+    [summaries, timeline],
+  );
 
   // Charges the overlay models with: whatever the user has typed wins, and
   // the file's own derived rates are the fallback — the same precedence the
@@ -103,7 +112,7 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
         </div>
       ) : (
         <>
-          <MoneyStackedChart stacks={stacks} overlay={overlay} />
+          <MoneyStackedChart stacks={stacks} overlay={overlay} planAnnotations={annotations} />
           <PeriodDeltaTable table={deltaTable} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <HourCostHistogram rows={allData} plan={plan} />

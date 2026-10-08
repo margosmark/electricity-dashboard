@@ -287,6 +287,32 @@ export function assignPeriodPlan(
   return { ...base, plan: 'unknown', origin: 'unknown', conflict: false };
 }
 
+/** One chart annotation per billing period — the money-chart overlay. */
+export type PeriodPlanAnnotation = {
+  /** billingPeriod.start (unix seconds) — the key stacks are keyed by. */
+  start: number;
+  plan: PlanType | 'unknown';
+  origin: PeriodPlan['origin'];
+};
+
+/**
+ * Resolve every bill period to its plan for the overlay (slice 5): the same
+ * detection + declaration rules the timeline and the report use, so the
+ * chart can never tell a different story than the table beside it.
+ */
+export function planAnnotations(
+  summaries: UsageSummary[],
+  timeline: PlanTimelineEntry[],
+): PeriodPlanAnnotation[] {
+  return summaries.map((summary) => {
+    const assignment = assignPeriodPlan(detectPlanType(summary.items), timeline, {
+      start: summary.startDate,
+      end: summary.endDate,
+    });
+    return { start: summary.start, plan: assignment.plan, origin: assignment.origin };
+  });
+}
+
 /* -------------------------------------------------------------------------- *
  * 3. Per-period alternative modeling
  * -------------------------------------------------------------------------- */
