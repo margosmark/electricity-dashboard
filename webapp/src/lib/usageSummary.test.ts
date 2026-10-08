@@ -316,6 +316,15 @@ describe('line-item classification keys off the note', () => {
     expect(classifyBillLine(item('Current Meter Read'))).toBe('info');
     expect(classifyBillLine(item('Amount Due', 0))).toBe('info');
     expect(classifyBillLine(item('Balance Forward', 0))).toBe('info');
+    // Wave O: a NON-ZERO "Amount Due" is still the bill's own summary line,
+    // not a charge. It used to fall through to `other` (only the zero-amount
+    // case reached `info`), which put the whole payable amount into the
+    // "Other lines" slice of the money chart — every period's bar roughly
+    // doubled on Mark's 24-period export, whose Amount Due lines are all
+    // non-zero. `billTotals` reads it back as `amountDue`, which is what its
+    // `info` branch has always been there to do.
+    expect(classifyBillLine(item('Amount Due', 287.11))).toBe('info');
+    expect(classifyBillLine(item('Balance Forward', 12.5))).toBe('info');
   });
 
   it('never folds an unknown wording into a total we would double-count', () => {

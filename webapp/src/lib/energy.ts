@@ -1995,7 +1995,7 @@ export type BillLineClass =
   | 'other';
 
 const BILL_INFO_NOTE =
-  /\busage\b|meter read|days in bill|loss factor|read date|due date|post date|balance forward/;
+  /\busage\b|meter read|days in bill|loss factor|read date|due date|post date|balance forward|amount due/;
 
 /**
  * Group a line for display and reconciliation. The note is the utility's own
