@@ -31,7 +31,9 @@ export type PlanBandDatum = {
   /** The exact category value the axis draws (row label). */
   key: string;
   plan: PlanType;
-  origin: 'detected' | 'declared';
+  /** Informational; an unknown ORIGIN can no longer coexist with a known
+   *  plan, but the annotation type keeps the union in one place. */
+  origin: PeriodPlanAnnotation['origin'];
 };
 
 type Props = {
