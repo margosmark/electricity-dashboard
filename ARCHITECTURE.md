@@ -58,13 +58,18 @@ into components.
    on-peak). Costs computed for **all three plans simultaneously** per reading:
    `costTOU`, `costULO`, and `costTiered` (tier thresholds prorated
    `(days/30.4)` per aggregation bucket).
-4. **View filter** — scope = Billing period (anchored to a persisted
-   `billing_day`, `getBillingPeriod`), Month, YTD, or custom range; zoom
-   monthly → weekly → daily → hourly (`getFilteredForZoom`). First load picks
-   the window with `selectInitialWindow`: anchor `min(last data day, today)`,
-   then the first of billing period → calendar month → trailing data-anchored
-   window that is at least half covered by readings, so a fresh upload never
-   opens a mostly-future window.
+4. **View filter** — scope = Billing period, Month, YTD, or custom range;
+   zoom monthly → weekly → daily → hourly (`getFilteredForZoom`). The
+   BillingPeriod scope runs off **`lib/billingAxis.ts`**: the file's OWN
+   `UsageSummary.billingPeriod` entries (de-duped when two exports describe
+   the same bill, holes between them kept as explicit `gap` periods, the
+   readings past the last bill as one `open` period). Prev/next step those
+   periods one at a time and stop at the ends; `billing_day` +
+   `getBillingPeriod` is the fallback for a file that states no periods, and
+   first load opens the axis period holding `min(last data day, today)` under
+   the same ≥50%-coverage gate `selectInitialWindow` applies (falling back to
+   it: billing period → calendar month → trailing data-anchored window), so a
+   fresh upload never opens a mostly-future window.
 5. **Aggregate & analyze** — `aggregateChartData` per bucket, plus
    `calculateComparison` (totals across the three plans),
    `calculateVampire` (5th-percentile hourly draw × 24h × 30d at off-peak —
@@ -102,6 +107,7 @@ browser-local app that never uploads any of it:
 | `billing_day` | `updateBillingDay` | `getBillingPeriod` anchors |
 | `selected_plan` | `useSelectedPlan` (nav switcher, plan cards) | `useSelectedPlan` — the switcher AND the header chip read one store |
 | `extra_charges` | True-bill fields | `useExtraCharges` |
+| `estimate_ledger` | `useEstimateLedger` (the open period's claim + every claim a bill has since scored) | `lib/estimateLedger` — settles on load, so a new export closes its own windows |
 
 ## Accessibility (standing gate)
 

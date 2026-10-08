@@ -135,7 +135,9 @@ describe('buildPeriodStacks', () => {
     expect(withUsage).toBe(true);
     for (const s of stacks) {
       const kwh = (s.usageTotal ?? 0);
-      expect(kwh).toBeCloseTo(billedKwh(s.summary) ?? 0, 3);
+      // buildPeriodStacks only ever builds billed stacks, so `summary` is set
+      // (the axis's other kinds live in buildAxisStacks).
+      expect(kwh).toBeCloseTo(billedKwh(s.summary!) ?? 0, 3);
       expect(kwh).toBeGreaterThan(0);
       // Off-peak is the biggest window in this fixture.
       expect(s.usage!.offPeak).toBeGreaterThan(s.usage!.onPeak);

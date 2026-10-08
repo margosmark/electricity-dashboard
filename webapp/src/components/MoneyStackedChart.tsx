@@ -25,13 +25,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bar, BarChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import {
   COST_SLICE_META,
   COST_SLICE_ORDER,
   shareBreakdown,
   type PeriodStack,
+  type PeriodStackKind,
   type PlanId,
   type PlanOverlay,
 } from '@/lib/moneyViz';
@@ -61,7 +62,22 @@ type ChartRow = {
   coverage: number;
   total: number;
   rebate?: number;
-  [slice: string]: number | string | undefined;
+  /** Which slice of the axis the bar is — everything but `billed` is flagged. */
+  kind: PeriodStackKind;
+  /** True when the money shown is our estimate, never a bill. */
+  estimated: boolean;
+  [slice: string]: number | string | boolean | undefined;
+};
+
+/**
+ * The badge every non-billed bar carries, in the chart's table and tooltip.
+ * It exists so no hatched bar can ever be read as "you paid this".
+ */
+const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string } | null> = {
+  billed: null,
+  open: { text: 'Estimate', cls: 'bg-yellow-400 border-black' },
+  gap: { text: 'No bill', cls: 'bg-slate-200 border-black' },
+  derived: { text: 'Billing day', cls: 'bg-slate-200 border-black' },
 };
 
 /** Slices that actually occur in this file — the rest get no bar, no chip. */
@@ -113,8 +129,24 @@ function CompositionTooltip({
       </ul>
       {mode !== 'usage' && (
         <div className="mt-2 pt-2 border-t-2 border-black flex justify-between gap-4 text-[11px] font-black">
-          <span>You paid</span>
-          <span>{money(row.total ?? 0)}</span>
+          <span>
+            {row.kind === 'billed' ? 'You paid' : row.kind === 'open' ? 'Estimated' : 'Billed'}
+          </span>
+          <span>
+            {row.kind === 'gap'
+              ? '—'
+              : `${row.estimated ? '~' : ''}${money(Number(row.total ?? 0))}`}
+          </span>
+        </div>
+      )}
+      {row.kind !== 'billed' && (
+        <div
+          data-testid="money-tooltip-flag"
+          className="mt-2 text-[9px] font-black uppercase bg-yellow-100 border-2 border-black px-2 py-1"
+        >
+          {row.kind === 'open'
+            ? 'Estimate — not billed yet (commodity only)'
+            : 'No bill in this file covers these days'}
         </div>
       )}
       <div className="mt-1 text-[9px] font-bold text-slate-500">
@@ -182,6 +214,8 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
     );
   }, [stacks]);
   const usageMissing = stacks.length > 0 && stacks.every((s) => s.usage === null);
+  /** Any bar on the timeline that is NOT a bill (the open tail, or a hole). */
+  const hasFlagged = stacks.some((s) => s.kind !== 'billed');
 
   const rows = useMemo<ChartRow[]>(() => {
     if (mode === 'usage') {
@@ -191,6 +225,8 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
         fullLabel: s.label,
         coverage: s.coverage,
         total: s.totals.payable,
+        kind: s.kind,
+        estimated: s.estimated,
         offPeak: s.usage?.offPeak ?? 0,
         midPeak: s.usage?.midPeak ?? 0,
         onPeak: s.usage?.onPeak ?? 0,
@@ -207,6 +243,8 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
         coverage: s.coverage,
         total: s.totals.payable,
         rebate: s.cost.credit,
+        kind: s.kind,
+        estimated: s.estimated,
       };
       for (const k of costKeys) {
         const v = s.cost[k as keyof PeriodStack['cost']];
@@ -315,6 +353,17 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
         </p>
       )}
 
+      {mode === 'dollars' && hasFlagged && (
+        <p
+          data-testid="money-chart-flagged"
+          className="mt-2 text-[10px] font-bold normal-case text-slate-500"
+        >
+          Hatched bars are not bills: the bar badged <strong>Estimate</strong> is your unbilled
+          tail (commodity only), and a bar badged <strong>No bill</strong> is a stretch of days no
+          bill in this file covers. Solid bars are what you were actually charged.
+        </p>
+      )}
+
       {mode === 'usage' && usageMissing && (
         <div
           data-testid="money-usage-empty"
@@ -383,6 +432,25 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
               layout={isShare ? 'vertical' : 'horizontal'}
               margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
             >
+              {/* One hatch pattern per slice: a bar drawn in it can never be
+                  read as money somebody charged. The pattern keeps the
+                  slice's colour, so the open period's off/mid/on-peak split
+                  still reads — it is just visibly not solid. */}
+              <defs>
+                {COST_SLICE_ORDER.map((k) => (
+                  <pattern
+                    key={k}
+                    id={`est-hatch-${k}`}
+                    patternUnits="userSpaceOnUse"
+                    width="8"
+                    height="8"
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width="8" height="8" fill="#FFFFFF" />
+                    <rect width="4" height="8" fill={COST_SLICE_META[k].color} />
+                  </pattern>
+                ))}
+              </defs>
               <XAxis
                 type={isShare ? 'number' : 'category'}
                 dataKey={isShare ? undefined : 'label'}
@@ -436,7 +504,23 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
                   fill={COST_SLICE_META[k as keyof typeof COST_SLICE_META].color}
                   stroke="#000"
                   strokeWidth={1}
-                />
+                >
+                  {/* Cell per bar: billed periods keep the solid colour; any
+                      other period is drawn hatched with a dashed outline. */}
+                  {rows.map((r) => (
+                    <Cell
+                      key={r.key}
+                      fill={
+                        r.kind === 'billed'
+                          ? COST_SLICE_META[k as keyof typeof COST_SLICE_META].color
+                          : `url(#est-hatch-${k})`
+                      }
+                      stroke="#000"
+                      strokeWidth={r.kind === 'billed' ? 1 : 2}
+                      strokeDasharray={r.kind === 'billed' ? undefined : '6 4'}
+                    />
+                  ))}
+                </Bar>
               ))}
               {/* Slice 5c — the alternatives, on the same dollars.
                   No text labels on the lines themselves: three plans can land
@@ -604,9 +688,23 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const badge = r.kind !== 'billed' ? KIND_BADGE[r.kind] : null;
+              return (
               <tr key={r.key} className="border-b-2 border-black/20" data-testid="money-row">
-                <td className="py-1 pr-2 whitespace-nowrap">{r.label}</td>
+                <td className="py-1 pr-2 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-2">
+                    <span>{r.label}</span>
+                    {badge && (
+                      <span
+                        data-testid="money-row-badge"
+                        className={`text-[8px] px-1.5 py-0.5 border-2 rounded ${badge.cls}`}
+                      >
+                        {badge.text}
+                      </span>
+                    )}
+                  </span>
+                </td>
                 {hasPlanColumn && (
                   <td className="py-1 pr-2 whitespace-nowrap" data-testid="money-plan-cell">
                     {planLabelFor(Number(r.key))}
@@ -618,22 +716,36 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
                     <td key={k} className="py-1 px-2 text-right tabular-nums">
                       {mode === 'usage'
                         ? v.toLocaleString('en-CA', { maximumFractionDigits: 1 })
-                        : isShare
-                          ? `${v.toFixed(1)}%`
-                          : money(v)}
+                        : r.kind === 'gap'
+                          /* No bill covers these days: every money cell is a
+                             dash, because "$0.00 delivery" would claim the
+                             utility charged nothing for a period it never
+                             billed. */
+                          ? '—'
+                          : r.estimated && v === 0
+                            /* Same honesty for the open period: delivery,
+                               regulatory and HST there are not "zero", they
+                               do not exist yet. */
+                            ? '—'
+                            : isShare
+                              ? `${v.toFixed(1)}%`
+                              : money(v)}
                     </td>
                   );
                 })}
                 <td className="py-1 px-2 text-right tabular-nums">
                   {mode === 'usage'
                     ? kwhFmt(usageKeys.reduce((n, k) => n + Number(r[k] ?? 0), 0))
-                    : money(Number(r.total ?? 0))}
+                    : r.kind === 'gap'
+                      ? '—'
+                      : `${r.estimated ? '~' : ''}${money(Number(r.total ?? 0))}`}
                 </td>
                 <td className="py-1 px-2 text-right tabular-nums">
                   {Math.round((Number(r.coverage ?? 0)) * 100)}%
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

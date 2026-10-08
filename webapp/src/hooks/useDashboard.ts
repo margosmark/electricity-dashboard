@@ -15,8 +15,12 @@ import {
   type UsageSummary, type LocalTimeParams, type GreenButtonFeed,
   type ExtraCharges, type ExtraChargeField, type ExtraChargesSource,
   getBillingPeriod, parseGreenButtonFeed, selectInitialWindow,
+  MIN_WINDOW_COVERAGE,
   EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, chargesArePristine,
 } from "@/lib/energy";
+// The billing axis — the file's OWN periods as the view's timeline (this
+// wave's whole idea), with billing_day as the fallback when it has none.
+import { buildBillingAxis, dateWindowOf, periodAt, stepPeriod, type BillingAxis } from "@/lib/billingAxis";
 // Wave J owns the merge arithmetic; live sync must not be a second opinion
 // about what a union means (union, incoming wins — see importPlan.ts).
 import { mergeForWrite, planImport } from "@/lib/importPlan";
@@ -180,6 +184,13 @@ export type MergeFileChoice = {
   chosen: number | "combine" | null;
   /** Set when this file produced no readings: what to tell the user. */
   issue?: ParseDiagnostic;
+  /**
+   * The UsageSummary bills parsed out of this same file. They ride along with
+   * the readings so the first-load window can be cut on the FILE's periods —
+   * the window is chosen in the same call that imports the rows, before any
+   * stored state has caught up.
+   */
+  summaries?: UsageSummary[];
 };
 
 /**
@@ -246,6 +257,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     fileName: string;
     groups: UsagePointGroup[];
     origin?: "upload" | "greenbutton";
+    /** Bills from the same file — see MergeFileChoice.summaries. */
+    summaries?: UsageSummary[];
   } | null>(null);
 
   /** 2+ files waiting on the merge review screen (range + rows before import). */
@@ -264,6 +277,33 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * actual-bill panel without re-parsing the export.
    */
   const [billFeed, setBillFeed] = useState<BillFeed>(() => readStoredBillFeed());
+
+  /**
+   * The timeline THIS FILE defines: its own `billingPeriod` entries (de-duped
+   * when several exports describe the same bill), the holes between them, and
+   * the unbilled tail after the last one. It drives which window the view
+   * opens on, where the BillingPeriod scope buttons land and how prev/next
+   * step — instead of the calendar rules the app used before.
+   *
+   * With no UsageSummary in the file, the same builder cuts periods on
+   * `billingDay`, which is exactly the behavior older exports got.
+   */
+  const axis = useMemo(
+    () => buildBillingAxis({ summaries: billFeed.summaries, rows: rawData, billingDay }),
+    [billFeed.summaries, rawData, billingDay],
+  );
+
+  /**
+   * Where the timeline should anchor: the newest reading, clamped to the
+   * clock (a feed timestamped ahead of us must not open a future window).
+   */
+  const anchorTimestamp = (points: DataPoint[]): number | null => {
+    if (points.length === 0) return null;
+    let last = points[0].timestamp;
+    for (const p of points) if (p.timestamp > last) last = p.timestamp;
+    const now = Math.floor(Date.now() / 1000);
+    return Math.min(last, now);
+  };
 
   /**
    * Bills parsed by the file(s) waiting to be imported, held until the user
@@ -342,7 +382,30 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * through Month → data-anchored trailing window, and reports which scope the
    * resulting window belongs to.)
    */
-  const applyInitialWindow = (points: DataPoint[], day: number) => {
+  const applyInitialWindow = (
+    points: DataPoint[],
+    day: number,
+    /** The bills these readings came WITH. Callers pass the ones just parsed;
+     *  the restore path passes what is already in state. */
+    bills?: UsageSummary[],
+  ) => {
+    // The file's own period containing the anchor wins — same coverage gate
+    // selectInitialWindow applies, so an almost-empty bill period still falls
+    // through to the data-anchored window below instead of opening on
+    // nothing. A file with no periods never reaches this branch.
+    const summaries = bills ?? billFeed.summaries;
+    const anchor = anchorTimestamp(points);
+    if (summaries.length > 0 && anchor !== null) {
+      const fileAxis = buildBillingAxis({ summaries, rows: points, billingDay: day });
+      const period = periodAt(fileAxis, anchor);
+      if (period && period.coverage >= MIN_WINDOW_COVERAGE) {
+        const w = dateWindowOf(period);
+        setStartDate(w.start);
+        setEndDate(w.end);
+        setViewScope('BillingPeriod');
+        return;
+      }
+    }
     const w = selectInitialWindow(points, day, new Date());
     if (!w) return;
     setStartDate(w.start);
@@ -366,7 +429,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * opens on every reading it just loaded (12 monthly bars) and the scope
    * buttons still zoom in from there. Real uploads are untouched.
    */
-  const commitReadings = (data: DataPoint[], source: "upload" | "example" = "upload") => {
+  const commitReadings = (
+    data: DataPoint[],
+    source: "upload" | "example" = "upload",
+    bills?: UsageSummary[],
+  ) => {
     writeRows(data);
     localStorage.setItem("energy_data", JSON.stringify(data));
     try {
@@ -385,7 +452,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       setEndDate(format(new Date(last.timestamp * 1000), "yyyy-MM-dd"));
       setViewScope("Custom");
     } else {
-      applyInitialWindow(data, billingDay);
+      applyInitialWindow(data, billingDay, bills ?? billFeed.summaries);
     }
     setParseIssue(null);
     setShowUploadModal(false);
@@ -422,7 +489,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     ];
 
     if (groups.length > 1) {
-      setPendingUpload({ fileName: "Oakville Hydro (live sync)", groups, origin: "greenbutton" });
+      setPendingUpload({
+        fileName: "Oakville Hydro (live sync)",
+        groups,
+        origin: "greenbutton",
+        summaries: feed.summaries,
+      });
       setShowUploadModal(false);
       return { ok: true, incoming, picker: true };
     }
@@ -440,7 +512,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
-    commitReadings(merged);
+    commitReadings(merged, "upload", feed.summaries);
     commitBillFeed("union");
     if (hadWindow) {
       setStartDate(keep.start);
@@ -633,7 +705,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             setRawData(parsed);
             // A reload must keep saying "this is example data" if it is.
             if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
-            applyInitialWindow(parsed, day);
+            applyInitialWindow(parsed, day, readStoredBillFeed().summaries);
           }
         } else if (mounted) {
           setShowUploadModal(true);
@@ -827,6 +899,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             name: file.name,
             groups,
             chosen: groups.length === 1 ? 0 : null,
+            // The bills ride with the readings: the first-load window is
+            // chosen in the same call that imports them.
+            summaries: feed.summaries,
             ...(readings === 0 ? { issue: diagnoseGreenButtonDocument(text, 0) } : {}),
           });
         };
@@ -857,11 +932,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           if (only.groups.length > 1) {
             // Held until the picker commits: cancelling must leave the bills
             // the user already had alone.
-            setPendingUpload({ fileName: only.name, groups: only.groups });
+            setPendingUpload({ fileName: only.name, groups: only.groups, summaries: only.summaries });
             setShowUploadModal(false);
             return;
           }
-          commitReadings(only.groups[0].readings);
+          commitReadings(only.groups[0].readings, "upload", only.summaries);
           // An upload REPLACES: this file is what the user asked to see, so
           // an unrelated upload also replaces the panel (to nothing, if it
           // carried no bills) instead of leaving a stranger's bill on screen.
@@ -891,7 +966,13 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const chooseMerge = (readings: DataPoint[]) => {
     setPendingMerge(null);
     if (readings.length > 0) {
-      commitReadings(readings);
+      // Every file in the merge review, bills included: the axis de-dupes
+      // periods that two exports describe differently.
+      commitReadings(
+        readings,
+        "upload",
+        (pendingMerge ?? []).flatMap((f) => f.summaries ?? []),
+      );
       // The merged dataset IS those files, bills included (replace).
       commitBillFeed("replace");
     } else {
@@ -918,11 +999,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setPendingUpload(null);
     if (readings.length === 0) return;
     if (origin === "greenbutton") {
-      commitReadings(mergeForWrite(rawDataRef.current, readings));
+      commitReadings(mergeForWrite(rawDataRef.current, readings), "upload", pendingUpload?.summaries);
       commitBillFeed("union");
       return;
     }
-    commitReadings(readings);
+    commitReadings(readings, "upload", pendingUpload?.summaries);
     commitBillFeed("replace");
   };
 
@@ -1000,6 +1081,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setBillingDayState(day);
     localStorage.setItem("billing_day", day.toString());
     if (!day || day < 1 || day > 31) return; // typing in progress; skip re-anchor
+    // A file that states its own periods ignores this setting (it is the
+    // fallback for files that do not), so re-anchoring the window onto a
+    // synthetic billing-day period would move the view off the timeline the
+    // file actually defines. Persist the value, leave the window alone.
+    if (billFeed.summaries.length > 0) return;
     // Use the middle of the current period to re-anchor.
     const anchorDate = anchorStart ? new Date(anchorStart + "T00:00:00") : new Date();
     const anchor = addDays(anchorDate, 15);
@@ -1012,6 +1098,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const applyViewScope = (scope: "BillingPeriod" | "Month" | "YTD") => {
     setViewScope(scope);
     if (scope === "BillingPeriod") {
+      // The file's period holding "now" (clamped to the newest reading, so a
+      // feed that stops weeks ago opens on the period it actually covers
+      // rather than an empty current one). Falls back to billing_day when the
+      // file states no periods at all.
+      const anchor = anchorTimestamp(rawData) ?? Math.floor(Date.now() / 1000);
+      const period = periodAt(axis, anchor);
+      if (period) {
+        const w = dateWindowOf(period);
+        setStartDate(w.start);
+        setEndDate(w.end);
+        return;
+      }
       const p = getBillingPeriod(new Date(), billingDay);
       setStartDate(format(p.start, "yyyy-MM-dd"));
       setEndDate(format(p.end, "yyyy-MM-dd"));
@@ -1134,6 +1232,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     syncFromGreenButton, refreshGbStatus, disconnectGreenButton, startGreenButtonConnect,
     // Background refresh + alerts (Wave M)
     gbRefreshTick, backgroundSync,
+    // The file's own timeline — prev/next navigation reads it through a
+    // getter in Dashboard so it never steps through a stale copy.
+    axis,
   };
 }
 
@@ -1157,6 +1258,8 @@ export function useZoomNavigation(
   setEndDate: (d: string) => void,
   getViewScope: () => ViewScope,
   getBillingDay: () => number,
+  /** The file's own timeline; null/absent ⇒ the billing-day fallback. */
+  getAxis?: () => BillingAxis | null,
 ) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("monthly");
   const [zoomTarget, setZoomTarget] = useState<string | null>(null);
@@ -1218,8 +1321,27 @@ export function useZoomNavigation(
       setEndDate(format(lastDayOfMonth(target), "yyyy-MM-dd"));
       return;
     }
-    // BillingPeriod and Custom both re-anchor through getBillingPeriod using
-    // the billing-day anchor (matches original behavior).
+    // BillingPeriod steps through the FILE's periods when the file has them
+    // (this is the whole point of the billing axis): prev/next moves one
+    // real bill — or one gap, or the open tail — at a time, and stops at
+    // either end rather than wrapping from your newest bill to your oldest.
+    const axis = getAxis?.() ?? null;
+    if (getViewScope() === "BillingPeriod" && axis && axis.periods.length > 0) {
+      // Mid-window, not the start: a window can begin a few hours before its
+      // period does (the stamps are UTC, the date inputs are local days), and
+      // an anchor outside every period would step nowhere at all.
+      const startMs = new Date(startDate + "T00:00:00").getTime();
+      const endMs = new Date(endDate + "T23:59:59").getTime();
+      const mid = Math.floor((startMs + endMs) / 2 / 1000);
+      const next = stepPeriod(axis, mid, dir);
+      if (!next) return;
+      const w = dateWindowOf(next);
+      setStartDate(w.start);
+      setEndDate(w.end);
+      return;
+    }
+    // Custom (and a file with no periods) re-anchors through getBillingPeriod
+    // using the billing-day anchor — the pre-axis behavior, kept as fallback.
     const target = dir === "next" ? addMonths(s, 1) : subMonths(s, 1);
     const p = getBillingPeriod(target, getBillingDay());
     setStartDate(format(p.start, "yyyy-MM-dd"));

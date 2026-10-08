@@ -56,6 +56,8 @@ export default function Dashboard() {
     gbRefreshTick, backgroundSync,
     // Wave L: UsageSummary bills + the feed's own clock rules
     billFeed,
+    // The billing axis: the file's own periods as the view's timeline.
+    axis,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
@@ -72,10 +74,12 @@ export default function Dashboard() {
   // refs synced after render (lint-safe, no stale closures).
   const viewScopeRef = useRef<ViewScope>('BillingPeriod');
   const billingDayRef = useRef<number>(1);
+  const axisRef = useRef(axis);
   useEffect(() => {
     viewScopeRef.current = viewScope;
     billingDayRef.current = billingDay;
-  }, [viewScope, billingDay]);
+    axisRef.current = axis;
+  }, [viewScope, billingDay, axis]);
 
   /**
    * Wave H item 3 — Escape closes whatever is open, top layer first.
@@ -141,7 +145,8 @@ export default function Dashboard() {
 
   const { zoomLevel, setZoomLevelAndClear, zoomTarget, handleBarClick, goBack, navigatePeriod } =
     useZoomNavigation(startDate, endDate, setStartDate, setEndDate,
-      () => viewScopeRef.current, () => billingDayRef.current);
+      () => viewScopeRef.current, () => billingDayRef.current,
+      () => axisRef.current);
 
   // --- Calculations ---
 
@@ -500,7 +505,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center gap-3 md:gap-4 lg:ml-auto">
            <div className="bg-slate-100 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex items-center gap-2 md:gap-3">
               <Settings2 size={16} className="text-slate-500" />
-              <input type="number" min="1" max="31" aria-label="Billing day of month" inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
+              <input type="number" min="1" max="31" aria-label="Billing day of month" title={billFeed.summaries.length > 0 ? "Your file states its own billing periods, so this is only the fallback for exports that don't" : "Which day of the month your utility bills you on"} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
            </div>
            <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
                {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} aria-label={`Select ${PLAN_LABEL[p]} plan`} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
