@@ -681,6 +681,7 @@ export default function Dashboard() {
           shiftAnalysis={shiftAnalysis}
           verification={verification}
           rates={activeRateSet}
+          summaries={billFeed.summaries}
           plan={userPlan}
         />
       )}
