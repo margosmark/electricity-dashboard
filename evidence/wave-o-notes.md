@@ -52,7 +52,9 @@ was NOT on TOU:
 
 Rerun: `WAVE_O_XML=/path/to/export.xml WAVE_O_EXPECT_PERIODS=3 \
 NODE_PATH=$PWD/webapp/node_modules node evidence/wave-o-verify.cjs`
-(add `WAVE_O_SUFFIX=-long` for a second file's JSON).
+(add `WAVE_O_SUFFIX=-long` for a second file's JSON; add
+`WAVE_O_BASE_URL=http://10.10.11.110:3939/` and `WAVE_O_SUFFIX=-deployed`
+to check the deployed stack instead of a local `next start`).
 
 ## Decisions, and why they read this way
 
@@ -161,6 +163,7 @@ bill to draw.
 | `npm run build` | ok (`sw.js` VERSION restored to `oeo-v1-local` afterwards) |
 | `evidence/wave-o-verify.cjs` on the 3-period Oakville XML | **33 / 33** (re-run on the rebased build) |
 | `evidence/wave-o-verify.cjs -long` on the 24-period export | **33 / 33** (re-run on the rebased build) |
+| **deployed** — `WAVE_O_BASE_URL=http://10.10.11.110:3939/`, both files | **33 / 33** + **33 / 33** (`wave-o-verification-deployed.json`, `wave-o-verification-long-deployed.json`), stack at `e0a0efa` |
 | 390 × 844 mobile pass | included above: 0 px page overflow, 44 px toggles, charts/tables scroll inside their own boxes |
 | CI | **cannot start jobs, repo-wide and pre-existing**: every run on `main` and on every branch finishes in 3–5 s with all jobs failed and *zero steps* (e.g. run 37724113959, `E2E Smoke` / `Frontend` / `Python`, `steps: []`). Local gates above are the evidence, as for Waves L/P. |
 
