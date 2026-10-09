@@ -18,14 +18,14 @@
 import { ReferenceArea } from 'recharts';
 
 import type { PeriodPlanAnnotation, PlanType } from '@/lib/planTimeline';
+import { PLAN_BAND_STYLE } from '@/lib/planStyles';
 
 export type PlanAnnotation = PeriodPlanAnnotation;
 
-export const PLAN_BAND_STYLE: Record<PlanType, { fill: string; label: string }> = {
-  TOU: { fill: '#fde047', label: 'TOU' }, // yellow — matches the plan cards
-  Tiered: { fill: '#bfdbfe', label: 'TIERED' }, // blue-200
-  ULO: { fill: '#bbf7d0', label: 'ULO' }, // green-200
-};
+/* Wave R: the fills moved to lib/planStyles so a component that must not
+ * import Recharts (the switch timeline) can share them. Re-exported here so
+ * every existing import of PLAN_BAND_STYLE keeps resolving. */
+export { PLAN_BAND_STYLE };
 
 export type PlanBandDatum = {
   /** The exact category value the axis draws (row label). */

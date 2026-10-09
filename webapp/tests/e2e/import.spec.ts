@@ -45,7 +45,11 @@ test.describe('/import', () => {
 
     // The import is a real dataset, not the example set any more.
     expect(await page.evaluate(() => localStorage.getItem('energy_data_is_example'))).toBeNull();
-    await expect(page.getByText('Monthly Overview')).toBeVisible();
+    // Wave R: the dashboard opens on Overview — the verdict first, then the
+    // whole-dataset totals. (The chart itself is one tab over, on Usage.)
+    await expect(page.getByTestId('tab-nav')).toBeVisible();
+    await expect(page.getByTestId('best-choice-banner')).toBeVisible();
+    await expect(page.getByTestId('totals-strip')).toBeVisible();
   });
 
   test('existing readings: the merge review appears and Merge unions the two sets', async ({ page }) => {

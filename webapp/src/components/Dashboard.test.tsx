@@ -49,11 +49,12 @@ describe('Dashboard', () => {
     expect(screen.getByText(/preparing optimizer/i)).toBeInTheDocument();
   });
 
-  it('renders chart view after loading', async () => {
+  it('renders the four-tab strip after loading, Overview selected', async () => {
     await renderLoaded();
-    // Role-scoped: the data-freshness chip also says "chart" in its stale copy.
-    expect(screen.getByRole('button', { name: 'CHART' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'INSIGHTS' })).toBeInTheDocument();
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Usage', 'Plans', 'Money']);
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
   });
 
   it('renders plan selection buttons', async () => {
@@ -66,7 +67,10 @@ describe('Dashboard', () => {
   });
 
   it('renders zoom level buttons', async () => {
+    const user = userEvent.setup();
     await renderLoaded();
+    // Wave R: the chart (and its zoom control) lives on the Usage tab.
+    await user.click(screen.getByRole('tab', { name: 'Usage' }));
     expect(screen.getByText('monthly')).toBeInTheDocument();
     expect(screen.getByText('weekly')).toBeInTheDocument();
     expect(screen.getByText('daily')).toBeInTheDocument();
@@ -99,12 +103,15 @@ describe('Dashboard', () => {
     expect(screen.getByTitle('Reset Data')).toBeInTheDocument();
   });
 
-  it('switches to Insights view', async () => {
+  it('shows the usage analysis on the Usage tab', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    await user.click(screen.getByText('INSIGHTS'));
+    await user.click(screen.getByRole('tab', { name: 'Usage' }));
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
     expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
     expect(screen.getByText(/Weekly Routine Heatmap/i)).toBeInTheDocument();
+    // ...and the Overview panel is gone rather than hidden underneath.
+    expect(screen.queryByTestId('tab-panel-overview')).not.toBeInTheDocument();
   });
 
   it('shows always-on floor help modal', async () => {
@@ -117,18 +124,22 @@ describe('Dashboard', () => {
   });
 
   it('renders plan cards with costs', async () => {
+    const user = userEvent.setup();
     await renderLoaded();
-    // Scoped to ChartView: the totals strip also names the plans.
-    const chart = within(screen.getByTestId('chart-view'));
-    expect(chart.getByText('Time-of-Use')).toBeInTheDocument();
-    expect(chart.getByText('Tiered Pricing')).toBeInTheDocument();
-    expect(chart.getByRole('heading', { name: 'Ultra-Low Overnight' })).toBeInTheDocument();
+    // Scoped to the Plans panel: the totals strip also names the plans.
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
+    const plans = within(screen.getByTestId('tab-panel-plans'));
+    expect(plans.getByText('Time-of-Use')).toBeInTheDocument();
+    expect(plans.getByText('Tiered Pricing')).toBeInTheDocument();
+    expect(plans.getByRole('heading', { name: 'Ultra-Low Overnight' })).toBeInTheDocument();
   });
 
   // --- Behavior (not shape): rate chips must come from the active RateSet ---
 
   it('displays plan-card rate chips from the active RateSet, not hardcoded values', async () => {
+    const user = userEvent.setup();
     await renderLoaded();
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
     // mockRates uses offPeak 9.8 / midPeak 15.7 / onPeak 20.3 — the chips MUST
     // reflect those; a stale hardcoded 8.7/12.2/18.2 would be a regression.
     expect(screen.getAllByText('9.8¢').length).toBeGreaterThanOrEqual(2); // TOU Off-Peak + ULO Weekend Off
@@ -185,7 +196,7 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'CHART' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
   });
 
   // --- First-load window (Wave A slice 1) ---
@@ -261,15 +272,28 @@ describe('Dashboard', () => {
     expect(strip.textContent).toMatch(new RegExp(format(new Date(mockRawData[0].timestamp * 1000), 'MMM d, yyyy')));
   });
 
-  // --- Component split (Wave A slice 3) ---
+  // --- Section split (Wave A slice 3, reworked in Wave R) ---
 
-  it('renders the extracted ChartView/InsightsView containers', async () => {
+  it('renders exactly one tab panel at a time', async () => {
     const user = userEvent.setup();
     await renderLoaded();
+
+    // Overview is the default and the only panel on screen.
+    expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Usage' }));
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('insights-view')).not.toBeInTheDocument();
-    await user.click(screen.getByText('INSIGHTS'));
-    expect(screen.getByTestId('insights-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-overview')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Money' }));
+    expect(screen.getByTestId('tab-panel-money')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+  });
+
+  it('puts the best-choice banner first on Overview — the answer is not buried', async () => {
+    await renderLoaded();
+    const overview = screen.getByTestId('tab-panel-overview');
+    expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
   });
 });

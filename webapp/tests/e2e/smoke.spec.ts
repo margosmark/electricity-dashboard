@@ -51,16 +51,25 @@ test.describe('smoke', () => {
   test('upload flow: synthetic XML parses, dashboard + insights render', async ({ page }) => {
     await uploadFixture(page);
 
-    // Dashboard is live: chart header + plan cards visible
-    await expect(page.getByText('Monthly Overview')).toBeVisible();
-    // Plan card heading (Wave A's totals strip also says "Time-of-Use" — scope to the role)
-    await expect(page.getByRole('heading', { name: 'Time-of-Use' })).toBeVisible();
+    // Wave R: the page opens on OVERVIEW, and the decision is the first
+    // thing on it — not something you have to scroll to.
+    await expect(page.getByTestId('best-choice-banner')).toBeVisible();
+    await expect(page.getByTestId('totals-strip')).toBeVisible();
 
     // Bill projection banner is always on screen — either with a number or
     // saying exactly why it will not give one yet.
     const projection = page.getByTestId('bill-projection');
     await expect(projection).toBeVisible();
     await expect(projection).toHaveAttribute('data-state', /^(ready|gated)$/);
+
+    // Usage: the chart header.
+    await page.getByRole('tab', { name: 'Usage' }).click();
+    await expect(page.getByText('Monthly Overview')).toBeVisible();
+
+    // Plans & Track Record: the plan card (Wave A's totals strip also says
+    // "Time-of-Use" — scope to the role) and its window context.
+    await page.getByRole('tab', { name: 'Plans' }).click();
+    await expect(page.getByRole('heading', { name: 'Time-of-Use' })).toBeVisible();
     // WFH context annotation is computed from the visible window.
     await expect(page.getByTestId('wfh-annotation')).toBeVisible();
 
@@ -70,9 +79,10 @@ test.describe('smoke', () => {
     );
     expect(stored).toHaveLength(68);
 
-    // Insights: Shift Optimizer found the 5 weekday On-Peak blocks PLUS the
-    // 5 weekday Mid-Peak (08:00) blocks as a labelled lower tier (Wave E).
-    await page.getByRole('button', { name: 'INSIGHTS' }).click();
+    // Shift Optimizer found the 5 weekday On-Peak blocks PLUS the
+    // 5 weekday Mid-Peak (08:00) blocks as a labelled lower tier (Wave E) —
+    // and says so in the one-line verdict above it.
+    await expect(page.getByTestId('verdict-line')).toBeVisible();
     const optimizer = page.getByTestId('shift-optimizer');
     await expect(optimizer).toBeVisible();
     await expect(
@@ -109,10 +119,13 @@ test.describe('smoke', () => {
     // Ranked total is a real number
     await expect(optimizer.getByText(/\$\d+\.\d{2}/).first()).toBeVisible();
 
-    // Wave E's weekly before/after and the EV scenario render from the same
-    // fixture — the household sees whether the shift showed up, and what a
-    // charge costs three ways, without leaving Insights.
+    // Wave E's weekly before/after renders from the same fixture — the
+    // household sees whether the shift showed up.
     await expect(page.getByTestId('shift-verification')).toBeVisible();
+
+    // Money & What-If: the EV scenario prices a charge three ways from that
+    // same fixture.
+    await page.getByRole('tab', { name: 'Money' }).click();
     const ev = page.getByTestId('ev-scenario');
     await expect(ev).toBeVisible();
     // If we found nothing overnight, the card must say so — never imply a car.
@@ -143,7 +156,9 @@ test.describe('smoke', () => {
 
     await page.getByTestId('merge-confirm').click();
     await expect(review).toBeHidden();
-    await expect(page.getByText('Monthly Overview')).toBeVisible();
+    // Lands on Overview with the decision already on screen.
+    await expect(page.getByTestId('best-choice-banner')).toBeVisible();
+    await expect(page.getByTestId('totals-strip')).toBeVisible();
     expect(
       await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
     ).toHaveLength(68);

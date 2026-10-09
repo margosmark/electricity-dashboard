@@ -1,0 +1,80 @@
+/**
+ * Wave R — the answer, at the top of Overview.
+ *
+ * This is the banner that used to sit at line ~301 of 316, below the plan
+ * cards, the true-bill card, the actual-bill panel and both Wave P tables —
+ * i.e. the thing the user opened the page for, buried under everything else.
+ * Same markup, same numbers, moved to the first element of the Overview tab
+ * (decision-first information architecture).
+ *
+ * It renders the WINDOW on screen, exactly as the old banner did: this is
+ * "which plan would the days I am looking at have cost least", not a
+ * whole-dataset claim. The chip in the toolbar repeats the same verdict so
+ * the answer is never more than one glance away, on any tab.
+ */
+
+'use client';
+
+import { buildVerdict, formatDelta, type PlanCosts } from '@/lib/verdict';
+import type { PlanId } from '@/hooks/useSelectedPlan';
+
+export type BestChoiceBannerProps = {
+  /** Per-plan cost of the visible window; null when the window is empty. */
+  comparison: PlanCosts | null;
+  /** The plan the household has selected — the one being judged. */
+  userPlan: PlanId;
+  /** Day span the comparison covers (used for the caption, never invented). */
+  days: number;
+};
+
+export default function BestChoiceBanner({ comparison, userPlan, days }: BestChoiceBannerProps) {
+  const verdict = buildVerdict(comparison, userPlan, days);
+  if (!verdict) return null;
+
+  return (
+    <section
+      data-testid="best-choice-banner"
+      data-best-plan={verdict.best}
+      data-current-plan={userPlan}
+      data-already-best={String(verdict.alreadyBest)}
+      data-window-days={verdict.days}
+      aria-labelledby="best-choice-heading"
+      className="bg-black text-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-yellow-400 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase"
+    >
+      <div className="space-y-2 md:space-y-4 text-center lg:text-left">
+        <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-yellow-400 font-black">
+          Winning Economic Plan
+        </div>
+        <h4 id="best-choice-heading" className="text-3xl md:text-5xl italic leading-tight">
+          THE BEST CHOICE IS <br />
+          <span className="text-4xl sm:text-6xl md:text-8xl text-yellow-400 not-italic block mt-1 md:mt-2 font-black">
+            {verdict.bestLabel}
+          </span>
+        </h4>
+        <p className="text-[9px] md:text-[11px] font-bold text-slate-400 normal-case">
+          Over the {verdict.days} day{verdict.days === 1 ? '' : 's'} on screen · commodity
+          (variable) charges only — no delivery, regulatory charges or HST.
+        </p>
+      </div>
+      <div className="bg-white text-black p-6 md:p-10 rounded-2xl md:rounded-[2.5rem] border-4 border-black shadow-xl lg:rotate-3 flex flex-col items-center min-w-[200px] md:min-w-[300px]">
+        <div className="text-[10px] tracking-widest text-slate-400 mb-1 md:mb-2 font-black text-center uppercase">
+          Plan Impact
+        </div>
+        <div className="text-4xl md:text-7xl italic text-black whitespace-nowrap leading-none text-center font-black">
+          {verdict.alreadyBest ? (
+            <span className="text-emerald-600 text-2xl md:text-5xl not-italic block">
+              Optimum
+              <br />
+              Choice!
+            </span>
+          ) : (
+            <span className="text-red-600">-{formatDelta(verdict.delta)}</span>
+          )}
+        </div>
+        <div className="text-[8px] md:text-[10px] mt-2 md:mt-4 font-black text-center text-black">
+          vs. your current {userPlan} plan
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,17 +1,24 @@
 /**
- * Wave G item 6 — the season band and the season-aware tier threshold.
+ * Wave G item 6 (Wave R split) — the season band and the season-aware tier
+ * threshold.
  *
  * The band's geometry lives in src/lib/season.test.ts (pure data, boundaries
  * pinned); this file checks it reaches the user: chips under the chart that
  * name the window(s), shading when the labels allow it, and the Tiered card
  * naming which seasonal threshold is in force.
+ *
+ * Wave R moved the plan cards (and with them the Tiered cut-off) out of
+ * ChartView onto Plans & Track Record, so the threshold assertions now render
+ * PlanCards directly. They still test the same contract: the number shown is
+ * the one in force for the WINDOW's dates, and it says what the other
+ * season's cut-off is.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import ChartView, { type ChartViewProps } from './ChartView';
+import PlanCards, { type PlanCardsProps } from './PlanCards';
 import { type ChartDataItem, type ProcessedPoint, type RateSet } from '@/lib/energy';
-import type { BillProjection } from '@/lib/billProjection';
 import type { ReactNode, ReactElement } from 'react';
 
 /**
@@ -32,8 +39,6 @@ vi.mock('recharts', async (importOriginal) => {
   return { ...actual, ResponsiveContainer };
 });
 
-vi.mock('@/components/BillProjectionBanner', () => ({ default: () => null }));
-vi.mock('@/components/TrueBillEstimate', () => ({ TrueBillEstimate: () => null }));
 vi.mock('@/components/ExportCsvButton', () => ({ ExportCsvButton: () => null }));
 
 const RATE: RateSet = {
@@ -66,14 +71,20 @@ function props(over: Partial<ChartViewProps>): ChartViewProps {
     handleBarClick: vi.fn(),
     selectionCost: 12.34,
     userPlan: 'TOU',
-    setUserPlan: vi.fn(),
-    comparison: { TOU: 10, Tiered: 11, ULO: 12 },
-    activeRateSet: RATE,
     filteredData: [],
     startDate: '2026-04-28',
+    ...over,
+  };
+}
+
+function cardProps(over: Partial<PlanCardsProps>): PlanCardsProps {
+  return {
+    comparison: { TOU: 10, Tiered: 11, ULO: 12 },
+    userPlan: 'TOU',
+    setUserPlan: vi.fn(),
+    activeRateSet: RATE,
+    startDate: '2026-04-28',
     endDate: '2026-05-03',
-    projection: {} as BillProjection,
-    wfh: null,
     ...over,
   };
 }
@@ -88,7 +99,6 @@ describe('season band chips', () => {
       activeChartData: [bar('2026-07-01'), bar('2026-07-02'), bar('2026-07-03')],
       filteredData: row(false),
       startDate: '2026-07-01',
-      endDate: '2026-07-03',
     })} />);
     const labels = chips();
     expect(labels).toHaveLength(1);
@@ -114,7 +124,6 @@ describe('season band chips', () => {
       activeChartData: [bar('2026-10-31'), bar('2026-11-01')],
       filteredData: row(true),
       startDate: '2026-10-31',
-      endDate: '2026-11-01',
     })} />);
     const labels = chips();
     expect(labels).toHaveLength(2);
@@ -140,9 +149,9 @@ describe('season band chips', () => {
 
 describe('season-aware tier threshold', () => {
   it('names the summer threshold when the window ends in summer', () => {
-    render(<ChartView {...props({
-      activeChartData: [bar('2026-04-30'), bar('2026-05-01')],
-      filteredData: row(false), // most recent reading is summer
+    render(<PlanCards {...cardProps({
+      startDate: '2026-04-28',
+      endDate: '2026-05-03',
     })} />);
     const t = screen.getByTestId('tier-threshold');
     expect(t).toHaveTextContent('Tier 1 cut-off');
@@ -153,9 +162,7 @@ describe('season-aware tier threshold', () => {
   });
 
   it('names the winter threshold when the window ends in winter', () => {
-    render(<ChartView {...props({
-      activeChartData: [bar('2026-01-15'), bar('2026-01-16')],
-      filteredData: row(true),
+    render(<PlanCards {...cardProps({
       startDate: '2026-01-15',
       endDate: '2026-01-16',
     })} />);
@@ -166,13 +173,22 @@ describe('season-aware tier threshold', () => {
     expect(t).not.toHaveTextContent(/spans both/);
   });
 
-  it('falls back to the season in view when there are no rows', () => {
-    render(<ChartView {...props({
-      activeChartData: [bar('2026-01-15')],
-      filteredData: [],
+  it('falls back to the window end when no rows are loaded', () => {
+    render(<PlanCards {...cardProps({
       startDate: '2026-01-15',
-      endDate: '2026-01-15',
+      endDate: '2026-01-16',
     })} />);
     expect(screen.getByTestId('tier-threshold')).toHaveTextContent('1,000 kWh/mo');
+  });
+
+  it('spans seasons by the WINDOW dates, not by whichever bars are drawn', () => {
+    render(<PlanCards {...cardProps({
+      startDate: '2025-12-01',
+      endDate: '2026-07-31',
+    })} />);
+    const t = screen.getByTestId('tier-threshold');
+    // Ends in July → summer cut-off in force; the window crossed Nov 1 too.
+    expect(t).toHaveTextContent('600 kWh/mo');
+    expect(t).toHaveTextContent(/window spans both seasons/);
   });
 });

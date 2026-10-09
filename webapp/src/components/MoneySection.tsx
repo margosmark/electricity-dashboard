@@ -12,9 +12,9 @@
  *   2. period → period deltas (PeriodDeltaTable);
  *   3. ¢/kWh by hour of day + the attribution waterfall for one period.
  *
- * This file is dynamically imported from InsightsView for the same reason
- * YearOverYearPanel is: it pulls the Recharts chunk, which on a first visit
- * has nothing to draw.
+ * This file is dynamically imported from the Money & What-If tab for the same
+ * reason YearOverYearPanel is: it pulls the Recharts chunk, which on a first
+ * visit has nothing to draw.
  */
 
 'use client';

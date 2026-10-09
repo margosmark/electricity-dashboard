@@ -82,7 +82,8 @@ test.describe('full journey', () => {
     expect((await tou.textContent()) || '').not.toBe(yearly);
 
     // --- 4. The answer: Shift Optimizer headline on real usage. ----------
-    await page.getByRole('button', { name: 'INSIGHTS' }).click();
+    // Wave R: the advice moved to Plans & Track Record with its evidence.
+    await page.getByRole('tab', { name: 'Plans' }).click();
     const optimizer = page.getByTestId('shift-optimizer');
     await expect(optimizer).toBeVisible();
 
@@ -97,6 +98,9 @@ test.describe('full journey', () => {
     await expect(page.getByTestId('confidence-badge').first()).toBeVisible();
 
     // --- 5. Take the evidence away: a real CSV file lands on disk. -------
+    // The window's CSV belongs to the chart, so it exports from Usage.
+    await page.getByRole('tab', { name: 'Usage' }).click();
+    await expect(page.getByTestId('chart-view')).toBeVisible();
     const downloadPromise = page.waitForEvent('download', { timeout: 30_000 });
     await page.getByTestId('export-csv').first().click();
     const download = await downloadPromise;
@@ -151,6 +155,8 @@ test.describe('full journey', () => {
     // would not be "the full experience".
     await expect(page.locator('input[type="date"]').first()).toHaveValue('2025-10-01');
     await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-09-30');
+    // Wave R: the chart lives on the Usage tab now.
+    await page.getByRole('tab', { name: 'Usage' }).click();
     // ...so the monthly chart has a year of tick labels, not one. Recharts
     // v3 parks tick labels in their own z-layer, so select on the group's
     // own class rather than assuming they sit under the axis <g>.
@@ -162,8 +168,8 @@ test.describe('full journey', () => {
       )
       .toBeGreaterThanOrEqual(6);
 
-    // The answer lives on the Insights tab.
-    await page.getByRole('button', { name: 'INSIGHTS' }).click();
+    // The answer lives on Plans & Track Record.
+    await page.getByRole('tab', { name: 'Plans' }).click();
     await expect(page.getByTestId('shift-headline')).toBeVisible();
 
     // ...and can be handed back to the user's own file.
@@ -272,8 +278,8 @@ test.describe('keyboard, print and crash', () => {
     await page.goto('/');
     await page.locator('input[type="file"]').setInputFiles(SAMPLE);
     await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
-    await page.getByRole('button', { name: 'INSIGHTS' }).click();
-    await expect(page.getByTestId('insights-view')).toBeVisible();
+    await page.getByRole('tab', { name: 'Plans' }).click();
+    await expect(page.getByTestId('tab-panel-plans')).toBeVisible();
 
     // Letter portrait at 96 dpi = 816 × 1056 px of content area.
     await page.setViewportSize({ width: 816, height: 1056 });
@@ -281,13 +287,13 @@ test.describe('keyboard, print and crash', () => {
 
     // Wave H item 6: chrome must not print...
     await expect(page.locator('[data-testid="plan-switcher"]')).toBeHidden();
+    await expect(page.getByTestId('tab-nav')).toBeHidden();
     await expect(page.getByTestId('export-csv').first()).toBeHidden();
-    await expect(page.getByRole('button', { name: 'INSIGHTS' })).toBeHidden();
     // ...the document must.
-    const insights = page.getByTestId('insights-view');
-    await expect(insights).toBeVisible();
+    const printedPanel = page.getByTestId('tab-panel-plans');
+    await expect(printedPanel).toBeVisible();
     await expect(page.getByTestId('shift-optimizer')).toBeVisible();
-    await expect(page.getByTestId('insights-view')).toBeVisible();
+    await expect(page.getByTestId('verdict-line')).toBeVisible();
 
     // No horizontal overflow on a Letter-width page.
     const overflow = await page.evaluate(
