@@ -7,6 +7,12 @@
  * panel that only exists when its tab is active. That is the same bar the
  * Wave H a11y checklist holds every control to, so tabs get no exemption.
  *
+ * `aria-controls` therefore goes on the SELECTED tab only: an aria-controls
+ * that names an id nothing renders is a dangling reference (axe
+ * `aria-valid-attr-value`, which is what Lighthouse flagged at 0.87). The
+ * inactive panels are not in the DOM at all, so only the one tab whose panel
+ * is actually rendered may point at it.
+ *
  * Layout: icons + short labels, `overflow-x-auto` so the four still fit as
  * one row at 390 px without shrinking the touch targets below 44 px.
  * `no-print` because a printed report is the active section, not the chrome
@@ -98,7 +104,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               type="button"
               role="tab"
               id={`tab-${tab.id}`}
-              aria-controls={`panel-${tab.id}`}
+              aria-controls={selected ? `panel-${tab.id}` : undefined}
               aria-selected={selected}
               data-testid={`tab-${tab.id}`}
               data-active={String(selected)}

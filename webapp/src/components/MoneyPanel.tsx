@@ -57,7 +57,7 @@ export default function MoneyPanel({
   openPeriod,
 }: MoneyPanelProps) {
   return (
-    <div className="space-y-6 md:space-y-10" data-testid="tab-panel-money">
+    <div id="panel-money" role="tabpanel" aria-labelledby="tab-money" className="space-y-6 md:space-y-10" data-testid="tab-panel-money">
       {/* Accrue-as-you-go: where the open period is heading, right now. */}
       <BillAccrualCurve
         rows={allData}

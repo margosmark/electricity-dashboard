@@ -68,7 +68,7 @@ export default function PlansPanel({
   allData,
 }: PlansPanelProps) {
   return (
-    <div className="space-y-6 md:space-y-10" data-testid="tab-panel-plans">
+    <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}
       <VerdictLine comparison={comparison} userPlan={userPlan} days={days} />
 
