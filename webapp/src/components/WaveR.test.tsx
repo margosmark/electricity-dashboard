@@ -504,6 +504,45 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.getByTestId('accrual-actual-line')).toBeInTheDocument();
   });
 
+  it('draws real geometry — finite coordinates, a rising line, a pace that ends high', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={OCTOBER}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        today={oct(10)}
+      />,
+    );
+
+    // A NaN anywhere in a path is a chart that renders as nothing, and no
+    // amount of text assertions would catch it.
+    const points = screen
+      .getByTestId('accrual-actual-line')
+      .getAttribute('points')!
+      .trim()
+      .split(/\s+/)
+      .flatMap((pair) => pair.split(',').map(Number));
+    expect(points.length).toBeGreaterThanOrEqual(4);
+    expect(points.every((n) => Number.isFinite(n))).toBe(true);
+
+    // The accrual only ever goes up (energy costs money)…
+    const ys = points.filter((_, i) => i % 2 === 1);
+    for (let i = 1; i < ys.length; i++) expect(ys[i]).toBeLessThanOrEqual(ys[i - 1]);
+
+    // …and the pace line runs from the origin to a HIGHER point at the end
+    // of the period than where it starts.
+    const pace = screen.getByTestId('accrual-pace-line');
+    const x1 = Number(pace.getAttribute('x1'));
+    const y1 = Number(pace.getAttribute('y1'));
+    const x2 = Number(pace.getAttribute('x2'));
+    const y2 = Number(pace.getAttribute('y2'));
+    expect([x1, y1, x2, y2].every(Number.isFinite)).toBe(true);
+    expect(x2).toBeGreaterThan(x1);
+    expect(y2).toBeLessThan(y1); // svg y grows downward
+  });
+
   it('flags a front-loaded period as running ahead of the line', () => {
     // Five heavy days, then five light ones: the accrual runs hot early and
     // the run-rate (which the pace line is built from) cools underneath it.
