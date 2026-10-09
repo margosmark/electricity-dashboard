@@ -12,7 +12,8 @@
 ## The numbers a reviewer should check
 
 From `wave-r-verification.json` — **72/72** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy `dcd702f`) with the committed Green
+(`http://10.10.11.110:3939`, deploy `08f3643`; re-run against the evidence
+commit itself, not just the feature commit) with the committed Green
 Button Alliance sample (sha256 `18e54b8b1ebdfa2f…`, printed by the script
 before it drives anything; pass `WAVE_R_XML` to run it against Mark's real
 export instead — that file is never committed):
