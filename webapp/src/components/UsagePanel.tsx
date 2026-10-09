@@ -50,7 +50,7 @@ export default function UsagePanel({
   ...chart
 }: UsagePanelProps) {
   return (
-    <div className="space-y-6 md:space-y-10" data-testid="tab-panel-usage">
+    <div id="panel-usage" role="tabpanel" aria-labelledby="tab-usage" className="space-y-6 md:space-y-10" data-testid="tab-panel-usage">
       {/* Are the rates this chart prices with still the current ones? */}
       <RateStalenessBanner result={staleness} />
 

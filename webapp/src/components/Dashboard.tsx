@@ -388,7 +388,7 @@ export default function Dashboard() {
              <p className="font-bold text-slate-600 text-sm md:text-lg mb-6 md:mb-10 text-black">Privacy-First: Data stays in your browser. <span className="underline decoration-blue-500">Upload your XML to begin.</span></p>
              <p className="text-[10px] md:text-xs font-black uppercase text-slate-500 mb-3">Pick one export, or hold Ctrl / ⌘ to pick 2+ and merge them.</p>
              <div className="relative">
-               <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+               <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label="Upload Green Button XML" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
              </div>
              {/* Wave K — the other way to get data in: authorise once and
@@ -505,7 +505,13 @@ export default function Dashboard() {
 
           <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
             <input type="date" aria-label="Window start date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
-            <span className="opacity-40 font-black text-[10px]">TO</span>
+            {/* The quiet separator between the two window dates. Explicit hex
+                instead of `text-black opacity-40`: 40% black on white is
+                #999999 = 2.84:1 at 10px (axe color-contrast — small text
+                needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still
+                reads as secondary; the hex is literal so the regression test
+                can measure the ratio instead of trusting a palette name. */}
+            <span data-testid="window-separator" className="text-[#475569] font-black text-[10px]">TO</span>
             <input type="date" aria-label="Window end date" value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
           </div>
 
@@ -532,7 +538,12 @@ export default function Dashboard() {
              <input type="number" min="1" max="31" aria-label="Billing day of month" title={billFeed.summaries.length > 0 ? "Your file states its own billing periods, so this is only the fallback for exports that don't" : "Which day of the month your utility bills you on"} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
           </div>
           <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
-              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} aria-label={`Select ${PLAN_LABEL[p]} plan`} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
+              {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
+                  accessible name. A label like "Select Time-of-Use plan" hides
+                  "TOU" from the name (axe label-content-name-mismatch — the
+                  name must contain what a sighted user reads), and the toggle
+                  role already carries the state via aria-pressed. */}
+              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
           </div>
           {floor && (
           <button type="button" onClick={() => setShowFloorHelp(true)} title="Always-on floor" aria-label="Always-on floor: what it is and how we measure yours" aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4 xl:gap-8">

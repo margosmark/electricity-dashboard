@@ -221,7 +221,10 @@ async function planPersistence(browser) {
     const chip = page.getByTestId('active-plan-chip');
     check('header shows the active plan before any interaction', /Plan:/i.test(flat(await chip.textContent())), flat(await chip.textContent()));
 
-    await page.getByTestId('plan-switcher').getByRole('button', { name: 'Select Ultra-Low Overnight plan' }).click();
+    // The switcher's buttons are named by their visible text now (the old
+    // "Select … plan" aria-label hid TOU/ULO from the accessible name —
+    // axe label-content-name-mismatch, t_d5cc9a2d).
+    await page.getByTestId('plan-switcher').getByRole('button', { name: 'ULO' }).click();
     await page.waitForFunction(() => localStorage.getItem('selected_plan') === 'ULO');
     check('plan choice written to localStorage', true, 'selected_plan=ULO');
     check('header chip follows the switcher', (await chip.getAttribute('data-plan')) === 'ULO', flat(await chip.textContent()));

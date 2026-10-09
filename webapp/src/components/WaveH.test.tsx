@@ -233,7 +233,7 @@ describe('Wave H 2 — persisted plan', () => {
     expect(chip).toHaveAttribute('data-plan', 'TOU');
     expect(chip).toHaveTextContent(/Plan: Time-of-Use/i);
 
-    await userEvent.click(within(screen.getByTestId('plan-switcher')).getByRole('button', { name: 'Select Ultra-Low Overnight plan' }));
+    await userEvent.click(within(screen.getByTestId('plan-switcher')).getByRole('button', { name: 'ULO' }));
 
     await waitFor(() => {
       expect(localStorage.getItem(PLAN_STORAGE_KEY)).toBe('ULO');
@@ -376,7 +376,9 @@ describe('Wave H 3 — semantics and labels', () => {
     expect(pressedScopes()).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
 
-    const tou = screen.getByRole('button', { name: 'Select Time-of-Use plan' });
+    // The switcher's accessible name IS the visible text (see Wave H 3b):
+    // "Select Time-of-Use plan" hid "TOU" from it.
+    const tou = screen.getByRole('button', { name: 'TOU' });
     expect(tou).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -393,7 +395,7 @@ describe('Wave H 3 — semantics and labels', () => {
     expect(document.activeElement).toBe(card);
     await userEvent.keyboard('{Enter}');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Select Tiered plan' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Tiered' })).toHaveAttribute('aria-pressed', 'true');
     });
     expect(card).toHaveAttribute('aria-pressed', 'true');
   });
@@ -410,6 +412,64 @@ describe('Wave H 3 — semantics and labels', () => {
     expect(css).toMatch(/\.print-compact/);
     // Reduced motion: the skeleton must not be a prerequisite for reading.
     expect(css).toMatch(/prefers-reduced-motion/);
+  });
+});
+
+/* ========================================================================== *
+ * 3b. The four Lighthouse a11y findings (t_d5cc9a2d)
+ * ========================================================================== */
+
+describe('Wave H 3b — Lighthouse accessibility findings', () => {
+  /** WCAG 2.x relative luminance, the same math the color-contrast audit runs. */
+  const luminance = (hex: string): number => {
+    const channel = (v: number): number => {
+      const s = v / 255;
+      return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  };
+
+  it('paints the "TO" window separator at ≥4.5:1 on white', async () => {
+    stubFetch();
+    await renderLoaded();
+
+    const separator = screen.getByTestId('window-separator');
+    expect(separator).toHaveTextContent('TO');
+    // opacity-40 black on white is #999999 = 2.84:1 — the colour has to carry
+    // the ratio itself, not an opacity fraction of black.
+    expect(separator.className).not.toMatch(/opacity-/);
+    const hex = separator.className.match(/text-\[(#[0-9a-fA-F]{6})\]/)?.[1];
+    expect(hex, 'the separator names its colour so the ratio is measurable').toBeTruthy();
+    const ratio = 1.05 / (luminance(hex as string) + 0.05);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('gives the plan-switcher buttons the accessible name they visibly show', async () => {
+    stubFetch();
+    await renderLoaded();
+
+    const switcher = screen.getByTestId('plan-switcher');
+    for (const visible of ['Tiered', 'TOU', 'ULO']) {
+      const button = within(switcher).getByRole('button', { name: visible });
+      // "Select Time-of-Use plan" did not contain the visible "TOU" (axe
+      // label-content-name-mismatch). aria-pressed still carries the state.
+      expect(button).toHaveTextContent(visible);
+      expect(button).not.toHaveAttribute('aria-label');
+    }
+  });
+
+  it('labels the file input in the upload modal', async () => {
+    stubFetch();
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    const input = screen.getByLabelText('Upload Green Button XML');
+    expect(input).toHaveAttribute('type', 'file');
+    // …and it is the one inside the modal, not some other input on the page.
+    expect(input.closest('[data-testid="upload-modal"]')).not.toBeNull();
   });
 });
 

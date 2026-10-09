@@ -70,7 +70,7 @@ export default function OverviewPanel({
   const freshness = totals ? dataFreshness(totals.lastDate, new Date()) : null;
 
   return (
-    <div className="space-y-6 md:space-y-10" data-testid="tab-panel-overview">
+    <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="space-y-6 md:space-y-10" data-testid="tab-panel-overview">
       {/* 1. THE ANSWER. First element, nothing above it but the tab strip. */}
       <BestChoiceBanner comparison={comparison} userPlan={userPlan} days={days} />
 

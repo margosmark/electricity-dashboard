@@ -91,12 +91,44 @@ describe('Wave R 1 — the tab strip', () => {
 
     const tabs = within(list).getAllByRole('tab');
     expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-usage', 'tab-plans', 'tab-money']);
+    // Only the SELECTED tab carries aria-controls: the other three panels are
+    // not in the DOM, and an aria-controls naming an id nothing renders is the
+    // dangling reference axe dings as aria-valid-attr-value (t_d5cc9a2d —
+    // Lighthouse a11y 0.87). Every reference that IS present must resolve.
+    const selectedTabs = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
+    expect(selectedTabs).toHaveLength(1);
     for (const tab of tabs) {
-      expect(tab).toHaveAttribute('aria-controls', `panel-${tab.id.replace('tab-', '')}`);
+      const controls = tab.getAttribute('aria-controls');
+      if (tab === selectedTabs[0]) {
+        // Only the selected tab may name a panel. Whether that id actually
+        // resolves to a rendered tabpanel is asserted against the whole
+        // Dashboard in the next test — TabNav on its own renders no panel.
+        expect(controls).toBe(`panel-${tab.id.replace('tab-', '')}`);
+      } else {
+        expect(controls).toBeNull();
+      }
       expect(tab).toHaveAttribute('type', 'button');
       // Every tab is a real, reachable control with a 44 px touch target.
       expect(tab.className).toContain('min-h-11');
     }
+  });
+
+  it('renders the selected tab\'s panel as a labelled tabpanel the tab actually points at', async () => {
+    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    stubFetch();
+    await renderLoaded();
+
+    const tab = screen.getByRole('tab', { name: 'Overview' });
+    const panelId = tab.getAttribute('aria-controls') as string;
+    // The id the tab names must be a real element in the document — this is
+    // the assertion that failed before the fix (aria-controls="panel-overview"
+    // pointed at nothing: the panel had only a data-testid).
+    const panel = document.getElementById(panelId);
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveAttribute('role', 'tabpanel');
+    // …and the panel points back at the tab that opened it.
+    expect(panel).toHaveAttribute('aria-labelledby', tab.id);
+    expect(document.getElementById(panel?.getAttribute('aria-labelledby') as string)).toBe(tab);
   });
 
   it('uses roving tabindex: one stop for the whole strip', () => {

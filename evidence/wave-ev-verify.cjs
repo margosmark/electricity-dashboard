@@ -301,7 +301,8 @@ async function verifySynthetic(browser) {
   facts.shots = [await shot(page, 'winter-7pm-desktop')];
 
   // 6. The plan switcher really drives the stay side (Dashboard → card).
-  await page.locator('[data-testid="plan-switcher"] button[aria-label*="Ultra-Low"]').click();
+  // Named by visible text since t_d5cc9a2d (no aria-label on the switcher).
+  await page.getByTestId('plan-switcher').getByRole('button', { name: 'ULO' }).click();
   const uloStay = flat(await page.getByTestId('ev-stay-side').textContent());
   facts.rendered.stayOnUlo = uloStay;
   check(
