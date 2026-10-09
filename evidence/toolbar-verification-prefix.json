@@ -1,0 +1,349 @@
+{
+  "wave": "toolbar",
+  "base": "http://10.10.11.110:3939/",
+  "fixture": "green-button-alliance-sample.xml",
+  "at": "2026-10-09T03:16:57.930Z",
+  "total": 24,
+  "passed": 14,
+  "failed": 10,
+  "checks": [
+    {
+      "name": "1440px: toolbar present",
+      "ok": true,
+      "detail": "1280x289 at y=296"
+    },
+    {
+      "name": "1440px: largest dead band ≤ 45000px²",
+      "ok": false,
+      "detail": "640x176 = 112640px² at (104,388)"
+    },
+    {
+      "name": "1440px: every toolbar row fills ≥72% of the card",
+      "ok": false,
+      "detail": "row1 1035/1232 (84%) · row2 585/1232 (48%)"
+    },
+    {
+      "name": "1440px: ≥55% of the card's face is painted controls",
+      "ok": false,
+      "detail": "40%"
+    },
+    {
+      "name": "1440px: no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "1440px: the toolbar itself does not scroll sideways",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "1366px: toolbar present",
+      "ok": true,
+      "detail": "1280x289 at y=296"
+    },
+    {
+      "name": "1366px: largest dead band ≤ 45000px²",
+      "ok": false,
+      "detail": "640x176 = 112640px² at (67,388)"
+    },
+    {
+      "name": "1366px: every toolbar row fills ≥72% of the card",
+      "ok": false,
+      "detail": "row1 1035/1232 (84%) · row2 585/1232 (48%)"
+    },
+    {
+      "name": "1366px: ≥55% of the card's face is painted controls",
+      "ok": false,
+      "detail": "40%"
+    },
+    {
+      "name": "1366px: no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "1366px: the toolbar itself does not scroll sideways",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "1024px: toolbar present",
+      "ok": true,
+      "detail": "960x352 at y=296"
+    },
+    {
+      "name": "1024px: largest dead band ≤ 45000px²",
+      "ok": false,
+      "detail": "660x84 = 55440px² at (308,384)"
+    },
+    {
+      "name": "1024px: every toolbar row fills ≥72% of the card",
+      "ok": false,
+      "detail": "row1 904/912 (99%) · row2 585/912 (64%)"
+    },
+    {
+      "name": "1024px: ≥55% of the card's face is painted controls",
+      "ok": false,
+      "detail": "43%"
+    },
+    {
+      "name": "1024px: no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "1024px: the toolbar itself does not scroll sideways",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "390px: toolbar present",
+      "ok": true,
+      "detail": "358x426 at y=219"
+    },
+    {
+      "name": "390px: largest dead band ≤ 14000px²",
+      "ok": false,
+      "detail": "148x112 = 16576px² at (212,235)"
+    },
+    {
+      "name": "390px: every toolbar row fills ≥72% of the card",
+      "ok": true,
+      "detail": "row1 318/326 (98%) · row2 318/326 (98%)"
+    },
+    {
+      "name": "390px: ≥45% of the card's face is painted controls",
+      "ok": true,
+      "detail": "73%"
+    },
+    {
+      "name": "390px: no horizontal page overflow",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "390px: the toolbar itself does not scroll sideways",
+      "ok": true,
+      "detail": "0px"
+    }
+  ],
+  "layouts": {
+    "390": {
+      "card": {
+        "x": 16,
+        "y": 219,
+        "w": 358,
+        "h": 426
+      },
+      "inner": {
+        "x": 32,
+        "y": 235,
+        "w": 326,
+        "h": 394
+      },
+      "rows": [
+        {
+          "y": 239,
+          "h": 214,
+          "x": 36,
+          "w": 318,
+          "fill": 0.9754601226993865,
+          "kids": [
+            {
+              "t": "BEST: TIERED -$6/MO TO BILLING PERIOD MONTH YTD",
+              "x": 36,
+              "w": 318
+            }
+          ]
+        },
+        {
+          "y": 469,
+          "h": 156,
+          "x": 36,
+          "w": 318,
+          "fill": 0.9754601226993865,
+          "kids": [
+            {
+              "t": "Tiered TOU ULO ALWAYS-ON FLOOR $271/yr 6.6 KWH/D",
+              "x": 36,
+              "w": 318
+            }
+          ]
+        }
+      ],
+      "void": {
+        "area": 16576,
+        "w": 148,
+        "h": 112,
+        "x": 212,
+        "y": 235
+      },
+      "coverage": 0.7286277408228627,
+      "toolbarScroll": 0,
+      "pageOverflow": 0
+    },
+    "1024": {
+      "card": {
+        "x": 32,
+        "y": 296,
+        "w": 960,
+        "h": 352
+      },
+      "inner": {
+        "x": 56,
+        "y": 320,
+        "w": 912,
+        "h": 304
+      },
+      "rows": [
+        {
+          "y": 324,
+          "h": 121,
+          "x": 60,
+          "w": 904,
+          "fill": 0.9912280701754386,
+          "kids": [
+            {
+              "t": "BEST: TIERED -$6/MO TO BILLING PERIOD MONTH YTD",
+              "x": 60,
+              "w": 904
+            }
+          ]
+        },
+        {
+          "y": 469,
+          "h": 151,
+          "x": 379,
+          "w": 585,
+          "fill": 0.6417900219298246,
+          "kids": [
+            {
+              "t": "Tiered TOU ULO ALWAYS-ON FLOOR $271/yr 6.6 KWH/D",
+              "x": 379,
+              "w": 585
+            }
+          ]
+        }
+      ],
+      "void": {
+        "area": 55440,
+        "w": 660,
+        "h": 84,
+        "x": 308,
+        "y": 384
+      },
+      "coverage": 0.42561172668513386,
+      "toolbarScroll": 0,
+      "pageOverflow": 0
+    },
+    "1366": {
+      "card": {
+        "x": 43,
+        "y": 296,
+        "w": 1280,
+        "h": 289
+      },
+      "inner": {
+        "x": 67,
+        "y": 320,
+        "w": 1232,
+        "h": 241
+      },
+      "rows": [
+        {
+          "y": 324,
+          "h": 58,
+          "x": 71,
+          "w": 1035,
+          "fill": 0.8399959415584416,
+          "kids": [
+            {
+              "t": "BEST: TIERED -$6/MO TO BILLING PERIOD MONTH YTD",
+              "x": 71,
+              "w": 1035
+            }
+          ]
+        },
+        {
+          "y": 406,
+          "h": 151,
+          "x": 710,
+          "w": 585,
+          "fill": 0.47509131493506496,
+          "kids": [
+            {
+              "t": "Tiered TOU ULO ALWAYS-ON FLOOR $271/yr 6.6 KWH/D",
+              "x": 710,
+              "w": 585
+            }
+          ]
+        }
+      ],
+      "void": {
+        "area": 112640,
+        "w": 640,
+        "h": 176,
+        "x": 67,
+        "y": 388
+      },
+      "coverage": 0.39525228869491164,
+      "toolbarScroll": 0,
+      "pageOverflow": 0
+    },
+    "1440": {
+      "card": {
+        "x": 80,
+        "y": 296,
+        "w": 1280,
+        "h": 289
+      },
+      "inner": {
+        "x": 104,
+        "y": 320,
+        "w": 1232,
+        "h": 241
+      },
+      "rows": [
+        {
+          "y": 324,
+          "h": 58,
+          "x": 108,
+          "w": 1035,
+          "fill": 0.8399959415584416,
+          "kids": [
+            {
+              "t": "BEST: TIERED -$6/MO TO BILLING PERIOD MONTH YTD",
+              "x": 108,
+              "w": 1035
+            }
+          ]
+        },
+        {
+          "y": 406,
+          "h": 151,
+          "x": 747,
+          "w": 585,
+          "fill": 0.47509131493506496,
+          "kids": [
+            {
+              "t": "Tiered TOU ULO ALWAYS-ON FLOOR $271/yr 6.6 KWH/D",
+              "x": 747,
+              "w": 585
+            }
+          ]
+        }
+      ],
+      "void": {
+        "area": 112640,
+        "w": 640,
+        "h": 176,
+        "x": 104,
+        "y": 388
+      },
+      "coverage": 0.39525228869491164,
+      "toolbarScroll": 0,
+      "pageOverflow": 0
+    }
+  }
+}
