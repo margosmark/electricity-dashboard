@@ -1,0 +1,145 @@
+{
+  "task": "t_d5cc9a2d \u2014 Lighthouse accessibility 0.87 \u2192 1.0 (four pre-existing a11y audits)",
+  "commit": "3cc2932",
+  "how_measured": "CHROME_PATH=/usr/bin/chromium npx lhci autorun --config=<desktop|lighthouserc.mobile.json> in webapp/; pre-fix = same worktree with the six component files reverted to d9e9f2b and re-built on :3101; post-fix = the deployed container at http://10.10.11.110:3939/",
+  "pre_fix_local_desktop": {
+    "source_report": "127_0_0_1--2026_10_09_23_08_57.report.json",
+    "url": "http://127.0.0.1:3101/#tab=overview",
+    "fetched_at": "2026-10-09T23:08:57.782Z",
+    "lighthouse_version": "12.6.1",
+    "categories": {
+      "performance": 1,
+      "accessibility": 0.87,
+      "best-practices": 1,
+      "seo": 1
+    },
+    "audits": {
+      "aria-valid-attr-value": {
+        "score": 0,
+        "failing_nodes": 1
+      },
+      "color-contrast": {
+        "score": 0,
+        "failing_nodes": 1
+      },
+      "label-content-name-mismatch": {
+        "score": 0,
+        "failing_nodes": 2
+      },
+      "label": {
+        "score": 0,
+        "failing_nodes": 1
+      }
+    },
+    "metrics": {
+      "cumulative-layout-shift": 0,
+      "largest-contentful-paint": 730.3,
+      "total-blocking-time": 0
+    }
+  },
+  "pre_fix_local_mobile": {
+    "source_report": "127_0_0_1--2026_10_09_23_09_14.report.json",
+    "url": "http://127.0.0.1:3101/#tab=overview",
+    "fetched_at": "2026-10-09T23:09:14.381Z",
+    "lighthouse_version": "12.6.1",
+    "categories": {
+      "performance": 0.91,
+      "accessibility": 0.87,
+      "best-practices": 0.96,
+      "seo": 1
+    },
+    "audits": {
+      "aria-valid-attr-value": {
+        "score": 0,
+        "failing_nodes": 1
+      },
+      "color-contrast": {
+        "score": 0,
+        "failing_nodes": 1
+      },
+      "label-content-name-mismatch": {
+        "score": 0,
+        "failing_nodes": 2
+      },
+      "label": {
+        "score": 0,
+        "failing_nodes": 1
+      }
+    },
+    "metrics": {
+      "cumulative-layout-shift": 0,
+      "largest-contentful-paint": 3073.2,
+      "total-blocking-time": 198
+    }
+  },
+  "post_fix_deployed_desktop": {
+    "source_report": "10_10_11_110--2026_10_09_23_02_41.report.json",
+    "url": "http://10.10.11.110:3939/#tab=overview",
+    "fetched_at": "2026-10-09T23:02:41.672Z",
+    "lighthouse_version": "12.6.1",
+    "categories": {
+      "performance": 1,
+      "accessibility": 1,
+      "best-practices": 0.75,
+      "seo": 1
+    },
+    "audits": {
+      "aria-valid-attr-value": {
+        "score": 1,
+        "failing_nodes": 0
+      },
+      "color-contrast": {
+        "score": 1,
+        "failing_nodes": 0
+      },
+      "label-content-name-mismatch": {
+        "score": null,
+        "failing_nodes": 0
+      },
+      "label": {
+        "score": 1,
+        "failing_nodes": 0
+      }
+    },
+    "metrics": {
+      "cumulative-layout-shift": 0,
+      "largest-contentful-paint": 722.4,
+      "total-blocking-time": 0
+    }
+  },
+  "post_fix_deployed_mobile": {
+    "source_report": "10_10_11_110--2026_10_09_23_03_04.report.json",
+    "url": "http://10.10.11.110:3939/#tab=overview",
+    "fetched_at": "2026-10-09T23:03:04.541Z",
+    "lighthouse_version": "12.6.1",
+    "categories": {
+      "performance": 0.91,
+      "accessibility": 1,
+      "best-practices": 0.72,
+      "seo": 1
+    },
+    "audits": {
+      "aria-valid-attr-value": {
+        "score": 1,
+        "failing_nodes": 0
+      },
+      "color-contrast": {
+        "score": 1,
+        "failing_nodes": 0
+      },
+      "label-content-name-mismatch": {
+        "score": null,
+        "failing_nodes": 0
+      },
+      "label": {
+        "score": 1,
+        "failing_nodes": 0
+      }
+    },
+    "metrics": {
+      "cumulative-layout-shift": 0,
+      "largest-contentful-paint": 3042.1,
+      "total-blocking-time": 197
+    }
+  }
+}
