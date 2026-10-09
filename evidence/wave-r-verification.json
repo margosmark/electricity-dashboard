@@ -1,0 +1,372 @@
+{
+  "wave": "R",
+  "base": "http://10.10.11.110:3939/",
+  "fixture": "green-button-alliance-sample.xml",
+  "fixtureSha256": "18e54b8b1ebdfa2f249a97ee602362ca95ba8dd0d030cba236c39e945259c7fb",
+  "at": "2026-10-09T02:38:41.447Z",
+  "total": 72,
+  "passed": 72,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "4 tabs, ARIA tablist",
+      "ok": true,
+      "detail": "4 tabs"
+    },
+    {
+      "name": "tabs are Overview / Usage / Plans / Money",
+      "ok": true,
+      "detail": "overview | usage | plans | money"
+    },
+    {
+      "name": "exactly one tab selected",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "Overview is the default tab",
+      "ok": true,
+      "detail": "OVERVIEW"
+    },
+    {
+      "name": "roving tabindex: active tab is the only tab stop",
+      "ok": true,
+      "detail": "tabindex 0 / -1"
+    },
+    {
+      "name": "best-choice banner is the FIRST element of Overview",
+      "ok": true,
+      "detail": "best-choice-banner"
+    },
+    {
+      "name": "banner states a real plan",
+      "ok": true,
+      "detail": "Tiered"
+    },
+    {
+      "name": "best-choice chip is in the toolbar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chip agrees with the banner",
+      "ok": true,
+      "detail": "Tiered vs Tiered"
+    },
+    {
+      "name": "chip quotes a monthly delta",
+      "ok": true,
+      "detail": "best: tiered -$6/mo"
+    },
+    {
+      "name": "click switches to Usage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hash follows the click",
+      "ok": true,
+      "detail": "tab=usage"
+    },
+    {
+      "name": "ArrowRight selects Plans",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "focus moved with the arrow",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "End selects Money",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Home selects Overview",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chip jumps to the banner from Usage",
+      "ok": true,
+      "detail": "jumped"
+    },
+    {
+      "name": "chip jumps to the banner from Plans",
+      "ok": true,
+      "detail": "jumped"
+    },
+    {
+      "name": "chip jumps to the banner from Money",
+      "ok": true,
+      "detail": "jumped"
+    },
+    {
+      "name": "deep link #tab=money opens Money",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "browser Back returns to the previous tab",
+      "ok": true,
+      "detail": "aria-selected=true"
+    },
+    {
+      "name": "Usage shows the chart",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Usage shows the rate-season bands",
+      "ok": true,
+      "detail": "1 chips"
+    },
+    {
+      "name": "Usage shows the anomaly section",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dual heatmap: weekday grid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dual heatmap: weekend grid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "weekday grid is 5 days + header (6 rows)",
+      "ok": true,
+      "detail": "6 rows"
+    },
+    {
+      "name": "weekend grid is 2 days + header (3 rows)",
+      "ok": true,
+      "detail": "3 rows"
+    },
+    {
+      "name": "Usage shows year-over-year",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rate staleness (when shown) lives on Usage",
+      "ok": true,
+      "detail": "banner not rendered — no newer OEB set"
+    },
+    {
+      "name": "Plans restates the verdict as one line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "verdict line carries the banner plan",
+      "ok": true,
+      "detail": "Tiered vs Tiered"
+    },
+    {
+      "name": "three plan cards render",
+      "ok": true,
+      "detail": "3 cards"
+    },
+    {
+      "name": "shift advice panel renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "shift verification renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plan-switch timeline renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "timeline draws one segment per billing period",
+      "ok": true,
+      "detail": "1 segments"
+    },
+    {
+      "name": "timeline segments carry a detected plan",
+      "ok": true,
+      "detail": "1 segments drawn"
+    },
+    {
+      "name": "Wave P timeline editor renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Wave P switch track record renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "actual-bill panel renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "bill accrual curve renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "accrual curve draws its chart (or says why it cannot)",
+      "ok": true,
+      "detail": "chart=0 empty=1"
+    },
+    {
+      "name": "Wave O money section renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Wave O stacked composition renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Wave O period deltas render",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Wave O hour histogram renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Wave O waterfall renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "true-bill estimate renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EV scenario renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "toolbar exists and holds the global actions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "file/GB status is NOT in the toolbar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "file/GB status lives on Overview",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rate staleness is NOT in the toolbar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "alerts bell (when a feed is connected) stays in the toolbar",
+      "ok": true,
+      "detail": "no connected feed — toggle not rendered"
+    },
+    {
+      "name": "no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: all four tabs fit",
+      "ok": true,
+      "detail": "4 tabs"
+    },
+    {
+      "name": "mobile: Overview is the default",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: banner is the first element of Overview",
+      "ok": true,
+      "detail": "best-choice-banner"
+    },
+    {
+      "name": "mobile: the chip is reachable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: no horizontal overflow on Overview",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: Usage panel opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: no horizontal overflow on Usage",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: Plans panel opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: no horizontal overflow on Plans",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: Money panel opens",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: no horizontal overflow on Money",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: Overview tab is a touch target ≥44px wide",
+      "ok": true,
+      "detail": "87×44"
+    },
+    {
+      "name": "mobile: Usage tab is a touch target ≥44px wide",
+      "ok": true,
+      "detail": "87×44"
+    },
+    {
+      "name": "mobile: Plans tab is a touch target ≥44px wide",
+      "ok": true,
+      "detail": "87×44"
+    },
+    {
+      "name": "mobile: Money tab is a touch target ≥44px wide",
+      "ok": true,
+      "detail": "87×44"
+    },
+    {
+      "name": "mobile: the weekday grid scrolls inside its own card",
+      "ok": true,
+      "detail": "{\"scrollable\":true,\"pageOverflow\":0}"
+    }
+  ]
+}
