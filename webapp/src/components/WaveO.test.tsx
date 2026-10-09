@@ -258,17 +258,18 @@ describe('attribution waterfall', () => {
   });
 });
 
-describe('wiring into Insights', () => {
-  it('renders the honest empty state on the Insights tab when no bill is loaded', async () => {
+describe('wiring into the Money & What-If tab', () => {
+  it('renders the honest empty state when no bill is loaded', async () => {
+    const user = userEvent.setup();
     render(<Dashboard />);
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    screen.getByText('INSIGHTS').click();
-    const insights = await screen.findByTestId('insights-view');
-    const moneySection = await within(insights).findByTestId('money-section');
+    await user.click(screen.getByRole('tab', { name: 'Money' }));
+    const panel = await screen.findByTestId('tab-panel-money');
+    const moneySection = await within(panel).findByTestId('money-section');
     expect(moneySection).toHaveTextContent(/Upload a Green Button export with billing periods/i);
     // Nothing is drawn before a bill exists.
-    expect(within(insights).queryByTestId('money-stacked')).not.toBeInTheDocument();
+    expect(within(panel).queryByTestId('money-stacked')).not.toBeInTheDocument();
   });
 });

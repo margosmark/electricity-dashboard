@@ -1,15 +1,18 @@
 /**
  * Ontario Energy Optimizer - Interaction Fix Edition
  *
- * Flow: Monthly ➔ Weekly ➔ Daily ➔ Hourly
- * State and handlers live in src/hooks/useDashboard.ts; the tab bodies live in
- * ChartView.tsx / InsightsView.tsx; this file renders the shell around them.
+ * Flow: Overview ➔ Usage ➔ Plans & Track Record ➔ Money & What-If.
+ *
+ * Wave R — this file is the SHELL: state and handlers live in
+ * src/hooks/useDashboard.ts, the tab strip in TabNav, and the content of each
+ * section in OverviewPanel / UsagePanel / PlansPanel / MoneyPanel. What used
+ * to be one 316-line scroll with the answer at the bottom is now four tabs
+ * that open on the answer.
  */
 
 "use client";
 
 import React, { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
-import { format } from 'date-fns';
 import { HelpCircle, Zap, Upload, X, Trash2, Settings2 } from 'lucide-react';
 import {
   type ChartDataItem,
@@ -26,15 +29,18 @@ import { UsagePointPicker } from '@/components/UsagePointPicker';
 import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
 import MultiFileMerge from '@/components/MultiFileMerge';
-import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import { NotificationToggle } from '@/components/NotificationToggle';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
-import ChartView from '@/components/ChartView';
-import InsightsView from '@/components/InsightsView';
+import TabNav from '@/components/TabNav';
+import BestChoiceChip from '@/components/BestChoiceChip';
+import OverviewPanel from '@/components/OverviewPanel';
+import UsagePanel from '@/components/UsagePanel';
+import PlansPanel from '@/components/PlansPanel';
+import MoneyPanel from '@/components/MoneyPanel';
+import { useTabs } from '@/hooks/useTabs';
 import { useSelectedPlan, PLAN_LABEL } from '@/hooks/useSelectedPlan';
-import { dataFreshness } from '@/lib/freshness';
 import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
 import { projectMonthBill } from '@/lib/billProjection';
@@ -66,7 +72,8 @@ export default function Dashboard() {
   // Wave H item 2: the plan is a stored fact shared with the header chip,
   // not component state that forgets itself on reload.
   const [userPlan, setUserPlan] = useSelectedPlan();
-  const [viewMode, setViewMode] = React.useState<'Chart' | 'Insights'>('Chart');
+  // Wave R: four tabs, remembered in localStorage and addressable at #tab=.
+  const { tab, select: setActiveTab } = useTabs();
   // Wave H item 7: $/yr vs $/day reframing of the totals strip.
   const [costMode, setCostMode] = React.useState<'yr' | 'day'>('yr');
 
@@ -232,6 +239,17 @@ export default function Dashboard() {
     return activeChartData.reduce((acc, curr) => acc + (curr[costKey] as number), 0);
   }, [activeChartData, userPlan]);
 
+  // --- Verdict inputs (Wave R) ------------------------------------------
+  // The window the comparison was measured over, in days. The banner and the
+  // toolbar chip both quote it, so "$45/mo" can always say what it was scaled
+  // from.
+  const windowDays = useMemo(() => {
+    if (filteredData.length === 0) return 0;
+    const first = filteredData[0];
+    const last = filteredData[filteredData.length - 1];
+    return Math.max(1, Math.round((last.timestamp - first.timestamp) / 86_400) + 1);
+  }, [filteredData]);
+
   // --- Totals-strip display state (Wave H items 5 + 7) --------------------
   // The strip reports the WHOLE dataset, so its unit conversions are anchored
   // on the dataset's own span — never on the visible window.
@@ -246,17 +264,8 @@ export default function Dashboard() {
       )
     : 1;
 
-  /** Whole-dataset total, shown as the chosen unit (annualized or daily). */
-  const money = (datasetTotal: number): string => {
-    const perDay = datasetTotal / totalDays;
-    return (costMode === 'yr' ? perDay * 365.25 : perDay).toFixed(2);
-  };
-
   const perDayOf = (datasetTotal: number): number => datasetTotal / totalDays;
   const perYearOf = (datasetTotal: number): number => perDayOf(datasetTotal) * 365.25;
-
-  // Why the chart's right edge may look empty (Wave H item 5).
-  const freshness = totals ? dataFreshness(totals.lastDate, new Date()) : null;
 
   // The one sentence the toggle exists for: "$3.42/day is $1,249/yr".
   const bestCostTotal = totals
@@ -273,6 +282,9 @@ export default function Dashboard() {
       ? `$${bestYearly.toFixed(0)}/yr for ${PLAN_LABEL[totals.bestPlan]} is $${bestDaily.toFixed(2)}/day`
       : `$${bestDaily.toFixed(2)}/day for ${PLAN_LABEL[totals.bestPlan]} is $${bestYearly.toFixed(0)}/yr`
     : '';
+
+  // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
+  const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
 
   /**
    * Wave I item 5 — the load shell.
@@ -325,10 +337,10 @@ export default function Dashboard() {
     );
 
   return (
-    <div key="ready" className="space-y-10 text-black relative font-black uppercase">
-      {/* Persistent OEB rate-staleness alert: rendered in both views until
-          /api/rates ships the newer effectiveDate. */}
-      <RateStalenessBanner result={staleness} />
+    <div key="ready" className="space-y-6 md:space-y-10 text-black relative font-black uppercase">
+      {/* Wave R — the four sections, sticky under the header. Decision-first:
+          Overview is the default, so the answer is the first thing rendered. */}
+      <TabNav active={tab} onChange={setActiveTab} />
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
@@ -462,7 +474,10 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Nav Controls — controls never print; the document below them does. */}
+      {/* Nav Controls — controls never print; the document below them does.
+          Wave R declutter: rate staleness moved to Usage, file/GB status to
+          Overview, and the CHART/INSIGHTS toggle is now the tab strip above.
+          What stays global is what is global: alerts, the verdict, the plan. */}
       <div className="no-print relative z-[200] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black">
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" aria-label="Upload XML" className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
@@ -471,158 +486,126 @@ export default function Dashboard() {
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
           <NotificationToggle connected={gbConnected} backgroundSync={backgroundSync} />
-           <GreenButtonSync
-             variant="chip"
-             status={gbStatus}
-             syncing={gbSyncing}
-             message={gbMessage}
-             onConnect={startGreenButtonConnect}
-             onSync={() => { void syncFromGreenButton(); }}
-             onDisconnect={() => { void disconnectGreenButton(); }}
-             onDismissMessage={() => setGbMessage(null)}
-           />
+          {/* Wave R — the answer, on every tab. Click jumps to the banner. */}
+          <BestChoiceChip
+            comparison={comparison}
+            userPlan={userPlan}
+            days={windowDays}
+            active={tab === 'overview'}
+            onJump={() => setActiveTab('overview')}
+          />
 
-           <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
-             <input type="date" aria-label="Window start date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
-             <span className="opacity-40 font-black text-[10px]">TO</span>
-             <input type="date" aria-label="Window end date" value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
-           </div>
+          <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
+            <input type="date" aria-label="Window start date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
+            <span className="opacity-40 font-black text-[10px]">TO</span>
+            <input type="date" aria-label="Window end date" value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
+          </div>
 
-           <div className="flex gap-1">
-             <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
+          <div className="flex gap-1">
+            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
 
-             <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
+            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
 
-             <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
-           </div>
-        </div>
-
-        <div className="flex bg-black p-1 rounded-xl gap-1 lg:ml-auto">
-          <button type="button" aria-pressed={viewMode === 'Chart'} onClick={() => setViewMode('Chart')} className={`inline-flex min-h-11 items-center px-4 md:px-6 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${viewMode === 'Chart' ? 'bg-white text-black' : 'text-slate-400'}`}>CHART</button>
-          <button type="button" aria-pressed={viewMode === 'Insights'} onClick={() => setViewMode('Insights')} className={`inline-flex min-h-11 items-center px-4 md:px-6 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${viewMode === 'Insights' ? 'bg-yellow-400 text-black' : 'text-slate-400'}`}>INSIGHTS</button>
+            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 md:gap-4 lg:ml-auto">
-           <div className="bg-slate-100 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex items-center gap-2 md:gap-3">
-              <Settings2 size={16} className="text-slate-500" />
-              <input type="number" min="1" max="31" aria-label="Billing day of month" title={billFeed.summaries.length > 0 ? "Your file states its own billing periods, so this is only the fallback for exports that don't" : "Which day of the month your utility bills you on"} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
-           </div>
-           <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
-               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} aria-label={`Select ${PLAN_LABEL[p]} plan`} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
-           </div>
-           {floor && (
-           <button type="button" onClick={() => setShowFloorHelp(true)} title="Always-on floor" aria-label="Always-on floor: what it is and how we measure yours" aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:flex-none p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group">
-             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">Always-on floor <HelpCircle size={8} className="opacity-50 md:size-10 group-hover:opacity-100" /></div>
-             <div className="text-xl md:text-4xl italic">${floor.annualCost.toFixed(0)}/yr</div>
-             <div className="text-[8px] md:text-[10px] uppercase opacity-75">{floor.kwhPerDay.toFixed(1)} kWh/day</div>
-           </button>
-           )}
+          <div className="bg-slate-100 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex items-center gap-2 md:gap-3">
+             <Settings2 size={16} className="text-slate-500" />
+             <input type="number" min="1" max="31" aria-label="Billing day of month" title={billFeed.summaries.length > 0 ? "Your file states its own billing periods, so this is only the fallback for exports that don't" : "Which day of the month your utility bills you on"} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
+          </div>
+          <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
+              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} aria-label={`Select ${PLAN_LABEL[p]} plan`} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
+          </div>
+          {floor && (
+          <button type="button" onClick={() => setShowFloorHelp(true)} title="Always-on floor" aria-label="Always-on floor: what it is and how we measure yours" aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:flex-none p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group">
+            <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">Always-on floor <HelpCircle size={8} className="opacity-50 md:size-10 group-hover:opacity-100" /></div>
+            <div className="text-xl md:text-4xl italic">${floor.annualCost.toFixed(0)}/yr</div>
+            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{floor.kwhPerDay.toFixed(1)} kWh/day</div>
+          </button>
+          )}
         </div>
       </div>
 
-      {/* Full-data totals strip: every reading ever loaded, not just the window above. */}
-      {totals && (
-        <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
-          <div className="bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
-            <div className="text-[8px] md:text-[10px] text-yellow-400">Since {format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
-            <div className="text-xl md:text-3xl italic font-black">{totals.totalKwh.toFixed(0)} kWh</div>
-          </div>
-
-          {/* Wave H item 7 — same numbers, either unit. */}
-          <div
-            data-testid="cost-toggle"
-            role="group"
-            aria-label="Show costs as"
-            /* A printed report states one unit; the switch itself is chrome. */
-            className="no-print bg-slate-100 p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1"
-          >
-            {(['yr', 'day'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={costMode === mode}
-                onClick={() => setCostMode(mode)}
-                className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:px-5 py-2 rounded-lg md:rounded-xl text-[11px] md:text-[11px] font-black transition-all ${
-                  costMode === mode ? 'bg-black text-white' : 'text-black hover:bg-white'
-                }`}
-              >
-                {mode === 'yr' ? '$/yr' : '$/day'}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-3 md:gap-4">
-            {([
-              { id: 'TOU', label: 'Time-of-Use', cost: totals.costTOU },
-              { id: 'Tiered', label: 'Tiered', cost: totals.costTiered },
-              { id: 'ULO', label: 'Ultra-Low Overnight', cost: totals.costULO },
-            ] as const).map((p) => (
-              <div
-                key={p.id}
-                data-testid={`plan-cost-${p.id}`}
-                data-unit={costMode}
-                className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-black ${p.id === totals.bestPlan ? 'bg-emerald-400' : p.id === totals.worstPlan ? 'bg-red-400' : 'bg-slate-100'}`}
-              >
-                <div className="text-[8px] md:text-[10px]">{p.label}</div>
-                <div className="text-lg md:text-2xl italic font-black">
-                  ${money(p.cost)}
-                  <span className="text-[9px] md:text-[11px] not-italic font-black ml-1">
-                    {costMode === 'yr' ? '/yr' : '/day'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
-            <div className="text-[8px] md:text-[10px]">Best vs worst plan</div>
-            <div className="text-lg md:text-2xl italic font-black">
-              ${money(totals.planDelta)}
-              <span className="text-[9px] md:text-[11px] font-black ml-1">
-                {costMode === 'yr' ? '/yr' : '/day'}
-              </span>
+      {/* The four sections. Only the active one renders — a hidden tab's
+          charts are not drawn, measured or announced to a screen reader. */}
+      {tab === 'overview' && (
+        <OverviewPanel
+          comparison={comparison}
+          userPlan={userPlan}
+          days={windowDays}
+          totals={totals}
+          costMode={costMode}
+          setCostMode={setCostMode}
+          reframe={reframe}
+          projection={projection}
+          fileStatus={
+            <div className="no-print" data-testid="overview-file-status">
+              <GreenButtonSync
+                variant="chip"
+                status={gbStatus}
+                syncing={gbSyncing}
+                message={gbMessage}
+                onConnect={startGreenButtonConnect}
+                onSync={() => { void syncFromGreenButton(); }}
+                onDisconnect={() => { void disconnectGreenButton(); }}
+                onDismissMessage={() => setGbMessage(null)}
+              />
             </div>
-            <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>
-          </div>
+          }
+        />
+      )}
 
-          {/* Wave H item 5 — "why is the chart empty at the end?" answered
-              before it is asked. */}
-          <div
-            data-testid="data-freshness-chip"
-            role="status"
-            data-last-reading={totals.lastDate}
-            data-age-days={freshness?.ageDays}
-            data-stale={String(freshness?.stale ?? false)}
-            className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-black flex flex-col ${
-              freshness?.stale ? 'bg-amber-300' : 'bg-slate-100'
-            }`}
-            title={
-              freshness?.stale
-                ? `Your newest reading is ${freshness.relative} — upload a newer export to fill the gap.`
-                : undefined
-            }
-          >
-            <div className="text-[8px] md:text-[10px] uppercase font-black">
-              Data as of {format(new Date(totals.lastDate + 'T00:00:00'), 'MMM d, yyyy')}
-            </div>
-            <div
-              className={`text-[9px] md:text-[11px] font-black normal-case ${
-                freshness?.stale ? 'text-black' : 'text-slate-500'
-              }`}
-            >
-              {freshness?.stale
-                ? `${freshness.relative} — upload a newer export for a full chart`
-                : freshness?.relative}
-            </div>
-          </div>
+      {tab === 'usage' && (
+        <UsagePanel
+          staleness={staleness}
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          processedData={processedData}
+          zoomLevel={zoomLevel}
+          zoomTarget={zoomTarget}
+          goBack={goBack}
+          navigatePeriod={navigatePeriod}
+          setZoomLevelAndClear={setZoomLevelAndClear}
+          activeChartData={activeChartData}
+          handleBarClick={handleBarClick}
+          selectionCost={selectionCost}
+          userPlan={userPlan}
+          startDate={startDate}
+          filteredData={filteredData}
+        />
+      )}
 
-          <div className="text-[8px] md:text-[10px] text-slate-500 max-w-[240px] md:max-w-none">
-            Whole dataset ({format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d')} – {format(new Date(totals.lastDate + 'T00:00:00'), 'MMM d, yyyy')}), variable charges only.
-            <span data-testid="cost-reframe" className="block mt-1 text-black font-black normal-case">
-              {reframe}
-            </span>
-          </div>
-        </div>
+      {tab === 'plans' && (
+        <PlansPanel
+          comparison={comparison}
+          userPlan={userPlan}
+          setUserPlan={setUserPlan}
+          days={windowDays}
+          activeRateSet={activeRateSet}
+          startDate={startDate}
+          endDate={endDate}
+          wfh={wfh}
+          shiftAnalysis={shiftAnalysis}
+          verification={verification}
+          summaries={billFeed.summaries}
+          allData={processedData}
+        />
+      )}
+
+      {tab === 'money' && (
+        <MoneyPanel
+          summaries={billFeed.summaries}
+          allData={processedData}
+          filteredData={filteredData}
+          plan={userPlan}
+          rates={activeRateSet}
+          startDate={startDate}
+          endDate={endDate}
+          projection={projection}
+          openPeriod={openPeriod}
+        />
       )}
 
       {/* Always-on floor help modal */}
@@ -651,44 +634,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      )}
-
-      {viewMode === 'Chart' && (
-        <ChartView
-          zoomLevel={zoomLevel}
-          zoomTarget={zoomTarget}
-          goBack={goBack}
-          navigatePeriod={navigatePeriod}
-          setZoomLevelAndClear={setZoomLevelAndClear}
-          activeChartData={activeChartData}
-          handleBarClick={handleBarClick}
-          selectionCost={selectionCost}
-          userPlan={userPlan}
-          setUserPlan={setUserPlan}
-          comparison={comparison}
-          activeRateSet={activeRateSet}
-          filteredData={filteredData}
-          allData={processedData}
-          summaries={billFeed.summaries}
-          startDate={startDate}
-          endDate={endDate}
-          projection={projection}
-          wfh={wfh}
-        />
-      )}
-
-      {viewMode === 'Insights' && (
-        <InsightsView
-          anomalies={anomalies}
-          heatmapData={heatmapData}
-          filteredData={filteredData}
-          processedData={processedData}
-          shiftAnalysis={shiftAnalysis}
-          verification={verification}
-          rates={activeRateSet}
-          summaries={billFeed.summaries}
-          plan={userPlan}
-        />
       )}
     </div>
   );

@@ -268,7 +268,9 @@ describe('Wave H 3 — Escape closes every overlay', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Drop XML Here/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'CHART' })).toBeInTheDocument();
+    // The dashboard underneath is the four-tab strip, not the old 2-way toggle.
+    expect(screen.getByTestId('tab-nav')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
   });
 
   it('closes the always-on floor help', async () => {
@@ -350,9 +352,16 @@ describe('Wave H 3 — semantics and labels', () => {
   it('exposes pressed state on every toggle group', async () => {
     stubFetch();
     await renderLoaded();
-    const chart = screen.getByRole('button', { name: 'CHART' });
-    expect(chart).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'INSIGHTS' })).toHaveAttribute('aria-pressed', 'false');
+    // Wave R: the CHART/INSIGHTS toggle is now an ARIA tab strip — selected
+    // state replaces pressed state, and exactly one tab is selected.
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(4);
+    const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBe(screen.getByRole('tab', { name: 'Overview' }));
+    // Roving tabindex: the strip is ONE tab stop, not four.
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Usage' })).toHaveAttribute('tabindex', '-1');
 
     // The scope buttons are mutually exclusive: never more than one pressed.
     // (First load here anchors on a Custom trailing window, so none is pressed
@@ -374,6 +383,8 @@ describe('Wave H 3 — semantics and labels', () => {
   it('makes the clickable plan cards reachable and operable from the keyboard', async () => {
     stubFetch();
     await renderLoaded();
+    // Wave R: the cards moved to Plans & Track Record.
+    await userEvent.click(screen.getByRole('tab', { name: 'Plans' }));
     const card = screen.getByRole('button', { name: 'Use the Tiered Pricing plan' });
     expect(card).toHaveAttribute('tabindex', '0');
     expect(card).toHaveAttribute('aria-pressed', 'false');

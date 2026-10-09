@@ -223,7 +223,11 @@ describe('Dashboard integration', () => {
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    expect(screen.queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
+    // Wave R: the banner now lives on Usage — go look where it would be.
+    screen.getByRole('tab', { name: 'Usage' }).click();
+    await waitFor(() => {
+      expect(screen.queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
+    });
   });
 
   it('renders the banner when the OEB page carries a newer set', async () => {
@@ -242,6 +246,11 @@ describe('Dashboard integration', () => {
       }),
     );
     render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    // Wave R: rate staleness moved out of the global chrome into Usage.
+    screen.getByRole('tab', { name: 'Usage' }).click();
     const banner = await screen.findByTestId('rate-staleness-banner', {}, { timeout: 5000 });
     expect(banner).toHaveTextContent('2026-11-01');
     expect(banner).toHaveTextContent('2025-11-01');
@@ -252,14 +261,14 @@ describe('Dashboard integration', () => {
     });
   });
 
-  it('renders the trend empty state inside InsightsView', async () => {
+  it('renders the trend empty state on the Usage tab', async () => {
     render(<Dashboard />);
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    screen.getByText('INSIGHTS').click();
-    const insights = await screen.findByTestId('insights-view');
-    expect(insights).toBeInTheDocument();
+    screen.getByRole('tab', { name: 'Usage' }).click();
+    const usage = await screen.findByTestId('tab-panel-usage');
+    expect(usage).toBeInTheDocument();
     const trend = screen.getByTestId('trend-panel');
     expect(trend).toBeInTheDocument();
     expect(screen.getByTestId('trend-empty')).toHaveTextContent(/Need 12\+ months/i);
