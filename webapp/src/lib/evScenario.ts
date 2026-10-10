@@ -203,6 +203,10 @@ export type EvPeakExposure = {
   /** What that window costs at ULO On-Peak minus what it would cost overnight. */
   atStakePerMonth: number;
   windowLabel: string;
+  /** Distinct days of data the /month figures were scaled FROM. Every "per
+   *  month" number here is peakKwh ÷ (days ÷ 30.44) — a run-rate over this
+   *  window, never a month of metering. The UI must be able to say so. */
+  days: number;
 };
 
 export type EvScenarioEmptyReason = 'no-data' | 'no-rates' | 'no-ev-kwh';
@@ -636,6 +640,7 @@ export function buildEvScenario(input: {
         overnightCostPerMonth,
         atStakePerMonth: costPerMonth - overnightCostPerMonth,
         windowLabel: 'Weekdays 16:00–21:00',
+        days: daySet.size,
       };
     }
   }

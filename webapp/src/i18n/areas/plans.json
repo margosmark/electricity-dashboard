@@ -98,7 +98,11 @@
     "planTimeline.mixedSignatures": "mixed plan signatures in one bill ({plans})",
     "planTimeline.skipNoReadings": "no readings in this browser fall inside this period",
     "planTimeline.skipCoverage": "readings cover {covered} of {days} days ({pct}%, {needed}% needed)",
-    "planTimeline.modelExcluded": "the model re-prices this plan to a bill {sign}{amount} away from what Oakville actually charged"
+    "planTimeline.modelExcluded": "the model re-prices this plan to a bill {sign}{amount} away from what Oakville actually charged",
+    "track.notModeledNoMoney": "Not modeled — {reason}.",
+    "track.noAmountInFile": "No amount in file",
+    "planCard.scope": "commodity only · {range} on screen",
+    "planTimeline.skipNoChargeLines": "this bill states no charge lines, so there is nothing to compare"
   },
   "fr": {
     "wfh.annotation": "{kwh} sur {total} kWh visibles tombent sur {weekdays} jour ouvrable — les heures qu’une maison active le jour passe soit au travail, soit ailleurs. Contexte pour les cartes de grilles ci-dessous, pas une prévision.",
@@ -199,6 +203,10 @@
     "planTimeline.mixedSignatures": "signatures de grilles mêlées dans une même facture ({plans})",
     "planTimeline.skipNoReadings": "aucun relevé dans ce navigateur ne tombe à l’intérieur de cette période",
     "planTimeline.skipCoverage": "les relevés couvrent {covered} jours sur {days} ({pct} %, {needed} % requis)",
-    "planTimeline.modelExcluded": "le modèle revalorise cette grille à un écart de {sign}{amount} par rapport à ce qu’Oakville a réellement facturé"
+    "planTimeline.modelExcluded": "le modèle revalorise cette grille à un écart de {sign}{amount} par rapport à ce qu’Oakville a réellement facturé",
+    "track.notModeledNoMoney": "Non modélisé — {reason}.",
+    "track.noAmountInFile": "Aucun montant dans le fichier",
+    "planCard.scope": "électricité seulement · {range} à l’écran",
+    "planTimeline.skipNoChargeLines": "cette facture n’indique aucune ligne de frais, donc rien à comparer"
   }
 }

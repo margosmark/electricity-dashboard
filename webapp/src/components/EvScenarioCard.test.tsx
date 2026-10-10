@@ -213,6 +213,10 @@ describe('EvScenarioCard', () => {
     expect(comparison).toBeInTheDocument();
     // ULO moves nobody's cost: the shift is a no-op, and it says so.
     expect(comparison).toHaveTextContent('no change from shifting');
-    expect(comparison).toHaveTextContent(/Today \$/);
+    // The comparison's anchor is the whole loaded file, so it is named as a
+    // baseline — never "today", which would claim a day the number never
+    // measured.
+    expect(comparison).toHaveTextContent(/Baseline \$/);
+    expect(comparison).not.toHaveTextContent(/Today \$/);
   });
 });
