@@ -93,21 +93,28 @@ export const COST_SLICE_ORDER: CostSliceKey[] = [
 /** The kicker over the open-period panel. */
 export const ESTIMATE_KEY_LABEL = 'Money your meter has used, not yet a bill';
 
+/* Wave U — every user-visible reason/note in this file comes from the
+ * locale catalog at call time; the bucket keys and classifier regexes stay
+ * canonical English (they are data). */
+import { fmtMoney, fmtNumber, t } from '@/i18n';
+/** Wave U — the catalog key the display layer translates instead. */
+export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
+
 export const COST_SLICE_META: Record<
   CostSliceKey,
-  { label: string; short: string; color: string }
+  { label: string; short: string; color: string; labelKey: string; shortKey: string }
 > = {
-  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981' },
-  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15' },
-  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444' },
-  tier1: { label: 'Tier 1', short: 'Tier 1', color: '#1D4ED8' },
-  tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD' },
-  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB' },
-  delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6' },
-  regulatory: { label: 'Regulatory', short: 'Regulatory', color: '#A78BFA' },
-  other: { label: 'Other lines', short: 'Other', color: '#FB923C' },
-  tax: { label: 'HST', short: 'HST', color: '#F59E0B' },
-  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: '#059669' },
+  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
+  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
+  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
+  tier1: { label: 'Tier 1', short: 'Tier 1', color: '#1D4ED8', labelKey: 'rate.tier1', shortKey: 'rate.tier1' },
+  tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
+  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
+  delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },
+  regulatory: { label: 'Regulatory', short: 'Regulatory', color: '#A78BFA', labelKey: 'slice.regulatory', shortKey: 'slice.regulatory' },
+  other: { label: 'Other lines', short: 'Other', color: '#FB923C', labelKey: 'slice.other.label', shortKey: 'slice.other.short' },
+  tax: { label: 'HST', short: 'HST', color: '#F59E0B', labelKey: 'slice.tax', shortKey: 'slice.tax' },
+  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: '#059669', labelKey: 'slice.credit.label', shortKey: 'slice.credit.short' },
 };
 
 /**
@@ -131,15 +138,18 @@ export const COST_SLICE_META: Record<
  */
 export function commodityWindowOf(note: string): CostSliceKey {
   const n = note.toLowerCase();
-  if (/\boff[\s-]?peak/.test(n)) return 'offPeak';
-  if (/\bmid[\s-]?peak/.test(n)) return 'midPeak';
-  if (/\bon[\s-]?peak/.test(n)) return 'onPeak';
+  // Wave U: the OEB's French period names classify identically ("Période
+  // creuse" → offPeak, "Période normale" → midPeak, "Période de pointe" →
+  // onPeak), so a bilingual export buckets the same as an English one.
+  if (/\boff[\s-]?peak|p[ée]riode creuse/.test(n)) return 'offPeak';
+  if (/\bmid[\s-]?peak|p[ée]riode normale|mi-?pointe/.test(n)) return 'midPeak';
+  if (/\bon[\s-]?peak|p[ée]riode de pointe/.test(n)) return 'onPeak';
   // Same patterns `rateForUsageNote` prices with, so the slice and the ¢/kWh
   // can never disagree about which tier a line was billed at. Whitespace
   // tolerance is the point: Oakville writes "BLOCK 1 - Winter" and
   // "BLOCK 1- Summer" in the same bill.
-  if (/\bblock\s*1\b|\btier\s*1\b|first[ -]?tier/.test(n)) return 'tier1';
-  if (/\bblock\s*2\b|\btier\s*2\b|second[ -]?tier/.test(n)) return 'tier2';
+  if (/\bblock\s*1\b|\btier\s*1\b|first[ -]?tier|\bbloc\s*1\b|\bpalier\s*1\b|premier palier/.test(n)) return 'tier1';
+  if (/\bblock\s*2\b|\btier\s*2\b|second[ -]?tier|\bbloc\s*2\b|\bpalier\s*2\b|deuxi[èe]me palier/.test(n)) return 'tier2';
   return 'commodityOther';
 }
 
@@ -474,6 +484,26 @@ const DELTA_LABELS: Record<DeltaRowKey, string> = {
 };
 
 /**
+ * Wave U — the DELTA_LABELS values above stay canonical English (pinned by
+ * lib/moneyViz.test.ts); the display layer looks the row's text up here.
+ */
+export const DELTA_LABEL_KEYS: Record<DeltaRowKey, string> = {
+  offPeak: COST_SLICE_META.offPeak.labelKey,
+  midPeak: COST_SLICE_META.midPeak.labelKey,
+  onPeak: COST_SLICE_META.onPeak.labelKey,
+  tier1: COST_SLICE_META.tier1.labelKey,
+  tier2: COST_SLICE_META.tier2.labelKey,
+  commodityOther: COST_SLICE_META.commodityOther.labelKey,
+  delivery: COST_SLICE_META.delivery.labelKey,
+  regulatory: COST_SLICE_META.regulatory.labelKey,
+  other: COST_SLICE_META.other.labelKey,
+  tax: COST_SLICE_META.tax.labelKey,
+  credit: COST_SLICE_META.credit.labelKey,
+  total: 'delta.total',
+  payable: 'delta.payable',
+};
+
+/**
  * The change between consecutive periods, per charge type.
  *
  * The FIRST column prints that period's own figure and is labelled a
@@ -515,8 +545,7 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
   });
 
   const flagged = stacks.filter((s) => s.kind !== 'billed');
-  const notBills =
-    'Columns marked with a badge are not bills: an estimate of what has not been billed yet, or days no bill in this file covers — no change is computed across them.';
+  const notBills = t('delta.notBills');
   const billedCount = billable.filter(Boolean).length;
   return {
     rows,
@@ -524,14 +553,12 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
     hasComparison: billedCount > 1,
     note:
       stacks.length === 0
-        ? 'No billing periods in this file.'
+        ? t('delta.noteEmpty')
         : billedCount <= 1
-          ? `Only one billing period here — every number in it is the baseline, so there is nothing to compare against yet.${
-              flagged.length > 0 ? ` ${notBills}` : ''
-            }`
+          ? `${t('delta.noteBaseline')}${flagged.length > 0 ? ` ${notBills}` : ''}`
           : flagged.length > 0
-            ? `Change versus the period immediately before it, real bill against real bill. ${notBills}`
-            : 'Change versus the period immediately before it. The first column is the baseline period’s own figure.',
+            ? `${t('delta.noteFlagged')} ${notBills}`
+            : t('delta.notePlain'),
   };
 }
 
@@ -642,8 +669,7 @@ export function hourCostProfile(
     buckets: [],
     averageCents: null,
     ready: false,
-    reason:
-      'No readings in the current window — widen the date range and the hour-by-hour price appears here.',
+    reason: t('moneyViz.hourCostNoReadings'),
     rows: 0,
   };
   if (rows.length === 0) return empty;
@@ -691,7 +717,7 @@ export function hourCostProfile(
   if (totalKwh <= 0) {
     return {
       ...empty,
-      reason: 'The readings in this window add up to no energy at all.',
+      reason: t('moneyViz.hourCostNoEnergy'),
       rows: rows.length,
     };
   }
@@ -779,23 +805,28 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
     .filter((i) => i.measurement && /usage$/.test(i.note.trim().toLowerCase()))
     .reduce((n, i) => n + (i.measurement?.scaled ?? 0), 0);
   const perKwh = (amount: number) =>
-    kwh > 0 ? ` — ${((amount / kwh) * 100).toFixed(2)}¢/kWh across ${kwh.toFixed(0)} kWh` : '';
+    kwh > 0
+      ? t('wf.perKwhSuffix', {
+          cents: fmtNumber((amount / kwh) * 100, 2),
+          kwh: kwh.toFixed(0),
+        })
+      : '';
 
   push(
     'commodity',
-    'Commodity',
+    t('wf.commodity'),
     'start',
     totals.commodity,
-    `The electricity itself${perKwh(totals.commodity)}.`,
+    t('wf.commodityDetail', { suffix: perKwh(totals.commodity) }),
   );
   if (totals.delivery !== 0) {
-    push('delivery', 'Delivery', 'add', totals.delivery, `Bringing it to you${perKwh(totals.delivery)}.`);
+    push('delivery', t('wf.delivery'), 'add', totals.delivery, t('wf.deliveryDetail', { suffix: perKwh(totals.delivery) }));
   }
   if (totals.regulatory !== 0) {
-    push('regulatory', 'Regulatory', 'add', totals.regulatory, `Provincial charges${perKwh(totals.regulatory)}.`);
+    push('regulatory', t('wf.regulatory'), 'add', totals.regulatory, t('wf.regulatoryDetail', { suffix: perKwh(totals.regulatory) }));
   }
   if (totals.other !== 0) {
-    push('other', 'Other lines', 'add', totals.other, 'Lines the file does not classify.');
+    push('other', t('wf.otherLines'), 'add', totals.other, t('wf.otherDetail'));
   }
 
   // The utility's own subtotal. When its stated total and its own itemized
@@ -807,30 +838,30 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
   if (stated !== null) {
     const gap = round2(stated - running);
     if (Math.abs(gap) > 0.005) {
-      push('gap', 'Not itemized', 'add', gap, 'The stated total minus the itemized lines above.');
+      push('gap', t('wf.notItemized'), 'add', gap, t('wf.gapDetail'));
     }
     push(
       'subtotal',
-      'Total electricity charges',
+      t('delta.total'),
       'subtotal',
       stated,
-      'The utility’s own "Total Electricity Charges" line — before HST and the rebate.',
+      t('wf.subtotalStated'),
     );
   } else {
     push(
       'subtotal',
-      'Subtotal',
+      t('wf.subtotal'),
       'subtotal',
       running,
-      'The itemized lines above (this file states no "Total Electricity Charges" line).',
+      t('wf.subtotalItemized'),
     );
   }
 
   if (totals.tax !== 0) {
-    push('tax', 'HST', 'add', totals.tax, 'The tax line as the file states it.');
+    push('tax', t('slice.tax'), 'add', totals.tax, t('wf.taxDetail'));
   }
   if (totals.credit !== 0) {
-    push('credit', 'OEB rebate', 'credit', totals.credit, 'Money back — the Ontario Electricity Rebate.');
+    push('credit', t('wf.oebRebate'), 'credit', totals.credit, t('wf.creditDetail'));
   }
 
   // Land on the bill's OWN payable figure. If these steps have not reached it
@@ -839,26 +870,26 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
   const payable = totals.payable;
   const drift = round2(payable - running);
   if (Math.abs(drift) > 0.005) {
-    push('drift', 'Not itemized', 'add', drift, 'The gap between the steps above and this bill’s own amount due.');
+    push('drift', t('wf.notItemized'), 'add', drift, t('wf.driftDetail'));
   }
 
   const amountDueNote =
     totals.amountDue !== null && Math.abs(totals.amountDue - payable) > 0.005
-      ? ` The file's own "Amount Due" line is $${totals.amountDue.toFixed(2)} — it may carry a balance forward.`
+      ? t('wf.amountDueNote', { amount: fmtMoney(totals.amountDue) })
       : '';
   push(
     'payable',
-    'Amount due',
+    t('wf.amountDue'),
     'total',
     payable,
-    `Total + HST − rebate: what this period cost.${amountDueNote}`,
+    `${t('wf.payableDetail')}${amountDueNote}`,
   );
 
   return {
     steps,
     amountDue: round2(payable),
     ready: steps.length > 2,
-    reason: steps.length > 2 ? '' : 'This period states no charges.',
+    reason: steps.length > 2 ? '' : t('moneyViz.waterfallNoCharges'),
   };
 }
 
@@ -946,19 +977,19 @@ export function planOverlay(
   };
 
   if (summaries.length === 0) {
-    return { ...base, reason: 'This file carries no billing periods.' };
+    return { ...base, reason: t('moneyViz.noBillingPeriods') };
   }
   if (coveredPeriods.length === 0) {
     const coveredDays = coveredPeriods.reduce((n, s) => n + s.rows.length, 0);
     return {
       ...base,
-      reason: `Your readings cover none of these billing periods fully (${coveredDays} rows inside them), so a plan comparison would be a guess. Load readings that overlap the bill and the lines appear.`,
+      reason: t('moneyViz.noFullCoverage', { rows: coveredDays }),
     };
   }
   if (!charges) {
     return {
       ...base,
-      reason: 'No delivery / regulatory / HST rates to model the other plans with yet.',
+      reason: t('moneyViz.noModelRates'),
       covered: coveredPeriods.length,
     };
   }
@@ -986,7 +1017,7 @@ export function planOverlay(
   if (!costs) {
     return {
       ...base,
-      reason: 'No readings inside the covered periods to price the plans with.',
+      reason: t('moneyViz.noReadingsInPeriods'),
       covered: coveredPeriods.length,
     };
   }
@@ -1007,7 +1038,7 @@ export function planOverlay(
     if (!estimate) {
       return {
         ...base,
-        reason: 'The delivery / regulatory / HST fields are incomplete, so the plans cannot be modelled.',
+        reason: t('moneyViz.incompleteCharges'),
         actual: round2(actual),
         covered: coveredPeriods.length,
       };

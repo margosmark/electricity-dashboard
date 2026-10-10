@@ -12,6 +12,8 @@
 
 "use client";
 
+/* Wave U — user-visible copy translates; lib code reads the module locale. */
+import { useTranslation } from "@/i18n";
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Database, Download, Upload, X } from 'lucide-react';
 import { downloadTextFile } from '@/lib/download';
@@ -32,6 +34,7 @@ const TOGGLE_CLASS =
   'shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(124,58,237,1)] transition-all';
 
 export function BackupControls({ onExport, onImport, disabled = false }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   // Wave H item 3: Escape closes this drawer too, same as every other
@@ -92,7 +95,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
     setError(null);
     const doc = onExport();
     if (!doc) {
-      setStatus('Nothing to export yet — upload your utility XML first.');
+      setStatus(t("backup.nothingToExport"));
       return;
     }
     downloadTextFile(doc.filename, doc.text, 'application/json;charset=utf-8');
@@ -106,7 +109,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
     try {
       const res = await onImport(file);
       if (res.ok) setStatus(`${res.filename ?? file.name} imported — reloading…`);
-      else setError(res.error ?? 'That file could not be imported.');
+      else setError(res.error ?? t("backup.importFailed"));
     } finally {
       setBusy(false);
       // Allow re-picking the same file after a failure.
@@ -119,8 +122,8 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
       <button
         type="button"
         data-testid="backup-toggle"
-        title="Backup & restore"
-        aria-label="Backup and restore"
+        title={t("backup.title")}
+        aria-label={t("backup.aria")}
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={disabled}
@@ -134,14 +137,14 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
         <div
           data-testid="backup-drawer"
           role="dialog"
-          aria-label="Backup and restore"
+          aria-label={t("backup.aria")}
           className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[340px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">Backup &amp; Restore</div>
             <button
               type="button"
-              aria-label="Close backup drawer"
+              aria-label={t("backup.closeAria")}
               onClick={() => setOpen(false)}
               className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
             >

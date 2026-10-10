@@ -12,6 +12,8 @@
  * the button's whole job is to work for someone who has no export at all.
  */
 
+/* Wave U — the example-data copy translates; lib code reads the module locale. */
+import { t } from '@/i18n';
 import {
   parseGreenButtonUsagePoints,
   combineUsagePointGroups,
@@ -48,9 +50,9 @@ export async function loadExampleReadings(
   } catch (e) {
     return {
       ok: false,
-      detail:
-        `The example data could not be downloaded (${String((e as Error)?.message ?? e)}). ` +
-        'Check your connection and try again, or upload your own Green Button XML export.',
+      detail: t('example.downloadFail', {
+        reason: String((e as Error)?.message ?? e),
+      }),
     };
   }
 
@@ -60,18 +62,16 @@ export async function loadExampleReadings(
   } catch (e) {
     return {
       ok: false,
-      detail:
-        'The example data file arrived but could not be read as Green Button XML ' +
-        `(${String((e as Error)?.message ?? e)}). Upload your own Green Button XML export instead.`,
+      detail: t('example.parseFail', {
+        reason: String((e as Error)?.message ?? e),
+      }),
     };
   }
 
   if (readings.length === 0) {
     return {
       ok: false,
-      detail:
-        'The example data file arrived but contained no readings. ' +
-        'Upload your own Green Button XML export instead.',
+      detail: t('example.noReadings'),
     };
   }
 

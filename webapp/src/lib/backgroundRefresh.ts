@@ -47,8 +47,10 @@
  * it on, an on-device browser notification. Queued separately as Wave N.
  */
 
+/* Wave U — user-visible copy translates; lib code reads the module locale. */
+import { fmtMoney, fmtNumber, planLabel, t } from '@/i18n';
 import type { FullDataTotals, ProcessedPoint } from './energy';
-import { PLAN_LABEL, type PlanId } from '@/hooks/useSelectedPlan';
+import { type PlanId } from '@/hooks/useSelectedPlan';
 
 /* -------------------------------------------------------------------------- *
  * Storage keys (owned by the hook; named here so lib and hook cannot drift).
@@ -322,13 +324,13 @@ export function detectPlanChange(input: {
       .map((p) => ({ plan: p, cost: round2(perMonth(planCost(totals, p), days)) }))
       .sort((a, b) => a.cost - b.cost),
     // The card's copy, verbatim in shape: name the winner and the gap.
-    headline: `Your best plan changed: ${PLAN_LABEL[best]} now saves ~$${savingVsPrevious.toFixed(2)}/mo vs ${PLAN_LABEL[previousBest]}`,
+    headline: t('bgRefresh.cardHeadline', { best: planLabel(best), amount: fmtMoney(savingVsPrevious), previous: planLabel(previousBest) }),
     detail:
       best === previousBest
         ? ''
         : savingVsCurrent > 0 && currentPlan !== previousBest
-          ? `You are on ${PLAN_LABEL[currentPlan]} — switching to ${PLAN_LABEL[best]} is ~$${savingVsCurrent.toFixed(2)}/mo on these readings.`
-          : `Recomputed across ${totals.totalKwh.toFixed(0)} kWh of readings after the latest refresh.`,
+          ? t('bgRefresh.cardSwitch', { current: planLabel(currentPlan), best: planLabel(best), amount: fmtMoney(savingVsCurrent) })
+          : t('bgRefresh.cardRecomputed', { kwh: fmtNumber(totals.totalKwh) }),
   };
 }
 
@@ -371,7 +373,7 @@ export function detectRateChange(input: {
       id: `rate:${current}`,
       effectiveDate: current,
       previousEffectiveDate: input.ackRateDate,
-      headline: 'New OEB rates in effect — re-comparing your plans',
+      headline: t('bgRefresh.newRates'),
       detail: `Your readings are now priced from the set effective ${current} (was ${input.ackRateDate}). The three plan costs above were recomputed on it.`,
     },
   };
@@ -425,16 +427,15 @@ export type NotificationPayload = { title: string; body: string; tag: string };
 export function notificationPayload(notice: RefreshNotice): NotificationPayload {
   if (notice.kind === 'plan-change') {
     return {
-      title: `Best plan changed to ${PLAN_LABEL[notice.plan]}`,
+      title: t('bgRefresh.planChanged', { plan: planLabel(notice.plan) }),
       body:
-        `Your readings now put ${PLAN_LABEL[notice.plan]} ~$${notice.monthlySavingVsPrevious.toFixed(2)}/mo ahead of ` +
-        `${PLAN_LABEL[notice.previousBest]}. Open the dashboard to re-compare all three plans.`,
+        t('bgRefresh.planChangedBody', { plan: planLabel(notice.plan), amount: fmtMoney(notice.monthlySavingVsPrevious), previous: planLabel(notice.previousBest) }),
       tag: notice.id,
     };
   }
   return {
-    title: 'New Ontario energy rates',
-    body: `Rates effective ${notice.effectiveDate} are in your readings — the dashboard is re-comparing your plans.`,
+    title: t('bgRefresh.newRatesTitle'),
+    body: t('bgRefresh.newRatesBody', { date: notice.effectiveDate }),
     tag: notice.id,
   };
 }

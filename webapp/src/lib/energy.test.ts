@@ -1325,7 +1325,7 @@ describe('anomalyWeatherContext', () => {
     const ctx = anomalyWeatherContext(rows, hourly);
     expect(ctx.kind).toBe('ac');
     expect(ctx.tempC).toBe(31);
-    expect(ctx.text).toBe('31°C — that\'s AC');
+    expect(ctx.text).toBe('31°C — that’s AC');
   });
 
   it('blames heating on a freezing day, quoting the day\u2019s LOW', () => {
@@ -1334,7 +1334,7 @@ describe('anomalyWeatherContext', () => {
     const ctx = anomalyWeatherContext(rows, hourly);
     expect(ctx.kind).toBe('heat');
     expect(ctx.tempC).toBe(-14);
-    expect(ctx.text).toBe('-14°C — that\'s heat');
+    expect(ctx.text).toBe('-14°C — that’s heat');
   });
 
   it('says weather is not the story on a mild day, quoting the MEAN', () => {
@@ -1414,7 +1414,7 @@ describe('detectAnomalies with temperatures', () => {
     const spike = anomalies.find((a) => a.usage === 50)!;
     expect(spike.context).toBeDefined();
     expect(spike.context!.kind).toBe('ac');
-    expect(spike.context!.text).toBe('31°C — that\'s AC');
+    expect(spike.context!.text).toBe('31°C — that’s AC');
   });
 
   it('still labels the context "no data" when no temperatures were loaded', () => {

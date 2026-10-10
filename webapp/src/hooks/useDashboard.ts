@@ -8,6 +8,8 @@
 
 "use client";
 
+/* Wave U — upload/connect copy translates; hooks read the module locale. */
+import { t } from "@/i18n";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
@@ -844,7 +846,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       setGbStatus(status);
 
       if (gbFlag === "connected") {
-        setGbMessage({ tone: "ok", text: "Connected to Oakville Hydro." });
+        setGbMessage({ tone: "ok", text: t('gb.connectedOk') });
       } else if (gbFlag?.startsWith("error:")) {
         const copy = describeGbError(gbFlag.slice("error:".length));
         setGbMessage({ tone: "error", text: `${copy.headline} — ${copy.detail}` });
@@ -871,9 +873,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             ? {
                 tone: "ok",
                 text: outcome.picker
-                  ? "Connected — pick which meter to load."
-                  : `Live sync: ${outcome.incoming} readings from the feed, ` +
-                    `${outcome.added ?? 0} new.`,
+                  ? t('gb.connectedPicker')
+                  : t('gb.syncCounts', {
+                      incoming: outcome.incoming,
+                      added: outcome.added ?? 0,
+                    }),
               }
             : { tone: "error", text: describeGbError(outcome.code).detail },
         );
@@ -956,9 +960,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         reader.onerror = () =>
           reject({
             ok: false,
-            headline: `Could not read ${file.name}.`,
-            detail: 'The browser failed to open the file — it may have been moved or locked since you picked it.',
-            hints: ['Pick the file again from disk.'],
+            headline: t('upload.couldNotRead', { name: file.name }),
+            detail: t('upload.readFailedDetail'),
+            hints: [t('upload.readFailedHint')],
           } satisfies ParseDiagnostic);
         reader.onload = (ev) => {
           const text = (ev.target?.result as string) ?? "";
@@ -973,9 +977,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
               diag.ok
                 ? ({
                     ok: false,
-                    headline: `Could not read ${file.name}.`,
+                    headline: t('upload.couldNotRead', { name: file.name }),
                     detail: String((e as Error)?.message ?? e),
-                    hints: ['Re-download the export and try again.'],
+                    hints: [t('upload.redownloadHint')],
                   } satisfies ParseDiagnostic)
                 : diag,
             );
@@ -1016,9 +1020,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           setParseIssue(
             results.map((r) => r.issue).find(Boolean) ?? {
               ok: false,
-              headline: "No readings found in that file.",
-              detail: "The upload was read successfully but contained no interval readings to import.",
-              hints: ["Export Green Button XML with interval data from your utility portal."],
+              headline: t('upload.noReadingsHeadline'),
+              detail: t('upload.noReadingsDetail'),
+              hints: [t('upload.noReadingsHint')],
             },
           );
           return;
@@ -1050,9 +1054,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             ? e
             : {
                 ok: false,
-                headline: "That file could not be read.",
+                headline: t('upload.couldNotReadPlain'),
                 detail: String((e as Error)?.message ?? e),
-                hints: ["Re-download the export from your utility portal and try again."],
+                hints: [t('upload.portalRedownloadHint')],
               },
         );
       })
@@ -1127,9 +1131,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       if (!loaded.ok) {
         setParseIssue({
           ok: false,
-          headline: "Example data unavailable.",
+          headline: t('upload.exampleUnavailable'),
           detail: loaded.detail,
-          hints: ["Upload your own Green Button XML export to continue."],
+          hints: [t('upload.exampleHint')],
         });
         return { ok: false, detail: loaded.detail };
       }
@@ -1280,7 +1284,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     try {
       text = await file.text();
     } catch {
-      return { ok: false, error: `Could not read ${file.name}. Choose the JSON file produced by “Export JSON”.` };
+      return { ok: false, error: t('backup.errReadJson', { name: file.name }) };
     }
 
     const profile = parseBackup(text);
@@ -1295,12 +1299,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         });
         if (!saved.ok) {
           reportStorage(saved);
-          return { ok: false, error: `This browser refused to save the readings (${saved.detail}). Nothing was changed.` };
+          return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
         }
         const day = saveBillingDay(profile.value.payload.billing_day);
         if (!day.ok) {
           reportStorage(day);
-          return { ok: false, error: `This browser refused to save the billing day (${day.detail}). Nothing was changed.` };
+          return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
         }
         // The remaining keys are owned by their own hooks (charges, timeline).
         localStorage.setItem(EXTRA_CHARGES_KEY, values.extra_charges);
@@ -1308,7 +1312,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       } catch {
         return {
           ok: false,
-          error: "This browser refused to save the backup (storage may be full or blocked). Nothing was changed.",
+          error: t('backup.errRefusedBackup'),
         };
       }
       onBackupApplied?.();
@@ -1325,7 +1329,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       });
       if (!saved.ok) {
         reportStorage(saved);
-        return { ok: false, error: `This browser refused to save the readings (${saved.detail}). Nothing was changed.` };
+        return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
       }
       onBackupApplied?.();
       return { ok: true, filename: file.name };
@@ -1360,8 +1364,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     await refreshGbStatus();
     setGbMessage(
       ok
-        ? { tone: "ok", text: "Disconnected — stored authorisation wiped from the server." }
-        : { tone: "error", text: "Could not reach the shim to disconnect." },
+        ? { tone: "ok", text: t('gb.disconnectedOk') }
+        : { tone: "error", text: t('gb.disconnectFail') },
     );
     return ok;
   };
