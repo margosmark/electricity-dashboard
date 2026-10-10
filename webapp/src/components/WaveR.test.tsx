@@ -595,6 +595,234 @@ describe('Wave R 4b — the bill accrual curve', () => {
 });
 
 /* ========================================================================== *
+ * 4d. Slice 7 — the "am I on pace?" rework: headline, benchmark, phone shape
+ * ========================================================================== */
+
+describe('Wave R 4d — the card answers its own question', () => {
+  /**
+   * One bill per commodity figure: a single priced commodity line is all
+   * `billTotals` needs to produce that number, and the benchmark only reads
+   * the commodity line — never the amount due, which would put all-in bills
+   * against a commodity-only accrual.
+   */
+  function billSummaries(commodity: number[]) {
+    const MONTH = 2_592_000; // 30 days
+    return commodity.map((amount, i) => ({
+      source: 'UsageSummary' as const,
+      start: new Date(2026, 4 + i, 25).getTime() / 1000,
+      duration: MONTH,
+      startDate: '2026-05-25',
+      endDate: '2026-06-24',
+      days: 30,
+      billLastPeriod: null,
+      billToDate: null,
+      costAdditionalLastPeriod: null,
+      currency: 124,
+      consumption: null,
+      items: [
+        { note: 'Off Peak-Summer', amount, rawAmount: null, itemKind: null, unitCost: null, measurement: null },
+      ],
+    }));
+  }
+
+  function hourly(from: Date, days: number, kwh = 1) {
+    const raw: { timestamp: number; usage_kwh: number }[] = [];
+    for (let d = 0; d < days; d++) {
+      for (let h = 0; h < 24; h++) {
+        raw.push({
+          timestamp: Math.floor(new Date(from.getFullYear(), from.getMonth(), from.getDate() + d, h).getTime() / 1000),
+          usage_kwh: kwh,
+        });
+      }
+    }
+    return processRawData(raw, [RATES]);
+  }
+
+  const oct = (day: number) => new Date(2026, 9, day);
+  /** Wave Q's shape: the open window ENDS at the newest reading. */
+  const tail = { start: new Date(2026, 9, 1).getTime() / 1000, end: new Date(2026, 9, 11).getTime() / 1000 };
+  const billThrough = { at: new Date(2026, 9, 25).getTime() / 1000, source: 'file-cadence' as const };
+
+  it('leads with the projected landing, not a period label', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+
+    // 25 days to the bill date at $2.88/day of Wave F pace: the headline IS
+    // the answer, and it names the date it lands on.
+    const headline = screen.getByTestId('accrual-headline');
+    expect(headline).toHaveTextContent(/\$72\.00 by Oct 25/);
+    expect(headline).toHaveAttribute('data-projected-total', '72.00');
+    expect(screen.getByTestId('bill-accrual')).toHaveAttribute('data-bill-date', '2026-10-25');
+  });
+
+  it('carries the fixed explainer that names every line', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+    const explainer = screen.getByTestId('accrual-explainer');
+    expect(explainer).toHaveTextContent(/Grey line = spent so far/);
+    expect(explainer).toHaveTextContent(/Yellow dashed = where you’re on pace to land by the bill date/);
+    expect(explainer).toHaveTextContent(/Dotted = your average of the last 3 bills/);
+    // The card is described by it, so a screen reader hears it before the SVG.
+    expect(screen.getByTestId('bill-accrual')).toHaveAttribute('aria-describedby');
+  });
+
+  it('judges the landing against the last 3 bills as a colour, not arithmetic', () => {
+    const rows = hourly(oct(1), 10); // $2.88/day → $69.12 landing
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        // Three bills whose commodity averaged $42 — the $72 landing is $30 over.
+        summaries={billSummaries([30, 42, 54])}
+        today={oct(10)}
+      />,
+    );
+    const chip = screen.getByTestId('accrual-pace-chip');
+    expect(chip).toHaveAttribute('data-direction', 'above');
+    expect(chip).toHaveTextContent(/pacing \$30\.00 ABOVE/);
+    expect(chip.className).toContain('bg-red-400');
+    // The dotted line is drawn at that same average.
+    expect(screen.getByTestId('accrual-benchmark-line')).toBeInTheDocument();
+    expect(screen.getByTestId('bill-accrual')).toHaveAttribute('data-avg-prior-bills', '42.00');
+  });
+
+  it('goes green when the landing sits under the benchmark', () => {
+    const rows = hourly(oct(1), 10, 0.2); // $0.576/day → ~$14.40 landing
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        summaries={billSummaries([40, 42, 44])}
+        today={oct(10)}
+      />,
+    );
+    const chip = screen.getByTestId('accrual-pace-chip');
+    expect(chip).toHaveAttribute('data-direction', 'below');
+    expect(chip.className).toContain('bg-emerald-300');
+    expect(chip).toHaveTextContent(/pacing BELOW by/);
+  });
+
+  it('says it has nothing to compare against rather than faking a verdict', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+    const chip = screen.getByTestId('accrual-pace-chip');
+    expect(chip).toHaveAttribute('data-direction', 'none');
+    expect(chip).toHaveTextContent(/no bills to compare/);
+    expect(screen.queryByTestId('accrual-benchmark-line')).not.toBeInTheDocument();
+  });
+
+  it('marks the day tier 1 runs out on a Tiered period', () => {
+    // 3 kWh/hour = 72 kWh/day; the prorated summer allowance for 25 days is
+    // 600 × 25/30.4 ≈ 493 kWh, which day 7 spends.
+    const rows = hourly(oct(1), 10, 3);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+    expect(screen.getByTestId('accrual-tier-marker')).toBeInTheDocument();
+    expect(screen.getByTestId('accrual-note')).toHaveTextContent(/tier-2 rate/);
+  });
+
+  it('draws no tier marker off-Tiered — TOU has no tier-1 allowance', () => {
+    const rows = hourly(oct(1), 10, 3);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="TOU"
+        period={tail}
+        projection={projectMonthBill(rows, 'TOU', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+    expect(screen.queryByTestId('accrual-tier-marker')).not.toBeInTheDocument();
+  });
+
+  it('on a phone: headline + chip + sparkline, full chart one tap away', async () => {
+    const rows = hourly(oct(1), 10);
+    const user = userEvent.setup();
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+
+    // The answer (headline + chip) is ABOVE the shape, in every layout —
+    // a phone never has to scroll past a chart to learn the verdict.
+    expect(screen.getByTestId('accrual-headline')).toBeInTheDocument();
+    expect(screen.getByTestId('accrual-pace-chip')).toBeInTheDocument();
+
+    // Both shapes are always in the DOM — CSS picks which one PAINTS, so
+    // there is one chart node per shape (never two) and no layout thrash on
+    // toggle. Collapsed: sparkline visible-ish (md:hidden), chart hidden.
+    const spark = screen.getByTestId('accrual-sparkline').parentElement!;
+    const full = screen.getByTestId('accrual-chart').parentElement!;
+    const toggle = screen.getByTestId('accrual-chart-toggle');
+    expect(spark.className).toContain('md:hidden');
+    expect(full.className).toContain('hidden');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent(/Show the full chart/);
+
+    // Expanding flips which shape the phone paints; the toggle itself is
+    // md:hidden, so a desktop never sees a control that does nothing.
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveTextContent(/Hide the full chart/);
+    expect(spark.className).not.toContain('md:hidden');
+    expect(spark.className).toContain('hidden');
+    expect(full.className).not.toContain('hidden');
+
+    await user.click(toggle);
+    expect(spark.className).toContain('md:hidden');
+    expect(full.className).toContain('hidden');
+  });
+});
+
+/* ========================================================================== *
  * 4c. Plan-switch decision timeline
  * ========================================================================== */
 
