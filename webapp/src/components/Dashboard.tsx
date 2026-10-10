@@ -20,8 +20,10 @@ import {
   buildActiveChartData, calculateComparison,
   detectAnomalies, buildHeatmapData, calculateFullDataTotals,
   calculateAlwaysOnFloor, calculateWfhShare,
+  getFilteredForZoom,
   resolveZone,
 } from '@/lib/energy';
+import { buildEfficiency } from '@/lib/statistics';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
 } from '@/hooks/useDashboard';
@@ -203,6 +205,31 @@ export default function Dashboard() {
   // Whole-dataset totals for the strip — deliberately NOT filtered by the
   // visible window: this row answers "what would all my data have cost?".
   const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData]);
+
+  // Wave S — the window the user is actually LOOKING at: the date
+  // selection, narrowed further by whatever the chart is zoomed into (a
+  // drilled month/week/day), because "in view" has to mean what is on
+  // screen. Falls back to the selection when the zoom window is empty.
+  const viewRange = useMemo(() => {
+    const rows = getFilteredForZoom(filteredData, zoomLevel, zoomTarget);
+    if (rows.length > 0) {
+      return { start: rows[0].dayStr, end: rows[rows.length - 1].dayStr };
+    }
+    if (startDate && endDate) return { start: startDate, end: endDate };
+    return null;
+  }, [filteredData, zoomLevel, zoomTarget, startDate, endDate]);
+
+  // ¢/kWh per closed bill, the all-time and in-view weighted averages, and
+  // the behaviour-vs-rate trend verdict (pure fn — see lib/statistics.ts).
+  const efficiency = useMemo(
+    () =>
+      buildEfficiency({
+        summaries: billFeed.summaries,
+        rates: rateHistory,
+        view: viewRange,
+      }),
+    [billFeed.summaries, rateHistory, viewRange],
+  );
 
   // Rate schedule in force for the plan cards — read live, never hardcoded.
   const activeRateSet = useActiveRateSet(processedData);
@@ -567,6 +594,8 @@ export default function Dashboard() {
           setCostMode={setCostMode}
           reframe={reframe}
           projection={projection}
+          efficiency={efficiency}
+          onOpenMoney={() => setActiveTab('money')}
           fileStatus={
             <div className="no-print" data-testid="overview-file-status">
               <GreenButtonSync
