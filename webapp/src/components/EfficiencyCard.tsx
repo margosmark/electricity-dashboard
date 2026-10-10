@@ -4,20 +4,32 @@
  * movement you caused.
  *
  * Contents, in decision order:
- *   1. the headline stat: all-time kWh-weighted ¢/kWh (the same number the
- *      totals strip quotes, stated once as THE number);
+ *   1. the headline stat: all-time kWh-weighted ¢/kWh — published TWICE,
+ *      once excl. tax (the utility's own "Total Electricity Charges" line:
+ *      commodity + delivery + regulatory) and once incl. tax (that line plus
+ *      the bill's HST, over the same kWh). Both are shown simultaneously
+ *      because the owner's own question — "does the avg kWh cost include
+ *      all fees?" — went unanswered by a card that printed one bare number
+ *      whose numerator it had never stated. The subtitle now names the
+ *      charges and the divisor, and the footnote under the pair quotes the
+ *      tax rate the FILE states rather than a rate assumed from outside it;
  *   2. the trend chip, read from the USAGE component of the split — what
  *      your commodity would cost at today's rates — with the rate component,
  *      delivery/other and the net printed beside it, because a slope that
  *      includes an OEB rate bump (or the fixed delivery charge spread over a
  *      winter's worth of kWh) is a lie in green ink;
- *   3. the mini-line: every closed bill's ¢/kWh, the regression over the
- *      verdict window, Nov 1 rate-change ticks, and winter/summer bands —
- *      summer bills are structurally cheaper per kWh (off-peak dominates and
- *      the fixed delivery charge spreads over 2.5× the kWh), and the bands
- *      say so instead of letting the eye infer genius;
+ *   3. the mini-line: every closed bill's ¢/kWh (each point carrying both
+ *      the excl- and incl-tax figure), the regression over the verdict
+ *      window, Nov 1 rate-change ticks, and winter/summer bands — summer
+ *      bills are structurally cheaper per kWh (off-peak dominates and the
+ *      fixed delivery charge spreads over 2.5× the kWh), and the bands say
+ *      so instead of letting the eye infer genius;
  *   4. a click through to the MONEY tab, where the same bills are broken
  *      apart.
+ *
+ * The regression, the split components and the verdict all stay on the
+ * PRE-TAX number: a tax line scales a ¢/kWh by a constant, so it moves no
+ * slope and changes no verdict — only the headline reading.
  *
  * Deliberately hand-drawn SVG rather than Recharts: the recharts chunk is a
  * ~651 KB vendor bundle this app keeps off the critical path (Wave I item 4),
@@ -34,8 +46,11 @@ import { Gauge } from 'lucide-react';
 
 import { seasonSegments, type Season } from '@/lib/season';
 import {
+  EFFICIENCY_SUBTITLE,
   fmtBand,
   fmtSigned,
+  impliedTaxPct,
+  taxFootnote,
   type EfficiencyReport,
   type EfficiencyTrend,
   type PeriodEfficiency,
@@ -292,6 +307,8 @@ function Chart({
           data-testid="efficiency-point"
           data-start={p.startDate}
           data-cents={p.cents.toFixed(2)}
+          data-cents-incl-tax={p.centsInclTax.toFixed(2)}
+          data-tax={p.tax.toFixed(2)}
           data-kwh={p.kwh.toFixed(1)}
         />
       ))}
@@ -356,29 +373,73 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <Gauge size={22} strokeWidth={4} />
         </span>
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-500 font-black uppercase">
-            ¢ per kilowatt-hour · Total Electricity Charges ÷ billed kWh
+          <div
+            className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-500 font-black uppercase"
+            data-testid="efficiency-subtitle"
+          >
+            {EFFICIENCY_SUBTITLE}
           </div>
           <h3 id="efficiency-heading" className="text-xl md:text-3xl italic font-black uppercase">
             Efficiency
           </h3>
         </div>
 
-        {/* 1. The headline stat. */}
-        <div className="ml-auto bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black text-right">
+        {/* 1. The headline stat — BOTH readings of the same bills, side by
+            side. The pre-tax number is the one the totals strip and the
+            trend fit are built on; the incl-tax number is what the bill
+            asked for before the rebate. Neither is "the" number, so neither
+            gets to stand alone without saying which one it is. */}
+        <div
+          className="ml-auto bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black text-right"
+          data-testid="efficiency-headline"
+          data-cents={allTime.cents.toFixed(2)}
+          data-cents-incl-tax={allTime.centsInclTax.toFixed(2)}
+          data-tax={allTime.tax.toFixed(2)}
+        >
           <div className="text-[8px] md:text-[10px] text-yellow-400 uppercase font-black">
             All time · {allTime.bills} bills
           </div>
-          <div
-            className="text-xl md:text-3xl italic font-black"
-            data-testid="efficiency-all-time"
-            data-cents={allTime.cents.toFixed(2)}
-          >
-            {allTime.cents.toFixed(1)}¢
-            <span className="text-[10px] md:text-xs not-italic font-black ml-1">/kWh</span>
+          <div className="flex items-end justify-end gap-4 md:gap-6">
+            <div>
+              <div
+                className="text-xl md:text-3xl italic font-black"
+                data-testid="efficiency-all-time"
+                data-cents={allTime.cents.toFixed(2)}
+              >
+                {allTime.cents.toFixed(1)}¢
+                <span className="text-[10px] md:text-xs not-italic font-black ml-1">/kWh</span>
+              </div>
+              <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
+                excl. tax
+              </div>
+            </div>
+            <div>
+              <div
+                className="text-xl md:text-3xl italic font-black text-yellow-400"
+                data-testid="efficiency-all-time-incl-tax"
+                data-cents={allTime.centsInclTax.toFixed(2)}
+              >
+                {allTime.centsInclTax.toFixed(1)}¢
+                <span className="text-[10px] md:text-xs not-italic font-black ml-1">/kWh</span>
+              </div>
+              <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
+                incl. tax
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* 4. The footnote that makes the pair legible: the rate the FILE
+          states, and the two things these numbers are not. Derived from the
+          loaded bills, never hardcoded — a file with no tax line says so. */}
+      <p
+        data-testid="efficiency-tax-footnote"
+        data-tax-pct={impliedTaxPct(allTime) ?? ''}
+        className="mb-3 text-[10px] md:text-xs font-bold text-slate-500 normal-case"
+      >
+        {taxFootnote(allTime)}
+      </p>
 
       {/* 2. The verdict — read from the usage component, rates/delivery beside it. */}
       {ready ? (
@@ -492,9 +553,15 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
         <span
           className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[9px] md:text-[11px] font-black uppercase text-slate-500"
           data-testid="efficiency-range"
+          data-first-cents={first.cents.toFixed(2)}
+          data-first-cents-incl-tax={first.centsInclTax.toFixed(2)}
+          data-last-cents={last.cents.toFixed(2)}
+          data-last-cents-incl-tax={last.centsInclTax.toFixed(2)}
         >
           <span>
-            {first.label}: {first.cents.toFixed(1)}¢ → {last.label}: {last.cents.toFixed(1)}¢
+            {first.label}: {first.cents.toFixed(1)}¢ excl ·{' '}
+            {first.centsInclTax.toFixed(1)}¢ incl → {last.label}:{' '}
+            {last.cents.toFixed(1)}¢ excl · {last.centsInclTax.toFixed(1)}¢ incl
           </span>
           <span className="text-blue-700">Open the Money tab →</span>
         </span>
