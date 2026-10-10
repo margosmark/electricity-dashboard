@@ -87,6 +87,23 @@ function money(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
+/** ms per day — used only on yyyy-MM-dd stamps, so no DST can skew it. */
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Index of a `yyyy-MM-dd` day counted from a `yyyy-MM-dd` start.
+ *
+ * Parsing both at UTC midnight keeps the subtraction in whole days: the same
+ * stamps parsed as local time drift by an hour twice a year, and a day count
+ * that is wrong by one paints a reference line on the wrong date.
+ */
+function dayIndexFrom(start: string, day: string): number {
+  const a = Date.parse(`${start}T00:00:00Z`);
+  const b = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.max(0, Math.round((b - a) / MS_PER_DAY));
+}
+
 function Chart({ curve }: { curve: AccrualCurve }) {
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
@@ -101,8 +118,18 @@ function Chart({ curve }: { curve: AccrualCurve }) {
     .join(' ');
   const todayX = x(curve.daysElapsed);
   const last = curve.points[curve.points.length - 1];
+  // The crossing is often a PROJECTION past the drawn data — findIndex then
+  // returns -1, and x(-1 + 1) painted "tier 2" on the left edge of the chart,
+  // i.e. exactly opposite the date the note gives. Fall back to counting days
+  // from the period start, which lands on the same index when the day IS in
+  // the points and on the right future date when it is not.
+  const crossingIdx = curve.tierCrossingDay
+    ? curve.points.findIndex((p) => p.day === curve.tierCrossingDay)
+    : -1;
   const tierX = curve.tierCrossingDay
-    ? x(curve.points.findIndex((p) => p.day === curve.tierCrossingDay) + 1)
+    ? x(
+        (crossingIdx >= 0 ? crossingIdx : dayIndexFrom(curve.periodStart, curve.tierCrossingDay)) + 1,
+      )
     : null;
 
   return (

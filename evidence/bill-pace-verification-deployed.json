@@ -1,0 +1,248 @@
+{
+  "wave": "bill-pace",
+  "slice": 7,
+  "base": "http://10.10.11.110:3939/",
+  "fixture": "usage-summary-open-tail.xml",
+  "fixtureSha256": "324a0297c84daba813a12d80d8104188a0dc37ecfc22f0f98daa67c0dc70e49d",
+  "at": "2026-10-10T03:55:35.996Z",
+  "total": 47,
+  "passed": 47,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "accrual card renders on Money",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "card asks \"is my bill on pace?\"",
+      "ok": true,
+      "detail": "is my bill on pace?"
+    },
+    {
+      "name": "headline is the projected landing, with a date",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "headline reads \"$X by <date>\"",
+      "ok": true,
+      "detail": "$271.07 BY OCT 16"
+    },
+    {
+      "name": "headline carries a real number",
+      "ok": true,
+      "detail": "271.07"
+    },
+    {
+      "name": "fixed explainer names the grey line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "explainer names the yellow dashed line",
+      "ok": true,
+      "detail": "Grey line = spent so far this period (your estimate). Yellow dashed = where you’"
+    },
+    {
+      "name": "explainer names the dotted benchmark",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pacing chip renders next to the headline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chip declares a direction the card can be read from",
+      "ok": true,
+      "detail": "below"
+    },
+    {
+      "name": "chip tone matches its direction",
+      "ok": true,
+      "detail": "below"
+    },
+    {
+      "name": "chip quotes a dollar figure (or says it has nothing to compare)",
+      "ok": true,
+      "detail": "PACING BELOW BY $65.02"
+    },
+    {
+      "name": "grey accrual line draws",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "yellow dashed pace line draws",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pace line is yellow (#FACC15)",
+      "ok": true,
+      "detail": "#FACC15"
+    },
+    {
+      "name": "pace line is dashed",
+      "ok": true,
+      "detail": "10 6"
+    },
+    {
+      "name": "accrual line is grey, not black",
+      "ok": true,
+      "detail": "#64748B"
+    },
+    {
+      "name": "accrual geometry is finite",
+      "ok": true,
+      "detail": "64 coords"
+    },
+    {
+      "name": "accrual only ever rises",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pace line reaches PAST the accrual — the chart has a future",
+      "ok": true,
+      "detail": "pace ends x=704, accrual ends x=412.6206896551724"
+    },
+    {
+      "name": "dotted 3-bill benchmark draws across the chart",
+      "ok": true,
+      "detail": "1076px wide"
+    },
+    {
+      "name": "benchmark is a real number",
+      "ok": true,
+      "detail": "336.09"
+    },
+    {
+      "name": "an unbilled row exists and is badged Estimate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "OPEN row cell labels itself \"Est. commodity\"",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "OPEN row cell never says \"You paid\"",
+      "ok": true,
+      "detail": "Est. commodity ~$149.56"
+    },
+    {
+      "name": "EST. TOTAL column exists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EST. TOTAL header is permanently badged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "coverage column says what it measures",
+      "ok": true,
+      "detail": "PERIOD | PLAN | OFF-PEAK | MID-PEAK | ON-PEAK | DELIVERY | REGULATORY | HST | OEB REBATE | YOU PAID | EST. TOTAL ESTIMATE | DATA COVERAGE"
+    },
+    {
+      "name": "no bare \"Covered\" header remains",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EST. TOTAL shows a real figure when rates exist",
+      "ok": true,
+      "detail": "Est. total ~$251.07"
+    },
+    {
+      "name": "EST. TOTAL is larger than commodity alone",
+      "ok": true,
+      "detail": "251.07 > 149.56"
+    },
+    {
+      "name": "no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "mobile: headline renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: pacing chip renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: sparkline renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: sparkline is actually visible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: full chart is NOT visible before the tap",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: sparkline geometry is finite",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: toggle renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: toggle starts collapsed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: toggle is a real touch target",
+      "ok": true,
+      "detail": "302×44"
+    },
+    {
+      "name": "mobile: tap reveals the full chart",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: tap hides the sparkline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: toggle reports expanded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mobile: second tap returns to the sparkline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal overflow at 390px",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "accrual card fits the phone width",
+      "ok": true,
+      "detail": "358px"
+    }
+  ]
+}
