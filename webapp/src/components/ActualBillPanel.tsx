@@ -31,6 +31,7 @@ import {
   currencyLabel,
   deliverySplit,
   reconcileBillingPeriods,
+  summaryStatesMoney,
   type BillLineClass,
   type BillLineItem,
   type ChargeDecomposition,
@@ -187,6 +188,16 @@ function PeriodCard({
   const verdict = commodityVerdict(rec);
   const delta = rec.delta;
   const taxBase = totals.total;
+  /**
+   * The bill states no money at all (a bare ElectricPowerUsageSummary — the
+   * Green Button Alliance sample is exactly this shape). `billTotals` then
+   * hands back a clean $0.00 that nobody quoted, so every figure derived from
+   * it drops to a dash and the panel says why, the same way the money chart
+   * badged its unbilled row. A "you paid $0.00" over a bill with no charges is
+   * a payment asserted from the absence of data.
+   */
+  const statesMoney = summaryStatesMoney(summary);
+  const shownMoney = (n: number) => (statesMoney ? money(n) : '—');
 
   return (
     <div
@@ -200,17 +211,25 @@ function PeriodCard({
         </div>
         <div className="text-right">
           <div className="font-black italic text-xl md:text-2xl" data-testid="actual-payable">
-            {money(totals.payable)}
+            {statesMoney ? money(totals.payable) : '—'}
           </div>
           <div className="text-[10px] md:text-xs text-slate-500 font-bold">
-            {t('actualBill.youPaid')} · {t('actualBill.billedKwh', { kwh: kwh(periodKwh) })}
+            {statesMoney ? t('actualBill.youPaid') : t('actualBill.noChargeLines')} ·{' '}
+            {t('actualBill.billedKwh', { kwh: kwh(periodKwh) })}
             {currencyLabel(summary.currency) ? ` · ${currencyLabel(summary.currency)}` : ''}
           </div>
         </div>
       </div>
 
       {/* ---- estimate vs actual, the reason this panel exists ---------- */}
-      {verdict === 'match' && delta !== null ? (
+      {!statesMoney ? (
+        <div
+          data-testid="commodity-skip"
+          className="mt-3 md:mt-4 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-slate-600"
+        >
+          {t('actualBill.commoditySkip')}
+        </div>
+      ) : verdict === 'match' && delta !== null ? (
         <div
           data-testid="commodity-check"
           className="mt-3 md:mt-4 bg-emerald-50 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
@@ -306,19 +325,19 @@ function PeriodCard({
       <div className="mt-3 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs font-black">
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
           <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.electricity')}</div>
-          <div className="italic">{money(totals.commodity)}</div>
+          <div className="italic">{shownMoney(totals.commodity)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
           <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.deliveryReg')}</div>
-          <div className="italic">{money(totals.delivery + totals.regulatory)}</div>
+          <div className="italic">{shownMoney(totals.delivery + totals.regulatory)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
           <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.hst')}</div>
-          <div className="italic">{money(totals.tax)}</div>
+          <div className="italic">{shownMoney(totals.tax)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
           <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.rebate')}</div>
-          <div className="italic text-emerald-600">{money(totals.credit)}</div>
+          <div className="italic text-emerald-600">{shownMoney(totals.credit)}</div>
         </div>
       </div>
     </div>

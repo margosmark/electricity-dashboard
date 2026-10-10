@@ -16,7 +16,7 @@ import { type RateSet } from '@/lib/energy';
 import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import { fmtCentsAuto, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
+import { fmtCentsAuto, fmtDay, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -105,6 +105,18 @@ function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRa
         ];
 }
 
+/** `May 25 – Jun 23` / `25 mai – 23 juin` from two `yyyy-MM-dd` window
+ *  edges; the edges verbatim when they will not parse — a reformatted string
+ *  is still more honest than a dropped one. */
+function windowSpan(startDate: string, endDate: string): string {
+  const fmt = (iso: string): string => {
+    const d = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    return fmtDay(iso);
+  };
+  return `${fmt(startDate)} – ${fmt(endDate)}`;
+}
+
 export default function PlanCards({
   comparison,
   userPlan,
@@ -152,8 +164,19 @@ export default function PlanCards({
           >
             {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
             <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
-            <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">
+            {/* The card's headline number used to stand alone: a 6xl dollar
+                figure with nothing saying whether it is a bill, a projection,
+                or commodity alone. It is the cost of the window on screen,
+                commodity only — the same scope the Overview banner declares —
+                so the card declares it too. */}
+            <div className="text-4xl md:text-6xl italic mb-1 md:mb-2 font-black text-black">
               {comparison ? fmtMoney(comparison[plan.id]) : '—'}
+            </div>
+            <div
+              data-testid="plan-card-scope"
+              className="text-[8px] md:text-[10px] font-bold text-slate-500 normal-case mb-6 md:mb-10"
+            >
+              {t('planCard.scope', { range: windowSpan(startDate, endDate) })}
             </div>
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
               {rates.map((r, j) => (
