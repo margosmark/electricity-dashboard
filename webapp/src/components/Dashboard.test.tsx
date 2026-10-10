@@ -297,3 +297,66 @@ describe('Dashboard', () => {
     expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
   });
 });
+
+describe('Dashboard storage surfacing', () => {
+  it('shows a visible notice when stored data is corrupt instead of pretending to be empty', async () => {
+    (Storage.prototype.getItem as ReturnType<typeof vi.fn>).mockImplementation((key: string) => {
+      if (key === 'energy_data_v2') return '{"version":2,"points":[';
+      if (key === 'billing_day') return '1';
+      return null;
+    });
+
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    const notice = screen.getByTestId('storage-notice');
+    expect(notice).toBeInTheDocument();
+    expect(within(notice).getByText(/saved data could not be read/i)).toBeInTheDocument();
+    expect(within(notice).getByText(/energy_data_v2/)).toBeInTheDocument();
+    // data state is not silently claimed: the upload modal is up
+    expect(screen.getByText(/Link Data/i)).toBeInTheDocument();
+  });
+
+  it('asks for explicit confirmation and only removes this app’s keys on reset', async () => {
+    const store = new Map<string, string>();
+    store.set('energy_data', JSON.stringify(mockRawData));
+    store.set('billing_day', '1');
+    store.set('some_other_app', 'keep-me');
+    store.set('theme', 'dark');
+    Storage.prototype.getItem = vi.fn((key: string) => (store.has(key) ? store.get(key)! : null));
+    Storage.prototype.setItem = vi.fn((key: string, value: string) => { store.set(key, String(value)); });
+    Storage.prototype.removeItem = vi.fn((key: string) => { store.delete(key); });
+
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    // step 1: the trash button only opens a confirm dialog
+    await user.click(screen.getByTitle('Reset Data'));
+    expect(screen.getByTestId('reset-confirm')).toBeInTheDocument();
+    expect(screen.getByText(/other site data is untouched/i)).toBeInTheDocument();
+    expect(screen.getByText(/energy_data_v2/)).toBeInTheDocument();
+    // init migrated legacy → v2, and opening the dialog removed nothing
+    expect(store.has('energy_data_v2')).toBe(true);
+    expect(store.has('billing_day')).toBe(true);
+
+    // cancel keeps everything
+    await user.click(screen.getByTitle('Cancel Reset'));
+    expect(screen.queryByTestId('reset-confirm')).not.toBeInTheDocument();
+    expect(store.has('energy_data_v2')).toBe(true);
+
+    // step 2: confirm removes only our keys
+    await user.click(screen.getByTitle('Reset Data'));
+    await user.click(screen.getByTitle('Confirm Reset'));
+    expect(store.has('energy_data')).toBe(false);
+    expect(store.has('energy_data_v2')).toBe(false);
+    expect(store.has('billing_day')).toBe(false);
+    expect(store.get('some_other_app')).toBe('keep-me');
+    expect(store.get('theme')).toBe('dark');
+    // confirmReset then reloads; jsdom only logs its usual "not implemented" notice
+  });
+});

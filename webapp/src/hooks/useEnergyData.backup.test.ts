@@ -11,6 +11,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useEnergyData } from './useDashboard';
 import { BACKUP_SCHEMA, parseBackup, serializeBackup, buildBackupDocument } from '@/lib/backup';
 import type { DataPoint } from '@/lib/energy';
+import { loadEnergyData, saveEnergyData, saveBillingDay } from '@/lib/storage';
 
 const rows: DataPoint[] = [
   { timestamp: 1704067200, usage_kwh: 1.5 },
@@ -19,8 +20,8 @@ const rows: DataPoint[] = [
 ];
 
 function seedStorage(overrides: { billingDay?: string; extraCharges?: string } = {}) {
-  localStorage.setItem('energy_data', JSON.stringify(rows));
-  localStorage.setItem('billing_day', overrides.billingDay ?? '5');
+  saveEnergyData(rows);
+  saveBillingDay(Number(overrides.billingDay ?? '5'));
   localStorage.setItem(
     'extra_charges',
     overrides.extraCharges ??
@@ -101,7 +102,11 @@ describe('useEnergyData — import', () => {
     });
 
     expect(res!).toEqual({ ok: true, filename: 'energy-backup_2026-10-02.json' });
-    expect(JSON.parse(localStorage.getItem('energy_data')!)).toEqual(fresh);
+    // The readings land under the versioned key — read them the way the
+    // dashboard does on its next boot.
+    const restored = loadEnergyData();
+    expect(restored.ok && restored.value?.points).toEqual(fresh);
+    expect(localStorage.getItem('energy_data')).toBeNull();
     expect(localStorage.getItem('billing_day')).toBe('12');
     expect(JSON.parse(localStorage.getItem('extra_charges')!)).toEqual({
       deliveryPerKwh: '',
