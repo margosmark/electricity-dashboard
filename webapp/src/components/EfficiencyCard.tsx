@@ -278,7 +278,20 @@ function Chart({
         data-testid="efficiency-series"
       />
       {points.map((p, i) => (
-        <circle key={p.startDate} cx={x(i)} cy={y(p.cents)} r={3} fill="#000" />
+        <circle
+          key={p.startDate}
+          cx={x(i)}
+          cy={y(p.cents)}
+          r={3}
+          fill="#000"
+          /* The chart is decorative for screen readers, but the numbers it
+             draws are the ones the browser check reads back — one circle per
+             bill, with the audited ¢/kWh and the kWh it was divided by. */
+          data-testid="efficiency-point"
+          data-start={p.startDate}
+          data-cents={p.cents.toFixed(2)}
+          data-kwh={p.kwh.toFixed(1)}
+        />
       ))}
       {last && (
         <circle
