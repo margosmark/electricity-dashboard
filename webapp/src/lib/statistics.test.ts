@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 import { parseUsageSummaries, type RateSet } from './energy';
 import {
+  EFFICIENCY_SUBTITLE,
   TREND_MAX_PERIODS,
   TREND_MIN_PERIODS,
   buildEfficiency,
@@ -34,11 +35,13 @@ import {
   efficiencyTrend,
   fmtBand,
   fmtSigned,
+  impliedTaxPct,
   inViewCentsPerKwh,
   latestRateSet,
   linearFit,
   rateBoundaries,
   rateForUsageNote,
+  taxFootnote,
   verdictOf,
   weightedCentsPerKwh,
   type PeriodEfficiency,
@@ -70,16 +73,22 @@ function period(
   usage: number | null = cents,
   rate: number | null = 0,
   delivery: number | null = 0,
+  taxDollars = 0,
 ): PeriodEfficiency {
   const month = String((i % 12) + 1).padStart(2, '0');
+  const cost = cents * 10;
   return {
     start: Date.UTC(2024, i, 1) / 1000,
     startDate: `2024-${month}-01`,
     endDate: `2024-${month}-28`,
     label: `M${i}`,
     kwh: 1000,
-    cost: cents * 10,
+    cost,
+    tax: taxDollars,
     cents,
+    // 1,000 kWh: dollars and ¢/kWh differ by exactly 10, so the incl-tax
+    // figure is readable straight off the fixture.
+    centsInclTax: ((cost + taxDollars) / 1000) * 100,
     usageCents: usage,
     deliveryCents: delivery,
     rateCents: rate,
@@ -164,6 +173,123 @@ describe('Wave S 2 — all-time and in-view averages', () => {
     expect(inViewCentsPerKwh(periods, { start: '2030-01-01', end: '2030-02-01' })).toBeNull();
     expect(inViewCentsPerKwh(periods, null)).toBeNull();
     expect(inViewCentsPerKwh([], { start: '2026-01-01', end: '2026-12-31' })).toBeNull();
+  });
+});
+
+/* ========================================================================== *
+ * The tax dimension — what the ¢/kWh numerator does and does not contain
+ * ========================================================================== */
+
+describe('Wave U — the ¢/kWh numerator says what it contains', () => {
+  it('names the charges, the divisor and the tax exclusion in one line', () => {
+    // This is the answer to the owner's question, printed where the number
+    // is. Every charge class named, the divisor named, and the exclusion
+    // stated — so nobody has to infer it from a bare 16.3¢.
+    expect(EFFICIENCY_SUBTITLE).toContain('ALL electricity charges');
+    expect(EFFICIENCY_SUBTITLE).toContain('commodity + delivery + regulatory');
+    expect(EFFICIENCY_SUBTITLE).toContain('billed kWh');
+    expect(EFFICIENCY_SUBTITLE).toContain('tax excluded');
+  });
+
+  it('prices each bill with its OWN tax line over its OWN kWh', () => {
+    const periods = efficiencyPeriods(summaries, rates);
+    // The utility prints HST as a separate line under Total Electricity
+    // Charges — 13% of it, to the cent: 497.45→64.67, 403.58→52.47,
+    // 464.00→60.32. The incl-tax ¢/kWh adds that line back over the same
+    // kWh the pre-tax figure was divided by.
+    expect(periods.map((p) => p.tax)).toEqual([
+      expect.closeTo(64.67, 2),
+      expect.closeTo(52.47, 2),
+      expect.closeTo(60.32, 2),
+    ]);
+    expect(periods.map((p) => p.centsInclTax)).toEqual([
+      expect.closeTo(21.2121, 3),
+      expect.closeTo(16.3459, 3),
+      expect.closeTo(19.8606, 3),
+    ]);
+    // Every period's incl-tax figure is its own pre-tax figure scaled by
+    // (cost + tax)/cost — the same kWh, the same bills, one more line.
+    for (const p of periods) {
+      expect(p.centsInclTax).toBeCloseTo(((p.cost + p.tax) / p.kwh) * 100, 10);
+      expect(p.centsInclTax).toBeGreaterThan(p.cents);
+    }
+  });
+
+  it('weights the incl-tax average by kWh over Σ(cost+tax)', () => {
+    const all = weightedCentsPerKwh(efficiencyPeriods(summaries, rates))!;
+    // $1,365.03 + $177.46 = $1,542.49 ÷ 8,080 kWh.
+    expect(all.tax).toBeCloseTo(177.46, 2);
+    expect(all.cost).toBeCloseTo(1365.03, 2);
+    expect(all.centsInclTax).toBeCloseTo(19.0902, 3);
+    // On THIS file every bill happens to be 13%, so a ×1.13 shortcut would
+    // land on the same number. That is exactly why the shortcut is not what
+    // runs: give the periods tax rates no single multiplier can express and
+    // the sum-based mean still comes out exact, where ×1.13 does not.
+    const mixed = [
+      period(0, 10, 10, 0, 0, 1), // $100 cost, $1 tax → 10%
+      period(1, 20, 20, 0, 0, 6), // $200 cost, $6 tax → 30%
+    ];
+    const mean = weightedCentsPerKwh(mixed)!;
+    // Σ(cost + tax) = 101 + 206 = 307 over 2,000 kWh = 15.35¢. A ×1.13
+    // shortcut would say 16.95¢ — 1.6¢ out, on two bills.
+    expect(mean.centsInclTax).toBeCloseTo(15.35, 10);
+    expect(mean.centsInclTax).not.toBeCloseTo(mean.cents * 1.13, 3);
+    expect(mean.tax).toBe(7);
+    expect(mean.cost).toBe(300);
+  });
+
+  it('scopes the incl-tax average to the same window as the pre-tax one', () => {
+    const periods = efficiencyPeriods(summaries, rates);
+    const july = inViewCentsPerKwh(periods, { start: '2026-08-01', end: '2026-08-31' })!;
+    // One bill, 464.00 + 60.32 over 2,640 kWh.
+    expect(july.cents).toBeCloseTo(17.5758, 3);
+    expect(july.centsInclTax).toBeCloseTo(19.8606, 3);
+    expect(july.cost).toBeCloseTo(464.0, 2);
+    expect(july.tax).toBeCloseTo(60.32, 2);
+  });
+
+  it('collapses the two figures onto each other when the file states no tax line', () => {
+    // Strip every H.S.T. line: the incl-tax figure must equal the pre-tax
+    // one EXACTLY — no borrowed 13%, no rounding cushion.
+    const untaxed = [
+      {
+        ...summaries[0],
+        items: summaries[0].items.filter((i) => !/h\.?s\.?t\.?/i.test(i.note)),
+      },
+    ];
+    const [p] = efficiencyPeriods(untaxed, rates);
+    expect(p.tax).toBe(0);
+    expect(p.centsInclTax).toBe(p.cents);
+    expect(p.cents).toBeCloseTo(18.7717, 3);
+
+    const all = weightedCentsPerKwh(efficiencyPeriods(untaxed, rates))!;
+    expect(all.centsInclTax).toBe(all.cents);
+    expect(impliedTaxPct(all)).toBe(0);
+  });
+
+  it('derives the quoted tax rate from the bills, and says so when there is none', () => {
+    const taxed = weightedCentsPerKwh(efficiencyPeriods(summaries, rates))!;
+    // 177.46 ÷ 1,365.03 = 13.0% — read off the file, not assumed.
+    expect(impliedTaxPct(taxed)).toBe(13.0);
+    expect(taxFootnote(taxed)).toContain('HST on your bills is 13.0%');
+    expect(taxFootnote(taxed)).toContain('Water and gas are billed separately');
+    expect(taxFootnote(taxed)).not.toContain('undefined');
+
+    const untaxed = weightedCentsPerKwh(
+      efficiencyPeriods(
+        [
+          {
+            ...summaries[0],
+            items: summaries[0].items.filter((i) => !/h\.?s\.?t\.?/i.test(i.note)),
+          },
+        ],
+        rates,
+      ),
+    )!;
+    expect(taxFootnote(untaxed)).toContain('states no tax line');
+    // No bills at all: no rate to quote, and no crash quoting it.
+    expect(impliedTaxPct(null)).toBeNull();
+    expect(taxFootnote(null)).toContain('Water and gas');
   });
 });
 
