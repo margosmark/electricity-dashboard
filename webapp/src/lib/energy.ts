@@ -2,6 +2,10 @@ import { XMLParser } from 'fast-xml-parser';
 import { isOntarioHoliday } from './ontarioHolidays';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
+/* Wave U — user-visible sentences in this file come from the locale catalog
+ * at call time (lib code reads the module locale; components re-render on
+ * toggle via useTranslation). Numeric fields stay numeric. */
+import { fmtMoney0, getLocale, t } from '@/i18n';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -123,18 +127,18 @@ export function anomalyWeatherContext(
 ): AnomalyContext {
   const day = dayTemps(rows, temps);
   if (day.mean === null || day.high === null || day.low === null) {
-    return { kind: 'unknown', tempC: null, text: 'no data' };
+    return { kind: 'unknown', tempC: null, text: t('anomalies.ctxNoData') };
   }
   if (day.high >= ANOMALY_AC_TEMP_C) {
-    return { kind: 'ac', tempC: day.high, text: `${whole(day.high)}°C — that's AC` };
+    return { kind: 'ac', tempC: day.high, text: t('anomalies.ctxAc', { temp: whole(day.high) }) };
   }
   if (day.low <= ANOMALY_HEAT_TEMP_C) {
-    return { kind: 'heat', tempC: day.low, text: `${whole(day.low)}°C — that's heat` };
+    return { kind: 'heat', tempC: day.low, text: t('anomalies.ctxHeat', { temp: whole(day.low) }) };
   }
   return {
     kind: 'mild',
     tempC: day.mean,
-    text: 'no weather signal — worth checking the appliance',
+    text: t('anomalies.ctxMild'),
   };
 }
 
@@ -225,7 +229,6 @@ function longestRunAbove(
 /* Wave U — user-visible sentences in this file come from the locale catalog
  * at call time (lib code reads the module locale; components re-render on
  * toggle via useTranslation). Numeric fields stay numeric. */
-import { fmtMoney0, getLocale, t } from '@/i18n';
 
 /**
  * "$0.0412/kWh" / "$3.95/month" — the true-bill receipt's rate format.
