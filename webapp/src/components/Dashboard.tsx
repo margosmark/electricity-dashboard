@@ -13,7 +13,9 @@
 "use client";
 
 import React, { useMemo, useRef, useEffect, useLayoutEffect } from 'react';
-import { HelpCircle, Zap, Upload, X, Trash2, Settings2 } from 'lucide-react';
+import { HelpCircle, Zap, Upload, X, Trash2, Settings2, AlertTriangle, Download } from 'lucide-react';
+import { format } from 'date-fns';
+import { downloadTextFile } from '@/lib/download';
 import {
   type ChartDataItem,
   processRawData, filterByDateRange,
@@ -24,7 +26,11 @@ import {
 } from '@/lib/energy';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
+  type StorageNotice,
 } from '@/hooks/useDashboard';
+// The readings-only export (storage.ts's own document) — the toolbar's
+// quick export, distinct from BackupControls' full-profile JSON.
+import { exportEnergyData } from '@/lib/storage';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
 import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
@@ -45,16 +51,42 @@ import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
 import { projectMonthBill } from '@/lib/billProjection';
 
+/** One row per storage problem — never let a failed write look like a saved one. */
+const STORAGE_MESSAGES: Record<StorageNotice['kind'], string> = {
+  quota: 'Data too large for browser storage — export and clear old data',
+  corrupt: 'Saved data could not be read — re-upload your XML or import a backup',
+  cleanup: 'Saved data could not be fully cleaned up — export a backup now',
+};
+
+/** Visible, dismissible row for any storage failure — quota / corrupt / cleanup. */
+function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDismiss: () => void }) {
+  return (
+    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] font-black uppercase">
+      <AlertTriangle size={20} strokeWidth={4} className="shrink-0 mt-1" />
+      <div className="flex-1 min-w-[200px]">
+        <div className="text-xs md:text-base">{STORAGE_MESSAGES[notice.kind]}</div>
+        <div className="text-[10px] md:text-xs opacity-90 normal-case mt-1 break-all">{notice.detail}</div>
+      </div>
+      <button onClick={onDismiss} title="Dismiss storage notice" aria-label="Dismiss storage notice" className="ml-auto p-2 bg-white text-black border-2 border-black rounded-lg hover:bg-slate-100 transition-all">
+        <X size={16} strokeWidth={4} />
+      </button>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     viewScope, setViewScope,
-    handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
+    handleFileUpload, updateBillingDay, applyViewScope,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
     pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
     exportBackup, importBackupFile,
+    // Storage surfacing + the two-step, scoped reset (t_a8a54e33)
+    storageNotice, dismissStorageNotice, raiseStorageNotice,
+    resetConfirmOpen, resetKeys, openResetConfirm, cancelResetConfirm, confirmReset,
     parseIssue, setParseIssue,
     exampleData, loadExampleData, discardExampleData,
     gbStatus, gbSyncing, gbMessage, setGbMessage,
@@ -154,6 +186,46 @@ export default function Dashboard() {
     useZoomNavigation(startDate, endDate, setStartDate, setEndDate,
       () => viewScopeRef.current, () => billingDayRef.current,
       () => axisRef.current);
+
+  // --- Readings-only export / import (storage.ts's own document) ----------
+  //
+  // Deliberately separate from BackupControls, which moves the WHOLE profile
+  // (readings + billing day + bill add-ons + plan timeline): this one moves
+  // just the readings. Both files are accepted by the same import, so the two
+  // affordances are two sizes of the same round trip, not two formats.
+
+  const handleExportData = () => {
+    const exported = exportEnergyData(rawData, 'manual-export');
+    if (!exported.ok) {
+      raiseStorageNotice({ kind: exported.reason, detail: exported.detail });
+      return;
+    }
+    downloadTextFile(
+      `energy-optimizer-export-${format(new Date(), 'yyyy-MM-dd')}.json`,
+      exported.value,
+      'application/json',
+    );
+  };
+
+  /** The modal's "…or import a previous export (.json)" input. */
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    void importBackupFile(file).then((res) => {
+      if (res.ok) return; // onBackupApplied reloads and the rows reappear
+      // Inside the modal the parse-diagnostic box is where failures are read.
+      setParseIssue({
+        ok: false,
+        headline: 'That backup could not be imported.',
+        detail: res.error ?? 'The file was not recognised as an export of this app.',
+        hints: [
+          'Pick the JSON produced by “Export JSON” (the full profile) or by the toolbar’s download button (readings only).',
+          'Nothing was changed: an import is accepted whole or not at all.',
+        ],
+      });
+    });
+  };
 
   // --- Calculations ---
 
@@ -386,11 +458,18 @@ export default function Dashboard() {
           <div className="my-auto bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black">
              <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-black font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> Link Data</h2>
              <p className="font-bold text-slate-600 text-sm md:text-lg mb-6 md:mb-10 text-black">Privacy-First: Data stays in your browser. <span className="underline decoration-blue-500">Upload your XML to begin.</span></p>
+             {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} /></div>}
              <p className="text-[10px] md:text-xs font-black uppercase text-slate-500 mb-3">Pick one export, or hold Ctrl / ⌘ to pick 2+ and merge them.</p>
              <div className="relative">
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label="Upload Green Button XML" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
              </div>
+             {/* The other way in with no utility file at all: a JSON this app
+                 exported before (full profile or readings only). */}
+             <label className="mt-4 block cursor-pointer">
+               <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label="Import JSON backup" className="sr-only" />
+               <span className="block min-h-11 w-full py-3 bg-emerald-50 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs text-black text-center">…or import a previous export (.json)</span>
+             </label>
              {/* Wave K — the other way to get data in: authorise once and
                  let the shim pipe ESPI straight through to localStorage. */}
              <GreenButtonSync
@@ -453,6 +532,21 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Reset: two-step confirm, scoped to this app's keys only */}
+      {resetConfirmOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex items-center justify-center p-4">
+          <div role="dialog" aria-modal="true" aria-label="Confirm reset" data-testid="reset-confirm" className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-lg w-full text-black">
+            <h2 className="text-xl md:text-3xl uppercase tracking-tighter mb-3 md:mb-4 flex items-center gap-2 md:gap-3 text-red-600 font-black"><AlertTriangle size={22} strokeWidth={4} /> Erase saved data?</h2>
+            <p className="font-bold text-slate-700 text-xs md:text-sm mb-2">This removes {resetKeys.length} saved {resetKeys.length === 1 ? 'item' : 'items'} from <em>this browser only</em>:</p>
+            <p className="font-black uppercase text-[10px] md:text-xs text-slate-500 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : 'nothing stored yet'} — other site data is untouched.</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button type="button" onClick={confirmReset} title="Confirm Reset" className="min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors">Yes, erase it</button>
+              <button type="button" onClick={cancelResetConfirm} title="Cancel Reset" className="min-h-11 flex-1 py-3 md:py-4 bg-slate-100 border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-slate-200 active:translate-y-0.5 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Multi-UsagePoint picker: only when the feed carried more than one meter */}
       {pendingUpload && (
         <UsagePointPicker
@@ -489,7 +583,8 @@ export default function Dashboard() {
       <div className="no-print relative z-[200] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-col gap-4 md:gap-6 text-black">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" aria-label="Upload XML" className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={emergencyReset} title="Reset Data" aria-label="Reset all data in this browser" className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={openResetConfirm} title="Reset Data" aria-label="Reset all data in this browser" className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={handleExportData} title="Export Data" aria-label="Export readings as JSON" disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-blue-700 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
@@ -554,6 +649,11 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Storage failure row (visible whenever a read/write did not land) */}
+      {storageNotice && !showUploadModal && (
+        <StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} />
+      )}
 
       {/* The four sections. Only the active one renders — a hidden tab's
           charts are not drawn, measured or announced to a screen reader. */}

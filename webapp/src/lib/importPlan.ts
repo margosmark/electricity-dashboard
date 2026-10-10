@@ -146,23 +146,4 @@ export function mergeForWrite(existing: DataPoint[], incoming: DataPoint[]): Dat
   return [...byTs.values()].sort((a, b) => a.timestamp - b.timestamp);
 }
 
-/** Rows read back from `localStorage.energy_data`, tolerating a corrupt value. */
-export function readStoredRows(raw: string | null): DataPoint[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (r): r is DataPoint =>
-        !!r &&
-        typeof r === 'object' &&
-        typeof (r as DataPoint).timestamp === 'number' &&
-        Number.isFinite((r as DataPoint).timestamp) &&
-        typeof (r as DataPoint).usage_kwh === 'number' &&
-        Number.isFinite((r as DataPoint).usage_kwh) &&
-        (r as DataPoint).usage_kwh >= 0,
-    );
-  } catch {
-    return [];
-  }
-}
+

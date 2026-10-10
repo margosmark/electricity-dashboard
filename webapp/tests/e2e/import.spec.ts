@@ -15,7 +15,7 @@ const FIXTURE = path.resolve(__dirname, '../fixtures/synthetic.xml');
 const FIXTURE_READINGS = 68;
 
 async function storedReadings(page: Page): Promise<Array<{ timestamp: number; usage_kwh: number }>> {
-  return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]'));
+  return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || 'null')?.points || []);
 }
 
 async function seedStorage(page: Page, rows: Array<{ timestamp: number; usage_kwh: number }>) {

@@ -28,6 +28,7 @@ import Dashboard from './Dashboard';
 import DualHeatmap from './DualHeatmap';
 import BillAccrualCurve from './BillAccrualCurve';
 import PlanSwitchTimeline from './PlanSwitchTimeline';
+import { saveEnergyData } from '@/lib/storage';
 import BestChoiceChip from './BestChoiceChip';
 import VerdictLine from './VerdictLine';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
@@ -114,7 +115,7 @@ describe('Wave R 1 — the tab strip', () => {
   });
 
   it('renders the selected tab\'s panel as a labelled tabpanel the tab actually points at', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     stubFetch();
     await renderLoaded();
 
@@ -184,7 +185,7 @@ describe('Wave R 1 — the tab strip', () => {
 
   it('selects on click and only the active tab renders its panel', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
@@ -196,7 +197,7 @@ describe('Wave R 1 — the tab strip', () => {
 
   it('remembers the choice in storage AND writes it into the address bar', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     await user.click(screen.getByRole('tab', { name: 'Money' }));
@@ -207,7 +208,7 @@ describe('Wave R 1 — the tab strip', () => {
   });
 
   it('opens on the tab the URL names, even when storage says otherwise', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     window.location.hash = '#tab=plans';
     localStorage.setItem(TAB_STORAGE_KEY, 'money');
 
@@ -218,7 +219,7 @@ describe('Wave R 1 — the tab strip', () => {
 
   it('follows the back button back to the tab that entry opened on', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     await user.click(screen.getByRole('tab', { name: 'Usage' }));
@@ -236,7 +237,7 @@ describe('Wave R 1 — the tab strip', () => {
   });
 
   it('degrades to Overview for an unreadable or hostile hash', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     window.location.hash = '#tab=not-a-tab';
 
     await renderLoaded();
@@ -246,7 +247,7 @@ describe('Wave R 1 — the tab strip', () => {
   });
 
   it('keeps the strip out of the printed report', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
     expect(screen.getByTestId('tab-nav').className).toContain('no-print');
   });
@@ -258,7 +259,7 @@ describe('Wave R 1 — the tab strip', () => {
 
 describe('Wave R 2 — the answer is never buried', () => {
   it('puts the banner first on Overview and the chip in the toolbar', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     const overview = screen.getByTestId('tab-panel-overview');
@@ -268,7 +269,7 @@ describe('Wave R 2 — the answer is never buried', () => {
 
   it('keeps the chip on EVERY tab, with the same verdict as the banner', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     const banner = screen.getByTestId('best-choice-banner');
@@ -284,7 +285,7 @@ describe('Wave R 2 — the answer is never buried', () => {
 
   it('jumps from the chip to the banner when another tab is active', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     await user.click(screen.getByRole('tab', { name: 'Money' }));
@@ -299,7 +300,7 @@ describe('Wave R 2 — the answer is never buried', () => {
 
   it('recomputes the verdict as one line where the evidence lives', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     // The banner is an Overview element — read its verdict BEFORE leaving.
@@ -359,7 +360,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
         return Promise.resolve({ json: () => Promise.resolve(mockRates) });
       }),
     );
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     // Neither is global chrome any more: the file status lives inside the
@@ -384,7 +385,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
 
   it('keeps one toolbar — with the plan switcher and upload — across every tab', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
 
     const toolbar = screen.getByTestId('plan-switcher').closest('.no-print')!;
@@ -405,7 +406,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
   });
 
   it('drops the CHART/INSIGHTS toggle — the tabs replaced it', async () => {
-    localStorage.setItem('energy_data', JSON.stringify(mockRawData));
+    saveEnergyData(mockRawData);
     await renderLoaded();
     expect(screen.queryByRole('button', { name: 'CHART' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'INSIGHTS' })).not.toBeInTheDocument();
