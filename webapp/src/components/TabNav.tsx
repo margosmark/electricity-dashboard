@@ -24,6 +24,7 @@
 import { useRef } from 'react';
 import { Banknote, Gauge, Scale, TrendingUp } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
+import { useTranslation } from '@/i18n';
 
 const ICONS: Record<TabId, typeof Gauge> = {
   overview: Gauge,
@@ -39,6 +40,9 @@ export type TabNavProps = {
 
 export default function TabNav({ active, onChange }: TabNavProps) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  // Wave U — `lib/tabs.ts` keeps the canonical English definitions (pure
+  // data, unit-tested); the strip renders the localized view of them.
+  const { t } = useTranslation();
 
   const focusTab = (index: number) => {
     const next = (index + TABS.length) % TABS.length;
@@ -87,7 +91,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
     >
       <div
         role="tablist"
-        aria-label="Dashboard sections"
+        aria-label={t('tabnav.aria')}
         aria-orientation="horizontal"
         onKeyDown={onKeyDown}
         className="flex gap-1 md:gap-2 overflow-x-auto"
@@ -109,7 +113,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               data-testid={`tab-${tab.id}`}
               data-active={String(selected)}
               tabIndex={selected ? 0 : -1}
-              title={tab.description}
+              title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
               className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs whitespace-nowrap transition-all ${
                 selected
@@ -118,7 +122,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               }`}
             >
               <Icon size={14} strokeWidth={4} aria-hidden="true" className="shrink-0" />
-              <span>{tab.label}</span>
+              <span>{t(`tab.${tab.id}`)}</span>
             </button>
           );
         })}

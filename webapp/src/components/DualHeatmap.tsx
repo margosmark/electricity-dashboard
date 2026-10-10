@@ -22,22 +22,24 @@
 
 import { type HeatmapData } from '@/lib/energy';
 import { heatColor, splitHeatmap, type HeatmapGroup } from '@/lib/heatmapSplit';
+import { fmtKwh, useTranslation } from '@/i18n';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
+  const { t } = useTranslation();
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-2 mb-2 md:mb-3">
         <h4 className="text-sm md:text-lg font-black uppercase text-black">{group.label}</h4>
         <span className="text-[8px] md:text-[10px] font-black uppercase text-slate-500">
-          {group.dayLabels.length} days · {group.days} in view
+          {t('heatmap.gridMeta', { total: group.dayLabels.length, inView: group.days })}
         </span>
       </div>
       <div className="overflow-x-auto pb-1">
         <div
           role="grid"
-          aria-label={`Average kWh by hour, ${group.label.toLowerCase()}`}
+          aria-label={t('heatmap.gridAria', { group: group.label.toLowerCase() })}
           data-testid={`heatmap-grid-${group.id}`}
           className="min-w-[520px] text-black"
         >
@@ -69,7 +71,15 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
                 {group.dayLabels[rowIndex]}
               </div>
               {row.map((cell, hour) => {
-                const label = `${group.dayLabels[rowIndex]} ${String(hour).padStart(2, '0')}:00 — ${cell.avg.toFixed(2)} kWh average over ${cell.days} day${cell.days === 1 ? '' : 's'}`;
+                const label = t('heatmap.cellLabel', {
+                  day: group.dayLabels[rowIndex],
+                  hour: `${String(hour).padStart(2, '0')}:00`,
+                  // Two decimals: the a11y name IS the number a sighted user
+                  // reads from the hover chip (Wave R's no-hover-only rule).
+                  kwh: fmtKwh(cell.avg, 2),
+                  count: cell.days,
+                  days: cell.days,
+                });
                 return (
                   <div
                     key={hour}
@@ -83,7 +93,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
                     )} hover:scale-110 active:scale-110 relative group transition-all font-black`}
                   >
                     <div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">
-                      {cell.avg.toFixed(2)} kWh
+                      {fmtKwh(cell.avg)}
                     </div>
                   </div>
                 );
@@ -101,6 +111,7 @@ export type DualHeatmapProps = {
 };
 
 export default function DualHeatmap({ heatmapData }: DualHeatmapProps) {
+  const { t } = useTranslation();
   const split = splitHeatmap(heatmapData);
 
   return (
@@ -109,19 +120,17 @@ export default function DualHeatmap({ heatmapData }: DualHeatmapProps) {
       className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black overflow-hidden"
     >
       <h3 className="text-2xl md:text-4xl mb-2 italic text-black font-black uppercase">
-        Weekly Routine Heatmap
+        {t('heatmap.title')}
       </h3>
       <p className="mb-4 md:mb-6 text-[10px] md:text-xs font-bold text-slate-600 normal-case max-w-3xl">
-        Weekdays and weekends split apart — a charger that only runs Monday to Friday at 19:00
-        disappears when Saturday and Sunday share its colour scale. Both grids use the SAME scale
-        (peaking at {split.maxAvg.toFixed(2)} kWh in an hour), so the colours stay comparable.
+        {t('heatmap.blurb', { max: fmtKwh(split.maxAvg) })}
       </p>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         <HeatGrid group={split.weekday} maxAvg={split.maxAvg} />
         <HeatGrid group={split.weekend} maxAvg={split.maxAvg} />
       </div>
       <div className="mt-4 text-[8px] md:text-[10px] text-slate-400 font-black text-center xl:hidden">
-        Scroll each grid sideways to see all 24 hours →
+        {t('heatmap.scrollHint')}
       </div>
     </div>
   );

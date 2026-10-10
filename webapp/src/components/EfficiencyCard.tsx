@@ -41,12 +41,12 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { format } from 'date-fns';
 import { Gauge } from 'lucide-react';
+import { fmtCents, fmtDateLong, useTranslation } from '@/i18n';
 
 import { seasonSegments, type Season } from '@/lib/season';
 import {
-  EFFICIENCY_SUBTITLE,
+  EFFICIENCY_SUBTITLE_KEY,
   fmtBand,
   fmtSigned,
   impliedTaxPct,
@@ -78,17 +78,21 @@ const CHIP_CLASS: Record<TrendVerdict, string> = {
   stable: 'bg-slate-200',
 };
 
-const CHIP_WORD: Record<TrendVerdict, string> = {
-  improving: 'IMPROVING',
-  worsening: 'WORSENING',
-  stable: 'STABLE',
+const CHIP_WORD_KEY: Record<TrendVerdict, string> = {
+  improving: 'efficiency.verdict.improving',
+  worsening: 'efficiency.verdict.worsening',
+  stable: 'efficiency.verdict.stable',
 };
 
-/** Signed slope with its unit; the stable case quotes the band instead. */
-function slopeText(verdict: TrendVerdict, slope: number, band: number): string {
+/**
+ * Signed slope with its unit; the stable case quotes the band instead.
+ * Wave U: the sentence comes from the catalog so "IMPROVING −0.4¢/kWh per
+ * period" becomes "AMÉLIORATION −0,4 ¢/kWh par période" on toggle.
+ */
+function slopeText(t: (key: string, p?: Record<string, string | number>) => string, verdict: TrendVerdict, slope: number, band: number): string {
   return verdict === 'stable'
-    ? `±${fmtBand(band)}¢/kWh per period`
-    : `${fmtSigned(slope)}¢/kWh per period`;
+    ? t('efficiency.slopeBand', { band: fmtBand(band) })
+    : t('efficiency.slope', { slope: fmtSigned(slope) });
 }
 
 function Chart({
@@ -98,6 +102,8 @@ function Chart({
   points: PeriodEfficiency[];
   trend: EfficiencyTrend;
 }) {
+  // Wave U — season words and ¢ axis labels render in the active language.
+  const { t } = useTranslation();
   const geometry = useMemo(() => {
     const innerW = W - PAD.left - PAD.right;
     const innerH = H - PAD.top - PAD.bottom;
@@ -209,7 +215,7 @@ function Chart({
               fontWeight={900}
               fill="#334155"
             >
-              {b.season === 'winter' ? 'Winter' : 'Summer'}
+              {b.season === 'winter' ? t('season.winter') : t('season.summer')}
             </text>
           )}
         </g>
@@ -233,7 +239,7 @@ function Chart({
         strokeWidth={2}
       />
       <text x={PAD.left - 6} y={PAD.top + 8} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
-        {hi.toFixed(0)}¢
+        {fmtCents(hi, 0)}
       </text>
       <text
         x={PAD.left - 6}
@@ -243,31 +249,33 @@ function Chart({
         fontWeight={900}
         fill="#000"
       >
-        {lo.toFixed(0)}¢
+        {fmtCents(lo, 0)}
       </text>
 
       {/* Rate-change ticks — the Nov 1 boundaries, named. */}
-      {ticks.map((t) => (
-        <g key={t.date}>
+      {/* Wave U: the loop variable is `tick`, not `t` — `t` is the
+          translator from useTranslation() above. */}
+      {ticks.map((tick) => (
+        <g key={tick.date}>
           <line
-            x1={t.x}
+            x1={tick.x}
             y1={PAD.top}
-            x2={t.x}
+            x2={tick.x}
             y2={PAD.top + innerH}
             stroke="#b91c1c"
             strokeWidth={2}
             strokeDasharray="5 4"
             data-testid="efficiency-rate-tick"
-            data-date={t.date}
+            data-date={tick.date}
           />
           <text
-            x={t.x + 3}
+            x={tick.x + 3}
             y={PAD.top + 12}
             fontSize={9}
             fontWeight={900}
             fill="#b91c1c"
           >
-            rates
+            {t('efficiency.ratesTick')}
           </text>
         </g>
       ))}
@@ -335,6 +343,7 @@ function Chart({
 }
 
 export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardProps) {
+  const { t } = useTranslation();
   const { periods, allTime, trend } = report;
 
   if (!allTime || periods.length === 0) {
@@ -347,10 +356,10 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <span aria-hidden className="bg-slate-100 p-2 rounded-xl border-2 border-black">
             <Gauge size={20} strokeWidth={4} />
           </span>
-          <h3 className="text-lg md:text-2xl italic font-black uppercase">Efficiency</h3>
+          <h3 className="text-lg md:text-2xl italic font-black uppercase">{t('efficiency.title')}</h3>
         </div>
         <p data-testid="efficiency-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case">
-          {trend.emptyMessage ?? 'Upload a Green Button export to see what a kWh cost you.'}
+          {trend.emptyMessage ?? t('efficiency.empty')}
         </p>
       </section>
     );
@@ -377,10 +386,10 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-500 font-black uppercase"
             data-testid="efficiency-subtitle"
           >
-            {EFFICIENCY_SUBTITLE}
+            {t(EFFICIENCY_SUBTITLE_KEY)}
           </div>
           <h3 id="efficiency-heading" className="text-xl md:text-3xl italic font-black uppercase">
-            Efficiency
+            {t('efficiency.title')}
           </h3>
         </div>
 
@@ -397,7 +406,7 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           data-tax={allTime.tax.toFixed(2)}
         >
           <div className="text-[8px] md:text-[10px] text-yellow-400 uppercase font-black">
-            All time · {allTime.bills} bills
+            {t('efficiency.allTime', { count: allTime.bills })}
           </div>
           <div className="flex items-end justify-end gap-4 md:gap-6">
             <div>
@@ -406,11 +415,11 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
                 data-testid="efficiency-all-time"
                 data-cents={allTime.cents.toFixed(2)}
               >
-                {allTime.cents.toFixed(1)}¢
-                <span className="text-[10px] md:text-xs not-italic font-black ml-1">/kWh</span>
+                {fmtCents(allTime.cents, 1)}
+                <span className="text-[10px] md:text-xs not-italic font-black ml-1">{t('efficiency.perKwh')}</span>
               </div>
               <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
-                excl. tax
+                {t('efficiency.exclTax')}
               </div>
             </div>
             <div>
@@ -419,11 +428,11 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
                 data-testid="efficiency-all-time-incl-tax"
                 data-cents={allTime.centsInclTax.toFixed(2)}
               >
-                {allTime.centsInclTax.toFixed(1)}¢
-                <span className="text-[10px] md:text-xs not-italic font-black ml-1">/kWh</span>
+                {fmtCents(allTime.centsInclTax, 1)}
+                <span className="text-[10px] md:text-xs not-italic font-black ml-1">{t('efficiency.perKwh')}</span>
               </div>
               <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
-                incl. tax
+                {t('efficiency.inclTax')}
               </div>
             </div>
           </div>
@@ -456,9 +465,9 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             data-stable-band={trend.band.toFixed(3)}
             className={`inline-flex items-center px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-black font-black uppercase text-[11px] md:text-sm ${CHIP_CLASS[trend.verdict!]}`}
           >
-            {CHIP_WORD[trend.verdict!]}{' '}
+            {t(CHIP_WORD_KEY[trend.verdict!])}{' '}
             <span className="ml-2 normal-case">
-              {slopeText(trend.verdict!, trend.slope ?? 0, trend.band)}
+              {slopeText(t, trend.verdict!, trend.slope ?? 0, trend.band)}
             </span>
             <span className="ml-1 text-[9px] md:text-[11px] font-black">
               ({trend.windowLabel})
@@ -477,12 +486,10 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             }`}
           >
             {trend.rateDirection === 'flat'
-              ? `rates flat ±${fmtBand(trend.rate?.stderr ?? 0)}¢`
-              : trend.rateDirection === 'up'
-                ? `rates ${fmtSigned(trend.rate?.slope ?? 0)}¢/period`
-                : trend.rateDirection === 'down'
-                  ? `rates ${fmtSigned(trend.rate?.slope ?? 0)}¢/period`
-                  : 'rates: not split'}
+              ? t('efficiency.ratesFlat', { band: fmtBand(trend.rate?.stderr ?? 0) })
+              : trend.rateDirection === 'up' || trend.rateDirection === 'down'
+                ? t('efficiency.ratesSlope', { slope: fmtSigned(trend.rate?.slope ?? 0) })
+                : t('efficiency.ratesNotSplit')}
           </span>
 
           <span
@@ -517,8 +524,8 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             }`}
           >
             {trend.netVerdict === 'stable'
-              ? `net stable ±${fmtBand(trend.net?.stderr ?? 0)}¢`
-              : `net ${fmtSigned(trend.net?.slope ?? 0)}¢/period`}
+              ? t('efficiency.netStable', { band: fmtBand(trend.net?.stderr ?? 0) })
+              : t('efficiency.netSlope', { slope: fmtSigned(trend.net?.slope ?? 0) })}
           </span>
         </div>
       ) : (
@@ -547,7 +554,7 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <Chart points={periods} trend={trend} />
         ) : (
           <p className="text-[11px] font-bold text-slate-600 normal-case">
-            One bill so far — the line starts at your second.
+            {t('efficiency.oneBill')}
           </p>
         )}
         <span
@@ -559,22 +566,30 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           data-last-cents-incl-tax={last.centsInclTax.toFixed(2)}
         >
           <span>
-            {first.label}: {first.cents.toFixed(1)}¢ excl ·{' '}
-            {first.centsInclTax.toFixed(1)}¢ incl → {last.label}:{' '}
-            {last.cents.toFixed(1)}¢ excl · {last.centsInclTax.toFixed(1)}¢ incl
+            {t('efficiency.firstLast', {
+              firstLabel: first.label,
+              firstExcl: fmtCents(first.cents, 1),
+              firstIncl: fmtCents(first.centsInclTax, 1),
+              lastLabel: last.label,
+              lastExcl: fmtCents(last.cents, 1),
+              lastIncl: fmtCents(last.centsInclTax, 1),
+            })}
           </span>
-          <span className="text-blue-700">Open the Money tab →</span>
+          <span className="text-blue-700">{t('efficiency.openMoney')}</span>
         </span>
       </button>
 
       <p className="mt-3 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
         {trend.splitAvailable
-          ? 'Usage prices YOUR commodity at today’s OEB rates; the rate line is what the schedule did instead. Delivery & fixed is the rest of the bill — no public rate schedule to reprice, so it is reported beside the verdict, never credited with it.'
-          : (trend.splitNote ?? 'Usage/rate split unavailable.')}
-        {' '}Bands are Ontario’s rate seasons (Nov 1 – Apr 30 winter); red ticks are rate changes:{' '}
-        {trend.rateBoundaries.length > 0
-          ? trend.rateBoundaries.map((d) => format(new Date(`${d}T00:00:00`), 'MMM d, yyyy')).join(', ')
-          : 'none inside this data'}.
+          ? t('efficiency.splitNote')
+          : (trend.splitNote ?? t('efficiency.splitUnavailable'))}
+        {' '}{trend.rateBoundaries.length > 0
+          ? t('efficiency.bandsNote', {
+              dates: trend.rateBoundaries
+                .map((d) => fmtDateLong(new Date(`${d}T00:00:00`)))
+                .join(', '),
+            })
+          : t('efficiency.bandsNoteNone')}
       </p>
     </section>
   );

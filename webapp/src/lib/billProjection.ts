@@ -15,6 +15,9 @@
 
 import { endOfMonth, format, getDate, startOfMonth } from 'date-fns';
 import type { ProcessedPoint } from './energy';
+// Wave U — captions/gate notes come from the catalog at call time; month
+// names follow the active locale (fmtDate is date-fns bound to it).
+import { fmtDate, fmtMoney, t } from '@/i18n';
 
 export type BillPlan = 'TOU' | 'Tiered' | 'ULO';
 
@@ -73,7 +76,7 @@ export function projectMonthBill(
   const monthStart = startOfMonth(today);
   const monthEnd = endOfMonth(today);
   const month = format(monthStart, 'yyyy-MM');
-  const monthLabel = format(monthStart, 'MMMM yyyy');
+  const monthLabel = fmtDate(monthStart, 'MMMM yyyy');
   const daysIntoMonth = getDate(today);
   const daysInMonth = getDate(monthEnd);
 
@@ -95,7 +98,7 @@ export function projectMonthBill(
     projectedKwh: 0,
     projectedCost: 0,
     dataThrough: '',
-    caption: 'Commodity cost only — no delivery, regulatory charges or HST.',
+    caption: t('projection.captionBase'),
     gateNote: '',
   };
 
@@ -103,7 +106,7 @@ export function projectMonthBill(
     return {
       ...base,
       emptyReason: 'no-data',
-      gateNote: `No readings for ${monthLabel} yet — upload your latest export and this fills in.`,
+      gateNote: t('projection.gateNoData', { month: monthLabel }),
     };
   }
 
@@ -165,7 +168,15 @@ export function projectMonthBill(
     return {
       ...resolved,
       emptyReason: 'too-early',
-      gateNote: `${daysIntoMonth} day${daysIntoMonth === 1 ? '' : 's'} into ${monthLabel} — a projection would be a guess. This switches on at day ${MIN_DAYS_FOR_PROJECTION} (${MIN_DAYS_FOR_PROJECTION - daysIntoMonth} to go).`,
+      gateNote: t('projection.gateTooEarly', {
+        // `count` drives the _one/_other plural variant; `days` is the
+        // placeholder the sentence interpolates.
+        count: daysIntoMonth,
+        days: daysIntoMonth,
+        month: monthLabel,
+        threshold: MIN_DAYS_FOR_PROJECTION,
+        remaining: MIN_DAYS_FOR_PROJECTION - daysIntoMonth,
+      }),
     };
   }
 
@@ -173,7 +184,7 @@ export function projectMonthBill(
     return {
       ...resolved,
       emptyReason: 'no-data',
-      gateNote: `No readings for ${monthLabel} yet (your data ends ${dataThrough}) — upload a newer export and this fills in.`,
+      gateNote: t('projection.gateNoDataThrough', { month: monthLabel, through: dataThrough }),
     };
   }
 
@@ -181,7 +192,7 @@ export function projectMonthBill(
     return {
       ...resolved,
       emptyReason: 'no-recent-data',
-      gateNote: `Only ${recentDays} recorded day${recentDays === 1 ? '' : 's'} in the last ${PROJECTION_RECENT_DAYS} — not enough to project the rest of the month.`,
+      gateNote: t('projection.gateNoRecent', { count: recentDays, days: recentDays, window: PROJECTION_RECENT_DAYS }),
     };
   }
 
@@ -189,7 +200,7 @@ export function projectMonthBill(
   const projectedCost = mtdCost + remainingDays * resolved.avgDailyCost;
   const staleNote =
     dataThrough < format(today, 'yyyy-MM-dd')
-      ? ` Your readings stop at ${dataThrough}.`
+      ? ` ${t('projection.staleNote', { through: dataThrough })}`
       : '';
 
   return {
@@ -197,7 +208,13 @@ export function projectMonthBill(
     ready: true,
     projectedKwh,
     projectedCost,
-    caption: `Commodity cost only — no delivery, regulatory charges or HST. ${monthDaysCovered} of ${daysInMonth} day${daysInMonth === 1 ? '' : 's'} measured; the other ${remainingDays} at your last ${recentDays}-day average of $${resolved.avgDailyCost.toFixed(2)}/day.${staleNote}`,
+    caption: `${t('projection.captionBase')} ${t('projection.captionDetail', {
+      covered: monthDaysCovered,
+      daysInMonth,
+      remaining: remainingDays,
+      window: recentDays,
+      daily: fmtMoney(resolved.avgDailyCost),
+    })}.${staleNote}`,
     gateNote: '',
   };
 }
