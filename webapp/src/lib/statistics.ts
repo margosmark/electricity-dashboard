@@ -125,6 +125,8 @@ import {
   type UsageSummary,
 } from './energy';
 import { seasonForDay, type Season } from './season';
+// Wave U — trend prose reads the locale catalog at call time.
+import { t } from '@/i18n';
 
 /* -------------------------------------------------------------------------- *
  * Window rules
@@ -209,13 +211,16 @@ export function rateForUsageNote(
 ): number | null {
   const n = note.toLowerCase();
   // ULO's labels contain "off-peak" too, so they are tested first.
-  if (/overnight|ulo\b/.test(n)) return rates.ulo.overnight;
-  if (/weekend/.test(n)) return rates.ulo.weekendOffPeak;
-  if (/off[ -]?peak/.test(n)) return rates.tou.offPeak;
-  if (/mid[ -]?peak/.test(n)) return rates.tou.midPeak;
-  if (/on[ -]?peak/.test(n)) return rates.tou.onPeak;
-  if (/block\s*1|tier\s*1|first[ -]?tier/.test(n)) return rates.tiered.tier1;
-  if (/block\s*2|tier\s*2|second[ -]?tier/.test(n)) return rates.tiered.tier2;
+  // Wave U: the OEB's French period names price the same as the English
+  // ones ("Période basse de nuit" → overnight, "Période creuse" → offPeak,
+  // "Palier 1" → tier 1) — see I18N.md's canonical-data rule.
+  if (/overnight|ulo\b|\bnuit\b|nuit tr[èe]s basse/.test(n)) return rates.ulo.overnight;
+  if (/weekend|fin de semaine|week-?end/.test(n)) return rates.ulo.weekendOffPeak;
+  if (/off[ -]?peak|p[ée]riode creuse/.test(n)) return rates.tou.offPeak;
+  if (/mid[ -]?peak|p[ée]riode normale|mi-?pointe/.test(n)) return rates.tou.midPeak;
+  if (/on[ -]?peak|p[ée]riode de pointe/.test(n)) return rates.tou.onPeak;
+  if (/block\s*1|tier\s*1|first[ -]?tier|\bbloc\s*1|\bpalier\s*1|premier palier/.test(n)) return rates.tiered.tier1;
+  if (/block\s*2|tier\s*2|second[ -]?tier|\bbloc\s*2|\bpalier\s*2|deuxi[èe]me palier/.test(n)) return rates.tiered.tier2;
   return null;
 }
 
@@ -389,6 +394,9 @@ export function inViewCentsPerKwh(
  */
 export const EFFICIENCY_SUBTITLE =
   'ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded';
+/** Wave U — the display translates this; EFFICIENCY_SUBTITLE stays canonical
+ *  (lib/statistics.test.ts pins its wording). */
+export const EFFICIENCY_SUBTITLE_KEY = 'efficiency.subtitle';
 
 /**
  * The tax rate implied by the loaded bills themselves: Σtax ÷ ΣTotal
@@ -561,11 +569,14 @@ export function rateBoundaries(
     .sort();
 }
 
+/* Wave U — the trend's prose comes from the catalog at call time, so the
+ * same computation emits "IMPROVING −0.4¢/kWh per period" or
+ * "AMÉLIORATION −0,4 ¢/kWh par période" without a second code path. */
+
 function behaviorClause(dir: TrendDirection, slope: number): string {
-  if (dir === 'flat') return `your usage mix is flat (±${fmtBand(slope)}¢ behavior-driven)`;
-  if (dir === 'down')
-    return `your usage mix improved (${fmtSigned(slope)}¢/kWh behavior-driven)`;
-  return `your usage mix got worse (${fmtSigned(slope)}¢/kWh behavior-driven)`;
+  if (dir === 'flat') return t('trend.behaviorFlat', { band: fmtBand(slope) });
+  if (dir === 'down') return t('trend.behaviorImproved', { slope: fmtSigned(slope) });
+  return t('trend.behaviorWorse', { slope: fmtSigned(slope) });
 }
 
 function deliveryClause(dir: TrendDirection, slope: number): string {
@@ -575,14 +586,14 @@ function deliveryClause(dir: TrendDirection, slope: number): string {
 }
 
 function rateClause(dir: TrendDirection, slope: number): string {
-  if (dir === 'flat') return `rates are flat (±${fmtBand(slope)}¢)`;
-  if (dir === 'up') return `rates rose (${fmtSigned(slope)}¢/kWh)`;
-  return `rates fell (${fmtSigned(slope)}¢/kWh)`;
+  if (dir === 'flat') return t('trend.ratesFlat', { band: fmtBand(slope) });
+  if (dir === 'up') return t('trend.ratesRose', { slope: fmtSigned(slope) });
+  return t('trend.ratesFell', { slope: fmtSigned(slope) });
 }
 
 function netClause(verdict: TrendVerdict, fit: LinearFit): string {
-  if (verdict === 'stable') return `net stable ±${fmtBand(fit.stderr)}¢`;
-  return `net ${fmtSigned(fit.slope)}¢`;
+  if (verdict === 'stable') return t('trend.netStable', { band: fmtBand(fit.stderr) });
+  return t('trend.net', { slope: fmtSigned(fit.slope) });
 }
 
 /**
@@ -599,7 +610,7 @@ export function efficiencyTrend(
   const points = [...periods].sort((a, b) => a.start - b.start);
   const windowSize = Math.min(points.length, TREND_MAX_PERIODS);
   const window = points.slice(points.length - windowSize);
-  const windowLabel = `your last ${windowSize} bill${windowSize === 1 ? '' : 's'}`;
+  const windowLabel = t('trend.window', { count: windowSize, bills: windowSize });
   const boundaries = rateBoundaries(points, rates);
 
   const base: EfficiencyTrend = {
@@ -628,8 +639,7 @@ export function efficiencyTrend(
   if (points.length === 0) {
     return {
       ...base,
-      emptyMessage:
-        'No closed bills loaded yet — upload your Green Button export and each bill’s ¢/kWh lands here.',
+      emptyMessage: t('trend.emptyNoBills'),
     };
   }
 
@@ -643,21 +653,21 @@ export function efficiencyTrend(
   const splitNote = splitAvailable
     ? null
     : window.some((p) => p.unmappedKwh > 0)
-      ? 'A usage category on a recent bill can’t be priced against today’s rates, so the usage/rate split is off for this window.'
-      : 'No OEB rate set is loaded, so this trend can’t be split into usage, rates and delivery yet.';
+      ? t('trend.splitUnpriceable')
+      : t('trend.splitNoRates');
 
   if (points.length < TREND_MIN_PERIODS) {
     return {
       ...base,
       splitAvailable,
       splitNote,
-      emptyMessage: `Need at least ${TREND_MIN_PERIODS} closed bills for a trend — you have ${points.length}.`,
+      emptyMessage: t('trend.emptyNeedBills', { min: TREND_MIN_PERIODS, have: points.length }),
     };
   }
 
   const net = linearFit(window.map((p) => p.cents));
   if (!net) {
-    return { ...base, splitAvailable, splitNote, emptyMessage: 'Not enough variation in the bills to fit a line.' };
+    return { ...base, splitAvailable, splitNote, emptyMessage: t('trend.emptyNoVariation') };
   }
 
   const usage = splitAvailable
@@ -682,7 +692,7 @@ export function efficiencyTrend(
     const dDir = deliveryDirection as TrendDirection;
     const rDir = directionOf(rate) as TrendDirection;
     // "but" only where the two really conflict: you got better AND paid more.
-    const connector = bDir === 'down' && rDir === 'up' ? 'but ' : '';
+    const connector = bDir === 'down' && rDir === 'up' ? t('trend.connectorBut') : '';
     sentence =
       `${behaviorClause(bDir, usage.slope)}, ${connector}` +
       `${rateClause(rDir, rate.slope)}; ${deliveryClause(dDir, delivery.slope)}` +
@@ -692,10 +702,10 @@ export function efficiencyTrend(
     // OBSERVED line did, and put the reason in the same sentence.
     const trendPhrase =
       netVerdict === 'stable'
-        ? `is flat (±${fmtBand(net.stderr)}¢ per period)`
-        : `is trending ${fmtSigned(net.slope)}¢ per period`;
+        ? t('trend.observedFlat', { band: fmtBand(net.stderr) })
+        : t('trend.observedTrend', { slope: fmtSigned(net.slope) });
     sentence =
-      `Observed ¢/kWh ${trendPhrase} over ${windowLabel}` +
+      `${t('trend.observedPrefix')} ${trendPhrase} ${t('trend.observedOver', { window: windowLabel })}` +
       `${splitNote ? ` — ${splitNote}` : ''}.`;
   }
   if (sentence) sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);

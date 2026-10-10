@@ -13,9 +13,10 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { type RateSet } from '@/lib/energy';
-import { distinctSeasons, SEASON_INFO, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
+import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
+import { fmtCents, fmtMoney, fmtNumber, periodLabel, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -53,10 +54,16 @@ export function seasonsInWindow(startDate: string, endDate: string): Season[] {
   return distinctSeasons([...seen]);
 }
 
+/**
+ * Wave U — `nameKey` renders the localized plan name (OEB French terms in
+ * French); `name` stays the canonical English for anything that needs the
+ * untranslated form. `Tiered Pricing` is this card's own display name — the
+ * chip label ("Tiered"/"Paliers") is the shorter switcher form.
+ */
 const PLANS = [
-  { id: 'Tiered', name: 'Tiered Pricing' },
-  { id: 'TOU', name: 'Time-of-Use' },
-  { id: 'ULO', name: 'Ultra-Low Overnight' },
+  { id: 'Tiered', name: 'Tiered Pricing', nameKey: 'planCard.Tiered' },
+  { id: 'TOU', name: 'Time-of-Use', nameKey: 'planCard.TOU' },
+  { id: 'ULO', name: 'Ultra-Low Overnight', nameKey: 'planCard.ULO' },
 ] as const;
 
 export default function PlanCards({
@@ -67,6 +74,7 @@ export default function PlanCards({
   startDate,
   endDate,
 }: PlanCardsProps) {
+  const { t } = useTranslation();
   const seasonOfView: Season = seasonForDay(endDate);
   const seasonsInView = seasonsInWindow(startDate, endDate);
   const tierThreshold =
@@ -81,23 +89,25 @@ export default function PlanCards({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
       {PLANS.map((plan, i) => {
+        // Wave U: the period NAMES localize (OEB French), the ¢ values go
+        // through fmtCents so the decimal comma follows the toggle.
         const rates =
           plan.id === 'Tiered'
             ? [
-                { l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` },
-                { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` },
+                { l: t('rate.tier1'), v: fmtCents(activeRateSet ? activeRateSet.tiered.tier1 : 12.0) },
+                { l: t('rate.tier2'), v: fmtCents(activeRateSet ? activeRateSet.tiered.tier2 : 14.2) },
               ]
             : plan.id === 'TOU'
               ? [
-                  { l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' },
-                  { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' },
-                  { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' },
+                  { l: periodLabel('Off-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.offPeak : 9.8), c: 'text-emerald-600' },
+                  { l: periodLabel('Mid-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.midPeak : 15.7), c: 'text-yellow-600' },
+                  { l: periodLabel('On-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.onPeak : 20.3), c: 'text-red-600' },
                 ]
               : [
-                  { l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' },
-                  { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' },
-                  { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' },
-                  { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' },
+                  { l: t('rate.overnight'), v: fmtCents(activeRateSet ? activeRateSet.ulo.overnight : 3.9), c: 'text-purple-600' },
+                  { l: t('rate.weekendOff'), v: fmtCents(activeRateSet ? activeRateSet.ulo.weekendOffPeak : 9.8), c: 'text-emerald-600' },
+                  { l: periodLabel('Mid-Peak'), v: fmtCents(activeRateSet ? activeRateSet.ulo.midPeak : 15.7), c: 'text-yellow-600' },
+                  { l: periodLabel('On-Peak'), v: fmtCents(activeRateSet ? activeRateSet.ulo.onPeak : 39.1), c: 'text-red-600' },
                 ];
 
         return (
@@ -106,7 +116,7 @@ export default function PlanCards({
             role="button"
             tabIndex={0}
             aria-pressed={userPlan === plan.id}
-            aria-label={`Use the ${plan.name} plan`}
+            aria-label={t('planCard.useAria', { plan: t(plan.nameKey) })}
             onClick={() => setUserPlan(plan.id)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -116,10 +126,10 @@ export default function PlanCards({
             }}
             className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
           >
-            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
-            <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
+            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
+            <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
             <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">
-              {comparison ? `$${comparison[plan.id].toFixed(2)}` : '—'}
+              {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
               {rates.map((r: { l: string; v: string; c?: string }, j: number) => (
@@ -136,14 +146,14 @@ export default function PlanCards({
                 className="mt-3 md:mt-5 bg-yellow-50 p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[9px] md:text-xs font-black"
               >
                 <div className="flex justify-between">
-                  <span>Tier 1 cut-off</span>
-                  <span>{tierThreshold.toLocaleString()} kWh/mo</span>
+                  <span>{t('tier.cutoff')}</span>
+                  <span>{t('tier.kwhPerMonth', { kwh: fmtNumber(tierThreshold) })}</span>
                 </div>
                 <div className="mt-1 text-slate-600 font-bold normal-case">
-                  {SEASON_INFO[seasonOfView].long}
-                  {seasonsInView.length > 1 ? ' — window spans both seasons' : ''}
+                  {t(`season.long.${seasonOfView}`)}
+                  {seasonsInView.length > 1 ? ` — ${t('tier.spansBoth')}` : ''}
                   {otherTierThreshold != null
-                    ? ` · other window: ${otherTierThreshold.toLocaleString()} kWh/mo`
+                    ? ` · ${t('tier.otherWindow', { kwh: fmtNumber(otherTierThreshold) })}`
                     : ''}
                 </div>
               </div>

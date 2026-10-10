@@ -17,6 +17,8 @@
  */
 
 import { format } from 'date-fns';
+// Wave U — the timeline's captions come from the catalog at call time.
+import { t } from '@/i18n';
 import type { PlanType, SwitchPeriodRow, SwitchReport } from './planTimeline';
 
 export type SwitchSegment = {
@@ -72,7 +74,10 @@ export const EMPTY_SWITCH_TIMELINE: SwitchTimeline = {
   totalDays: 0,
   known: 0,
   switches: 0,
-  note: 'No billing periods yet — upload an export with bills to draw the switch history.',
+  // Stamped at import (English by default) for the toEqual-pinned export;
+  // `buildSwitchTimeline` re-stamps a FRESH t() into its empty return, so the
+  // sentence a user sees always matches the active locale.
+  note: t('switchTimeline.emptyNote'),
 };
 
 const MS_PER_DAY = 86_400;
@@ -90,7 +95,9 @@ function daysBetween(start: number, end: number): number {
  */
 export function buildSwitchTimeline(report: SwitchReport): SwitchTimeline {
   const rows = [...report.rows].sort((a, b) => a.summary.start - b.summary.start);
-  if (rows.length === 0) return EMPTY_SWITCH_TIMELINE;
+  if (rows.length === 0) {
+    return { ...EMPTY_SWITCH_TIMELINE, note: t('switchTimeline.emptyNote') };
+  }
 
   type Draft = {
     key: string;
@@ -121,7 +128,7 @@ export function buildSwitchTimeline(report: SwitchReport): SwitchTimeline {
       const days = daysBetween(previousEnd, startTs);
       drafts.push({
         key: `gap:${previousEnd}`,
-        label: 'Unknown period',
+        label: t('switchTimeline.unknownPeriod'),
         plan: 'unknown',
         start: format(new Date(previousEnd * 1000), 'yyyy-MM-dd'),
         last: format(new Date(startTs * 1000), 'yyyy-MM-dd'),
@@ -131,7 +138,7 @@ export function buildSwitchTimeline(report: SwitchReport): SwitchTimeline {
         origin: 'unknown',
         saving: null,
         counted: false,
-        reason: 'No bill we hold covers these days.',
+        reason: t('switchTimeline.gapReason'),
         previousPlan,
         isSwitch: false,
       });
@@ -210,7 +217,7 @@ export function buildSwitchTimeline(report: SwitchReport): SwitchTimeline {
     switches: switchPoints.length,
     note:
       switchPoints.length === 0
-        ? `${known} billing period${known === 1 ? '' : 's'}, all on the same plan — no switch to score yet.`
-        : `${switchPoints.length} plan switch${switchPoints.length === 1 ? '' : 'es'} across ${known} billing periods.`,
+        ? t('switchTimeline.noteNoSwitch', { count: known, periods: known })
+        : t('switchTimeline.noteSwitches', { count: switchPoints.length, switches: switchPoints.length, periods: known }),
   };
 }

@@ -38,6 +38,11 @@ import {
   type ProcessedPoint,
   type UsageSummary,
 } from '@/lib/energy';
+// Wave U — the receipt translates; the utility's own line notes (item.note)
+// stay verbatim, because they ARE the file's data.
+// `t` (module-level) is used by the pure label helpers above the components;
+// `useTranslation` subscribes the components to locale switches.
+import { fmtCents, fmtKwh, fmtMoney, fmtPercent, t, useTranslation } from '@/i18n';
 
 type Props = {
   /** Bill periods parsed out of the file (Wave L parser). */
@@ -47,8 +52,8 @@ type Props = {
   plan: 'TOU' | 'Tiered' | 'ULO';
 };
 
-const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
-const kwh = (n: number) => `${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })} kWh`;
+const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
+const kwh = (n: number) => fmtKwh(n, 2);
 
 const CLASS_STYLE: Record<BillLineClass, string> = {
   commodity: 'border-l-8 border-blue-500',
@@ -70,7 +75,8 @@ function measurementLabel(item: BillLineItem): string | null {
     const d = new Date(m.scaled * 1000);
     return d.toISOString().slice(0, 10);
   }
-  if (m.uom === 114 || /days/.test(note)) return `${m.scaled} days`;
+  if (m.uom === 114 || /days/.test(note))
+    return t('actualBill.days', { count: m.scaled, days: m.scaled });
   if (/loss factor/.test(note)) return `${m.scaled.toFixed(4)} ×`;
   if (/usage|meter read/.test(note)) return kwh(m.scaled);
   return String(m.scaled);
@@ -91,25 +97,28 @@ function splitNote(
   const amount = item.amount;
   if (amount === null || amount === 0) return null;
   if (cls === 'commodity' && periodKwh > 0) {
-    return `${((amount / periodKwh) * 100).toFixed(2)}¢/kWh — varies with what you use`;
+    return t('actualBill.perKwhVaries', { cents: fmtCents((amount / periodKwh) * 100, 2) });
   }
   if (cls === 'delivery') {
     if (split && split.mode === 'split' && split.flat !== null) {
-      return `≈ $${split.flat.toFixed(2)} fixed per period + ${(
-        (split.perKwh * 100).toFixed(2)
-      )}¢/kWh — fitted across ${split.periods} periods, ±$${(split.maxResidual ?? 0).toFixed(2)}`;
+      return t('actualBill.deliveryFit', {
+        flat: fmtMoney(split.flat),
+        cents: fmtCents(split.perKwh * 100, 2),
+        periods: split.periods,
+        residual: fmtMoney(split.maxResidual ?? 0),
+      });
     }
-    if (periodKwh > 0) return `${((amount / periodKwh) * 100).toFixed(2)}¢/kWh — blended`;
+    if (periodKwh > 0) return t('actualBill.perKwhBlended', { cents: fmtCents((amount / periodKwh) * 100, 2) });
     return null;
   }
   if (cls === 'regulatory' && periodKwh > 0) {
-    return `${((amount / periodKwh) * 100).toFixed(2)}¢/kWh — varies with what you use`;
+    return t('actualBill.perKwhVaries', { cents: fmtCents((amount / periodKwh) * 100, 2) });
   }
   if (cls === 'tax' && taxBase > 0) {
-    return `${((amount / taxBase) * 100).toFixed(2)}% of the subtotal — scales with it`;
+    return t('actualBill.pctOfSubtotalScales', { pct: fmtPercent((amount / taxBase) * 100, 2) });
   }
   if (cls === 'credit' && taxBase > 0) {
-    return `${((amount / taxBase) * 100).toFixed(2)}% of the subtotal`;
+    return t('actualBill.pctOfSubtotal', { pct: fmtPercent((amount / taxBase) * 100, 2) });
   }
   return null;
 }
@@ -172,6 +181,7 @@ function PeriodCard({
   rec: PeriodReconciliation;
   split: ReturnType<typeof deliverySplit>;
 }) {
+  const { t } = useTranslation();
   const { summary, totals } = rec;
   const periodKwh = billedKwh(summary) ?? summary.consumption?.scaled ?? 0;
   const verdict = commodityVerdict(rec);
@@ -193,7 +203,7 @@ function PeriodCard({
             {money(totals.payable)}
           </div>
           <div className="text-[10px] md:text-xs text-slate-500 font-bold">
-            you paid · {kwh(periodKwh)} billed
+            {t('actualBill.youPaid')} · {t('actualBill.billedKwh', { kwh: kwh(periodKwh) })}
             {currencyLabel(summary.currency) ? ` · ${currencyLabel(summary.currency)}` : ''}
           </div>
         </div>
@@ -205,10 +215,10 @@ function PeriodCard({
           data-testid="commodity-check"
           className="mt-3 md:mt-4 bg-emerald-50 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
         >
-          Commodity check ✓ — our rates estimate{' '}
-          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>, Oakville billed{' '}
-          <span className="italic">{money(rec.commodityActual)}</span> (Δ {money(delta)}, within $
-          {COMMODITY_MATCH_TOLERANCE}).
+          {t('actualBill.checkOkA')}{' '}
+          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>,{' '}
+          {t('actualBill.checkOkB')}{' '}
+          <span className="italic">{money(rec.commodityActual)}</span> ({t('actualBill.delta', { delta: money(delta) })}, {t('actualBill.within', { tolerance: fmtMoney(COMMODITY_MATCH_TOLERANCE) })}).
         </div>
       ) : verdict === 'off' && delta !== null ? (
         <div
@@ -216,23 +226,27 @@ function PeriodCard({
           role="alert"
           className="mt-3 md:mt-4 bg-red-100 border-4 border-red-600 rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-red-900"
         >
-          Our rate assumptions are off — for this period our rates estimate{' '}
-          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span> but Oakville billed{' '}
-          <span className="italic">{money(rec.commodityActual)}</span> for the same electricity (Δ{' '}
-          {money(delta)}, tolerance $1). Check the OEB rate schedule in Settings before trusting
-          the estimate.
+          {t('actualBill.checkOffA')}{' '}
+          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>{' '}
+          {t('actualBill.checkOffB')}{' '}
+          <span className="italic">{money(rec.commodityActual)}</span>{' '}
+          {t('actualBill.checkOffC', { delta: money(delta) })}
+          {t('actualBill.checkOffAdvice')}
         </div>
       ) : (
         <div
           data-testid="commodity-skip"
           className="mt-3 md:mt-4 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-slate-600"
         >
-          Not compared —{' '}
+          {t('actualBill.notCompared')}{' '}
           {rec.rows.length === 0
-            ? 'this browser holds no readings inside this period.'
-            : `your readings cover ${rec.coveredDays} of ${rec.periodDays} days (${Math.round(
-                rec.coverage * 100,
-              )}%, ${Math.round(PERIOD_MIN_COVERAGE * 100)}% needed).`}
+            ? t('actualBill.noReadings')
+            : t('actualBill.coverage', {
+                covered: rec.coveredDays,
+                days: rec.periodDays,
+                pct: fmtPercent(Math.round(rec.coverage * 100)),
+                needed: fmtPercent(Math.round(PERIOD_MIN_COVERAGE * 100)),
+              })}
         </div>
       )}
 
@@ -241,8 +255,11 @@ function PeriodCard({
           data-testid="kwh-crosscheck"
           className="mt-2 text-[10px] md:text-xs text-slate-500 font-bold"
         >
-          Billed {kwh(rec.billedKwh)} · your readings add up to {kwh(rec.meteredKwh)} (Δ{' '}
-          {kwh(Math.abs(rec.billedKwh - rec.meteredKwh))}).
+          {t('actualBill.crosscheck', {
+            billed: kwh(rec.billedKwh),
+            metered: kwh(rec.meteredKwh),
+            delta: kwh(Math.abs(rec.billedKwh - rec.meteredKwh)),
+          })}
         </div>
       )}
 
@@ -278,7 +295,7 @@ function PeriodCard({
                     ? measured
                     : '—'}
                 {item.itemKind !== null ? (
-                  <span className="ml-2 text-[9px] text-slate-400">kind {item.itemKind}</span>
+                  <span className="ml-2 text-[9px] text-slate-400">{t('actualBill.kind', { kind: item.itemKind })}</span>
                 ) : null}
               </span>
             </li>
@@ -288,19 +305,19 @@ function PeriodCard({
 
       <div className="mt-3 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs font-black">
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">Electricity</div>
+          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.electricity')}</div>
           <div className="italic">{money(totals.commodity)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">Delivery + reg</div>
+          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.deliveryReg')}</div>
           <div className="italic">{money(totals.delivery + totals.regulatory)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">HST</div>
+          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.hst')}</div>
           <div className="italic">{money(totals.tax)}</div>
         </div>
         <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">Rebate</div>
+          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.rebate')}</div>
           <div className="italic text-emerald-600">{money(totals.credit)}</div>
         </div>
       </div>
@@ -309,6 +326,7 @@ function PeriodCard({
 }
 
 export function ActualBillPanel({ summaries, allData, plan }: Props) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string>('all');
 
   const recs = useMemo(
@@ -341,17 +359,15 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            Straight from your XML · {summaries.length} billing period
-            {summaries.length === 1 ? '' : 's'}
+            {t('actualBill.straightFromXml', { count: summaries.length })}
             {summaries[summaries.length - 1].currency !== null
               ? ` · ${currencyLabel(summaries[summaries.length - 1].currency)}`
               : ''}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">Your actual bill</h2>
+          <h2 className="text-2xl md:text-4xl italic font-black">{t('actualBill.title')}</h2>
         </div>
         <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-md">
-          Every line item as the utility wrote it, next to what this app estimates for the same
-          period. Nothing here is retyped or fetched — it is all in the file you imported.
+          {t('actualBill.blurb')}
         </div>
       </div>
 
@@ -369,7 +385,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               selected === 'all' ? 'bg-yellow-400' : 'bg-slate-50'
             }`}
           >
-            All periods
+            {t('actualBill.allPeriods')}
           </button>
           {recs.map((r) => (
             <button
@@ -394,9 +410,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
           role="alert"
           className="mt-4 md:mt-6 bg-red-600 text-white border-4 border-black rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
         >
-          At least one billing period does not match this app&apos;s rate assumptions. The estimate
-          is using the wrong price for your electricity — fix the rate schedule before trusting the
-          projections below it.
+          {t('actualBill.rateBanner')}
         </div>
       )}
 

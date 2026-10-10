@@ -19,7 +19,8 @@ import {
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import type { ProcessedPoint } from '@/lib/energy';
-import { buildYearOverYear, MONTH_LABELS } from '@/lib/trend';
+import { buildYearOverYear, monthLabelsFor } from '@/lib/trend';
+import { fmtKwh, useTranslation } from '@/i18n';
 
 const YEAR_COLORS = ['#2563EB', '#F97316', '#16A34A', '#A855F7'];
 
@@ -31,17 +32,22 @@ export default function YearOverYearPanel({
 }: {
   processedData: ProcessedPoint[];
 }) {
+  const { t, locale } = useTranslation();
   const trend = useMemo(() => buildYearOverYear(processedData), [processedData]);
+  // Wave U — the 12 month headers come from the same locale-aware helper
+  // the trend lib uses, so the axis and the delta row can never disagree.
+  // Pass `locale` explicitly so the memo genuinely re-runs on a switch.
+  const monthLabels = useMemo(() => monthLabelsFor(locale), [locale]);
 
   // Chart rows: one per month-of-year, keyed by year for grouped bars.
   const rows = useMemo(
     () =>
-      MONTH_LABELS.map((month, i) => {
+      monthLabels.map((month, i) => {
         const row: Record<string, string | number | null> = { month };
         for (const s of trend.series) row[String(s.year)] = s.kwh[i];
         return row;
       }),
-    [trend.series],
+    [trend.series, monthLabels],
   );
 
   // Latest delta row (most recent year with a prior year to compare against).
@@ -61,7 +67,7 @@ export default function YearOverYearPanel({
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase">
         <TrendingUp size={24} className="md:w-10 md:h-10" strokeWidth={3} />
-        <h3 className="text-2xl md:text-4xl">Year-over-Year — Monthly kWh</h3>
+        <h3 className="text-2xl md:text-4xl">{t('yoy.title')}</h3>
       </div>
 
       {!trend.ready ? (
@@ -70,13 +76,10 @@ export default function YearOverYearPanel({
           className="bg-slate-50 p-6 md:p-8 rounded-xl md:rounded-2xl border-2 md:border-4 border-dashed border-black"
         >
           <p className="text-lg md:text-2xl font-black uppercase text-black">
-            {trend.emptyMessage ?? 'No data loaded yet.'}
+            {trend.emptyMessage ?? t('yoy.emptyNoData')}
           </p>
           <p className="mt-3 text-xs md:text-sm font-black text-slate-500 normal-case">
-            Once the dataset covers more than a year (or more than one rate-set change), this
-            panel overlays each year&apos;s monthly kWh against the same month last year so
-            heating/cooling seasonality is visible. Rates are versioned separately — cost
-            comparisons always use the rate set active on each reading.
+            {t('yoy.emptyBody')}
           </p>
         </div>
       ) : (
@@ -91,7 +94,7 @@ export default function YearOverYearPanel({
                 <YAxis tick={{ fontSize: 11, fontWeight: 900 }} unit=" kWh" width={80} />
                 <Tooltip
                   formatter={(value, name) => [
-                    `${Number(value).toFixed(1)} kWh`,
+                    fmtKwh(Number(value)),
                     String(name),
                   ]}
                   contentStyle={{
@@ -127,10 +130,10 @@ export default function YearOverYearPanel({
           {latestDelta ? (
             <div data-testid="trend-deltas" className="overflow-x-auto">
               <div className="text-xs md:text-sm font-black uppercase mb-2">
-                Δ vs {latestDelta.year - 1} ({latestDelta.year} vs {latestDelta.year - 1})
+                {t('yoy.deltaHeader', { year: latestDelta.year, prior: latestDelta.year - 1 })}
               </div>
               <div className="grid grid-cols-12 gap-1 min-w-[560px]">
-                {MONTH_LABELS.map((m, i) => {
+                {monthLabels.map((m, i) => {
                   const pct = latestDelta.pct[i];
                   const has = pct !== null;
                   const bg = !has
@@ -158,7 +161,7 @@ export default function YearOverYearPanel({
             </div>
           ) : (
             <p data-testid="trend-no-delta" className="text-xs md:text-sm font-black text-slate-500">
-              No prior-year overlap yet — deltas appear once two calendar years of data exist.
+              {t('yoy.noOverlap')}
             </p>
           )}
 
@@ -166,21 +169,23 @@ export default function YearOverYearPanel({
           <div data-testid="trend-boundaries" className="text-[10px] md:text-xs font-black text-slate-500 normal-case space-y-1">
             {trend.boundaries.length > 0 && (
               <p>
-                ▲ Rate set changed inside this range:{' '}
-                {trend.boundaries.join(', ')} — kWh is rate-independent, but every cost figure in
-                the app prices each reading with its own active set.
+                {t('yoy.boundaries', { dates: trend.boundaries.join(', ') })}
               </p>
             )}
             {trend.partialMonths.length > 0 && (
               <p>
-                Partial months (data does not cover them fully): {trend.partialMonths.join(', ')}
-                {' — '}treat their deltas as indicative.
+                {t('yoy.partialMonths', { months: trend.partialMonths.join(', ') })}
               </p>
             )}
             <p>
-              {trend.series.length} year(s) · {trend.monthsOfData} months of data (
-              {trend.firstMonthLabel} – {trend.lastMonthLabel}) ·{' '}
-              {trend.rateSetChanges} rate-set change{trend.rateSetChanges === 1 ? '' : 's'}.
+              {t('yoy.meta', {
+                count: trend.rateSetChanges,
+                years: trend.series.length,
+                months: trend.monthsOfData,
+                first: trend.firstMonthLabel ?? '—',
+                last: trend.lastMonthLabel ?? '—',
+                changes: trend.rateSetChanges,
+              })}
             </p>
           </div>
         </div>
