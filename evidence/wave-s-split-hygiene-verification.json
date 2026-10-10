@@ -1,0 +1,280 @@
+{
+  "wave": "S-split-hygiene",
+  "scope": "three-way usage/delivery/rate split, verdict read from usage",
+  "base": "http://10.10.11.110:3939/",
+  "deploy": "58202db",
+  "fixture": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "fixtureBytes": 6424909,
+  "at": "2026-10-10T18:26:08.727Z",
+  "tz": "America/Toronto",
+  "window": 12,
+  "expected": {
+    "usage": -0.006,
+    "delivery": -0.151,
+    "rate": 0.212,
+    "net": 0.055,
+    "behaviourOld": -0.157,
+    "verdict": "stable",
+    "allTimeCents": "16.3",
+    "bills": 24
+  },
+  "audit": {
+    "bills": 24,
+    "allTimeCents": 16.2575,
+    "slopes": {
+      "observed": {
+        "slope": 0.0552,
+        "stderr": 0.1326
+      },
+      "behaviour": {
+        "slope": -0.157,
+        "stderr": 0.0756
+      },
+      "rate": {
+        "slope": 0.2122,
+        "stderr": 0.0704
+      },
+      "mixTerm": {
+        "slope": -0.0061,
+        "stderr": 0.0327
+      },
+      "nonCommodityTerm": {
+        "slope": -0.1508,
+        "stderr": 0.0894
+      }
+    },
+    "recombineCheck": 0
+  },
+  "dom": {
+    "card": {
+      "data-bills": "24",
+      "data-split": "true"
+    },
+    "headline": {
+      "cents": "16.26",
+      "label": "All time · 24 bills16.3¢/kWh",
+      "text": "16.3¢/kWh"
+    },
+    "strip": {
+      "cents": "16.26",
+      "bills": "24"
+    },
+    "chip": {
+      "data-verdict": "stable",
+      "data-window": "12",
+      "data-slope": "-0.006",
+      "data-usage-slope": "-0.006",
+      "data-delivery-slope": "-0.151",
+      "data-rate-slope": "0.212",
+      "data-net-slope": "0.055",
+      "data-stable-band": "0.033",
+      "text": "STABLE ±0.0¢/kWh per period(your last 12 bills)"
+    },
+    "ratesLine": {
+      "direction": "up",
+      "text": "rates +0.2¢/period"
+    },
+    "deliveryLine": {
+      "direction": "down",
+      "text": "delivery & fixed -0.2¢/period"
+    },
+    "netLine": {
+      "verdict": "stable",
+      "text": "net stable ±0.1¢"
+    },
+    "sentence": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢.",
+    "inOverview": true,
+    "deliveryLineCount": 1
+  },
+  "total": 37,
+  "passed": 37,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "audit sees 24 bills",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "audit usage slope == published −0.006 (±0.001)",
+      "ok": true,
+      "detail": "-0.0061"
+    },
+    {
+      "name": "audit delivery slope == published −0.151 (±0.001)",
+      "ok": true,
+      "detail": "-0.1508"
+    },
+    {
+      "name": "audit rate slope == published +0.212 (±0.001)",
+      "ok": true,
+      "detail": "0.2122"
+    },
+    {
+      "name": "audit net slope == published +0.055 (±0.001)",
+      "ok": true,
+      "detail": "0.0552"
+    },
+    {
+      "name": "audit: usage + delivery == the OLD behaviour term −0.157 (±0.005)",
+      "ok": true,
+      "detail": "-0.15689999999999998 vs -0.157"
+    },
+    {
+      "name": "audit: usage + delivery + rate == net (±0.001)",
+      "ok": true,
+      "detail": "0.055300000000000016 vs 0.0552"
+    },
+    {
+      "name": "audit: the usage term is FLAT inside its own error bar",
+      "ok": true,
+      "detail": "|-0.0061| <= 0.0327"
+    },
+    {
+      "name": "audit: the delivery term is 96% of the old behaviour term",
+      "ok": true,
+      "detail": "96%"
+    },
+    {
+      "name": "the EFFICIENCY card renders on Overview",
+      "ok": true,
+      "detail": "verdict=stable"
+    },
+    {
+      "name": "the split is available (rate set loaded, every bill priceable)",
+      "ok": true,
+      "detail": "data-split=true"
+    },
+    {
+      "name": "exactly one delivery & fixed line",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "all-time headline prints 16.3¢",
+      "ok": true,
+      "detail": "16.3¢/kWh (data-cents 16.26)"
+    },
+    {
+      "name": "all-time headline says \"24 bills\"",
+      "ok": true,
+      "detail": "All time · 24 bills16.3¢/kWh"
+    },
+    {
+      "name": "card data-bills == 24",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "all-time ¢/kWh == the audit's kWh-weighted mean (±0.011)",
+      "ok": true,
+      "detail": "16.26 vs 16.2575"
+    },
+    {
+      "name": "the totals strip restates the same ¢/kWh and bill count",
+      "ok": true,
+      "detail": "16.26¢ / 24 bills vs headline 16.26¢"
+    },
+    {
+      "name": "chip window == 12 bills",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "name": "usage slope == audit mixTerm (±0.001)",
+      "ok": true,
+      "detail": "-0.006 vs -0.0061"
+    },
+    {
+      "name": "delivery slope == audit nonCommodityTerm (±0.001)",
+      "ok": true,
+      "detail": "-0.151 vs -0.1508"
+    },
+    {
+      "name": "rate slope == audit rate (±0.001)",
+      "ok": true,
+      "detail": "0.212 vs 0.2122"
+    },
+    {
+      "name": "net slope == audit observed (±0.001)",
+      "ok": true,
+      "detail": "0.055 vs 0.0552"
+    },
+    {
+      "name": "usage + delivery + rate recombine to the net slope (±0.001)",
+      "ok": true,
+      "detail": "-0.006 + -0.151 + 0.212 vs net 0.055"
+    },
+    {
+      "name": "data-slope == data-usage-slope (the verdict can only read usage)",
+      "ok": true,
+      "detail": "slope=-0.006, usage=-0.006"
+    },
+    {
+      "name": "data-slope != data-delivery-slope (the old 96% term is not the verdict)",
+      "ok": true,
+      "detail": "slope=-0.006, delivery=-0.151"
+    },
+    {
+      "name": "the verdict on the owner's data is STABLE",
+      "ok": true,
+      "detail": "stable — STABLE ±0.0¢/kWh per period(your last 12 bills)"
+    },
+    {
+      "name": "the chip says STABLE and cites the 12-bill window",
+      "ok": true,
+      "detail": "STABLE ±0.0¢/kWh per period(your last 12 bills)"
+    },
+    {
+      "name": "usage |slope| ≤ stable band (flat, not improving)",
+      "ok": true,
+      "detail": "|-0.006| vs band 0.033"
+    },
+    {
+      "name": "rates chip points UP (+0.2¢/period)",
+      "ok": true,
+      "detail": "up — rates +0.2¢/period"
+    },
+    {
+      "name": "delivery & fixed chip points DOWN (−0.15¢/period)",
+      "ok": true,
+      "detail": "down — delivery & fixed -0.2¢/period"
+    },
+    {
+      "name": "net line says stable",
+      "ok": true,
+      "detail": "stable — net stable ±0.1¢"
+    },
+    {
+      "name": "sentence contains \"usage mix is flat\"",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "sentence contains \"delivery & fixed charges fell (-0.2¢/kWh)\"",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "sentence contains \"rates rose (+0.2¢/kWh)\"",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "sentence contains the net verdict",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "sentence no longer claims the usage mix improved",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "sentence does not credit delivery as behaviour",
+      "ok": true,
+      "detail": "Your usage mix is flat (±0.0¢ behavior-driven), rates rose (+0.2¢/kWh); delivery & fixed charges fell (-0.2¢/kWh) — net stable ±0.1¢."
+    }
+  ]
+}
