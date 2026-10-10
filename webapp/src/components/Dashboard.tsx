@@ -761,6 +761,7 @@ export default function Dashboard() {
           endDate={endDate}
           projection={projection}
           openPeriod={openPeriod}
+          billingDay={billingDay}
         />
       )}
 

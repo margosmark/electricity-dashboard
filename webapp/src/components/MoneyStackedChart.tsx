@@ -39,6 +39,7 @@ import {
 import PlanBands from '@/components/PlanBands';
 import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
 import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
+import { calculateTrueBill, hasExtraCharges, type ExtraCharges } from '@/lib/energy';
 
 type Mode = 'dollars' | 'share' | 'usage';
 
@@ -66,7 +67,11 @@ type ChartRow = {
   kind: PeriodStackKind;
   /** True when the money shown is our estimate, never a bill. */
   estimated: boolean;
-  [slice: string]: number | string | boolean | undefined;
+  /** Modelled all-in total (commodity + ride-alongs) for the unbilled row. */
+  estTotal?: number | null;
+  /** Metered kWh, so the est total can be priced per-kWh. */
+  kwh?: number;
+  [slice: string]: number | string | boolean | null | undefined;
 };
 
 /**
@@ -167,11 +172,49 @@ export type MoneyStackedChartProps = {
    * what a feed without bills must do.
    */
   planAnnotations?: PeriodPlanAnnotation[];
+  /**
+   * Slice 7 — Wave L's auto-populated delivery / regulatory / HST rates (or
+   * the user's own typed ones). Used to price the unbilled row's EST. TOTAL,
+   * so "what will this actually cost me?" has an answer that is not just the
+   * commodity line. Null = no rates at all: the column says so rather than
+   * inventing zero-dollar delivery.
+   */
+  charges?: ExtraCharges | null;
 };
 
-export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: MoneyStackedChartProps) {
+export default function MoneyStackedChart({
+  stacks,
+  overlay,
+  planAnnotations,
+  charges = null,
+}: MoneyStackedChartProps) {
   const [mode, setMode] = useState<Mode>('dollars');
   const [showOverlay, setShowOverlay] = useState(true);
+
+  /**
+   * The unbilled row's all-in estimate: commodity (which the row already
+   * carries) plus delivery / regulatory / HST at the saved rates, prorated
+   * to the days the tail actually covers. Only the OPEN row gets one — a
+   * billed row already knows its total, and a hole between bills has no
+   * money to top up. Without rates this stays null and the cell says why.
+   */
+  const openEstTotal = useMemo(() => {
+    if (!charges || !hasExtraCharges(charges)) return null;
+    const open = stacks.find((s) => s.kind === 'open');
+    if (!open) return null;
+    const kwh = open.usageTotal ?? 0;
+    if (kwh <= 0) return null;
+    // A billing period is ~30.44 days; the tail is a fraction of one, and
+    // the flat $/month delivery charge scales with that fraction.
+    const months = Math.max(open.days, 1) / 30.44;
+    const estimate = calculateTrueBill({
+      variableCost: open.totals.payable,
+      totalKwh: kwh,
+      months,
+      charges,
+    });
+    return estimate?.total ?? null;
+  }, [charges, stacks]);
 
   const share = useMemo(() => shareBreakdown(stacks), [stacks]);
 
@@ -227,6 +270,7 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
         total: s.totals.payable,
         kind: s.kind,
         estimated: s.estimated,
+        kwh: s.usageTotal ?? 0,
         offPeak: s.usage?.offPeak ?? 0,
         midPeak: s.usage?.midPeak ?? 0,
         onPeak: s.usage?.onPeak ?? 0,
@@ -245,6 +289,8 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
         rebate: s.cost.credit,
         kind: s.kind,
         estimated: s.estimated,
+        kwh: s.usageTotal ?? 0,
+        estTotal: s.kind === 'open' ? openEstTotal : null,
       };
       for (const k of costKeys) {
         const v = s.cost[k as keyof PeriodStack['cost']];
@@ -259,7 +305,7 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
       }
       return row;
     });
-  }, [stacks, mode, costKeys]);
+  }, [stacks, mode, costKeys, openEstTotal]);
 
   // The rebate is a credit, not a charge: it gets no bar in the share view
   // (nothing to share a denominator with) and no kWh column in the usage one.
@@ -666,7 +712,7 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
 
       {/* Raw numbers, so the chart is never the only way to read the data. */}
       <div className="mt-4 overflow-x-auto" data-testid="money-table">
-        <table className="w-full min-w-[560px] text-[10px] md:text-xs font-black">
+        <table className="w-full min-w-[680px] text-[10px] md:text-xs font-black">
           <caption className="sr-only">Charges per billing period</caption>
           <thead>
             <tr className="border-b-4 border-black text-left">
@@ -684,7 +730,22 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
               <th className="py-1 px-2 uppercase text-right">
                 {mode === 'usage' ? 'Billed' : 'You paid'}
               </th>
-              <th className="py-1 px-2 uppercase text-right">Covered</th>
+              {mode !== 'usage' && (
+                <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
+                  <span className="inline-flex items-center gap-1 justify-end">
+                    Est. total
+                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 border-black">
+                      Estimate
+                    </span>
+                  </span>
+                </th>
+              )}
+              <th
+                className="py-1 px-2 uppercase text-right"
+                title="Share of this period's days that carry readings — how solid the numbers beside it are."
+              >
+                Data coverage
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -734,12 +795,50 @@ export default function MoneyStackedChart({ stacks, overlay, planAnnotations }: 
                   );
                 })}
                 <td className="py-1 px-2 text-right tabular-nums">
-                  {mode === 'usage'
-                    ? kwhFmt(usageKeys.reduce((n, k) => n + Number(r[k] ?? 0), 0))
-                    : r.kind === 'gap'
-                      ? '—'
-                      : `${r.estimated ? '~' : ''}${money(Number(r.total ?? 0))}`}
+                  {mode === 'usage' ? (
+                    kwhFmt(usageKeys.reduce((n, k) => n + Number(r[k] ?? 0), 0))
+                  ) : r.kind === 'gap' ? (
+                    '—'
+                  ) : r.estimated ? (
+                    /* The unbilled tail: this cell says what it IS, so the
+                       "You paid" header above it can never be read as a
+                       claim that the utility has billed these days. */
+                    <span data-testid="money-open-total">
+                      <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                        Est. commodity
+                      </span>
+                      ~{money(Number(r.total ?? 0))}
+                    </span>
+                  ) : (
+                    money(Number(r.total ?? 0))
+                  )}
                 </td>
+                {mode !== 'usage' && (
+                  <td className="py-1 px-2 text-right tabular-nums" data-testid="money-est-total-cell">
+                    {r.kind === 'open' && r.estTotal != null ? (
+                      <span data-testid="money-open-est-total">
+                        <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                          Est. total
+                        </span>
+                        ~{money(Number(r.estTotal))}
+                      </span>
+                    ) : r.kind === 'open' ? (
+                      <span
+                        className="text-slate-400"
+                        title="No delivery / regulatory / HST rates saved yet — add them on the True Bill card and this fills in."
+                      >
+                        —
+                      </span>
+                    ) : (
+                      <span
+                        className="text-slate-400"
+                        title="A billed period already knows its total — that is the column beside this one."
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                )}
                 <td className="py-1 px-2 text-right tabular-nums">
                   {Math.round((Number(r.coverage ?? 0)) * 100)}%
                 </td>

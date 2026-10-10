@@ -15,6 +15,7 @@ the app owner's own data.
 | `utility-alectra-fragment.xml` | **The only genuine Alectra content found publicly**: a single `<IntervalReading>` element exported by an Alectra customer (Savage Data CMD feed) showing Alectra's real child ordering — `cost`, `ReadingQuality/quality`, `timePeriod`, `value 2290000`, `tou 2`. It is a fragment, not an Atom feed, so it documents Alectra structure rather than feed layout. | `github.com/rocketraman/open-green-button-homeassistant/issues/4`. |
 | `green-button-alliance-sample.xml` | Canonical **Green Button Alliance** published sample ("Test GB Data Hourly Nine Days Binned Daily", 216 IntervalReadings) including the `xml-stylesheet` PI, banner comment, and `ElectricPowerUsageSummary`. | `s3-us-west-2.amazonaws.com/technical.greenbuttonalliance.org/library/sample-data/TestGBDataHourlyNineDaysBinnedDaily.xml` (linked from the GBA samples index). |
 | `synthetic.xml` | Small synthetic feed generated for the e2e smoke test (no real meter readings). | Created in-repo by earlier waves. |
+| `usage-summary-open-tail.xml` | **Hand-generated fixture — not any utility's export.** The Wave L synthetic bills (same audited figures, copied verbatim) PLUS hourly meter readings that run a month PAST the last bill — the mid-period shape of a real export, and the one thing no other committed fixture had: the accrual curve could only ever draw its empty state in the browser check. Readings are raw Wh with no `ReadingType` multiplier (the parser's `raw / 1000` fallback, same as `example-usage.xml`), generated from a fixed hourly load shape so the file is byte-stable. Regenerate: `node webapp/scripts/generate-open-tail-fixture.mjs`. | Created in-repo for slice 7 (`webapp/src/components/OpenPeriod.test.tsx`, `evidence/bill-pace-verify.cjs`). |
 | `usage-summary-synthetic.xml` | **Hand-generated fixture — not any utility's export.** Three 29-day `UsageSummary` bills (2026-05-25 / 06-23 / 07-22) plus a `LocalTimeParameters` entry, built so the per-period lines are self-consistent (total = commodity + delivery + regulatory; HST 13%; rebate −23.5%) and their sums are exactly the figures the 2026-10-07 data audit published: **$1,365.03 total · $311.61 delivery · $177.46 HST · −$320.78 rebate · $45.15 regulatory · $530.74 / $218.71 / $258.82 off/mid/on**. Delivery is laid out as $35.88 fixed + $0.0252/kWh so the amortized split the "actual bill" panel shows is really fitted. | Created in-repo for Wave L (`webapp/src/lib/usageSummary.test.ts`, `webapp/src/components/WaveL.test.tsx`). The app owner's own Oakville Hydro export is used only for the deployed browser check and is **never committed** (last rule below). |
 
 ## What these fixtures caught
@@ -36,6 +37,9 @@ Two real scaling bugs, both fixed and pinned by `utilitySamples.test.ts`:
 
 - Keep it out of git unless it is genuinely public: the root `.gitignore`
   rule is the privacy guard, do not weaken it.
+- If a fixture is generated, commit the generator beside it and say so in
+  the table above — a fixture nobody can rebuild is a fixture nobody can
+  trust after the first edit.
 - Record provenance above, and say plainly when a file is a stand-in rather
   than the real utility's export.
 - Never put your own Oakville Hydro export here.
