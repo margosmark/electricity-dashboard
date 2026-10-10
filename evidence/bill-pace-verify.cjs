@@ -79,6 +79,12 @@ async function openMoney(browser, viewport) {
   if (!loaded) throw new Error('upload never produced a totals strip');
   await page.getByRole('tab', { name: 'Money' }).click();
   await shown(page.getByTestId('tab-panel-money'), 20_000);
+  // The panel mounts before the rows inside it — counting money-rows at this
+  // point races the render and intermittently reports "no bills" on a feed
+  // that has three. Wait for the thing every later check measures.
+  if (!(await shown(page.getByTestId('money-row').first(), 20_000))) {
+    throw new Error('Money tab never rendered its period rows');
+  }
   return { ctx, page };
 }
 
@@ -219,7 +225,49 @@ async function desktopRun(browser) {
       check('EST. TOTAL dashes honestly when no rates exist', (await openDash.innerText()).includes('—'));
     }
 
-    /* --- 6. no sideways scroll, screenshot ------------------------------ */
+    /* --- 6. the tier-2 marker (Tiered plan only) -------------------------- */
+    // Spec item 2, and the one thing never before seen in a browser: the
+    // crossing is usually a PROJECTION past the drawn data, and the first
+    // implementation drew it on the LEFT AXIS — findIndex() returns -1 for a
+    // day not in `points`, so x(-1+1) claimed the period starts already over
+    // the allowance while the note named a date weeks later.
+    await page.getByRole('button', { name: 'Tiered', exact: true }).click();
+    await page.waitForTimeout(2000);
+    const note = flat(await page.getByTestId('accrual-note').innerText());
+    const crossing = note.match(/runs out (\d{4}-\d{2}-\d{2})/);
+    const tierMarker = page.getByTestId('accrual-tier-marker');
+    if (crossing) {
+      check('Tiered plan names a tier-1 run-out date', true, crossing[1]);
+      check('tier marker draws', (await tierMarker.count()) > 0);
+      const mX = Number(await tierMarker.getAttribute('x1'));
+      const accXs = (await page.getByTestId('accrual-actual-line').getAttribute('points'))
+        .trim().split(/\s+/).map((p) => Number(p.split(',')[0]));
+      check('tier marker is finite', Number.isFinite(mX), String(mX));
+      check(
+        // The marker must sit past the accrual when the crossing is in the
+        // future — at/before the first point is the -1 bug, verbatim.
+        'tier marker sits PAST the drawn data (the -1 bug is back otherwise)',
+        mX > Math.max(...accXs),
+        `marker x=${mX}, accrual ends x=${Math.max(...accXs)}, crossing ${crossing[1]}`,
+      );
+      // And it must agree with the date in the note: later date, further right.
+      const noteX = accXs[0];
+      check('tier marker is not parked on the left axis', mX > noteX, `left edge x=${noteX}`);
+      check('projected crossing is drawn lighter than a fact', (await tierMarker.getAttribute('opacity')) !== null, String(await tierMarker.getAttribute('opacity')));
+    } else {
+      // No crossing in this period — the marker must be absent, not wrong.
+      check('no tier marker when the period never reaches tier 2', (await tierMarker.count()) === 0, note.slice(0, 120));
+    }
+
+    if (crossing) {
+      await page.screenshot({ path: path.join(OUT, 'bill-pace-desktop-tiered.png'), fullPage: true });
+      // Back to the default plan so the main screenshot shows what a user
+      // lands on, not a plan they never picked.
+      await page.getByRole('button', { name: 'TOU', exact: true }).click();
+      await page.waitForTimeout(1500);
+    }
+
+    /* --- 7. no horizontal scroll, screenshot ------------------------------ */
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

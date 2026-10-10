@@ -762,6 +762,49 @@ describe('Wave R 4d — the card answers its own question', () => {
     expect(screen.getByTestId('accrual-note')).toHaveTextContent(/tier-2 rate/);
   });
 
+  it('places a PROJECTED tier crossing past the data, not on the left axis', () => {
+    // 1.5 kWh/h = 36 kWh/day: 10 drawn days book 360 kWh, short of the
+    // prorated 473 kWh allowance, so the crossing falls on Oct 14 — beyond
+    // every point in `points`. findIndex() there returns -1, and x(-1 + 1)
+    // painted "tier 2" on the left axis, i.e. claiming the period starts
+    // already over the allowance while the note named Oct 14. The marker
+    // must land where the note says: after the last drawn point.
+    const rows = hourly(oct(1), 10, 1.5);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={tail}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        billDate={billThrough}
+        today={oct(10)}
+      />,
+    );
+
+    const note = screen.getByTestId('accrual-note').textContent ?? '';
+    const crossing = note.match(/runs out (\d{4}-\d{2}-\d{2})/);
+    expect(crossing, `note: ${note}`).not.toBeNull();
+    // The crossing is ahead of the data — that is the case under test.
+    expect(crossing![1] > '2026-10-10').toBe(true);
+
+    const markerX = Number(screen.getByTestId('accrual-tier-marker').getAttribute('x1'));
+    const chart = screen.getByTestId('accrual-chart');
+    const actual = chart.querySelector('polyline')!.getAttribute('points')!.trim().split(/\s+/);
+    const lastAccrualX = Number(actual[actual.length - 1].split(',')[0]);
+    const firstAccrualX = Number(actual[0].split(',')[0]);
+
+    expect(Number.isFinite(markerX)).toBe(true);
+    // Right of the whole accrual — never at/before the first point, which is
+    // what the -1 fallback drew.
+    expect(markerX).toBeGreaterThan(lastAccrualX);
+    expect(markerX).toBeGreaterThan(firstAccrualX);
+    // ...and still inside the plot.
+    const leftAxis = Number(
+      chart.querySelector('line')!.getAttribute('x1'),
+    );
+    expect(markerX).toBeGreaterThan(leftAxis);
+  });
+
   it('draws no tier marker off-Tiered — TOU has no tier-1 allowance', () => {
     const rows = hourly(oct(1), 10, 3);
     render(
