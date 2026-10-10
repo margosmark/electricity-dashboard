@@ -38,6 +38,7 @@ import { GreenButtonSync } from '@/components/GreenButtonSync';
 import { BackupControls } from '@/components/BackupControls';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
+import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import { NotificationToggle } from '@/components/NotificationToggle';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
@@ -244,11 +245,20 @@ export default function Dashboard() {
 
   const filteredData = useMemo(() => filterByDateRange(processedData, startDate, endDate), [processedData, startDate, endDate]);
 
+  // Wave T: the ONE Open-Meteo fetch behind the temperature-banded curve and
+  // the anomaly context lines. Client-side CDN, cached in this browser,
+  // scoped to the dates the readings themselves cover — never a request about
+  // a period that has no data, and never through this app's server.
+  const temps = useHourlyTemps(processedData);
+
   const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget]);
 
   const comparison = useMemo(() => calculateComparison(activeChartData), [activeChartData]);
 
-  const anomalies = useMemo(() => detectAnomalies(processedData, filteredData), [processedData, filteredData]);
+  const anomalies = useMemo(
+    () => detectAnomalies(processedData, filteredData, temps.temps),
+    [processedData, filteredData, temps.temps],
+  );
 
   const heatmapData = useMemo(() => buildHeatmapData(filteredData), [filteredData]);
 
@@ -719,6 +729,7 @@ export default function Dashboard() {
           anomalies={anomalies}
           heatmapData={heatmapData}
           processedData={processedData}
+          temps={temps}
           zoomLevel={zoomLevel}
           zoomTarget={zoomTarget}
           goBack={goBack}
