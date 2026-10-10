@@ -11,9 +11,11 @@
  * The pieces:
  *
  *   • buildPeriodStacks   — one bar per billing period, split by charge type
- *                           (commodity split into its own TOU windows, because
- *                           that split is exactly what people scan for) with
- *                           the bill's OWN per-window kWh alongside;
+ *                           (commodity split into its own TOU windows — or,
+ *                           on a Tiered bill, its Tier 1 / Tier 2 blocks —
+ *                           because that split is exactly what people scan
+ *                           for) with the bill's OWN per-window kWh
+ *                           alongside;
  *   • periodDeltaRows     — period → period change per charge type, with an
  *                           explicit baseline column for the first period;
  *   • hourCostProfile     — average ¢/kWh by hour of day (commodity only —
@@ -52,6 +54,8 @@ export type CostSliceKey =
   | 'offPeak'
   | 'midPeak'
   | 'onPeak'
+  | 'tier1'
+  | 'tier2'
   | 'commodityOther'
   | 'delivery'
   | 'regulatory'
@@ -66,14 +70,18 @@ export type CostSliceKey =
  * the money-back slice hangs under the axis where it belongs.
  *
  * Colours follow the app's existing vocabulary: the three TOU windows reuse
- * the plan-card rate colours (emerald / yellow / red), delivery + regulatory
- * reuse the ActualBillPanel's violet pair, HST the amber tax bar, and the
- * rebate the same emerald family as every other "money back" surface.
+ * the plan-card rate colours (emerald / yellow / red), the two tiers reuse
+ * the commodity blue as a light/dark pair (they ARE the commodity, just
+ * priced at two rates), delivery + regulatory reuse the ActualBillPanel's
+ * violet pair, HST the amber tax bar, and the rebate the same emerald family
+ * as every other "money back" surface.
  */
 export const COST_SLICE_ORDER: CostSliceKey[] = [
   'offPeak',
   'midPeak',
   'onPeak',
+  'tier1',
+  'tier2',
   'commodityOther',
   'delivery',
   'regulatory',
@@ -92,6 +100,8 @@ export const COST_SLICE_META: Record<
   offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981' },
   midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15' },
   onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444' },
+  tier1: { label: 'Tier 1', short: 'Tier 1', color: '#1D4ED8' },
+  tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD' },
   commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB' },
   delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6' },
   regulatory: { label: 'Regulatory', short: 'Regulatory', color: '#A78BFA' },
@@ -101,16 +111,35 @@ export const COST_SLICE_META: Record<
 };
 
 /**
- * Which TOU window a commodity line belongs to, keyed off the utility's own
- * note. A Tiered bill says "Tiered" / "Electricity" and a ULO bill says
- * "Overnight" — neither is forced into a peak bucket it does not have; they
- * land in `commodityOther` and the chart labels them "not split by window".
+ * Which slice of the COMMODITY a line belongs to, keyed off the utility's own
+ * note — the same loose-on-purpose matching `classifyBillLine` and
+ * `rateForUsageNote` use, because the wording is the only thing the file
+ * guarantees:
+ *
+ *   • a TOU line names its window ("Off Peak-Summer")   → off/mid/on-peak;
+ *   • a TIERED line names its block ("BLOCK 1 - Winter", "BLOCK 1- Summer",
+ *     "BLOCK 2 - Summer", "Tier 1")                    → tier 1 / tier 2;
+ *   • anything else — "Tiered Electricity", "Overnight",
+ *     a wording we have never seen                     → `commodityOther`,
+ *     which the chart labels "not split by window".
+ *
+ * The function predates the tier split (hence "window"): it is this file's
+ * ONE note → cost-slice mapping, and the tiers are just two more windows a
+ * bill can price its electricity in. ULO's "Overnight" is deliberately not
+ * forced into a peak bucket, and a note that names no tier number ("Tiered")
+ * is not guessed into one either.
  */
 export function commodityWindowOf(note: string): CostSliceKey {
   const n = note.toLowerCase();
   if (/\boff[\s-]?peak/.test(n)) return 'offPeak';
   if (/\bmid[\s-]?peak/.test(n)) return 'midPeak';
   if (/\bon[\s-]?peak/.test(n)) return 'onPeak';
+  // Same patterns `rateForUsageNote` prices with, so the slice and the ¢/kWh
+  // can never disagree about which tier a line was billed at. Whitespace
+  // tolerance is the point: Oakville writes "BLOCK 1 - Winter" and
+  // "BLOCK 1- Summer" in the same bill.
+  if (/\bblock\s*1\b|\btier\s*1\b|first[ -]?tier/.test(n)) return 'tier1';
+  if (/\bblock\s*2\b|\btier\s*2\b|second[ -]?tier/.test(n)) return 'tier2';
   return 'commodityOther';
 }
 
@@ -163,6 +192,8 @@ const zeroCostSlices = (): Record<CostSliceKey, number> => ({
   offPeak: 0,
   midPeak: 0,
   onPeak: 0,
+  tier1: 0,
+  tier2: 0,
   commodityOther: 0,
   delivery: 0,
   regulatory: 0,
@@ -179,11 +210,29 @@ const zeroUsageSlices = (): Record<UsageSliceKey, number> => ({
 });
 
 /**
+ * The kWh stack has no tier columns: the bill states tier USAGE in kWh, but
+ * this app only ever draws the four windows above, so a tiered usage line
+ * folds into `commodityOther` exactly as it did before the money split. The
+ * mapping is explicit (not a cast) so a new cost slice cannot silently land
+ * as an invisible extra key on `usage` and drop its kWh out of `usageTotal`.
+ */
+function usageKeyOf(note: string): UsageSliceKey {
+  const slice = commodityWindowOf(note);
+  if (slice === 'offPeak' || slice === 'midPeak' || slice === 'onPeak') return slice;
+  return 'commodityOther';
+}
+
+/**
  * One stack per period, oldest first.
  *
  * The commodity split walks the SAME lines `billTotals` sums, so the stack and
  * the panel above it can never disagree: a line that classifies as commodity
- * goes into its window bucket, everything else into its class bucket. The
+ * goes into its window bucket, everything else into its class bucket. A
+ * Tiered bill's "BLOCK 1 …" and "BLOCK 2 …" lines get a bucket EACH (tier 1
+ * / tier 2) rather than one undifferentiated commodity pile, so the tier
+ * split the pace chart marks is a split you can also read off this table —
+ * and a wording we do not recognize still falls through to `commodityOther`
+ * instead of being guessed into a tier. The
  * stated "Total Electricity Charges" is deliberately NOT stacked — it is the
  * sum of the parts, and stacking it too would double the bar.
  */
@@ -203,7 +252,7 @@ export function buildPeriodStacks(
       // cost the kWh stack its data.
       if (item.measurement && /usage$/.test(item.note.trim().toLowerCase())) {
         usageSeen = true;
-        usage[commodityWindowOf(item.note) as UsageSliceKey] += item.measurement.scaled;
+        usage[usageKeyOf(item.note)] += item.measurement.scaled;
       }
 
       const cls = classifyBillLine(item);
@@ -368,7 +417,9 @@ export function buildAxisStacks(
 
 /** The estimated commodity of a stack, from its own slices (never retyped). */
 function estimateFromSlices(cost: Record<CostSliceKey, number>): number {
-  return round2(cost.offPeak + cost.midPeak + cost.onPeak + cost.commodityOther);
+  return round2(
+    cost.offPeak + cost.midPeak + cost.onPeak + cost.tier1 + cost.tier2 + cost.commodityOther,
+  );
 }
 
 /* ==========================================================================
@@ -410,6 +461,8 @@ const DELTA_LABELS: Record<DeltaRowKey, string> = {
   offPeak: COST_SLICE_META.offPeak.label,
   midPeak: COST_SLICE_META.midPeak.label,
   onPeak: COST_SLICE_META.onPeak.label,
+  tier1: COST_SLICE_META.tier1.label,
+  tier2: COST_SLICE_META.tier2.label,
   commodityOther: COST_SLICE_META.commodityOther.label,
   delivery: COST_SLICE_META.delivery.label,
   regulatory: COST_SLICE_META.regulatory.label,
@@ -528,7 +581,13 @@ export function shareBreakdown(stacks: PeriodStack[]): ShareBreakdown | null {
 
   return {
     gross: round2(gross),
-    commodityPct: pct(sum((s) => s.cost.offPeak + s.cost.midPeak + s.cost.onPeak + s.cost.commodityOther)),
+    commodityPct: pct(
+      sum(
+        (s) =>
+          s.cost.offPeak + s.cost.midPeak + s.cost.onPeak + s.cost.tier1 + s.cost.tier2 +
+          s.cost.commodityOther,
+      ),
+    ),
     deliveryPct: pct(sum((s) => s.cost.delivery)),
     regulatoryPct: pct(sum((s) => s.cost.regulatory)),
     otherPct: pct(sum((s) => s.cost.other)),
