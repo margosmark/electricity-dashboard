@@ -20,7 +20,7 @@ import type { FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import type { EfficiencyReport } from '@/lib/statistics';
+import { EFFICIENCY_SUBTITLE, type EfficiencyReport } from '@/lib/statistics';
 import BestChoiceBanner from '@/components/BestChoiceBanner';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
@@ -92,36 +92,79 @@ export default function OverviewPanel({
 
           {/* Wave S — the whole dataset as ONE price: what a kWh actually
               cost, and what it cost in the window on screen. Same math as
-              the EFFICIENCY card, restated where the totals live. */}
+              the EFFICIENCY card, restated where the totals live — with the
+              SAME tax honesty: the subtitle names the charges and the
+              divisor, and every figure is published excl. and incl. tax so
+              no view of the same bills can disagree with another. */}
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
               className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black"
             >
               <div className="text-[8px] md:text-[10px] font-black">
-                ¢/kWh · Total Electricity Charges ÷ billed kWh
+                ¢/kWh · {EFFICIENCY_SUBTITLE}
               </div>
               <div className="flex gap-4 md:gap-6 mt-1">
                 <div>
                   <div className="text-[8px] font-black uppercase">All time</div>
-                  <div
-                    className="text-lg md:text-2xl italic font-black"
-                    data-testid="efficiency-all-time-strip"
-                    data-cents={efficiency.allTime.cents.toFixed(2)}
-                    data-bills={efficiency.allTime.bills}
-                  >
-                    {efficiency.allTime.cents.toFixed(1)}¢
+                  <div className="flex gap-3 md:gap-4">
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-all-time-strip"
+                        data-cents={efficiency.allTime.cents.toFixed(2)}
+                        data-bills={efficiency.allTime.bills}
+                      >
+                        {efficiency.allTime.cents.toFixed(1)}¢
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        excl. tax
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-all-time-strip-incl-tax"
+                        data-cents={efficiency.allTime.centsInclTax.toFixed(2)}
+                      >
+                        {efficiency.allTime.centsInclTax.toFixed(1)}¢
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        incl. tax
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
                   <div className="text-[8px] font-black uppercase">In view</div>
-                  <div
-                    className="text-lg md:text-2xl italic font-black"
-                    data-testid="efficiency-in-view"
-                    data-cents={(efficiency.inView?.cents ?? 0).toFixed(2)}
-                    data-bills={efficiency.inView?.bills ?? 0}
-                  >
-                    {efficiency.inView ? `${efficiency.inView.cents.toFixed(1)}¢` : '—'}
+                  <div className="flex gap-3 md:gap-4">
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-in-view"
+                        data-cents={(efficiency.inView?.cents ?? 0).toFixed(2)}
+                        data-bills={efficiency.inView?.bills ?? 0}
+                      >
+                        {efficiency.inView ? `${efficiency.inView.cents.toFixed(1)}¢` : '—'}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        excl. tax
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-in-view-incl-tax"
+                        data-cents={(efficiency.inView?.centsInclTax ?? 0).toFixed(2)}
+                      >
+                        {efficiency.inView
+                          ? `${efficiency.inView.centsInclTax.toFixed(1)}¢`
+                          : '—'}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        incl. tax
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -6,13 +6,23 @@
  * numbers out. No I/O, no Date.now(), no DOM.
  *
  * --------------------------------------------------------------------------------
- * The three numbers
+ * The three numbers — and the tax dimension every one of them carries
  * --------------------------------------------------------------------------------
  * 1. PER PERIOD — ¢/kWh = the bill's own "Total Electricity Charges" ÷ the
  *    metered usage in the same summary (the per-category "… Usage"
  *    measurements, uom 72 scaled by powerOfTenMultiplier — the same quantity
  *    `billedKwh` returns). Audited on the owner's 24-period export:
  *    Aug 2024 = 15.9¢, Jul 2025 = 13.9¢, Jan 2026 = 19.4¢.
+ *
+ *    THE NUMERATOR EXCLUDES TAX. "Total Electricity Charges" is the utility's
+ *    own pre-tax line — commodity + delivery + regulatory — and HST is a
+ *    SEPARATE line beneath it on the itemized bill (verified against the
+ *    owner's real file: every bill's tax line is exactly 13% of its Total
+ *    Electricity Charges). So every ¢/kWh here is a pre-tax figure, and
+ *    `centsInclTax` is the same bill with that tax line added back over the
+ *    same kWh. Both are published because both are legitimate ways to read a
+ *    bill: compare against a rate schedule pre-tax, or against what actually
+ *    left the bank account. Neither is "the" number, so neither is hidden.
  *
  * 2. ALL-TIME — the kWh-weighted mean over every closed billing period from
  *    every loaded export: Σ(cost) ÷ Σ(kWh). Weighting by kWh (not by bill)
@@ -23,6 +33,11 @@
  *    actually looking at (the date selection, further narrowed by whatever
  *    the chart is zoomed into). Bills whose billing window overlaps the
  *    selection are in; the weight is still each bill's own kWh.
+ *
+ * The incl-tax variants of 2 and 3 are the SAME weighted mean over
+ * Σ(cost + tax) — never a second pass over a different bill set, never the
+ * pre-tax mean multiplied by 1.13 (which would be wrong the moment a bill
+ * carries a rebate line or a tax that is not 13%).
  *
  * --------------------------------------------------------------------------------
  * The verdict, and why it is split three ways (the honesty bar)
@@ -135,10 +150,18 @@ export type PeriodEfficiency = {
   label: string;
   /** Billed kWh — the per-category "… Usage" measurements, same as `billedKwh`. */
   kwh: number;
-  /** Total Electricity Charges, dollars (what the bill actually asked for). */
+  /** Total Electricity Charges, dollars — the utility's own PRE-TAX line. */
   cost: number;
-  /** Observed ¢/kWh: cost ÷ kwh. */
+  /** The bill's tax line (HST), dollars — zero when the file states none. */
+  tax: number;
+  /** Observed ¢/kWh: cost ÷ kwh. PRE-TAX, by construction. */
   cents: number;
+  /**
+   * The same bill with its tax line added back over the same kWh:
+   * (cost + tax) ÷ kwh. What the bill cost per kWh all-in, before any
+   * rebate. Equals `cents` exactly when the file states no tax line.
+   */
+  centsInclTax: number;
   /**
    * ¢/kWh of this bill's COMMODITY repriced at today's rate set — what your
    * usage would cost under today's OEB prices. null when unpriceable.
@@ -237,8 +260,13 @@ export function efficiencyPeriods(
     const totals = billTotals(summary);
     const cost = totals.total;
     if (!Number.isFinite(cost)) continue;
+    // The bill's own tax line (HST), separate from Total Electricity Charges
+    // on the itemized bill. Zero when the file states no tax line, in which
+    // case the incl-tax figure collapses onto the pre-tax one exactly.
+    const tax = Number.isFinite(totals.tax) ? totals.tax : 0;
 
     const cents = (cost / kwh) * 100;
+    const centsInclTax = ((cost + tax) / kwh) * 100;
     let usageCents: number | null = null;
     let deliveryCents: number | null = null;
     let rateCents: number | null = null;
@@ -268,7 +296,9 @@ export function efficiencyPeriods(
       label: format(new Date(`${summary.startDate}T00:00:00`), 'MMM yyyy'),
       kwh,
       cost,
+      tax,
       cents,
+      centsInclTax,
       usageCents,
       deliveryCents,
       rateCents,
@@ -281,12 +311,22 @@ export function efficiencyPeriods(
 }
 
 export type EfficiencyAverage = {
-  /** kWh-weighted mean of the periods' ¢/kWh: Σcost ÷ ΣkWh × 100. */
+  /** kWh-weighted mean of the periods' ¢/kWh: Σcost ÷ ΣkWh × 100. PRE-TAX. */
   cents: number;
+  /**
+   * The same weighted mean over Σ(cost + tax) — every bill's own tax line
+   * added back, over the SAME kWh. Never `cents × 1.13`: a file that states
+   * no tax line, or a rebate-aware bill, must not be silently scaled.
+   */
+  centsInclTax: number;
   /** Periods that went into it. */
   bills: number;
   /** Period kWh behind the weight. */
   kwh: number;
+  /** Total Electricity Charges behind the pre-tax mean, dollars. */
+  cost: number;
+  /** The tax lines behind the incl-tax mean, dollars. */
+  tax: number;
 };
 
 /** Weighted mean over `periods`; null when there is no kWh to divide by. */
@@ -295,13 +335,22 @@ export function weightedCentsPerKwh(
 ): EfficiencyAverage | null {
   if (periods.length === 0) return null;
   let cost = 0;
+  let tax = 0;
   let kwh = 0;
   for (const p of periods) {
     cost += p.cost;
+    tax += p.tax;
     kwh += p.kwh;
   }
   if (!(kwh > 0)) return null;
-  return { cents: (cost / kwh) * 100, bills: periods.length, kwh };
+  return {
+    cents: (cost / kwh) * 100,
+    centsInclTax: ((cost + tax) / kwh) * 100,
+    bills: periods.length,
+    kwh,
+    cost,
+    tax,
+  };
 }
 
 /**
@@ -323,6 +372,59 @@ export function inViewCentsPerKwh(
     (p) => p.startDate <= end && p.endDate >= start,
   );
   return weightedCentsPerKwh(inView);
+}
+
+/* -------------------------------------------------------------------------- *
+ * What the two headline figures mean, in words the card can print
+ * -------------------------------------------------------------------------- */
+
+/**
+ * The subtitle every ¢/kWh headline in this app is published under.
+ *
+ * It exists because the card used to print a bare number whose numerator
+ * nobody had defined, and the owner's own question — "does the avg kWh cost
+ * include all fees?" — went unanswered by the UI. One line settles it: the
+ * charges named, the divisor named, and the tax called out as excluded
+ * (the incl-tax figure is printed right beside it, not hidden behind it).
+ */
+export const EFFICIENCY_SUBTITLE =
+  'ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded';
+
+/**
+ * The tax rate implied by the loaded bills themselves: Σtax ÷ ΣTotal
+ * Electricity Charges, as a percentage.
+ *
+ * Derived, never assumed — the card must say the rate the FILE states, not
+ * the 13% Ontario happens to charge this year, and a file with no tax line
+ * must read 0% rather than borrow a rate from nowhere. Rounded to one
+ * decimal because that is the precision at which a rate is worth quoting.
+ */
+export function impliedTaxPct(average: EfficiencyAverage | null): number | null {
+  if (!average || !(average.cost > 0)) return null;
+  return Math.round((average.tax / average.cost) * 1000) / 10;
+}
+
+/**
+ * The one-line footnote under the excl/incl pair: what the tax rate was, and
+ * the two things these numbers are NOT — a whole-utility bill (water and gas
+ * are billed separately and never enter a Green Button electricity export),
+ * and a post-rebate figure (the rebate is its own line on the Money tab).
+ */
+export function taxFootnote(average: EfficiencyAverage | null): string {
+  const pct = impliedTaxPct(average);
+  if (pct === null) {
+    return 'Water and gas are billed separately and are never in these numbers.';
+  }
+  if (pct === 0) {
+    return (
+      'This file states no tax line, so the two figures are the same. ' +
+      'Water and gas are billed separately and are never in these numbers.'
+    );
+  }
+  return (
+    `HST on your bills is ${pct.toFixed(1)}%; the incl.-tax figure adds that line back ` +
+    'over the same kWh. Water and gas are billed separately and are never in these numbers.'
+  );
 }
 
 /* -------------------------------------------------------------------------- *
