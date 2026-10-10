@@ -37,6 +37,7 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'track.vs', // "vs {plan}" — "vs" is standard French usage
   'ev.signedPositive', // "+{amount}" — the sign glyph is the same in both
   'ev.signedNegative', // "−{amount}" — the minus glyph is the same in both
+  'ev.categoriesAnd', // " + " — the joiner between period names is glyph-only
 ]);
 
 describe('i18n catalogs', () => {

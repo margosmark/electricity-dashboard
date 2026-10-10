@@ -22,7 +22,7 @@
  */
 
 /* Wave U — the EV assumptions are shown to the user, so they translate. */
-import { fmtCents, t } from '@/i18n';
+import { fmtCents, periodLabel, t } from '@/i18n';
 import {
   aggregateChartData,
   calculateComparison,
@@ -477,19 +477,27 @@ function priceStayHours(input: {
   return { rateCents, breakdown, seasons };
 }
 
-/** The evidence sentence under the stay-vs-move comparison. */
+/** The evidence sentence under the stay-vs-move comparison.
+ *
+ * Wave U — the sentence translates, and so do the rate-period NAMES inside
+ * it: `categories` holds the canonical names ("Off-Peak") because they are
+ * data the classifier produced, but this is prose shown to a person, so each
+ * one goes through `periodLabel()` ("Période creuse"). The hour and the rate
+ * are numbers, so they take the locale's decimal comma. */
 function stayDetail(stayLabel: string, breakdown: EvHourPrice[]): string {
   if (breakdown.length === 0) return '';
   if (breakdown.every((b) => b.upperBound)) {
-    return `No readings at ${stayLabel}, so the stay side is priced at each plan's most expensive rate — an upper bound, not a measurement.`;
+    return t('ev.stayDetailUpper', { label: stayLabel });
   }
-  return (
-    `Priced from your own readings at ${stayLabel}: ` +
-    breakdown
-      .map((b) => `${pad2(b.hour)}:00 ${b.categories.join(' + ')} ${b.rateCents.toFixed(1)}¢`)
-      .join(' · ') +
-    `.`
-  );
+  return t('ev.stayDetail', {
+    label: stayLabel,
+    hours: breakdown
+      .map(
+        (b) =>
+          `${pad2(b.hour)}:00 ${b.categories.map((c) => periodLabel(c)).join(t('ev.categoriesAnd'))} ${fmtCents(b.rateCents, 1)}`,
+      )
+      .join(' · '),
+  });
 }
 
 /**

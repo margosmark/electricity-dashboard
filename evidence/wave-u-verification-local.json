@@ -1,0 +1,520 @@
+{
+  "wave": "U",
+  "generatedAt": "2026-10-10T22:45:40.904Z",
+  "base": "http://127.0.0.1:3939/",
+  "deployedCommit": null,
+  "fixture": {
+    "sha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+    "bytes": 6424909
+  },
+  "checks": [
+    {
+      "name": "fresh context has NO oeo_locale stored (no auto-detect)",
+      "ok": true,
+      "detail": "null"
+    },
+    {
+      "name": "the toggle is mounted on a fresh load (behind the upload modal)",
+      "ok": true,
+      "detail": "1 found"
+    },
+    {
+      "name": "the toggle renders before any upload",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "default locale attribute is \"en\"",
+      "ok": true,
+      "detail": "en"
+    },
+    {
+      "name": "aria-pressed is false in English",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "the toggle is a real <button>",
+      "ok": true,
+      "detail": "BUTTON"
+    },
+    {
+      "name": "the toggle has an accessible name in English",
+      "ok": true,
+      "detail": "Switch to French"
+    },
+    {
+      "name": "English tab labels on a fresh load",
+      "ok": true,
+      "detail": "Overview | Usage | Plans | Money"
+    },
+    {
+      "name": "the toggle is reachable by keyboard (Tab)",
+      "ok": true,
+      "detail": "focused"
+    },
+    {
+      "name": "Enter on the focused toggle flips to French",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "the toggle is still labelled after switching (a11y in FR)",
+      "ok": true,
+      "detail": "Passer à l’anglais"
+    },
+    {
+      "name": "the choice persists to localStorage",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "the choice survives a reload (still fr)",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "switching back restores English tab labels",
+      "ok": true,
+      "detail": "Overview | Usage | Plans | Money"
+    },
+    {
+      "name": "[desktop] upload renders in English by default",
+      "ok": true,
+      "detail": "Overview | Usage | Plans | Money"
+    },
+    {
+      "name": "[desktop] the toggle reports locale=fr",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "[desktop] aria-pressed is true in French",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "[desktop] tab label: Overview is French when the toggle is FR",
+      "ok": true,
+      "detail": "APERÇU"
+    },
+    {
+      "name": "[desktop] tab label: Usage is French when the toggle is FR",
+      "ok": true,
+      "detail": "Aperçu | Consommation | Grilles | Coûts"
+    },
+    {
+      "name": "[desktop] tab label: Plans & Track Record",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[desktop] tab label: Money & What-If",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[desktop] best-choice banner is French when the toggle is FR",
+      "ok": true,
+      "detail": "LE MEILLEUR CHOIX EST"
+    },
+    {
+      "name": "[desktop] OEB plan name: TOU is French when the toggle is FR",
+      "ok": true,
+      "detail": "TARIFICATION SELON L’HEURE DE CONSOMMATION"
+    },
+    {
+      "name": "[desktop] OEB plan name: Tiered is French when the toggle is FR",
+      "ok": true,
+      "detail": "TARIFICATION PAR PALIERS"
+    },
+    {
+      "name": "[desktop] OEB plan name: ULO is French when the toggle is FR",
+      "ok": true,
+      "detail": "NUIT TRÈS BAS"
+    },
+    {
+      "name": "[desktop] money table header is French when the toggle is FR",
+      "ok": true,
+      "detail": "Vous avez payé"
+    },
+    {
+      "name": "[desktop] money table: Est. total is French when the toggle is FR",
+      "ok": true,
+      "detail": "TOTAL EST."
+    },
+    {
+      "name": "[desktop] money table: Data coverage is French when the toggle is FR",
+      "ok": true,
+      "detail": "COUVERTURE DES DONNÉES"
+    },
+    {
+      "name": "[desktop] money chart title is French when the toggle is FR",
+      "ok": true,
+      "detail": "CE QUE VOUS AVEZ PAYÉ, PAR PÉRIODE"
+    },
+    {
+      "name": "[desktop] money chart subtitle is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODES DE FACTURATION · DIRECTEMENT DEPUIS VOTRE XML"
+    },
+    {
+      "name": "[desktop] efficiency verdict chip is French when the toggle is FR",
+      "ok": true,
+      "detail": "STABLE"
+    },
+    {
+      "name": "[desktop] accrual pace verdict",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[desktop] accrual open-period label is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE OUVERTE"
+    },
+    {
+      "name": "[desktop] rate period: Off-Peak is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE CREUSE"
+    },
+    {
+      "name": "[desktop] rate period: On-Peak is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE DE POINTE"
+    },
+    {
+      "name": "[desktop] tab labels are French across the strip",
+      "ok": true,
+      "detail": "Aperçu | Consommation | Grilles | Coûts"
+    },
+    {
+      "name": "[desktop] the tab strip's aria-label is French",
+      "ok": true,
+      "detail": "\"Dashboard sections\" → \"Sections du tableau de bord\""
+    },
+    {
+      "name": "[desktop] money table headers are French",
+      "ok": true,
+      "detail": "Période | Forfait | Creuses | Mi-pointe | Pointe | Palier 1 | Palier 2 | Distribution | Réglementaire | TVH | Remise de l’Ontario | Vous avez payé | Total est.Estimation | Couverture des données"
+    },
+    {
+      "name": "[desktop] the money chart's aria-label is French",
+      "ok": true,
+      "detail": "Graphique à barres empilées des charges par période de facturation"
+    },
+    {
+      "name": "[desktop] money prints fr-CA (1 365,03 $)",
+      "ok": true,
+      "detail": "5,24 $"
+    },
+    {
+      "name": "[desktop] the SAME value in English keeps the $ prefix",
+      "ok": true,
+      "detail": "$314.14"
+    },
+    {
+      "name": "[desktop] cents use a comma decimal + space in fr-CA",
+      "ok": true,
+      "detail": "16,3 ¢"
+    },
+    {
+      "name": "[desktop] percentages carry the French space",
+      "ok": true,
+      "detail": "0%"
+    },
+    {
+      "name": "[desktop] French month names appear (dates follow the toggle)",
+      "ok": true,
+      "detail": "JANV"
+    },
+    {
+      "name": "[desktop] the BEST PLAN identity does not change with the language",
+      "ok": true,
+      "detail": "TOU vs TOU (chip text: \"Best: TOU ✓\" → \"Meilleur : TOU ✓\")"
+    },
+    {
+      "name": "[desktop] plan data-* ids stay canonical (TOU/Tiered/ULO)",
+      "ok": true,
+      "detail": "TOU,Tiered,TOU,ULO → TOU,Tiered,TOU,ULO"
+    },
+    {
+      "name": "[desktop] the toggle keeps an accessible name in FR",
+      "ok": true,
+      "detail": "\"Switch to French\" → \"Passer à l’anglais\""
+    },
+    {
+      "name": "[desktop] every aria-labelled control is still labelled in FR",
+      "ok": true,
+      "detail": "12 labelled controls"
+    },
+    {
+      "name": "[mobile] upload renders in English by default",
+      "ok": true,
+      "detail": "Overview | Usage | Plans | Money"
+    },
+    {
+      "name": "[mobile] the toggle reports locale=fr",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "[mobile] aria-pressed is true in French",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "[mobile] tab label: Overview is French when the toggle is FR",
+      "ok": true,
+      "detail": "APERÇU"
+    },
+    {
+      "name": "[mobile] tab label: Usage is French when the toggle is FR",
+      "ok": true,
+      "detail": "Aperçu | Consommation | Grilles | Coûts"
+    },
+    {
+      "name": "[mobile] tab label: Plans & Track Record",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[mobile] tab label: Money & What-If",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[mobile] best-choice banner is French when the toggle is FR",
+      "ok": true,
+      "detail": "LE MEILLEUR CHOIX EST"
+    },
+    {
+      "name": "[mobile] OEB plan name: TOU is French when the toggle is FR",
+      "ok": true,
+      "detail": "TARIFICATION SELON L’HEURE DE CONSOMMATION"
+    },
+    {
+      "name": "[mobile] OEB plan name: Tiered is French when the toggle is FR",
+      "ok": true,
+      "detail": "TARIFICATION PAR PALIERS"
+    },
+    {
+      "name": "[mobile] OEB plan name: ULO is French when the toggle is FR",
+      "ok": true,
+      "detail": "NUIT TRÈS BAS"
+    },
+    {
+      "name": "[mobile] money table header is French when the toggle is FR",
+      "ok": true,
+      "detail": "Vous avez payé"
+    },
+    {
+      "name": "[mobile] money table: Est. total is French when the toggle is FR",
+      "ok": true,
+      "detail": "TOTAL EST."
+    },
+    {
+      "name": "[mobile] money table: Data coverage is French when the toggle is FR",
+      "ok": true,
+      "detail": "COUVERTURE DES DONNÉES"
+    },
+    {
+      "name": "[mobile] money chart title is French when the toggle is FR",
+      "ok": true,
+      "detail": "CE QUE VOUS AVEZ PAYÉ, PAR PÉRIODE"
+    },
+    {
+      "name": "[mobile] money chart subtitle is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODES DE FACTURATION · DIRECTEMENT DEPUIS VOTRE XML"
+    },
+    {
+      "name": "[mobile] efficiency verdict chip is French when the toggle is FR",
+      "ok": true,
+      "detail": "STABLE"
+    },
+    {
+      "name": "[mobile] accrual pace verdict",
+      "ok": true,
+      "detail": "not on this fixture (skipped)"
+    },
+    {
+      "name": "[mobile] accrual open-period label is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE OUVERTE"
+    },
+    {
+      "name": "[mobile] rate period: Off-Peak is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE CREUSE"
+    },
+    {
+      "name": "[mobile] rate period: On-Peak is French when the toggle is FR",
+      "ok": true,
+      "detail": "PÉRIODE DE POINTE"
+    },
+    {
+      "name": "[mobile] tab labels are French across the strip",
+      "ok": true,
+      "detail": "Aperçu | Consommation | Grilles | Coûts"
+    },
+    {
+      "name": "[mobile] the tab strip's aria-label is French",
+      "ok": true,
+      "detail": "\"Dashboard sections\" → \"Sections du tableau de bord\""
+    },
+    {
+      "name": "[mobile] money table headers are French",
+      "ok": true,
+      "detail": "Période | Forfait | Creuses | Mi-pointe | Pointe | Palier 1 | Palier 2 | Distribution | Réglementaire | TVH | Remise de l’Ontario | Vous avez payé | Total est.Estimation | Couverture des données"
+    },
+    {
+      "name": "[mobile] the money chart's aria-label is French",
+      "ok": true,
+      "detail": "Graphique à barres empilées des charges par période de facturation"
+    },
+    {
+      "name": "[mobile] money prints fr-CA (1 365,03 $)",
+      "ok": true,
+      "detail": "5,24 $"
+    },
+    {
+      "name": "[mobile] the SAME value in English keeps the $ prefix",
+      "ok": true,
+      "detail": "$314.14"
+    },
+    {
+      "name": "[mobile] cents use a comma decimal + space in fr-CA",
+      "ok": true,
+      "detail": "16,3 ¢"
+    },
+    {
+      "name": "[mobile] percentages carry the French space",
+      "ok": true,
+      "detail": "0%"
+    },
+    {
+      "name": "[mobile] French month names appear (dates follow the toggle)",
+      "ok": true,
+      "detail": "JANV"
+    },
+    {
+      "name": "[mobile] the BEST PLAN identity does not change with the language",
+      "ok": true,
+      "detail": "TOU vs TOU (chip text: \"Best: TOU ✓\" → \"Meilleur : TOU ✓\")"
+    },
+    {
+      "name": "[mobile] plan data-* ids stay canonical (TOU/Tiered/ULO)",
+      "ok": true,
+      "detail": "TOU,Tiered,TOU,ULO → TOU,Tiered,TOU,ULO"
+    },
+    {
+      "name": "[mobile] the toggle keeps an accessible name in FR",
+      "ok": true,
+      "detail": "\"Switch to French\" → \"Passer à l’anglais\""
+    },
+    {
+      "name": "[mobile] every aria-labelled control is still labelled in FR",
+      "ok": true,
+      "detail": "12 labelled controls"
+    }
+  ],
+  "passed": 82,
+  "total": 82,
+  "evidence": {
+    "surfaces": {
+      "desktop": {
+        "enTabs": [
+          "Overview",
+          "Usage",
+          "Plans",
+          "Money"
+        ],
+        "frTabs": [
+          "Aperçu",
+          "Consommation",
+          "Grilles",
+          "Coûts"
+        ],
+        "frHeaders": [
+          "Période",
+          "Forfait",
+          "Creuses",
+          "Mi-pointe",
+          "Pointe",
+          "Palier 1",
+          "Palier 2",
+          "Distribution",
+          "Réglementaire",
+          "TVH",
+          "Remise de l’Ontario",
+          "Vous avez payé",
+          "Total est.Estimation",
+          "Couverture des données"
+        ],
+        "frChartAria": "Graphique à barres empilées des charges par période de facturation",
+        "frTablistLabel": "Sections du tableau de bord",
+        "toggleEn": "Switch to French",
+        "toggleFr": "Passer à l’anglais",
+        "moneyFrSample": "5,24 $"
+      },
+      "mobile": {
+        "enTabs": [
+          "Overview",
+          "Usage",
+          "Plans",
+          "Money"
+        ],
+        "frTabs": [
+          "Aperçu",
+          "Consommation",
+          "Grilles",
+          "Coûts"
+        ],
+        "frHeaders": [
+          "Période",
+          "Forfait",
+          "Creuses",
+          "Mi-pointe",
+          "Pointe",
+          "Palier 1",
+          "Palier 2",
+          "Distribution",
+          "Réglementaire",
+          "TVH",
+          "Remise de l’Ontario",
+          "Vous avez payé",
+          "Total est.Estimation",
+          "Couverture des données"
+        ],
+        "frChartAria": "Graphique à barres empilées des charges par période de facturation",
+        "frTablistLabel": "Sections du tableau de bord",
+        "toggleEn": "Switch to French",
+        "toggleFr": "Passer à l’anglais",
+        "moneyFrSample": "5,24 $"
+      }
+    },
+    "formats": {
+      "desktop": {
+        "centsFr": "16,3 ¢",
+        "pctFr": "0%",
+        "monthFr": "JANV"
+      },
+      "mobile": {
+        "centsFr": "16,3 ¢",
+        "pctFr": "0%",
+        "monthFr": "JANV"
+      }
+    },
+    "canonical": {
+      "desktop": {
+        "enBest": "Best: TOU ✓",
+        "frBest": "Meilleur : TOU ✓"
+      },
+      "mobile": {
+        "enBest": "Best: TOU ✓",
+        "frBest": "Meilleur : TOU ✓"
+      }
+    }
+  }
+}

@@ -41,6 +41,7 @@ import { useRateStaleness } from '@/hooks/useRateStaleness';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import { NotificationToggle } from '@/components/NotificationToggle';
+import LocaleToggle from '@/components/LocaleToggle';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
@@ -698,6 +699,11 @@ export default function Dashboard() {
                   carries the canonical id. */}
               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
+          {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
+              the language of the answer belongs beside the answer. A real
+              <button> in the tab order with aria-pressed and a localized
+              name (Wave H's a11y bar). */}
+          <LocaleToggle />
           {floor && (
           <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4 xl:gap-8">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
