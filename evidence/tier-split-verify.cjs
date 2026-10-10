@@ -25,7 +25,8 @@
  * Run:  TIER_SPLIT_XML=/path/to/export.xml TZ=America/Toronto \
  *         node evidence/tier-split-verify.cjs
  * Env:  TIER_SPLIT_BASE_URL (default http://127.0.0.1:3100/), TIER_SPLIT_CHROMIUM,
- *       TIER_SPLIT_SUFFIX ('-local' writes tier-split-verification-local.json)
+ *       TIER_SPLIT_SUFFIX ('-local' writes tier-split-verification-local.json),
+ *       TIER_SPLIT_SHA (the deployed commit, recorded in the JSON)
  *
  * TIER_SPLIT_XML is REQUIRED: the committed fixtures carry no Tiered bill, so
  * a run without Mark's export would check nothing. The file itself is never
@@ -329,6 +330,8 @@ async function main() {
   const summary = {
     wave: 'tier-split',
     base: BASE,
+    /** The deployed commit, when the run is against the deployed stack. */
+    deploy: process.env.TIER_SPLIT_SHA || null,
     fixture: path.basename(FIXTURE),
     fixtureSha256: sha,
     at: new Date().toISOString(),
