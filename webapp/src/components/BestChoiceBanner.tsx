@@ -17,6 +17,7 @@
 
 import { buildVerdict, formatDelta, type PlanCosts } from '@/lib/verdict';
 import type { PlanId } from '@/hooks/useSelectedPlan';
+import { planLabel, useTranslation } from '@/i18n';
 
 export type BestChoiceBannerProps = {
   /** Per-plan cost of the visible window; null when the window is empty. */
@@ -28,6 +29,8 @@ export type BestChoiceBannerProps = {
 };
 
 export default function BestChoiceBanner({ comparison, userPlan, days }: BestChoiceBannerProps) {
+  // Wave U — `t` here also re-renders the banner on a locale switch.
+  const { t } = useTranslation();
   const verdict = buildVerdict(comparison, userPlan, days);
   if (!verdict) return null;
 
@@ -43,36 +46,35 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
     >
       <div className="space-y-2 md:space-y-4 text-center lg:text-left">
         <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-yellow-400 font-black">
-          Winning Economic Plan
+          {t('bestChoice.eyebrow')}
         </div>
         <h4 id="best-choice-heading" className="text-3xl md:text-5xl italic leading-tight">
-          THE BEST CHOICE IS <br />
+          {t('bestChoice.headline')} <br />
           <span className="text-4xl sm:text-6xl md:text-8xl text-yellow-400 not-italic block mt-1 md:mt-2 font-black">
-            {verdict.bestLabel}
+            {planLabel(verdict.best)}
           </span>
         </h4>
         <p className="text-[9px] md:text-[11px] font-bold text-slate-400 normal-case">
-          Over the {verdict.days} day{verdict.days === 1 ? '' : 's'} on screen · commodity
-          (variable) charges only — no delivery, regulatory charges or HST.
+          {t('bestChoice.window', { count: verdict.days, days: verdict.days })} · {t('legal.commodityShort')}
         </p>
       </div>
       <div className="bg-white text-black p-6 md:p-10 rounded-2xl md:rounded-[2.5rem] border-4 border-black shadow-xl lg:rotate-3 flex flex-col items-center min-w-[200px] md:min-w-[300px]">
         <div className="text-[10px] tracking-widest text-slate-400 mb-1 md:mb-2 font-black text-center uppercase">
-          Plan Impact
+          {t('bestChoice.impact')}
         </div>
         <div className="text-4xl md:text-7xl italic text-black whitespace-nowrap leading-none text-center font-black">
           {verdict.alreadyBest ? (
             <span className="text-emerald-600 text-2xl md:text-5xl not-italic block">
-              Optimum
+              {t('bestChoice.optimumA')}
               <br />
-              Choice!
+              {t('bestChoice.optimumB')}
             </span>
           ) : (
             <span className="text-red-600">-{formatDelta(verdict.delta)}</span>
           )}
         </div>
         <div className="text-[8px] md:text-[10px] mt-2 md:mt-4 font-black text-center text-black">
-          vs. your current {userPlan} plan
+          {t('bestChoice.vsCurrent', { plan: planLabel(userPlan) })}
         </div>
       </div>
     </section>

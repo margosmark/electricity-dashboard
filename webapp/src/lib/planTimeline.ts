@@ -45,6 +45,9 @@ import {
   type ProcessedPoint,
   type UsageSummary,
 } from './energy';
+// Wave U — detection reasons and skip notes come from the locale catalog;
+// the PLAN_PATTERNS regexes above stay canonical (they match the FILE).
+import { fmtMoney, t } from '@/i18n';
 
 /* -------------------------------------------------------------------------- *
  * Types shared with the rest of the app
@@ -89,12 +92,22 @@ export type PlanTypeDetection = {
  *   LDCs use for a flat per-kWh line).
  */
 const PLAN_PATTERNS: Record<PlanType, (note: string) => boolean> = {
-  ULO: (n) => /\bovernight\b|ultra[ -]?low|\bweekend\b|\bweekday\b/.test(n),
-  TOU: (n) => /(?:off|mid|on)[ -]?peak/.test(n),
+  // Wave U: every anchor also accepts the OEB's French period wording
+  // ("Période basse de nuit", "Période creuse (fin de semaine)",
+  // "BLOC 1 - Hiver", "Palier 2"), so a bilingual export classifies the
+  // same way the English one does. Oakville's DMD feed emits English only
+  // (checked against Mark's own file) — these are here so the classifier is
+  // honest about the format it claims to tolerate, not because a French
+  // file is on disk today. ORDER still matters: the ULO test runs first
+  // because "Période creuse (fin de semaine)" contains BOTH "creuse" and
+  // "fin de semaine", exactly like English "Weekend Off-Peak".
+  ULO: (n) =>
+    /\bovernight\b|ultra[ -]?low|\bweekend\b|\bweekday\b|\bnuit\b|fin de semaine|week-?end|jours? ouvrables?/.test(n),
+  TOU: (n) => /(?:off|mid|on)[ -]?peak|p[ée]riode (?:creuse|normale|de pointe)|\bpointe\b|\bmi-?pointe\b/.test(n),
   Tiered: (n) =>
-    /\btier(?:ed)?\b|\bblock[ -]?\d/.test(n) ||
-    (n.includes('electricity') &&
-      !/(peak|total|charge|rebate|credit|tax|hst)/.test(n)),
+    /\btier(?:ed)?\b|\bblock[ -]?\d|\bbloc[ -]?\d|\bpalier(?:s)?\b/.test(n) ||
+    ((n.includes('electricity') || n.includes('électricité')) &&
+      !/(peak|total|charge|rebate|credit|tax|hst|pointe|total|cr[ée]dit|taxe|tvh)/.test(n)),
 };
 
 /** Line classes that are never plan evidence (totals, taxes, the ride-alongs). */
@@ -114,6 +127,7 @@ const NON_EVIDENCE: BillLineClass[] = ['total', 'tax', 'credit', 'delivery', 're
  * the utility's own lines produced the verdict.
  */
 export function detectPlanType(items: BillLineItem[]): PlanTypeDetection {
+  // (reasons below come from the locale catalog — Wave U)
   const hits: Record<PlanType, string[]> = { TOU: [], Tiered: [], ULO: [] };
   for (const item of items) {
     const note = item.note;
@@ -134,7 +148,7 @@ export function detectPlanType(items: BillLineItem[]): PlanTypeDetection {
       plan: 'unknown',
       evidence: [],
       candidates,
-      reason: 'no recognizable plan lines in this bill',
+      reason: t('planTimeline.noLines'),
     };
   }
   if (candidates.length === 1) {
@@ -149,7 +163,7 @@ export function detectPlanType(items: BillLineItem[]): PlanTypeDetection {
     plan: 'unknown',
     evidence,
     candidates,
-    reason: `mixed plan signatures in one bill (${candidates.join(' + ')})`,
+    reason: t('planTimeline.mixedSignatures', { plans: candidates.join(' + ') }),
   };
 }
 
@@ -537,8 +551,13 @@ export function buildSwitchReport(
         ...base,
         skipped:
           model.rows.length === 0
-            ? 'no readings in this browser fall inside this period'
-            : `readings cover ${model.coveredDays} of ${model.periodDays} days (${Math.round(model.coverage * 100)}%, ${Math.round(PERIOD_MIN_COVERAGE * 100)}% needed)`,
+            ? t('planTimeline.skipNoReadings')
+            : t('planTimeline.skipCoverage', {
+                covered: model.coveredDays,
+                days: model.periodDays,
+                pct: Math.round(model.coverage * 100),
+                needed: Math.round(PERIOD_MIN_COVERAGE * 100),
+              }),
       };
     }
 
@@ -569,7 +588,10 @@ export function buildSwitchReport(
       counted: trusted,
       excluded: trusted
         ? null
-        : `the model re-prices this plan to a bill ${modelDelta < 0 ? '' : '+'}$${Math.abs(modelDelta).toFixed(2)} away from what Oakville actually charged`,
+        : t('planTimeline.modelExcluded', {
+            sign: modelDelta < 0 ? '' : '+',
+            amount: fmtMoney(Math.abs(modelDelta)),
+          }),
     };
   });
 

@@ -21,6 +21,8 @@
  * and the day type come out of the data instead of a static window table.
  */
 
+/* Wave U — the EV assumptions are shown to the user, so they translate. */
+import { fmtCents, periodLabel, t } from '@/i18n';
 import {
   aggregateChartData,
   calculateComparison,
@@ -475,19 +477,27 @@ function priceStayHours(input: {
   return { rateCents, breakdown, seasons };
 }
 
-/** The evidence sentence under the stay-vs-move comparison. */
+/** The evidence sentence under the stay-vs-move comparison.
+ *
+ * Wave U — the sentence translates, and so do the rate-period NAMES inside
+ * it: `categories` holds the canonical names ("Off-Peak") because they are
+ * data the classifier produced, but this is prose shown to a person, so each
+ * one goes through `periodLabel()` ("Période creuse"). The hour and the rate
+ * are numbers, so they take the locale's decimal comma. */
 function stayDetail(stayLabel: string, breakdown: EvHourPrice[]): string {
   if (breakdown.length === 0) return '';
   if (breakdown.every((b) => b.upperBound)) {
-    return `No readings at ${stayLabel}, so the stay side is priced at each plan's most expensive rate — an upper bound, not a measurement.`;
+    return t('ev.stayDetailUpper', { label: stayLabel });
   }
-  return (
-    `Priced from your own readings at ${stayLabel}: ` +
-    breakdown
-      .map((b) => `${pad2(b.hour)}:00 ${b.categories.join(' + ')} ${b.rateCents.toFixed(1)}¢`)
-      .join(' · ') +
-    `.`
-  );
+  return t('ev.stayDetail', {
+    label: stayLabel,
+    hours: breakdown
+      .map(
+        (b) =>
+          `${pad2(b.hour)}:00 ${b.categories.map((c) => periodLabel(c)).join(t('ev.categoriesAnd'))} ${fmtCents(b.rateCents, 1)}`,
+      )
+      .join(' · '),
+  });
 }
 
 /**
@@ -730,22 +740,26 @@ export function buildEvScenario(input: {
   if (candidate) {
     assumptions.push(
       source === 'detected'
-        ? `Charging window read from your own data: ${candidate.label}, ${candidate.detail}. We can only see a block of load — we cannot tell an EV apart from any other timed appliance.`
-        : `You tagged ${dailyKwh.toFixed(1)} kWh a night; the overnight block in your data averages ${candidate.kwhPerNight.toFixed(1)} kWh/night (${candidate.label}). We priced YOUR number and ${
-            stayBasis === 'block'
-              ? "kept the block's charging hours"
-              : `priced it at the ${pad2(input.chargeHour ?? candidate.startHour)}:00 you told us, not at the block we found`
-          }.`,
+        ? t('ev.assumeDetected', { label: candidate.label, detail: candidate.detail })
+        : t('ev.assumeTagged', {
+            tagged: dailyKwh.toFixed(1),
+            actual: candidate.kwhPerNight.toFixed(1),
+            label: candidate.label,
+            basis:
+              stayBasis === 'block'
+                ? t('ev.assumeBasisBlock')
+                : t('ev.assumeBasisHour', { hour: pad2(input.chargeHour ?? candidate.startHour) }),
+          }),
     );
   } else if (!chargeMove) {
     // Nobody has answered the hour question and we found no block: the old
     // honest fallback stands — most expensive hours, called an upper bound.
     assumptions.push(
-      `No overnight charging block turned up in your data, so the plan comparison prices this energy as if it charges during your most expensive hours today. Treat the swing as an upper bound, not a measurement.`,
+      t('ev.assumeNoBlockBound'),
     );
   } else {
     assumptions.push(
-      `No overnight charging block turned up in your data — the hour you gave (${pad2(chargeMove.hour)}:00) is the only evidence of when this charge happens.`,
+      t('ev.assumeNoBlockHour', { hour: pad2(chargeMove.hour) }),
     );
   }
 
@@ -782,13 +796,13 @@ export function buildEvScenario(input: {
     : null;
 
   assumptions.push(
-    `$ per charge assumes the whole charge lands in 23:00–07:00, the ULO overnight window.`,
-    `$ per month assumes ${CHARGING_NIGHTS_PER_MONTH} charging nights.`,
-    `Rates are OEB commodity only — delivery, regulatory charges and HST are not in these numbers.`,
+    t('ev.assumePerCharge'),
+    t('ev.assumePerMonth', { nights: CHARGING_NIGHTS_PER_MONTH }),
+    t('ev.assumeCommodityOnly'),
   );
   if (peakExposure) {
     assumptions.push(
-      `${peakExposure.windowLabel} is ULO On-Peak at ${peakExposure.rateCents.toFixed(1)}¢/kWh — the exposure flagged below.`,
+      t('ev.assumePeakExposure', { label: peakExposure.windowLabel, rate: fmtCents(peakExposure.rateCents, 1) }),
     );
   }
 
@@ -796,19 +810,23 @@ export function buildEvScenario(input: {
   if (chargeMove) {
     if (chargeMove.stayBasis === 'worst-case') {
       assumptions.push(
-        `No readings at ${chargeMove.stayLabel}, so the "stay put" side prices your charge at your plan's most expensive rate — an upper bound, not a measurement.`,
+        t('ev.assumeWorstCase', { label: chargeMove.stayLabel }),
       );
     } else if (chargeMove.stayBasis === 'band') {
       assumptions.push(
-        `The stay side spreads your charge across ${chargeMove.bandLabel} — the ${pad2(chargeMove.hour)}:00 you told us, plus one hour either side for habit drift — and prices each of those hours from your own readings (${chargeMove.seasons.join(' and ') || 'no season'} rates, weekday and weekend windows as they fell).`,
+        t('ev.assumeBand', {
+          band: chargeMove.bandLabel,
+          hour: pad2(chargeMove.hour),
+          seasons: chargeMove.seasons.join(t('ev.seasonsAnd')) || t('ev.noSeason'),
+        }),
       );
     } else {
       assumptions.push(
-        `The stay side prices your charge where your own data puts it (${chargeMove.stayLabel}), read back from the readings' period charges.`,
+        t('ev.assumeStay', { label: chargeMove.stayLabel }),
       );
     }
     assumptions.push(
-      `Stay vs move prices only your charging kWh — the SAME energy the three-plan comparison credits once, below. Two views of one credit: don't add them together.`,
+      t('ev.assumeDoubleCount'),
     );
   }
 

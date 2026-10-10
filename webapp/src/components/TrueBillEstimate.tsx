@@ -32,9 +32,11 @@ import {
   deriveExtraCharges,
   hasExtraCharges,
   planCostFor,
-  BASELINE_ESTIMATE_CAPTION,
 } from '@/lib/energy';
 import { useExtraCharges } from '@/hooks/useDashboard';
+// Wave U — labels, captions and the vs-actual receipt translate with the
+// toggle; every money figure goes through the locale-aware formatters.
+import { fmtKwh, fmtMoney, fmtPercent, planLabel, useTranslation } from '@/i18n';
 
 const FIELD_CLASS =
   'w-full p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl ' +
@@ -96,6 +98,7 @@ export function TrueBillEstimate({
   summaries = [],
   allData,
 }: Props) {
+  const { t } = useTranslation();
   const { charges, setCharge, applyDerivedIfPristine } = useExtraCharges();
 
   // Wave L: the file's own bill, newest period first. Null when the feed
@@ -170,48 +173,50 @@ export function TrueBillEstimate({
       <div className="flex flex-col xl:flex-row gap-6 xl:gap-12 justify-between">
         <div className="xl:min-w-[320px]">
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            Estimate · {startDate} to {endDate} · {plan} plan
+            {t('trueBill.header', { start: startDate, end: endDate, plan: planLabel(plan) })}
           </div>
           <div className="text-4xl md:text-6xl italic font-black mt-1 md:mt-2" data-testid="variable-estimate">
-            ${variableCost.toFixed(2)}
+            {fmtMoney(variableCost)}
           </div>
           <p
             data-testid="estimate-caption"
             className="mt-3 md:mt-5 text-[10px] md:text-xs text-slate-600 normal-case font-bold max-w-2xl leading-relaxed"
           >
-            {bill ? bill.caption : BASELINE_ESTIMATE_CAPTION}
+            {/* Wave U: the English constant stays exported (it is pinned by
+                lib/energy.test.ts); the displayed text translates. */}
+            {bill ? bill.caption : t('trueBill.baselineCaption')}
           </p>
         </div>
 
         <div className="xl:max-w-[560px]">
           <div className="text-[8px] md:text-[10px] text-slate-400 mb-2 md:mb-3">
-            Your bill add-ons — optional, kept in this browser
+            {t('trueBill.addOns')}
           </div>
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <ChargeField
               id="charge-delivery-per-kwh"
-              label="Delivery $/kWh"
-              placeholder="e.g. 0.0125"
+              label={t('trueBill.field.deliveryPerKwh')}
+              placeholder={t('trueBill.ph.example4')}
               value={charges.deliveryPerKwh}
               onChange={set('deliveryPerKwh')}
             />
             <ChargeField
               id="charge-delivery-flat"
-              label="Delivery $/month"
-              placeholder="e.g. 15.00"
+              label={t('trueBill.field.deliveryFlat')}
+              placeholder={t('trueBill.ph.example2')}
               value={charges.deliveryFlat}
               onChange={set('deliveryFlat')}
             />
             <ChargeField
               id="charge-regulatory-per-kwh"
-              label="Regulatory $/kWh"
-              placeholder="e.g. 0.0005"
+              label={t('trueBill.field.regulatoryPerKwh')}
+              placeholder={t('trueBill.ph.example4')}
               value={charges.regulatoryPerKwh}
               onChange={set('regulatoryPerKwh')}
             />
             <ChargeField
               id="charge-hst-pct"
-              label="HST % (ON default 13)"
+              label={t('trueBill.field.hst')}
               placeholder="13"
               value={charges.hstPct}
               onChange={set('hstPct')}
@@ -224,27 +229,28 @@ export function TrueBillEstimate({
             >
               {xmlIntact ? (
                 <>
-                  Pre-filled from your XML&apos;s{' '}
-                  <strong>{charges.xmlSource.label}</strong> bill
-                  {derived
-                    ? ` ($${derived.delivery.toFixed(2)} delivery · $${derived.regulatory.toFixed(2)} regulatory · ${derived.hstPct}% HST)`
-                    : ''}
-                  . Type in any field to override it — your version sticks, even after the next
-                  sync.
+                  {t('trueBill.xmlPrefilled', {
+                    label: charges.xmlSource.label,
+                    delivery: fmtMoney(derived?.delivery ?? 0),
+                    regulatory: fmtMoney(derived?.regulatory ?? 0),
+                    hst: derived ? fmtPercent(derived.hstPct) : '',
+                  })}
                   {derived?.fit.mode === 'split' && derived.fit.flat !== null
-                    ? ` Delivery fits $${derived.fit.flat.toFixed(2)} fixed + $${derived.fit.perKwh.toFixed(4)}/kWh across ${derived.fit.periods} periods (±$${(derived.fit.maxResidual ?? 0).toFixed(2)}).`
+                    ? t('trueBill.xmlFit', {
+                        flat: fmtMoney(derived.fit.flat),
+                        perKwh: fmtMoney(derived.fit.perKwh, 4),
+                        periods: derived.fit.periods,
+                        residual: fmtMoney(derived.fit.maxResidual ?? 0),
+                      })
                     : ''}
                 </>
               ) : (
-                <>
-                  Originally from your XML&apos;s <strong>{charges.xmlSource.label}</strong> bill —
-                  you&apos;ve edited these. Clear a field to drop that charge from the estimate.
-                </>
+                <>{t('trueBill.xmlEdited', { label: charges.xmlSource.label })}</>
               )}
             </div>
           ) : (
             <div className="mt-2 text-[8px] md:text-[10px] text-slate-400 normal-case">
-              Local inputs — not derived from the OEB commodity rates in /api/rates.
+              {t('trueBill.localInputs')}
             </div>
           )}
         </div>
@@ -256,36 +262,36 @@ export function TrueBillEstimate({
           className="mt-6 md:mt-10 border-t-4 border-black pt-6 md:pt-8 flex flex-col md:flex-row md:items-end justify-between gap-5 md:gap-10"
         >
           <div>
-            <div className="text-[10px] md:text-xs tracking-[0.2em] text-yellow-600">True Bill Estimate</div>
+            <div className="text-[10px] md:text-xs tracking-[0.2em] text-yellow-600">{t('trueBill.title')}</div>
             <div className="text-4xl md:text-6xl italic font-black text-emerald-600 mt-1 md:mt-2" data-testid="true-bill-total">
-              ${bill.total.toFixed(2)}
+              {fmtMoney(bill.total)}
             </div>
             <div className="mt-2 text-[10px] text-slate-500 normal-case">
-              {bill.months} month{bill.months === 1 ? '' : 's'} · {bill.totalKwh.toFixed(1)} kWh in the window
+              {t('trueBill.monthsKwh', { count: bill.months, kwh: fmtKwh(bill.totalKwh) })}
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-[10px] md:text-xs">
             <div className="bg-slate-50 border-2 border-black rounded-lg p-3">
-              <div className="text-slate-400 text-[8px]">Variable</div>
-              <div className="italic">${bill.variable.toFixed(2)}</div>
+              <div className="text-slate-400 text-[8px]">{t('trueBill.variable')}</div>
+              <div className="italic">{fmtMoney(bill.variable)}</div>
             </div>
             {bill.deliveryPerKwh !== null || bill.deliveryFlat !== null ? (
               <div className="bg-slate-50 border-2 border-black rounded-lg p-3">
-                <div className="text-slate-400 text-[8px]">Delivery</div>
-                <div className="italic">${bill.delivery.toFixed(2)}</div>
+                <div className="text-slate-400 text-[8px]">{t('trueBill.delivery')}</div>
+                <div className="italic">{fmtMoney(bill.delivery)}</div>
               </div>
             ) : null}
             {bill.regulatoryPerKwh !== null ? (
               <div className="bg-slate-50 border-2 border-black rounded-lg p-3">
-                <div className="text-slate-400 text-[8px]">Regulatory</div>
-                <div className="italic">${bill.regulatory.toFixed(2)}</div>
+                <div className="text-slate-400 text-[8px]">{t('trueBill.regulatory')}</div>
+                <div className="italic">{fmtMoney(bill.regulatory)}</div>
               </div>
             ) : null}
             {bill.hstPct !== null ? (
               <div className="bg-slate-50 border-2 border-black rounded-lg p-3">
-                <div className="text-slate-400 text-[8px]">HST</div>
-                <div className="italic">${bill.hst.toFixed(2)}</div>
+                <div className="text-slate-400 text-[8px]">{t('trueBill.hst')}</div>
+                <div className="italic">{fmtMoney(bill.hst)}</div>
               </div>
             ) : null}
           </div>
@@ -299,28 +305,28 @@ export function TrueBillEstimate({
           className="mt-4 md:mt-6 border-t-4 border-black pt-4 md:pt-6"
         >
           <div className="text-[10px] md:text-xs tracking-[0.2em] text-slate-400 uppercase font-black">
-            Estimated vs actual · {vsActual.label}
+            {t('trueBill.vsActualHeader', { label: vsActual.label })}
           </div>
           <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2 text-black">
             <div>
               <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
-                Your estimate
+                {t('trueBill.yourEstimate')}
               </div>
               <div className="text-2xl md:text-3xl italic font-black">
-                ${vsActual.estimate.toFixed(2)}
+                {fmtMoney(vsActual.estimate)}
               </div>
             </div>
             <div>
               <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
-                Oakville billed
+                {t('trueBill.oakvilleBilled')}
               </div>
               <div className="text-2xl md:text-3xl italic font-black text-emerald-600">
-                ${vsActual.actual.toFixed(2)}
+                {fmtMoney(vsActual.actual)}
               </div>
             </div>
             <div>
               <div className="text-[8px] md:text-[10px] text-slate-400 uppercase font-black">
-                Difference
+                {t('trueBill.difference')}
               </div>
               <div
                 className={`text-2xl md:text-3xl italic font-black ${
@@ -328,18 +334,17 @@ export function TrueBillEstimate({
                 }`}
               >
                 {vsActual.delta < 0 ? '−' : ''}
-                ${Math.abs(vsActual.delta).toFixed(2)}
+                {fmtMoney(Math.abs(vsActual.delta))}
               </div>
             </div>
           </div>
           <div className="mt-2 text-[10px] md:text-xs text-slate-500 font-bold normal-case">
-            Compared before the Ontario Electricity Rebate (this estimate has no rebate field):
-            the rebate took{' '}
+            {t('trueBill.rebateIntro')}{' '}
             <strong>
-              {vsActual.credit < 0 ? '−' : ''}${Math.abs(vsActual.credit).toFixed(2)}
+              {vsActual.credit < 0 ? '−' : ''}{fmtMoney(Math.abs(vsActual.credit))}
             </strong>{' '}
-            off, so Oakville actually asked for{' '}
-            <strong>${vsActual.payable.toFixed(2)}</strong> for that period.
+            {t('trueBill.rebateOutro')}{' '}
+            <strong>{fmtMoney(vsActual.payable)}</strong>
           </div>
         </div>
       )}
