@@ -1,9 +1,10 @@
 {
   "wave": "tier-split",
   "base": "http://127.0.0.1:3100/",
+  "deploy": null,
   "fixture": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
   "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
-  "at": "2026-10-10T15:52:34.010Z",
+  "at": "2026-10-10T15:58:18.107Z",
   "total": 38,
   "passed": 38,
   "failed": 0,
