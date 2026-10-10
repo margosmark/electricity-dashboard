@@ -59,8 +59,9 @@ state without failing anything else.
 
 ## Verification
 
-`evidence/bill-pace-verify.cjs` — **47/47 checks** against a production
-`next start` build, desktop 1440 and phone 390:
+`evidence/bill-pace-verify.cjs` — **53/53 checks** against both a local
+production `next start` build and the deployed instance, desktop 1440 and
+phone 390:
 
 - card asks the question; headline is a real `$X by <date>` with a real number;
 - explainer names all three lines; chip's direction, tone, and dollar figure
@@ -72,7 +73,10 @@ state without failing anything else.
   coverage header named; est-total > commodity when rates exist;
 - 0px horizontal overflow at both widths; sparkline geometry finite; toggle
   is a real 44px touch target, `aria-expanded` flips both ways, tap reveals
-  the full chart and hides the sparkline.
+  the full chart and hides the sparkline;
+- on Tiered: the tier-1 run-out date is named, the marker draws, and it sits
+  **past the accrual** — the check that would catch the left-axis bug if it
+  ever came back.
 
 Two things worth recording because they cost time and will cost it again:
 
@@ -84,16 +88,56 @@ Two things worth recording because they cost time and will cost it again:
   and the browser was served *their* build, which 500'd on our chunk names.
   Run on 3107.
 
+## The bug the browser found that the unit tests could not
+
+Spec item 2 asked for the tier-2 marker, and `billAccrual.test.ts` tested its
+*date* — always correctly. But nobody had ever looked at where the marker
+lands. On the deployed build the note read *"Tier 1's 1145 kWh runs out
+2026-09-21"* while the marker sat at `x=54`, the period's first pixel,
+claiming the period starts already over the allowance. 32 days out of 32.
+
+```ts
+tierX = x(curve.points.findIndex((p) => p.day === curve.tierCrossingDay) + 1)
+```
+
+A crossing that is a *projection* is by construction not in `points` — it
+lies past the drawn data — so `findIndex` returns `-1`, `x(0)` is the left
+axis, and the marker paints exactly opposite the truth. The lib's date was
+right; only the date→x mapping was wrong. Fixed by counting calendar days
+from `periodStart` when the day isn't in `points`: same index when it is,
+correct future date when it isn't.
+
+Two lessons, both worth the ink:
+
+- **A test that pins a value pins only the value you thought to ask for.**
+  32/32 passing while the chart drew the marker in the wrong place. The
+  number was right; the picture was a lie. Vision caught it in one glance.
+- **Zero-size bounding boxes lie.** The dotted benchmark (`y1 === y2`) and
+  the tier marker (`x1 === x2`) both report `isVisible() === false` in
+  Playwright while rendering perfectly — a horizontal line has no height, a
+  vertical one has no width. Assert `getClientRects().length > 0`, or ask
+  about the geometry, never about visibility.
+
+## A race in the check itself
+
+`tab-panel-money` mounts before the rows inside it, so counting `money-row`
+at panel-open intermittently reported "no bills" on a feed that has three.
+The harness now waits for the row it measures. Stable across 3 consecutive
+local runs and the deployed run.
+
 ## Gates
 
 | gate | result |
 | --- | --- |
 | `npm run lint` | clean |
 | `npm run typecheck` | clean |
-| `npm run test` | **995/995** (58 files) |
+| `npm run test` | **1052/1052** (61 files) |
 | `npm run build` | 11 routes, 0 errors (sw.js VERSION restored to `oeo-v1-local`) |
-| `bill-pace-verify.cjs` | **47/47**, 1440 + 390 |
+| `bill-pace-verify.cjs` local | **53/53** @ 1440 + 390, ×3 runs |
+| `bill-pace-verify.cjs` deployed | **53/53** @ `10.10.11.110:3939`, commit `8fdc1ec` |
+| CI | billing-dead — "recent account payments have failed"; every job on every main push dies in 2–4s since 2026-10-07, before this change too. Gates run locally instead. |
 
-Screenshots: `bill-pace-desktop-money.png`, `bill-pace-mobile-money.png`,
-`bill-pace-mobile-expanded.png`. Full check list in
-`bill-pace-verification.json`.
+Screenshots: `bill-pace-desktop-money.png`, `bill-pace-desktop-tiered.png`,
+`bill-pace-mobile-money.png`, `bill-pace-mobile-expanded.png`. Full check
+lists in `bill-pace-verification.json` (deployed) and
+`bill-pace-verification-local.json`.
