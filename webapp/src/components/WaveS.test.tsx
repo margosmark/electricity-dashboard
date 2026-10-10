@@ -2,8 +2,10 @@
  * Wave S — the EFFICIENCY card and its place on OVERVIEW.
  *
  * Covered here, in the order the slices were specified:
- *   1. the card itself — headline stat, the split verdict chip (behaviour)
- *      with rates and net beside it, and the honest sentence;
+ *   1. the card itself — headline stat, the split verdict chip (USAGE, never
+ *      the delivery/fixed term that the follow-through audit found was 96% of
+ *      the old "behaviour" slope on real data) with rates, delivery and net
+ *      beside it, and the honest sentence;
  *   2. the mini-line — every bill, the regression over the verdict window,
  *      Nov 1 rate-change ticks, winter/summer bands — and its click
  *      through to the MONEY tab;
@@ -72,8 +74,10 @@ function yearOfPeriods(): PeriodEfficiency[] {
       kwh: 1000,
       cost: cents * 10,
       cents,
-      // Behaviour −0.2¢/period, rates +0.2¢/period → observed flat.
-      behaviorCents: 20 - 0.2 * i,
+      // Usage −0.2¢/period, rates +0.2¢/period, delivery flat 4¢ → the
+      // observed 19¢ is flat, and the verdict may only read the usage half.
+      usageCents: 16 - 0.2 * i,
+      deliveryCents: 4,
       rateCents: -1 + 0.2 * i,
       unmappedKwh: 0,
       season: seasonForDay(startDate),
@@ -133,30 +137,36 @@ describe('Wave S 1 — the EFFICIENCY card', () => {
     expect(headline).toHaveAttribute('data-cents', '19.00');
   });
 
-  it('reads the verdict from the BEHAVIOUR component, with rates and net beside it', () => {
+  it('reads the verdict from the USAGE component, with rates, delivery and net beside it', () => {
     render(<EfficiencyCard report={yearReport()} onOpenMoney={() => {}} />);
     const chip = screen.getByTestId('efficiency-trend-chip');
     expect(chip).toHaveAttribute('data-verdict', 'improving');
     expect(chip).toHaveAttribute('data-window', '12');
-    expect(chip).toHaveAttribute('data-behavior-slope', '-0.200');
+    expect(chip).toHaveAttribute('data-usage-slope', '-0.200');
+    expect(chip).toHaveAttribute('data-delivery-slope', '0.000');
     expect(chip).toHaveAttribute('data-rate-slope', '0.200');
     expect(chip).toHaveAttribute('data-net-slope', '0.000');
     expect(chip).toHaveTextContent('IMPROVING');
     expect(chip).toHaveTextContent('-0.2¢/kWh per period');
     expect(chip).toHaveTextContent('(your last 12 bills)');
 
-    // The chip is green only because the behaviour half improved.
+    // The chip is green only because the USAGE half improved.
     expect(chip.className).toContain('bg-emerald-400');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveAttribute('data-direction', 'up');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveTextContent('+0.2¢/period');
+    // Delivery gets its own line — reported, never credited with the verdict.
+    const delivery = screen.getByTestId('efficiency-delivery-line');
+    expect(delivery).toHaveAttribute('data-direction', 'flat');
+    expect(delivery).toHaveTextContent('delivery & fixed ±0.0¢');
     expect(screen.getByTestId('efficiency-net-line')).toHaveAttribute('data-verdict', 'stable');
   });
 
-  it('spells the split out in one sentence, rates and all', () => {
+  it('spells the split out in one sentence, rates and delivery and all', () => {
     render(<EfficiencyCard report={yearReport()} onOpenMoney={() => {}} />);
     const sentence = screen.getByTestId('efficiency-sentence').textContent || '';
     expect(sentence).toContain('usage mix improved (-0.2¢/kWh behavior-driven)');
     expect(sentence).toContain('rates rose (+0.2¢/kWh)');
+    expect(sentence).toContain('delivery & fixed charges flat (±0.0¢)');
     expect(sentence).toContain('net stable');
   });
 

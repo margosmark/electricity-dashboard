@@ -6,9 +6,11 @@
  * Contents, in decision order:
  *   1. the headline stat: all-time kWh-weighted ¢/kWh (the same number the
  *      totals strip quotes, stated once as THE number);
- *   2. the trend chip, read from the BEHAVIOUR component of the split, with
- *      the rate component and the net printed beside it, because a slope
- *      that includes an OEB rate bump is a lie in green ink;
+ *   2. the trend chip, read from the USAGE component of the split — what
+ *      your commodity would cost at today's rates — with the rate component,
+ *      delivery/other and the net printed beside it, because a slope that
+ *      includes an OEB rate bump (or the fixed delivery charge spread over a
+ *      winter's worth of kWh) is a lie in green ink;
  *   3. the mini-line: every closed bill's ¢/kWh, the regression over the
  *      verdict window, Nov 1 rate-change ticks, and winter/summer bands —
  *      summer bills are structurally cheaper per kWh (off-peak dominates and
@@ -378,7 +380,7 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
         </div>
       </div>
 
-      {/* 2. The verdict — read from the behaviour component, rates beside it. */}
+      {/* 2. The verdict — read from the usage component, rates/delivery beside it. */}
       {ready ? (
         <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3">
           <span
@@ -386,7 +388,8 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             data-verdict={trend.verdict}
             data-window={trend.windowSize}
             data-slope={(trend.slope ?? 0).toFixed(3)}
-            data-behavior-slope={(trend.behavior?.slope ?? 0).toFixed(3)}
+            data-usage-slope={(trend.usage?.slope ?? 0).toFixed(3)}
+            data-delivery-slope={(trend.delivery?.slope ?? 0).toFixed(3)}
             data-rate-slope={(trend.rate?.slope ?? 0).toFixed(3)}
             data-net-slope={(trend.net?.slope ?? 0).toFixed(3)}
             data-stable-band={trend.band.toFixed(3)}
@@ -419,6 +422,26 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
                 : trend.rateDirection === 'down'
                   ? `rates ${fmtSigned(trend.rate?.slope ?? 0)}¢/period`
                   : 'rates: not split'}
+          </span>
+
+          <span
+            data-testid="efficiency-delivery-line"
+            data-direction={trend.deliveryDirection ?? 'unknown'}
+            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-[10px] md:text-xs ${
+              trend.deliveryDirection === 'up'
+                ? 'bg-amber-50 text-amber-800'
+                : trend.deliveryDirection === 'down'
+                  ? 'bg-emerald-50 text-emerald-800'
+                  : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {trend.deliveryDirection === 'flat'
+              ? `delivery & fixed ±${fmtBand(trend.delivery?.stderr ?? 0)}¢`
+              : trend.deliveryDirection === 'up'
+                ? `delivery & fixed ${fmtSigned(trend.delivery?.slope ?? 0)}¢/period`
+                : trend.deliveryDirection === 'down'
+                  ? `delivery & fixed ${fmtSigned(trend.delivery?.slope ?? 0)}¢/period`
+                  : 'delivery & fixed: not split'}
           </span>
 
           <span
@@ -479,8 +502,8 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
 
       <p className="mt-3 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
         {trend.splitAvailable
-          ? 'Behaviour holds today’s OEB rates fixed and prices YOUR usage at them; the rate line is what the schedule did instead. Delivery and regulatory charges ride with the bill as issued — they have no public rate schedule to reprice.'
-          : (trend.splitNote ?? 'Rate/behaviour split unavailable.')}
+          ? 'Usage prices YOUR commodity at today’s OEB rates; the rate line is what the schedule did instead. Delivery & fixed is the rest of the bill — no public rate schedule to reprice, so it is reported beside the verdict, never credited with it.'
+          : (trend.splitNote ?? 'Usage/rate split unavailable.')}
         {' '}Bands are Ontario’s rate seasons (Nov 1 – Apr 30 winter); red ticks are rate changes:{' '}
         {trend.rateBoundaries.length > 0
           ? trend.rateBoundaries.map((d) => format(new Date(`${d}T00:00:00`), 'MMM d, yyyy')).join(', ')
