@@ -32,29 +32,29 @@ import {
   type NotificationAvailability,
 } from "@/lib/notifications";
 import type { BackgroundSyncState } from "@/lib/periodicSync";
+import { useTranslation } from "@/i18n";
 
 const TOGGLE_CLASS =
   "min-h-11 min-w-11 inline-flex items-center justify-center " +
   "p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl " +
   "shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all";
 
+/* Wave U — the availability and sync copy translates. These maps hold CATALOG
+ * KEYS rather than text, because they are module-level and a hook cannot run
+ * there; the component calls t() at render. */
 const AVAILABILITY_COPY: Record<NotificationAvailability, string> = {
-  on: "On — alerts can appear while the tab is closed.",
-  off: "Off — turn on to get an alert when the tab is closed.",
-  blocked: "Blocked — allow notifications for this site in your browser settings.",
-  unsupported: "Not available — this browser exposes no notification API here.",
+  on: "alerts.permOn",
+  off: "alerts.permOff",
+  blocked: "alerts.permBlocked",
+  unsupported: "alerts.permUnsupported",
 };
 
 const SYNC_COPY: Record<BackgroundSyncState, string> = {
-  registered:
-    "Periodic background sync registered — the browser will refresh on its own schedule while the app is installed.",
-  unsupported:
-    "Periodic background sync: not in this browser (Chromium-only, installed app only). Refreshing on tab focus instead.",
-  denied:
-    "Periodic background sync refused by the browser. Refreshing on tab focus instead.",
-  unconfigured:
-    "No background loop — this browser has not authorised live sync with Oakville Hydro.",
-  unknown: "Checking background refresh…",
+  registered: "alerts.syncRegistered",
+  unsupported: "alerts.syncUnsupported",
+  denied: "alerts.syncDenied",
+  unconfigured: "alerts.syncUnconfigured",
+  unknown: "alerts.syncUnknown",
 };
 
 type Props = {
@@ -65,6 +65,7 @@ type Props = {
 };
 
 export function NotificationToggle({ connected, backgroundSync }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [availability, setAvailability] = useState<NotificationAvailability>(() =>
     notificationAvailability(),
@@ -105,7 +106,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
     if (availability === "on") {
       disableNotifications();
       setAvailability("off");
-      setStatus("Turned off. The browser permission stays granted — this app just goes quiet.");
+      setStatus(t("alerts.turnedOff"));
       return;
     }
     if (availability === "blocked" || availability === "unsupported") return;
@@ -114,10 +115,10 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
     setAvailability(next);
     setStatus(
       next === "on"
-        ? "On. You will get an alert here when the best plan or the rates change."
+        ? t("alerts.granted")
         : next === "blocked"
-          ? "The browser did not grant permission — the in-app banner still works."
-          : "This browser cannot raise notifications.",
+          ? t("alerts.deniedMsg")
+          : t("alerts.cannotMsg"),
     );
   };
 
@@ -130,8 +131,8 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
       <button
         type="button"
         data-testid="notification-toggle"
-        title="Alert settings"
-        aria-label="Alert settings"
+        title={t("alerts.settingsTitle")}
+        aria-label={t("alerts.settingsTitle")}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
@@ -152,14 +153,14 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
         <div
           data-testid="notification-drawer"
           role="dialog"
-          aria-label="Alert settings"
+          aria-label={t("alerts.settingsTitle")}
           className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">Alerts</div>
             <button
               type="button"
-              aria-label="Close alert settings"
+              aria-label={t("alerts.closeAria")}
               onClick={() => setOpen(false)}
               className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
             >
@@ -185,17 +186,17 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
             }`}
           >
             {availability === "on"
-              ? "Turn off closed-tab alerts"
+              ? t("alerts.toggleOffAria")
               : availability === "blocked" || availability === "unsupported"
-                ? "Closed-tab alerts unavailable"
-                : "Turn on closed-tab alerts"}
+                ? t("alerts.toggleUnavailableAria")
+                : t("alerts.toggleOnAria")}
           </button>
 
           <div
             data-testid="notification-availability"
             className="mt-2 text-[9px] md:text-[10px] text-slate-600 normal-case font-bold leading-relaxed"
           >
-            {AVAILABILITY_COPY[availability]}
+            {t(AVAILABILITY_COPY[availability])}
           </div>
 
           <div
@@ -203,7 +204,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
             data-state={backgroundSync}
             className="mt-3 pt-3 border-t-2 border-black text-[9px] md:text-[10px] text-slate-600 normal-case font-bold leading-relaxed"
           >
-            {SYNC_COPY[backgroundSync]}
+            {t(SYNC_COPY[backgroundSync])}
           </div>
 
           {/* The tradeoff, stated where the user decides — not buried in a doc. */}

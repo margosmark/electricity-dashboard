@@ -10,8 +10,11 @@
 
 import { CalendarDays, Hourglass } from 'lucide-react';
 import type { BillProjection } from '@/lib/billProjection';
+import { fmtKwh, fmtMoney, useTranslation } from '@/i18n';
 
 export default function BillProjectionBanner({ projection }: { projection: BillProjection }) {
+  // Wave U — `t` also re-renders this banner on a locale switch.
+  const { t } = useTranslation();
   if (!projection.ready) {
     return (
       <div
@@ -21,7 +24,7 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
       >
         <Hourglass size={16} strokeWidth={4} className="shrink-0" />
         <div className="text-[10px] md:text-xs">
-          <span className="mr-2">This month&apos;s bill</span>
+          <span className="mr-2">{t('projection.thisMonthBill')}</span>
           <span className="font-bold text-slate-600 normal-case">{projection.gateNote}</span>
         </div>
       </div>
@@ -37,25 +40,25 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
       <div className="flex items-center gap-2 md:gap-3">
         <CalendarDays size={20} strokeWidth={4} />
         <div>
-          <div className="text-[8px] md:text-[10px]">Projected {projection.monthLabel} bill</div>
+          <div className="text-[8px] md:text-[10px]">{t('projection.projected', { month: projection.monthLabel })}</div>
           <div data-testid="bill-projection-amount" className="text-3xl md:text-5xl italic leading-none">
-            ${projection.projectedCost.toFixed(2)}
+            {fmtMoney(projection.projectedCost)}
           </div>
         </div>
       </div>
 
       <div className="bg-white border-2 md:border-4 border-black rounded-lg md:rounded-xl px-3 md:px-4 py-2">
-        <div className="text-[8px] md:text-[10px]">Month to date</div>
+        <div className="text-[8px] md:text-[10px]">{t('projection.monthToDate')}</div>
         <div className="text-lg md:text-2xl italic">
-          ${projection.monthToDateCost.toFixed(2)}
+          {fmtMoney(projection.monthToDateCost)}
           <span className="text-[8px] md:text-[10px] not-italic font-black ml-1">
-            · {projection.monthToDateKwh.toFixed(0)} kWh
+            · {fmtKwh(projection.monthToDateKwh, 0)}
           </span>
         </div>
       </div>
 
       <div className="bg-white border-2 md:border-4 border-black rounded-lg md:rounded-xl px-3 md:px-4 py-2">
-        <div className="text-[8px] md:text-[10px]">Days measured</div>
+        <div className="text-[8px] md:text-[10px]">{t('projection.daysMeasured')}</div>
         <div className="text-lg md:text-2xl italic">
           {projection.monthDaysCovered}/{projection.daysInMonth}
         </div>

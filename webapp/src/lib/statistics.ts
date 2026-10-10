@@ -6,13 +6,23 @@
  * numbers out. No I/O, no Date.now(), no DOM.
  *
  * --------------------------------------------------------------------------------
- * The three numbers
+ * The three numbers — and the tax dimension every one of them carries
  * --------------------------------------------------------------------------------
  * 1. PER PERIOD — ¢/kWh = the bill's own "Total Electricity Charges" ÷ the
  *    metered usage in the same summary (the per-category "… Usage"
  *    measurements, uom 72 scaled by powerOfTenMultiplier — the same quantity
  *    `billedKwh` returns). Audited on the owner's 24-period export:
  *    Aug 2024 = 15.9¢, Jul 2025 = 13.9¢, Jan 2026 = 19.4¢.
+ *
+ *    THE NUMERATOR EXCLUDES TAX. "Total Electricity Charges" is the utility's
+ *    own pre-tax line — commodity + delivery + regulatory — and HST is a
+ *    SEPARATE line beneath it on the itemized bill (verified against the
+ *    owner's real file: every bill's tax line is exactly 13% of its Total
+ *    Electricity Charges). So every ¢/kWh here is a pre-tax figure, and
+ *    `centsInclTax` is the same bill with that tax line added back over the
+ *    same kWh. Both are published because both are legitimate ways to read a
+ *    bill: compare against a rate schedule pre-tax, or against what actually
+ *    left the bank account. Neither is "the" number, so neither is hidden.
  *
  * 2. ALL-TIME — the kWh-weighted mean over every closed billing period from
  *    every loaded export: Σ(cost) ÷ Σ(kWh). Weighting by kWh (not by bill)
@@ -24,8 +34,13 @@
  *    the chart is zoomed into). Bills whose billing window overlaps the
  *    selection are in; the weight is still each bill's own kWh.
  *
+ * The incl-tax variants of 2 and 3 are the SAME weighted mean over
+ * Σ(cost + tax) — never a second pass over a different bill set, never the
+ * pre-tax mean multiplied by 1.13 (which would be wrong the moment a bill
+ * carries a rebate line or a tax that is not 13%).
+ *
  * --------------------------------------------------------------------------------
- * The verdict, and why it is split (the honesty bar)
+ * The verdict, and why it is split three ways (the honesty bar)
  * --------------------------------------------------------------------------------
  * A raw ¢/kWh trend conflates three things that have nothing to do with each
  * other: how you used electricity, what the OEB priced it at, and the season
@@ -35,32 +50,53 @@
  * app refuses to do, and during an OEB rate bump (Nov 1) a raw slope would
  * actively lie.
  *
- * So each period is split into two components that sum to it EXACTLY:
+ * So each period splits into THREE components that sum to it EXACTLY:
  *
- *   behaviour¢/kWh = (usage priced at TODAY's rate set, per category
- *                    + the bill's own delivery/regulatory/other charges as
- *                    billed) ÷ kWh
- *   rate¢/kWh     = observed − behaviour
- *                  = (what the commodity actually cost
- *                     − what today's rates would charge for that same usage)
- *                     ÷ kWh
+ *   usage¢/kWh     = (this bill's commodity, repriced at TODAY's rate set,
+ *                     per category) ÷ kWh — what your usage would cost under
+ *                     today's OEB prices and today's schedule.
+ *   delivery¢/kWh  = (delivery + regulatory + anything else the OEB schedule
+ *                     does not price, as billed) ÷ kWh.
+ *   rate¢/kWh      = observed − usage − delivery
+ *                   = (what the commodity actually cost − what today's rates
+ *                     would charge for that same usage) ÷ kWh.
  *
- * Regression is linear, so slope(observed) = slope(behaviour) + slope(rate)
- * to floating-point precision — the split never loses or invents a cent, and
- * a test asserts it.
+ * Regression is linear, so slope(observed) = slope(usage) + slope(delivery) +
+ * slope(rate) to floating-point precision — the split never loses or invents
+ * a cent, and a test asserts it.
  *
- * The VERDICT (the "am I improving?" claim) reads the behaviour component;
- * the rate component and the net are printed beside it. For the owner's data
- * that is the difference between "you're winning" and the truth: over the
- * last 12 bills the behaviour slope is −0.2¢/period while rates pushed
- * +0.2¢/period, netting a statistically-flat ±0.1¢.
+ * The VERDICT (the "am I improving?" claim) reads the USAGE component and
+ * nothing else; the delivery and rate slopes are printed beside it. That
+ * separation is not cosmetic — it was audited on the owner's 24-bill export
+ * (evidence/wave-s-split-hygiene.py, a second parser that reproduces this
+ * module's split to the cent): the older two-way split folded delivery into
+ * "behaviour", and 96% of the slope it then called an improvement
+ * (−0.157¢/period) was the DELIVERY term (−0.151¢/period) — the fixed charge
+ * spread over a winter's worth of kWh, a seasonal arithmetic artefact the
+ * module's own docs already described. The usage slope behind that same
+ * window was −0.006¢/period against a 0.033¢ error bar: flat. The panel was
+ * crediting the household with an efficiency gain it had not made.
  *
  * Honest limits, stated because they change what the panel means:
- *   • "Behaviour" holds the OEB rate SET constant, not the whole bill —
- *     delivery and regulatory charges are utility-set and have no public rate
- *     schedule we can reprice, so they ride with the bill as issued. A
- *     delivery-rate increase therefore lands on the behaviour side. The
- *     counterfactual only claims what it can compute.
+ *   • "Usage" holds the OEB rate SET (prices AND today's schedule) constant
+ *     but keeps each bill's own billed block split: TOU windows are re-drawn
+ *     on Nov 1 and tiered thresholds move (600 kWh/month summer, 1,000
+ *     winter), so a rate-schedule season change can still move this component
+ *     without any change in usage. Measured on the owner's data: re-splitting
+ *     the same metered hours under one fixed window set moves it by ≤0.13¢
+ *     (TOU), and the tier-threshold season by 0.63–0.88¢ on tiered bills
+ *     (a winter bill is 100% BLOCK 1 at the cheap tier). Both are small next
+ *     to a full ¢/kWh headline but not next to a 0.15¢ slope — hence the
+ *     12-bill window below.
+ *   • A plan switch (TOU ↔ tiered, which this owner made four times in two
+ *     years) reprices the counterfactual in the bill's OWN structure, so the
+ *     usage component steps by +0.89¢ / +0.55¢ at the two switches inside the
+ *     current window. The Money tab shows the switch; this panel does not
+ *     smooth it away.
+ *   • Delivery and regulatory charges are utility-set with no public rate
+ *     schedule we can reprice, so they ride with the bill as issued and get
+ *     their OWN component — never the verdict. A delivery-rate increase shows
+ *     up as the delivery slope, which is where it belongs.
  *   • The rate baseline is TODAY's set (`latestRateSet`), so the rate
  *     component reads "how much cheaper/more expensive than right now was
  *     this bill" — zero for bills already priced at the current set, and its
@@ -89,6 +125,8 @@ import {
   type UsageSummary,
 } from './energy';
 import { seasonForDay, type Season } from './season';
+// Wave U — trend prose reads the locale catalog at call time.
+import { t } from '@/i18n';
 
 /* -------------------------------------------------------------------------- *
  * Window rules
@@ -114,13 +152,26 @@ export type PeriodEfficiency = {
   label: string;
   /** Billed kWh — the per-category "… Usage" measurements, same as `billedKwh`. */
   kwh: number;
-  /** Total Electricity Charges, dollars (what the bill actually asked for). */
+  /** Total Electricity Charges, dollars — the utility's own PRE-TAX line. */
   cost: number;
-  /** Observed ¢/kWh: cost ÷ kwh. */
+  /** The bill's tax line (HST), dollars — zero when the file states none. */
+  tax: number;
+  /** Observed ¢/kWh: cost ÷ kwh. PRE-TAX, by construction. */
   cents: number;
-  /** ¢/kWh had TODAY's rates priced this usage — null when unpriceable. */
-  behaviorCents: number | null;
-  /** observed − behaviour: the rate-schedule part, null when unpriceable. */
+  /**
+   * The same bill with its tax line added back over the same kWh:
+   * (cost + tax) ÷ kwh. What the bill cost per kWh all-in, before any
+   * rebate. Equals `cents` exactly when the file states no tax line.
+   */
+  centsInclTax: number;
+  /**
+   * ¢/kWh of this bill's COMMODITY repriced at today's rate set — what your
+   * usage would cost under today's OEB prices. null when unpriceable.
+   */
+  usageCents: number | null;
+  /** ¢/kWh of delivery + regulatory + other, as billed (never repriced). */
+  deliveryCents: number | null;
+  /** observed − usage − delivery: the price-schedule part, null when unpriceable. */
   rateCents: number | null;
   /** Usage kWh this bill's categories we could NOT map to a rate key. */
   unmappedKwh: number;
@@ -160,13 +211,16 @@ export function rateForUsageNote(
 ): number | null {
   const n = note.toLowerCase();
   // ULO's labels contain "off-peak" too, so they are tested first.
-  if (/overnight|ulo\b/.test(n)) return rates.ulo.overnight;
-  if (/weekend/.test(n)) return rates.ulo.weekendOffPeak;
-  if (/off[ -]?peak/.test(n)) return rates.tou.offPeak;
-  if (/mid[ -]?peak/.test(n)) return rates.tou.midPeak;
-  if (/on[ -]?peak/.test(n)) return rates.tou.onPeak;
-  if (/block\s*1|tier\s*1|first[ -]?tier/.test(n)) return rates.tiered.tier1;
-  if (/block\s*2|tier\s*2|second[ -]?tier/.test(n)) return rates.tiered.tier2;
+  // Wave U: the OEB's French period names price the same as the English
+  // ones ("Période basse de nuit" → overnight, "Période creuse" → offPeak,
+  // "Palier 1" → tier 1) — see I18N.md's canonical-data rule.
+  if (/overnight|ulo\b|\bnuit\b|nuit tr[èe]s basse/.test(n)) return rates.ulo.overnight;
+  if (/weekend|fin de semaine|week-?end/.test(n)) return rates.ulo.weekendOffPeak;
+  if (/off[ -]?peak|p[ée]riode creuse/.test(n)) return rates.tou.offPeak;
+  if (/mid[ -]?peak|p[ée]riode normale|mi-?pointe/.test(n)) return rates.tou.midPeak;
+  if (/on[ -]?peak|p[ée]riode de pointe/.test(n)) return rates.tou.onPeak;
+  if (/block\s*1|tier\s*1|first[ -]?tier|\bbloc\s*1|\bpalier\s*1|premier palier/.test(n)) return rates.tiered.tier1;
+  if (/block\s*2|tier\s*2|second[ -]?tier|\bbloc\s*2|\bpalier\s*2|deuxi[èe]me palier/.test(n)) return rates.tiered.tier2;
   return null;
 }
 
@@ -211,9 +265,15 @@ export function efficiencyPeriods(
     const totals = billTotals(summary);
     const cost = totals.total;
     if (!Number.isFinite(cost)) continue;
+    // The bill's own tax line (HST), separate from Total Electricity Charges
+    // on the itemized bill. Zero when the file states no tax line, in which
+    // case the incl-tax figure collapses onto the pre-tax one exactly.
+    const tax = Number.isFinite(totals.tax) ? totals.tax : 0;
 
     const cents = (cost / kwh) * 100;
-    let behaviorCents: number | null = null;
+    const centsInclTax = ((cost + tax) / kwh) * 100;
+    let usageCents: number | null = null;
+    let deliveryCents: number | null = null;
     let rateCents: number | null = null;
     let unmappedKwh = 0;
 
@@ -221,11 +281,16 @@ export function efficiencyPeriods(
       const cf = counterfactualCommodity(summary, latest);
       unmappedKwh = cf.unmappedKwh;
       if (cf.unmappedKwh === 0) {
-        // Everything the rate set does NOT price rides with the bill as
-        // issued, so behaviour + rate recombines to `cents` exactly.
-        const nonCommodity = cost - totals.commodity;
-        behaviorCents = ((cf.dollars + nonCommodity) / kwh) * 100;
-        rateCents = cents - behaviorCents;
+        // Three components, exact by construction: the commodity repriced at
+        // today's rates, the bill's own delivery/regulatory/other as issued,
+        // and the residual — which is precisely the price-schedule delta.
+        // Delivery gets its own slice because folding it into the usage half
+        // made the verdict read a seasonal fixed-charge artefact as an
+        // efficiency gain (see the module header: 96% of the old "behaviour"
+        // slope on the owner's export was this term).
+        usageCents = (cf.dollars / kwh) * 100;
+        deliveryCents = ((cost - totals.commodity) / kwh) * 100;
+        rateCents = cents - usageCents - deliveryCents;
       }
     }
 
@@ -236,8 +301,11 @@ export function efficiencyPeriods(
       label: format(new Date(`${summary.startDate}T00:00:00`), 'MMM yyyy'),
       kwh,
       cost,
+      tax,
       cents,
-      behaviorCents,
+      centsInclTax,
+      usageCents,
+      deliveryCents,
       rateCents,
       unmappedKwh,
       season: seasonForDay(summary.startDate),
@@ -248,12 +316,22 @@ export function efficiencyPeriods(
 }
 
 export type EfficiencyAverage = {
-  /** kWh-weighted mean of the periods' ¢/kWh: Σcost ÷ ΣkWh × 100. */
+  /** kWh-weighted mean of the periods' ¢/kWh: Σcost ÷ ΣkWh × 100. PRE-TAX. */
   cents: number;
+  /**
+   * The same weighted mean over Σ(cost + tax) — every bill's own tax line
+   * added back, over the SAME kWh. Never `cents × 1.13`: a file that states
+   * no tax line, or a rebate-aware bill, must not be silently scaled.
+   */
+  centsInclTax: number;
   /** Periods that went into it. */
   bills: number;
   /** Period kWh behind the weight. */
   kwh: number;
+  /** Total Electricity Charges behind the pre-tax mean, dollars. */
+  cost: number;
+  /** The tax lines behind the incl-tax mean, dollars. */
+  tax: number;
 };
 
 /** Weighted mean over `periods`; null when there is no kWh to divide by. */
@@ -262,13 +340,22 @@ export function weightedCentsPerKwh(
 ): EfficiencyAverage | null {
   if (periods.length === 0) return null;
   let cost = 0;
+  let tax = 0;
   let kwh = 0;
   for (const p of periods) {
     cost += p.cost;
+    tax += p.tax;
     kwh += p.kwh;
   }
   if (!(kwh > 0)) return null;
-  return { cents: (cost / kwh) * 100, bills: periods.length, kwh };
+  return {
+    cents: (cost / kwh) * 100,
+    centsInclTax: ((cost + tax) / kwh) * 100,
+    bills: periods.length,
+    kwh,
+    cost,
+    tax,
+  };
 }
 
 /**
@@ -290,6 +377,62 @@ export function inViewCentsPerKwh(
     (p) => p.startDate <= end && p.endDate >= start,
   );
   return weightedCentsPerKwh(inView);
+}
+
+/* -------------------------------------------------------------------------- *
+ * What the two headline figures mean, in words the card can print
+ * -------------------------------------------------------------------------- */
+
+/**
+ * The subtitle every ¢/kWh headline in this app is published under.
+ *
+ * It exists because the card used to print a bare number whose numerator
+ * nobody had defined, and the owner's own question — "does the avg kWh cost
+ * include all fees?" — went unanswered by the UI. One line settles it: the
+ * charges named, the divisor named, and the tax called out as excluded
+ * (the incl-tax figure is printed right beside it, not hidden behind it).
+ */
+export const EFFICIENCY_SUBTITLE =
+  'ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded';
+/** Wave U — the display translates this; EFFICIENCY_SUBTITLE stays canonical
+ *  (lib/statistics.test.ts pins its wording). */
+export const EFFICIENCY_SUBTITLE_KEY = 'efficiency.subtitle';
+
+/**
+ * The tax rate implied by the loaded bills themselves: Σtax ÷ ΣTotal
+ * Electricity Charges, as a percentage.
+ *
+ * Derived, never assumed — the card must say the rate the FILE states, not
+ * the 13% Ontario happens to charge this year, and a file with no tax line
+ * must read 0% rather than borrow a rate from nowhere. Rounded to one
+ * decimal because that is the precision at which a rate is worth quoting.
+ */
+export function impliedTaxPct(average: EfficiencyAverage | null): number | null {
+  if (!average || !(average.cost > 0)) return null;
+  return Math.round((average.tax / average.cost) * 1000) / 10;
+}
+
+/**
+ * The one-line footnote under the excl/incl pair: what the tax rate was, and
+ * the two things these numbers are NOT — a whole-utility bill (water and gas
+ * are billed separately and never enter a Green Button electricity export),
+ * and a post-rebate figure (the rebate is its own line on the Money tab).
+ */
+export function taxFootnote(average: EfficiencyAverage | null): string {
+  const pct = impliedTaxPct(average);
+  if (pct === null) {
+    return 'Water and gas are billed separately and are never in these numbers.';
+  }
+  if (pct === 0) {
+    return (
+      'This file states no tax line, so the two figures are the same. ' +
+      'Water and gas are billed separately and are never in these numbers.'
+    );
+  }
+  return (
+    `HST on your bills is ${pct.toFixed(1)}%; the incl.-tax figure adds that line back ` +
+    'over the same kWh. Water and gas are billed separately and are never in these numbers.'
+  );
 }
 
 /* -------------------------------------------------------------------------- *
@@ -382,13 +525,16 @@ export type EfficiencyTrend = {
   windowLabel: string;
   /** Fit over observed ¢/kWh. */
   net: LinearFit | null;
-  /** Fit over the behaviour component (what today's rates + your usage cost). */
-  behavior: LinearFit | null;
+  /** Fit over the usage component (your commodity at today's rates). */
+  usage: LinearFit | null;
+  /** Fit over delivery/regulatory/other per kWh — reported, never credited. */
+  delivery: LinearFit | null;
   /** Fit over the rate component (what rates did, versus today). */
   rate: LinearFit | null;
   /**
-   * The headline claim. Reads BEHAVIOUR when the split is computable — the
-   * panel never credits you with a rate change — else the net fit.
+   * The headline claim. Reads USAGE when the split is computable — the panel
+   * never credits you with a rate change, and never with the delivery/fixed
+   * charge riding along either — else the net fit.
    */
   verdict: TrendVerdict | null;
   /** The slope the verdict was read from, ¢/kWh per period. */
@@ -399,6 +545,8 @@ export type EfficiencyTrend = {
   netVerdict: TrendVerdict | null;
   /** What the rate component did over the window. */
   rateDirection: TrendDirection | null;
+  /** What delivery/other per kWh did over the window. */
+  deliveryDirection: TrendDirection | null;
   /** One honest sentence; null when there is no verdict to phrase. */
   sentence: string | null;
   splitAvailable: boolean;
@@ -421,22 +569,31 @@ export function rateBoundaries(
     .sort();
 }
 
+/* Wave U — the trend's prose comes from the catalog at call time, so the
+ * same computation emits "IMPROVING −0.4¢/kWh per period" or
+ * "AMÉLIORATION −0,4 ¢/kWh par période" without a second code path. */
+
 function behaviorClause(dir: TrendDirection, slope: number): string {
-  if (dir === 'flat') return `your usage mix is flat (±${fmtBand(slope)}¢ behavior-driven)`;
-  if (dir === 'down')
-    return `your usage mix improved (${fmtSigned(slope)}¢/kWh behavior-driven)`;
-  return `your usage mix got worse (${fmtSigned(slope)}¢/kWh behavior-driven)`;
+  if (dir === 'flat') return t('trend.behaviorFlat', { band: fmtBand(slope) });
+  if (dir === 'down') return t('trend.behaviorImproved', { slope: fmtSigned(slope) });
+  return t('trend.behaviorWorse', { slope: fmtSigned(slope) });
+}
+
+function deliveryClause(dir: TrendDirection, slope: number): string {
+  if (dir === 'flat') return `delivery & fixed charges flat (±${fmtBand(slope)}¢)`;
+  if (dir === 'up') return `delivery & fixed charges rose (${fmtSigned(slope)}¢/kWh)`;
+  return `delivery & fixed charges fell (${fmtSigned(slope)}¢/kWh)`;
 }
 
 function rateClause(dir: TrendDirection, slope: number): string {
-  if (dir === 'flat') return `rates are flat (±${fmtBand(slope)}¢)`;
-  if (dir === 'up') return `rates rose (${fmtSigned(slope)}¢/kWh)`;
-  return `rates fell (${fmtSigned(slope)}¢/kWh)`;
+  if (dir === 'flat') return t('trend.ratesFlat', { band: fmtBand(slope) });
+  if (dir === 'up') return t('trend.ratesRose', { slope: fmtSigned(slope) });
+  return t('trend.ratesFell', { slope: fmtSigned(slope) });
 }
 
 function netClause(verdict: TrendVerdict, fit: LinearFit): string {
-  if (verdict === 'stable') return `net stable ±${fmtBand(fit.stderr)}¢`;
-  return `net ${fmtSigned(fit.slope)}¢`;
+  if (verdict === 'stable') return t('trend.netStable', { band: fmtBand(fit.stderr) });
+  return t('trend.net', { slope: fmtSigned(fit.slope) });
 }
 
 /**
@@ -453,7 +610,7 @@ export function efficiencyTrend(
   const points = [...periods].sort((a, b) => a.start - b.start);
   const windowSize = Math.min(points.length, TREND_MAX_PERIODS);
   const window = points.slice(points.length - windowSize);
-  const windowLabel = `your last ${windowSize} bill${windowSize === 1 ? '' : 's'}`;
+  const windowLabel = t('trend.window', { count: windowSize, bills: windowSize });
   const boundaries = rateBoundaries(points, rates);
 
   const base: EfficiencyTrend = {
@@ -464,13 +621,15 @@ export function efficiencyTrend(
     windowSize,
     windowLabel,
     net: null,
-    behavior: null,
+    usage: null,
+    delivery: null,
     rate: null,
     verdict: null,
     slope: null,
     band: 0,
     netVerdict: null,
     rateDirection: null,
+    deliveryDirection: null,
     sentence: null,
     splitAvailable: false,
     splitNote: null,
@@ -480,8 +639,7 @@ export function efficiencyTrend(
   if (points.length === 0) {
     return {
       ...base,
-      emptyMessage:
-        'No closed bills loaded yet — upload your Green Button export and each bill’s ¢/kWh lands here.',
+      emptyMessage: t('trend.emptyNoBills'),
     };
   }
 
@@ -489,57 +647,65 @@ export function efficiencyTrend(
   // deserves to be told whether its bills could be priced at today's rates.
   const splitAvailable =
     window.length > 0 &&
-    window.every((p) => p.behaviorCents !== null && p.rateCents !== null);
+    window.every(
+      (p) => p.usageCents !== null && p.deliveryCents !== null && p.rateCents !== null,
+    );
   const splitNote = splitAvailable
     ? null
     : window.some((p) => p.unmappedKwh > 0)
-      ? 'A usage category on a recent bill can’t be priced against today’s rates, so the rate/behaviour split is off for this window.'
-      : 'No OEB rate set is loaded, so this trend can’t be split into rate vs behaviour yet.';
+      ? t('trend.splitUnpriceable')
+      : t('trend.splitNoRates');
 
   if (points.length < TREND_MIN_PERIODS) {
     return {
       ...base,
       splitAvailable,
       splitNote,
-      emptyMessage: `Need at least ${TREND_MIN_PERIODS} closed bills for a trend — you have ${points.length}.`,
+      emptyMessage: t('trend.emptyNeedBills', { min: TREND_MIN_PERIODS, have: points.length }),
     };
   }
 
   const net = linearFit(window.map((p) => p.cents));
   if (!net) {
-    return { ...base, splitAvailable, splitNote, emptyMessage: 'Not enough variation in the bills to fit a line.' };
+    return { ...base, splitAvailable, splitNote, emptyMessage: t('trend.emptyNoVariation') };
   }
 
-  const behavior = splitAvailable
-    ? linearFit(window.map((p) => p.behaviorCents as number))
+  const usage = splitAvailable
+    ? linearFit(window.map((p) => p.usageCents as number))
+    : null;
+  const delivery = splitAvailable
+    ? linearFit(window.map((p) => p.deliveryCents as number))
     : null;
   const rate = splitAvailable
     ? linearFit(window.map((p) => p.rateCents as number))
     : null;
 
-  const headline = behavior ?? net;
+  const headline = usage ?? net;
   const verdict = verdictOf(headline);
   const netVerdict = verdictOf(net);
   const rateDirection = directionOf(rate);
+  const deliveryDirection = directionOf(delivery);
 
   let sentence: string | null = null;
-  if (behavior && rate && netVerdict) {
-    const bDir = directionOf(behavior) as TrendDirection;
+  if (usage && delivery && rate && netVerdict) {
+    const bDir = directionOf(usage) as TrendDirection;
+    const dDir = deliveryDirection as TrendDirection;
     const rDir = directionOf(rate) as TrendDirection;
     // "but" only where the two really conflict: you got better AND paid more.
-    const connector = bDir === 'down' && rDir === 'up' ? 'but ' : '';
+    const connector = bDir === 'down' && rDir === 'up' ? t('trend.connectorBut') : '';
     sentence =
-      `${behaviorClause(bDir, behavior.slope)}, ${connector}` +
-      `${rateClause(rDir, rate.slope)} — ${netClause(netVerdict, net)}.`;
+      `${behaviorClause(bDir, usage.slope)}, ${connector}` +
+      `${rateClause(rDir, rate.slope)}; ${deliveryClause(dDir, delivery.slope)}` +
+      ` — ${netClause(netVerdict, net)}.`;
   } else if (netVerdict) {
     // Split off (no rate set / an unpriceable category): report what the
     // OBSERVED line did, and put the reason in the same sentence.
     const trendPhrase =
       netVerdict === 'stable'
-        ? `is flat (±${fmtBand(net.stderr)}¢ per period)`
-        : `is trending ${fmtSigned(net.slope)}¢ per period`;
+        ? t('trend.observedFlat', { band: fmtBand(net.stderr) })
+        : t('trend.observedTrend', { slope: fmtSigned(net.slope) });
     sentence =
-      `Observed ¢/kWh ${trendPhrase} over ${windowLabel}` +
+      `${t('trend.observedPrefix')} ${trendPhrase} ${t('trend.observedOver', { window: windowLabel })}` +
       `${splitNote ? ` — ${splitNote}` : ''}.`;
   }
   if (sentence) sentence = sentence.charAt(0).toUpperCase() + sentence.slice(1);
@@ -548,13 +714,15 @@ export function efficiencyTrend(
     ...base,
     ready: true,
     net,
-    behavior,
+    usage,
+    delivery,
     rate,
     verdict,
     slope: headline.slope,
     band: headline.stderr,
     netVerdict,
     rateDirection,
+    deliveryDirection,
     sentence,
     splitAvailable,
     splitNote,

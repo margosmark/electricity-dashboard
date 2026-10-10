@@ -13,9 +13,10 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { type RateSet } from '@/lib/energy';
-import { distinctSeasons, SEASON_INFO, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
+import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
+import { fmtCentsAuto, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -53,44 +54,54 @@ export function seasonsInWindow(startDate: string, endDate: string): Season[] {
   return distinctSeasons([...seen]);
 }
 
+/**
+ * Wave U — `nameKey` renders the localized plan name (OEB French terms in
+ * French); `name` stays the canonical English for anything that needs the
+ * untranslated form. `Tiered Pricing` is this card's own display name — the
+ * chip label ("Tiered"/"Paliers") is the shorter switcher form.
+ */
 const PLANS = [
-  { id: 'Tiered', name: 'Tiered Pricing' },
-  { id: 'TOU', name: 'Time-of-Use' },
-  { id: 'ULO', name: 'Ultra-Low Overnight' },
+  { id: 'Tiered', name: 'Tiered Pricing', nameKey: 'planCard.Tiered' },
+  { id: 'TOU', name: 'Time-of-Use', nameKey: 'planCard.TOU' },
+  { id: 'ULO', name: 'Ultra-Low Overnight', nameKey: 'planCard.ULO' },
 ] as const;
 
 /** One labelled rate chip on a card. */
 type PlanRate = { l: string; v: string; c?: string };
 
 /**
- * Render one rate from the active RateSet as displayed cents
- * (9.75 -> '9.75¢', 10 -> '10.0¢'). Formatting only — never a source of
- * rate values. Two decimals because that is what the cost math uses: the
- * cents on the card must rebuild the dollar figure on the same card exactly,
- * and one decimal quietly rounds 9.75 to 9.8 while the bill still uses 9.75.
+ * The rate chips for one plan, straight from the RateSet in force — the same
+ * schedule the cost above was priced with, so the card cannot display a
+ * different number than the one it charged.
+ *
+ * Display SSOT, two halves:
+ * - values go through `fmtCentsAuto`, the rate-table formatter (the one
+ *   RateStalenessBanner already uses): source precision, max 2 digits. A
+ *   forced single digit would print 9.75 as 9.8¢ while the bill on the same
+ *   card still used 9.75, and this card's own test rebuilds the dollar figure
+ *   from the chips alone.
+ * - names go through the i18n keys / `periodLabel`, so Wave U's EN↔FR toggle
+ *   still reaches this card.
+ *
+ * Formatting only — never a source of rate values.
  */
-function formatRate(centsPerKwh: number): string {
-  return `${centsPerKwh.toFixed(2).replace(/0$/, '')}¢`;
-}
-
-/** The rate chips for one plan, straight from the RateSet in force. */
 function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRate[] {
   return planId === 'Tiered'
     ? [
-        { l: 'Tier 1', v: formatRate(rates.tiered.tier1) },
-        { l: 'Tier 2', v: formatRate(rates.tiered.tier2) },
+        { l: t('rate.tier1'), v: fmtCentsAuto(rates.tiered.tier1) },
+        { l: t('rate.tier2'), v: fmtCentsAuto(rates.tiered.tier2) },
       ]
     : planId === 'TOU'
       ? [
-          { l: 'Off-Peak', v: formatRate(rates.tou.offPeak), c: 'text-emerald-600' },
-          { l: 'Mid-Peak', v: formatRate(rates.tou.midPeak), c: 'text-yellow-600' },
-          { l: 'On-Peak', v: formatRate(rates.tou.onPeak), c: 'text-red-600' },
+          { l: periodLabel('Off-Peak'), v: fmtCentsAuto(rates.tou.offPeak), c: 'text-emerald-600' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.tou.midPeak), c: 'text-yellow-600' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.tou.onPeak), c: 'text-red-600' },
         ]
       : [
-          { l: 'Overnight', v: formatRate(rates.ulo.overnight), c: 'text-purple-600' },
-          { l: 'Weekend Off', v: formatRate(rates.ulo.weekendOffPeak), c: 'text-emerald-600' },
-          { l: 'Mid-Peak', v: formatRate(rates.ulo.midPeak), c: 'text-yellow-600' },
-          { l: 'On-Peak', v: formatRate(rates.ulo.onPeak), c: 'text-red-600' },
+          { l: t('rate.overnight'), v: fmtCentsAuto(rates.ulo.overnight), c: 'text-purple-600' },
+          { l: t('rate.weekendOff'), v: fmtCentsAuto(rates.ulo.weekendOffPeak), c: 'text-emerald-600' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.ulo.midPeak), c: 'text-yellow-600' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.ulo.onPeak), c: 'text-red-600' },
         ];
 }
 
@@ -102,6 +113,7 @@ export default function PlanCards({
   startDate,
   endDate,
 }: PlanCardsProps) {
+  const { t } = useTranslation();
   const seasonOfView: Season = seasonForDay(endDate);
   const seasonsInView = seasonsInWindow(startDate, endDate);
   const tierThreshold =
@@ -118,8 +130,8 @@ export default function PlanCards({
       {PLANS.map((plan, i) => {
         // Single source of truth for the displayed rates: the RateSet in
         // force, the same one that priced the cost above. No RateSet loaded
-        // -> no rate rows: an honest gap beats a stale literal copy of
-        // last November's schedule.
+        // -> no rate rows: an honest gap beats a stale literal copy of last
+        // November's schedule.
         const rates = activeRateSet ? planRates(plan.id, activeRateSet) : [];
 
         return (
@@ -128,7 +140,7 @@ export default function PlanCards({
             role="button"
             tabIndex={0}
             aria-pressed={userPlan === plan.id}
-            aria-label={`Use the ${plan.name} plan`}
+            aria-label={t('planCard.useAria', { plan: t(plan.nameKey) })}
             onClick={() => setUserPlan(plan.id)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -138,10 +150,10 @@ export default function PlanCards({
             }}
             className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
           >
-            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">YOUR PLAN</span><span className="sm:hidden">ACTIVE</span></div>}
-            <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{plan.name}</h3>
+            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
+            <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
             <div className="text-4xl md:text-6xl italic mb-6 md:mb-10 font-black text-black">
-              {comparison ? `$${comparison[plan.id].toFixed(2)}` : '—'}
+              {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
               {rates.map((r, j) => (
@@ -158,14 +170,14 @@ export default function PlanCards({
                 className="mt-3 md:mt-5 bg-yellow-50 p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[9px] md:text-xs font-black"
               >
                 <div className="flex justify-between">
-                  <span>Tier 1 cut-off</span>
-                  <span>{tierThreshold.toLocaleString()} kWh/mo</span>
+                  <span>{t('tier.cutoff')}</span>
+                  <span>{t('tier.kwhPerMonth', { kwh: fmtNumber(tierThreshold) })}</span>
                 </div>
                 <div className="mt-1 text-slate-600 font-bold normal-case">
-                  {SEASON_INFO[seasonOfView].long}
-                  {seasonsInView.length > 1 ? ' — window spans both seasons' : ''}
+                  {t(`season.long.${seasonOfView}`)}
+                  {seasonsInView.length > 1 ? ` — ${t('tier.spansBoth')}` : ''}
                   {otherTierThreshold != null
-                    ? ` · other window: ${otherTierThreshold.toLocaleString()} kWh/mo`
+                    ? ` · ${t('tier.otherWindow', { kwh: fmtNumber(otherTierThreshold) })}`
                     : ''}
                 </div>
               </div>

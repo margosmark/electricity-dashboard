@@ -10,9 +10,10 @@
 
 'use client';
 
-import { COST_SLICE_META, type DeltaTable as DeltaTableModel } from '@/lib/moneyViz';
+import { COST_SLICE_META, DELTA_LABEL_KEYS, type DeltaTable as DeltaTableModel } from '@/lib/moneyViz';
+import { fmtMoney, useTranslation } from '@/i18n';
 
-const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
+const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
 /** Colour a change by direction, but only once it is big enough to mean it. */
 const changeClass = (v: number | null) => {
@@ -21,6 +22,7 @@ const changeClass = (v: number | null) => {
 };
 
 export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) {
+  const { t } = useTranslation();
   if (table.rows.length === 0) return null;
 
   const baselineOnly = !table.hasComparison;
@@ -33,9 +35,9 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            Period over period
+            {t('delta.eyebrow')}
           </div>
-          <h3 className="text-xl md:text-4xl italic font-black">What changed between periods</h3>
+          <h3 className="text-xl md:text-4xl italic font-black">{t('delta.title')}</h3>
         </div>
         <div
           className="text-[10px] md:text-xs font-bold normal-case text-slate-500 max-w-md"
@@ -54,14 +56,14 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           data-testid="money-deltas-table"
         >
           <caption className="sr-only">
-            Change in each charge type between consecutive billing periods
+            {t('delta.caption')}
           </caption>
           <thead>
             <tr className="border-b-4 border-black text-left">
-              <th className="py-2 pr-3 uppercase">Charge</th>
+              <th className="py-2 pr-3 uppercase">{t('delta.chargeCol')}</th>
               {table.columns.map((c, i) => (
                 <th key={c.start} className="py-2 px-3 text-right uppercase whitespace-nowrap">
-                  {i === 0 ? `Baseline · ${c.label}` : `Δ → ${c.label}`}
+                  {i === 0 ? t('delta.baseline', { label: c.label }) : t('delta.arrow', { label: c.label })}
                   {/* A column that is not a real bill says so in the header,
                       so no number under it can be read as a charge. */}
                   {c.kind !== 'billed' && (
@@ -71,7 +73,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                         c.estimated ? 'bg-yellow-400' : 'bg-slate-200'
                       }`}
                     >
-                      {c.estimated ? 'Estimate' : 'No bill'}
+                      {c.estimated ? t('delta.estimate') : t('delta.noBill')}
                     </span>
                   )}
                 </th>
@@ -81,6 +83,13 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           <tbody>
             {table.rows.map((row) => {
               const strong = row.key === 'total' || row.key === 'payable';
+              /* A tier row is only defined for periods billed on that tier:
+                 on a TOU period — or in the OPEN column, where the estimate
+                 is one blended commodity figure we cannot honestly split —
+                 the cell is a dash, never "$0.00" (which would read as "you
+                 were charged nothing on tier 1") and never "TIER X" over an
+                 amount the utility has not billed yet. */
+              const tierRow = row.key === 'tier1' || row.key === 'tier2';
               const meta = COST_SLICE_META[row.key as keyof typeof COST_SLICE_META];
               return (
                 <tr
@@ -97,7 +106,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                         className="inline-block w-3 h-3 border-2 border-black shrink-0"
                         style={{ background: meta?.color ?? 'transparent' }}
                       />
-                      <span className={strong ? 'uppercase' : ''}>{row.label}</span>
+                      <span className={strong ? 'uppercase' : ''}>{t(DELTA_LABEL_KEYS[row.key])}</span>
                     </span>
                   </td>
                   {row.values.map((value, i) => {
@@ -106,7 +115,15 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                     const flagged = column && column.kind !== 'billed';
                     return (
                       <td key={i} className="py-1.5 px-3 text-right tabular-nums">
-                        {i === 0 || baselineOnly ? (
+                        {tierRow && Math.abs(value) < 0.005 ? (
+                          <span
+                            className="text-slate-400"
+                            data-testid="money-delta-no-tier"
+                            title={t('delta.noTier', { row: t(DELTA_LABEL_KEYS[row.key]) })}
+                          >
+                            —
+                          </span>
+                        ) : i === 0 || baselineOnly ? (
                           <span className="text-black">{money(value)}</span>
                         ) : !flagged ? (
                           <span className={changeClass(delta)} data-testid="money-delta-value">
@@ -116,7 +133,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                         ) : column.kind === 'gap' ? (
                           /* No bill covers these days: there is no change to
                              report, and printing $0.00 would claim one. */
-                          <span className="text-slate-400" title="No bill in this file covers these days">
+                          <span className="text-slate-400" title={t('delta.gapTitle')}>
                             —
                           </span>
                         ) : (
@@ -129,7 +146,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                           value === 0 ? (
                             <span
                               className="text-slate-400"
-                              title="Not billed yet — no charge exists for this window"
+                              title={t('delta.notBilledTitle')}
                             >
                               —
                             </span>
@@ -137,7 +154,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                             <span
                               className="text-amber-700 font-black"
                               data-testid="money-delta-estimate"
-                              title="Estimated, not billed yet"
+                              title={t('delta.estimatedTitle')}
                             >
                               ~{money(value)}
                             </span>
@@ -160,7 +177,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           data-testid="money-deltas-scroll-hint"
           className="mt-1 text-[9px] font-bold text-slate-400 normal-case"
         >
-          {table.columns.length} periods wide — scroll the table sideways for every change.
+          {t('delta.scrollHint', { count: table.columns.length })}
         </div>
       )}
 

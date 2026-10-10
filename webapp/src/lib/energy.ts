@@ -1,5 +1,11 @@
 import { XMLParser } from 'fast-xml-parser';
 import { isOntarioHoliday } from './ontarioHolidays';
+import type { HourlyTemps } from './openMeteo';
+import { tempAtC } from './openMeteo';
+/* Wave U — user-visible sentences in this file come from the locale catalog
+ * at call time (lib code reads the module locale; components re-render on
+ * toggle via useTranslation). Numeric fields stay numeric. */
+import { fmtMoney0, getLocale, t } from '@/i18n';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -45,7 +51,96 @@ export type Anomaly = {
   diffPct: number;
   /** What the DAY ITSELF looks like, not just that it was expensive. */
   signature: ApplianceSignature;
+  /** What the WEATHER looked like — present only when temperatures are. */
+  context?: AnomalyContext;
 };
+
+/* ==========================================================================
+ * Anomaly context — "31°C, that's AC" (Wave T slice 2)
+ *
+ * A spike is a fact ("you used 104 kWh, 74% over a normal Thursday"); WHY is
+ * a guess. The weather half of the guess is cheap and checkable: if the day
+ * was hot, air conditioning is the obvious culprit; if it was freezing,
+ * heating; if it was mild, weather did not do it and the appliance list is
+ * where to look. That is all this label claims — it does not name a device,
+ * it says whether looking at the weather explains anything at all.
+ *
+ * Thresholds are the ones the household's OWN temperature curve justifies
+ * (lib/tempBands.ts): 24°C is the bin where draw leaves the cold baseline and
+ * roughly doubles, and 0°C is the freezing point that starts heating season.
+ * Both are exported constants so a test can pin them and a reader can see
+ * they were chosen, not discovered to fit one week.
+ * ========================================================================== */
+
+/** Above this day-high the verdict is "that's AC". */
+export const ANOMALY_AC_TEMP_C = 24;
+/** Below this day-low the verdict is "that's heat". */
+export const ANOMALY_HEAT_TEMP_C = 0;
+
+export type AnomalyContextKind = 'ac' | 'heat' | 'mild' | 'unknown';
+
+/**
+ * What the card says. `tempC` is the number the verdict is ABOUT — the day's
+ * high when it is blaming heat, its low when it is blaming cold, its mean
+ * when it is saying weather is not the story — so the label and the number
+ * can never disagree.
+ */
+export type AnomalyContext = {
+  kind: AnomalyContextKind;
+  tempC: number | null;
+  text: string;
+};
+
+/** Temperatures for one calendar day, as the UTC hours that fall in it. */
+function dayTemps(
+  rows: { timestamp: number }[],
+  temps: HourlyTemps | null | undefined,
+): { mean: number | null; high: number | null; low: number | null; hours: number } {
+  let sum = 0;
+  let high = -Infinity;
+  let low = Infinity;
+  let hours = 0;
+  for (const r of rows) {
+    const t = tempAtC(temps, r.timestamp);
+    if (t === null) continue;
+    hours += 1;
+    sum += t;
+    if (t > high) high = t;
+    if (t < low) low = t;
+  }
+  if (hours === 0) return { mean: null, high: null, low: null, hours: 0 };
+  return { mean: sum / hours, high, low, hours };
+}
+
+const whole = (v: number) => String(Math.round(v));
+
+/**
+ * The verdict string for one anomaly day.
+ *
+ * Four honest outcomes, no fifth: the day's high (air conditioning), its low
+ * (heating), mild enough that weather is not an explanation, or no
+ * temperature at all — in which case we say "no data" instead of guessing.
+ */
+export function anomalyWeatherContext(
+  rows: { timestamp: number }[],
+  temps: HourlyTemps | null | undefined,
+): AnomalyContext {
+  const day = dayTemps(rows, temps);
+  if (day.mean === null || day.high === null || day.low === null) {
+    return { kind: 'unknown', tempC: null, text: t('anomalies.ctxNoData') };
+  }
+  if (day.high >= ANOMALY_AC_TEMP_C) {
+    return { kind: 'ac', tempC: day.high, text: t('anomalies.ctxAc', { temp: whole(day.high) }) };
+  }
+  if (day.low <= ANOMALY_HEAT_TEMP_C) {
+    return { kind: 'heat', tempC: day.low, text: t('anomalies.ctxHeat', { temp: whole(day.low) }) };
+  }
+  return {
+    kind: 'mild',
+    tempC: day.mean,
+    text: t('anomalies.ctxMild'),
+  };
+}
 
 /* ==========================================================================
  * Appliance-signature labelling for anomaly days
@@ -131,6 +226,23 @@ function longestRunAbove(
   return best;
 }
 
+/* Wave U — user-visible sentences in this file come from the locale catalog
+ * at call time (lib code reads the module locale; components re-render on
+ * toggle via useTranslation). Numeric fields stay numeric. */
+
+/**
+ * "$0.0412/kWh" / "$3.95/month" — the true-bill receipt's rate format.
+ * fr-CA moves the symbol: "0,0412 $/kWh".
+ */
+function fmtCharge(rate: number, digits: number, unit: 'kWh' | 'month'): string {
+  const fr = getLocale() === 'fr';
+  const n = new Intl.NumberFormat(fr ? 'fr-CA' : 'en-CA', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(rate);
+  return fr ? `${n} $/${unit}` : `$${n}/${unit}`;
+}
+
 function hourRange(start: number, hours: number): string {
   const end = start + hours;
   return `${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`;
@@ -156,16 +268,25 @@ export function classifyDayShape(
   if (sustained.hours >= SIGNATURE_SUSTAINED_HOURS) {
     return {
       id: 'sustained-high',
-      label: 'Looks like a water heater / EV / space heater',
-      detail: `${sustained.hours} h straight at ${SIGNATURE_SUSTAINED_KW} kW or more (${sustained.avg.toFixed(1)} kW average, ${hourRange(sustained.start, sustained.hours)})`,
+      label: t('sig.sustained.label'),
+      detail: t('sig.sustained.detail', {
+        hours: sustained.hours,
+        kw: SIGNATURE_SUSTAINED_KW,
+        avg: sustained.avg.toFixed(1),
+        range: hourRange(sustained.start, sustained.hours),
+      }),
     };
   }
 
   if (sustained.hours >= 1 && sustained.hours <= SIGNATURE_SPIKE_MAX_HOURS) {
     return {
       id: 'short-spike',
-      label: 'Looks like a motor / kettle',
-      detail: `Brief ${sustained.hours} h spike to ${sustained.peak.toFixed(1)} kW (${hourRange(sustained.start, sustained.hours)}) — sharp and short, like a well pump, kettle or power tool`,
+      label: t('sig.spike.label'),
+      detail: t('sig.spike.detail', {
+        hours: sustained.hours,
+        peak: sustained.peak.toFixed(1),
+        range: hourRange(sustained.start, sustained.hours),
+      }),
     };
   }
 
@@ -179,16 +300,23 @@ export function classifyDayShape(
     if (mean >= SIGNATURE_TAIL_MIN_KW && cv <= SIGNATURE_TAIL_MAX_CV) {
       return {
         id: 'overnight-flat-tail',
-        label: 'Looks like a left-on load',
-        detail: `${tailValues.length} hours from 23:00 to 07:00 held ${mean.toFixed(1)} kW and never dipped (${Math.round(cv * 100)}% spread) — something ran all night instead of switching off`,
+        label: t('sig.tail.label'),
+        detail: t('sig.tail.detail', {
+          hours: tailValues.length,
+          kw: mean.toFixed(1),
+          spread: Math.round(cv * 100),
+        }),
       };
     }
   }
 
   return {
     id: 'unclassified',
-    label: 'Unclassified — nothing we can name',
-    detail: `No ${SIGNATURE_SUSTAINED_KW} kW run lasting ${SIGNATURE_SUSTAINED_HOURS} h, no sharp short spike and no flat 23:00–07:00 block in this day's readings`,
+    label: t('sig.unclassified.label'),
+    detail: t('sig.unclassified.detail', {
+      kw: SIGNATURE_SUSTAINED_KW,
+      hours: SIGNATURE_SUSTAINED_HOURS,
+    }),
   };
 }
 
@@ -638,10 +766,20 @@ export function getUloRateKey(category: string): 'overnight' | 'weekendOffPeak' 
  * file actually uses with plain arithmetic in local time, which is what
  * `format()` does too, so no displayed value changes.
  * ------------------------------------------------------------------------- */
-const MONTH_ABBR = [
+const MONTH_ABBR_EN = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+// Wave U — the French chart labels, same array-lookup cost as English. The
+// French abbreviations drop date-fns' trailing dot ("sept.") to match the
+// OEB-style period captions elsewhere in the app.
+const MONTH_ABBR_FR = [
+  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+  'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+];
+/** Active-locale month abbreviations — one property read per call. */
+const MONTH_ABBR = (): readonly string[] =>
+  getLocale() === 'fr' ? MONTH_ABBR_FR : MONTH_ABBR_EN;
 const p2 = (n: number): string => (n < 10 ? `0${n}` : String(n));
 
 /** `yyyy-MM-dd` in local time — the app's day key everywhere. */
@@ -656,12 +794,12 @@ export function fmtMonthKey(dt: Date): string {
 
 /** `MMM yyyy` — the monthly bar label ("Sep 2026"). */
 export function fmtMonthLabel(dt: Date): string {
-  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getFullYear()}`;
+  return `${MONTH_ABBR()[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 /** `MMM dd` — the daily bar label ("Oct 04"), zero-padded exactly like date-fns. */
 export function fmtDayLabel(dt: Date): string {
-  return `${MONTH_ABBR[dt.getMonth()]} ${p2(dt.getDate())}`;
+  return `${MONTH_ABBR()[dt.getMonth()]} ${p2(dt.getDate())}`;
 }
 
 /** `HH:mm` — the hourly bar label ("07:00"), zero-padded. */
@@ -692,14 +830,14 @@ function dayKeyParts(key: string): { year: number; month: number; day: number } 
 function dayLabelOfDayKey(key: string): string {
   const p = dayKeyParts(key);
   if (!p) return key;
-  return `${MONTH_ABBR[p.month - 1]} ${p2(p.day)}`;
+  return `${MONTH_ABBR()[p.month - 1]} ${p2(p.day)}`;
 }
 
 /** `MMM yyyy` for a day key ("Sep 2026"). */
 function monthLabelOfDayKey(key: string): string {
   const p = dayKeyParts(key);
   if (!p) return key;
-  return `${MONTH_ABBR[p.month - 1]} ${p.year}`;
+  return `${MONTH_ABBR()[p.month - 1]} ${p.year}`;
 }
 
 /** Monday's day key for a day key — mondayOf's arithmetic, timezone-free. */
@@ -835,7 +973,7 @@ export function aggregateChartData(
       key = d.dayStr.slice(0, 7);
     } else if (zoomLevel === 'weekly') {
       const mon = mondayKeyOfDayKey(d.dayStr);
-      label = 'Week of ' + dayLabelOfDayKey(mon);
+      label = t('axis.weekOf', { date: dayLabelOfDayKey(mon) });
       key = mon;
     } else if (zoomLevel === 'daily') {
       label = dayLabelOfDayKey(d.dayStr);
@@ -1212,14 +1350,18 @@ export function calculateAlwaysOnFloor(
     billShare,
     benchmarkShare: ALWAYS_ON_BENCHMARK_SHARE,
     verdict,
-    label: `Always-on floor ≈ ${kwhPerDay.toFixed(1)} kWh/day ≈ $${annualCost.toFixed(0)}/yr`,
-    detail: `Community benchmark is about ${Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100)}% of the bill — yours works out at ${(billShare * 100).toFixed(0)}% (${verdict === 'near' ? 'in line with it' : verdict === 'below' ? 'below it, nicely low' : 'above it, worth a plug-hunt'}).`,
+    label: t('floor.calcLabel', { kwh: kwhPerDay.toFixed(1), cost: fmtMoney0(annualCost) }),
+    detail: t(`floor.benchmark.${verdict}`, {
+      benchmark: Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100),
+      actual: (billShare * 100).toFixed(0),
+    }),
   };
 }
 
 export function detectAnomalies(
   processedData: ProcessedPoint[],
   filteredData: ProcessedPoint[],
+  temps?: HourlyTemps | null,
 ): Anomaly[] {
   const dayStats = Array.from({ length: 7 }, () => ({ sum: 0, days: new Set<string>() }));
   processedData.forEach((d) => {
@@ -1251,6 +1393,10 @@ export function detectAnomalies(
         diffPct: ((val.usage - exp) / exp) * 100,
         // Why was it expensive — the SHAPE of that day, not just its total.
         signature: classifyDayShape(val.rows),
+        // ...and the weather it happened in, when we hold temperatures at all.
+        // Computed HERE, next to the rows that made the day an anomaly, so the
+        // card never has to reconstruct which hours belonged to it.
+        context: anomalyWeatherContext(val.rows, temps),
       });
     }
   });
@@ -1525,11 +1671,16 @@ export function calculateTrueBill(input: {
   const hst = hstPct === null ? 0 : preTax * (hstPct / 100);
   const total = preTax + hst;
 
-  const included: string[] = ['variable energy charges'];
-  if (deliveryPerKwh !== null) included.push(`delivery ($${deliveryPerKwh.toFixed(4)}/kWh)`);
-  if (deliveryFlat !== null) included.push(`delivery ($${deliveryFlat.toFixed(2)}/month)`);
-  if (regulatoryPerKwh !== null) included.push(`regulatory ($${regulatoryPerKwh.toFixed(4)}/kWh)`);
-  if (hstPct !== null) included.push(`HST (${hstPct}%)`);
+  // Wave U — the receipt line names each included charge in the active
+  // language; the rates themselves stay numbers (fmtTrueBillRate below).
+  const included: string[] = [t('trueBill.include.variable')];
+  if (deliveryPerKwh !== null)
+    included.push(t('trueBill.include.deliveryPerKwh', { rate: fmtCharge(deliveryPerKwh, 4, 'kWh') }));
+  if (deliveryFlat !== null)
+    included.push(t('trueBill.include.deliveryFlat', { rate: fmtCharge(deliveryFlat, 2, 'month') }));
+  if (regulatoryPerKwh !== null)
+    included.push(t('trueBill.include.regulatory', { rate: fmtCharge(regulatoryPerKwh, 4, 'kWh') }));
+  if (hstPct !== null) included.push(t('trueBill.include.hst', { pct: hstPct }));
 
   return {
     variable: variableCost,
@@ -1544,7 +1695,7 @@ export function calculateTrueBill(input: {
     months,
     totalKwh,
     included,
-    caption: `Includes: ${included.join(' + ')}.`,
+    caption: `${t('trueBill.includes', { list: included.join(' + ') })}.`,
   };
 }
 
@@ -2278,14 +2429,122 @@ export type DerivedCharges = {
 export function billPeriodLabel(ts: number, duration: number): string {
   const start = new Date(ts * 1000);
   const end = new Date((ts + duration) * 1000);
-  const a = `${MONTH_ABBR[start.getUTCMonth()]} ${start.getUTCDate()}, ${start.getUTCFullYear()}`;
-  const b = `${MONTH_ABBR[end.getUTCMonth()]} ${end.getUTCDate()}`;
+  // French ranges put the day first and drop the comma ("26 août – 24 sept").
+  const fr = getLocale() === 'fr';
+  const a = fr
+    ? `${start.getUTCDate()} ${MONTH_ABBR()[start.getUTCMonth()]} ${start.getUTCFullYear()}`
+    : `${MONTH_ABBR()[start.getUTCMonth()]} ${start.getUTCDate()}, ${start.getUTCFullYear()}`;
+  const b = fr
+    ? `${end.getUTCDate()} ${MONTH_ABBR()[end.getUTCMonth()]}`
+    : `${MONTH_ABBR()[end.getUTCMonth()]} ${end.getUTCDate()}`;
   return duration >= 86400 ? `${a} – ${b}` : a;
 }
 
 const round = (v: number, dp: number) => Number(v.toFixed(dp));
 /** 4 dp is what the field is designed for ("e.g. 0.0125"); keeps cents right. */
 const rate = (v: number) => String(round(v, 4));
+
+/**
+ * How badly a split may miss before it stops being quotable.
+ *
+ * Measured against THIS period's charge for the line being split — the amount
+ * the user is about to read a fixed/variable sentence about — because that is
+ * the number the claim is about. A $6 miss on a $102 delivery line is 6% of
+ * what the user is looking at and the split does not earn the right to be
+ * quoted; the same $6 against a $900 line would be nothing. (The absolute $0.50
+ * bar this replaced had exactly that flaw: it meant a different thing on every
+ * bill size.)
+ */
+export const CHARGE_FIT_MAX_RESIDUAL_SHARE = 0.05;
+
+/** Periods needed before "fixed + variable" is a fit and not a coincidence. */
+export const CHARGE_FIT_MIN_PERIODS = 3;
+
+type ChargeFitCore = {
+  flat: number;
+  perKwh: number;
+  maxResidual: number;
+  worstIndex: number;
+  /** True when the intercept came out negative and the line was forced
+   *  through zero — i.e. the charge has no fixed part at all. */
+  throughOrigin: boolean;
+};
+type ChargeFitOutcome =
+  | { ok: true; fit: ChargeFitCore }
+  | { ok: false; why: string };
+
+/**
+ * Least squares of a charge against usage — the fit, and its worst miss,
+ * with NO verdict on whether that miss is acceptable.
+ *
+ * The verdict belongs to the caller: "is a $6 miss tolerable?" is a question
+ * about the dollar amount on screen, so it is answered there (see
+ * `CHARGE_FIT_MAX_RESIDUAL_SHARE`) instead of being baked in here where the
+ * next caller could not see it.
+ *
+ * Structural refusals still belong to the core, because no tolerance fixes
+ * them: too few periods, usage that never moved, or a line that would need a
+ * negative fixed charge or a negative rate to fit (both of which mean the
+ * straight line is the wrong shape, not that it is slightly off).
+ */
+function fitChargeCore(amounts: number[], kwh: number[]): ChargeFitOutcome {
+  if (amounts.length !== kwh.length) {
+    return { ok: false, why: 'the periods and their kWh do not line up' };
+  }
+  const n = amounts.length;
+  if (n < CHARGE_FIT_MIN_PERIODS) {
+    return {
+      ok: false,
+      why: `only ${n} billing period${n === 1 ? '' : 's'} — at least ${CHARGE_FIT_MIN_PERIODS} are needed`,
+    };
+  }
+  const meanX = kwh.reduce((a, b) => a + b, 0) / n;
+  const meanY = amounts.reduce((a, b) => a + b, 0) / n;
+  const spread = Math.max(...kwh) - Math.min(...kwh);
+  if (meanX <= 0 || spread < meanX * 0.03) {
+    return { ok: false, why: 'usage barely moves between periods, so a slope would be noise' };
+  }
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxy += (kwh[i] - meanX) * (amounts[i] - meanY);
+    sxx += (kwh[i] - meanX) ** 2;
+  }
+  if (sxx <= 0) return { ok: false, why: 'every period used the same amount' };
+  const slope = sxy / sxx;
+  const intercept = meanY - slope * meanX;
+  if (slope < 0) return { ok: false, why: 'the fitted rate is negative (cheaper as you use more)' };
+
+  // A NEGATIVE intercept does not mean "the fit is bad" — it means the line
+  // has no fixed part at all, which is a real answer ("regulatory charges are
+  // entirely volume-driven"). Forcing it through zero is the fit that
+  // describes that shape; refusing to answer would throw away the answer.
+  const throughOrigin = intercept < 0;
+  let perKwh = slope;
+  if (throughOrigin) {
+    let sxy0 = 0;
+    let sxx0 = 0;
+    for (let i = 0; i < n; i += 1) {
+      sxy0 += kwh[i] * amounts[i];
+      sxx0 += kwh[i] * kwh[i];
+    }
+    if (sxx0 <= 0) return { ok: false, why: 'no period used any electricity' };
+    perKwh = sxy0 / sxx0;
+    if (perKwh < 0) return { ok: false, why: 'the fitted rate is negative (cheaper as you use more)' };
+  }
+  const flat = throughOrigin ? 0 : intercept;
+
+  let maxResidual = 0;
+  let worstIndex = 0;
+  for (let i = 0; i < n; i += 1) {
+    const residual = Math.abs(amounts[i] - (flat + perKwh * kwh[i]));
+    if (residual > maxResidual) {
+      maxResidual = residual;
+      worstIndex = i;
+    }
+  }
+  return { ok: true, fit: { flat, perKwh, maxResidual, worstIndex, throughOrigin } };
+}
 
 /**
  * Least-squares split of a charge into a fixed part and a $/kWh part across
@@ -2295,33 +2554,18 @@ const rate = (v: number) => String(round(v, 4));
  * With three Oakville periods the delivery line fits $35.70 + $0.0253/kWh to
  * ±$0.20; when usage barely moves between periods the slope is noise, and
  * then we say so and use one blended rate instead of inventing a fixed part.
+ * A fit that misses THIS period's charge by more than
+ * `CHARGE_FIT_MAX_RESIDUAL_SHARE` of it is refused for the same reason: it
+ * would answer a dollar question with a number that does not survive the
+ * question. Every caller shares that one bar, so two panels can never quote
+ * two different splits of the same line.
  */
-function fitCharge(
-  amounts: number[],
-  kwh: number[],
-): { flat: number; perKwh: number; maxResidual: number } | null {
-  if (amounts.length < 3 || amounts.length !== kwh.length) return null;
-  const n = amounts.length;
-  const meanX = kwh.reduce((a, b) => a + b, 0) / n;
-  const meanY = amounts.reduce((a, b) => a + b, 0) / n;
-  const spread = Math.max(...kwh) - Math.min(...kwh);
-  if (meanX <= 0 || spread < meanX * 0.03) return null; // usage must actually move
-  let sxy = 0;
-  let sxx = 0;
-  for (let i = 0; i < n; i += 1) {
-    sxy += (kwh[i] - meanX) * (amounts[i] - meanY);
-    sxx += (kwh[i] - meanX) ** 2;
-  }
-  if (sxx <= 0) return null;
-  const slope = sxy / sxx;
-  const flat = meanY - slope * meanX;
-  if (slope < 0 || flat < 0) return null;
-  let maxResidual = 0;
-  for (let i = 0; i < n; i += 1) {
-    maxResidual = Math.max(maxResidual, Math.abs(amounts[i] - (flat + slope * kwh[i])));
-  }
-  if (maxResidual > 0.5) return null; // the fit is not telling the truth
-  return { flat, perKwh: slope, maxResidual };
+function fitCharge(amounts: number[], kwh: number[]): ChargeFitCore | null {
+  const outcome = fitChargeCore(amounts, kwh);
+  if (!outcome.ok) return null;
+  // The LAST pair is the newest period — the one every caller quotes.
+  const tolerance = amounts[amounts.length - 1] * CHARGE_FIT_MAX_RESIDUAL_SHARE;
+  return outcome.fit.maxResidual > tolerance ? null : outcome.fit;
 }
 
 /**
@@ -2473,6 +2717,210 @@ export function deliverySplit(
 }
 
 /* ==========================================================================
+ * Fixed-vs-usage decomposition of a bill line (Wave T slice 3)
+ *
+ * "Can I actually reduce this?" is the question the delivery line invites and
+ * the one a ¢/kWh average cannot answer, because an average cannot tell a
+ * charge you would still owe at ZERO kWh (a monthly service charge, a fixed
+ * rider) from one that scales with volume. Fitting the line against usage
+ * across every billing period the file holds separates them — and, just as
+ * importantly, says when it cannot.
+ *
+ * Two honest refusals, and they are different:
+ *   • `unavailable` — there is not enough to fit (too few periods, usage that
+ *     never moved). Nothing was tested.
+ *   • `rejected` — it WAS fitted and the fit misses by more than
+ *     CHARGE_FIT_MAX_RESIDUAL_SHARE of this period's charge. Quoting "$F is
+ *     fixed" then would be a number that cannot survive its own question.
+ *
+ * The rejection is not hypothetical: on the reference 24-bill Oakville export
+ * the delivery line misses by $6.56 at worst — 6.4% of the newest period's
+ * $102.34 — because the utility repriced delivery between rate years. The
+ * card says so, names the bill it misses, and falls back to the blended rate
+ * that does not pretend to be two numbers. (evidence/wave-t-notes.md)
+ * ========================================================================== */
+
+export type ChargeDecompositionStatus = 'split' | 'rejected' | 'unavailable';
+
+export type ChargeDecomposition = {
+  line: 'delivery' | 'regulatory';
+  /** This period's charge for that line — the amount being explained. */
+  amount: number;
+  /** The kWh this period's charges are priced off. */
+  kwh: number;
+  /** Periods the fit was taken over. */
+  periods: number;
+  status: ChargeDecompositionStatus;
+  /** The fit, whether or not it was accepted — the attempt is never hidden. */
+  fit: {
+    flat: number;
+    perKwh: number;
+    maxResidual: number;
+    /** Worst miss ÷ this period's charge. */
+    residualShare: number;
+    /** The bill the fit misses most, for the sentence. */
+    worstPeriod: string | null;
+  } | null;
+  /** $ of this period's charge that owes at zero kWh. */
+  fixed: number | null;
+  /** $ of this period's charge that is volume-driven. */
+  variable: number | null;
+  fixedShare: number | null;
+  /** One blended rate for the line — what survives every refusal. */
+  blendedCentsPerKwh: number;
+  /** The sentence the card leads with. */
+  headline: string;
+  detail: string;
+};
+
+const money2 = (n: number) => `$${n.toFixed(2)}`;
+
+/* Wave U — the noun travels into the sentence as a {noun} param, so it must
+ * speak the active language. `be` is the verb that agrees with it ("Delivery
+ * IS" / "Regulatory charges ARE"; French: "est" / "ont lieu"). Both are
+ * resolved with t() at call time. */
+const LINE_NOUNS = {
+  // French disagrees with English about the article and the verb, so each
+  // sentence gets a per-line key rather than a {noun} param: "La distribution
+  // n'est pas…" vs "Les charges réglementaires ne sont pas…".
+  delivery: {
+    lowerKey: 'charge.nounDeliveryLower',
+    cannotSplitKey: 'charge.cannotSplitDelivery',
+    notLinearKey: 'charge.notLinearDelivery',
+  },
+  regulatory: {
+    lowerKey: 'charge.nounRegulatoryLower',
+    cannotSplitKey: 'charge.cannotSplitRegulatory',
+    notLinearKey: 'charge.notLinearRegulatory',
+  },
+} as const;
+
+/**
+ * Split one charge line into the part you would owe anyway and the part you
+ * can act on, or say exactly why that split cannot be made.
+ */
+export function chargeDecomposition(
+  summaries: UsageSummary[],
+  rows: ProcessedPoint[] | undefined,
+  line: 'delivery' | 'regulatory',
+): ChargeDecomposition | null {
+  if (summaries.length === 0) return null;
+  const stats = periodStats(summaries, rows);
+  const pairs: { amount: number; kwh: number; summary: UsageSummary }[] = [];
+  for (const s of summaries) {
+    const q = chargeBasisKwh(s, stats.get(s.start));
+    if (q === null || q <= 0) continue;
+    pairs.push({ amount: billTotals(s)[line], kwh: q, summary: s });
+  }
+  if (pairs.length === 0) return null;
+  // A file whose every period says zero for this line (a sample feed, a bill
+  // with nothing itemized) has nothing to explain — a "0.00 fixed, 0.00
+  // variable" answer would be theatre.
+  if (!pairs.some((p) => p.amount !== 0)) return null;
+
+  const newest = pairs[pairs.length - 1];
+  const nouns = LINE_NOUNS[line];
+  const noun = { lower: t(nouns.lowerKey) };
+  const blendedCentsPerKwh = newest.kwh > 0 ? (newest.amount / newest.kwh) * 100 : 0;
+
+  const outcome = fitChargeCore(pairs.map((p) => p.amount), pairs.map((p) => p.kwh));
+  const residualShare = outcome.ok ? outcome.fit.maxResidual / (newest.amount || 1) : null;
+  const worstPeriod = outcome.ok
+    ? billPeriodLabel(pairs[outcome.fit.worstIndex].summary.start, pairs[outcome.fit.worstIndex].summary.duration)
+    : null;
+
+  const fit =
+    outcome.ok && residualShare !== null
+      ? {
+          flat: round(outcome.fit.flat, 2),
+          perKwh: round(outcome.fit.perKwh, 4),
+          maxResidual: round(outcome.fit.maxResidual, 2),
+          residualShare: round(residualShare, 4),
+          worstPeriod,
+        }
+      : null;
+
+  if (!outcome.ok) {
+    return {
+      line,
+      amount: newest.amount,
+      kwh: newest.kwh,
+      periods: pairs.length,
+      status: 'unavailable',
+      fit: null,
+      fixed: null,
+      variable: null,
+      fixedShare: null,
+      blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+      headline: t(nouns.cannotSplitKey),
+      detail: `${outcome.why}. The honest number for this line is the ${round(blendedCentsPerKwh, 2)}¢/kWh it averaged this period.`,
+    };
+  }
+
+  const { flat, perKwh, maxResidual } = outcome.fit;
+  const rejected = (residualShare ?? 0) > CHARGE_FIT_MAX_RESIDUAL_SHARE;
+
+  if (rejected) {
+    return {
+      line,
+      amount: newest.amount,
+      kwh: newest.kwh,
+      periods: pairs.length,
+      status: 'rejected',
+      fit,
+      fixed: null,
+      variable: null,
+      fixedShare: null,
+      blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+      headline: t(nouns.notLinearKey),
+      detail:
+        t('charge.fitUnstable', {
+          flat: money2(flat),
+          perKwh: perKwh.toFixed(4),
+          periods: pairs.length,
+          miss: money2(maxResidual),
+          share: ((residualShare ?? 0) * 100).toFixed(1),
+          amount: money2(newest.amount),
+          noun: noun.lower,
+          bar: Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100),
+          worst: worstPeriod ?? t('charge.unknown'),
+          blended: String(round(blendedCentsPerKwh, 2)),
+        }),
+    };
+  }
+
+  const fixed = round(flat, 2);
+  const variable = round(newest.amount - flat, 2);
+  return {
+    line,
+    amount: newest.amount,
+    kwh: newest.kwh,
+    periods: pairs.length,
+    status: 'split',
+    fit,
+    fixed,
+    variable,
+    fixedShare: newest.amount > 0 ? round(fixed / newest.amount, 4) : null,
+    blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+    // A line with no fixed part is a DIFFERENT answer, and it is the common
+    // one for regulatory charges — say it as such instead of "$0.00 is fixed".
+    headline: outcome.fit.throughOrigin
+      ? t('charge.headlineNoFixed', { amount: money2(newest.amount), noun: noun.lower, variable: money2(variable) })
+      : t('charge.headline', { amount: money2(newest.amount), noun: noun.lower, fixed: money2(fixed), variable: money2(variable) }),
+    detail:
+      t('charge.detail', {
+        prefix: outcome.fit.throughOrigin ? '' : `${money2(flat)} + `,
+        perKwh: perKwh.toFixed(4),
+        periods: pairs.length,
+        origin: outcome.fit.throughOrigin ? t('charge.throughOrigin') : '',
+        miss: money2(maxResidual),
+        share: ((residualShare ?? 0) * 100).toFixed(1),
+        worst: worstPeriod ? `, ${worstPeriod}` : '',
+      }),
+  };
+}
+
+/* ==========================================================================
  * Multi-export merge — 2+ Green Button files into one reading set
  *
  * A single export usually covers one billing period, so extending the date
@@ -2600,6 +3048,6 @@ export function calculateWfhShare(rows: ProcessedPoint[]): WfhShare | null {
     kwh,
     totalKwh,
     weekdays: weekdays.size,
-    label: `Work-from-home window (07:00–19:00 weekdays)`,
+    label: t('wfh.label'),
   };
 }

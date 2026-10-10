@@ -15,6 +15,8 @@
 
 "use client";
 
+/* Wave U — user-visible copy translates; lib/hook code reads the module locale. */
+import { t, useTranslation } from "@/i18n";
 import { RefreshCw, Link2, Unplug } from "lucide-react";
 import type { GbStatus } from "@/lib/greenbutton/client";
 
@@ -50,7 +52,7 @@ export function gbUiState(status: GbStatus | null): GbUiState {
 }
 
 function lastSyncLine(status: GbStatus): string {
-  if (!status.lastSyncAt) return "Authorised — no data synced yet";
+  if (!status.lastSyncAt) return t("gb.authorisedNoData");
   const at = new Date(status.lastSyncAt);
   const mb = status.lastSyncBytes !== null ? ` · ${(status.lastSyncBytes / 1024).toFixed(0)} KB` : "";
   return `Synced ${at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${mb}`;
@@ -59,6 +61,7 @@ function lastSyncLine(status: GbStatus): string {
 export function GreenButtonSync({
   status, syncing, message, onConnect, onSync, onDisconnect, onDismissMessage, variant = "chip",
 }: Props) {
+  const { t } = useTranslation();
   // Not configured: the feature does not exist for this deployment yet.
   if (!status?.configured) {
     if (variant === "modal") {
@@ -108,7 +111,7 @@ export function GreenButtonSync({
               onClick={onSync}
               disabled={syncing}
               title={lastSyncLine(status)}
-              aria-label="Sync now from Oakville Hydro"
+              aria-label={t("gb.syncNowAria")}
               className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-green-600 text-white font-black uppercase text-[10px] disabled:opacity-60"
             >
               <RefreshCw size={14} strokeWidth={4} className={syncing ? "animate-spin" : ""} />
@@ -120,11 +123,11 @@ export function GreenButtonSync({
               type="button"
               data-testid="gb-disconnect"
               onClick={() => {
-                if (window.confirm("Disconnect live sync? The stored authorisation is wiped from the server.")) {
+                if (window.confirm(t("gb.disconnectConfirm"))) {
                   onDisconnect();
                 }
               }}
-              aria-label="Disconnect Green Button live sync"
+              aria-label={t("gb.disconnectAria")}
               className="min-h-11 px-2 border-l-4 border-black bg-white text-red-600 hover:bg-red-50"
             >
               <Unplug size={14} strokeWidth={4} />
@@ -187,13 +190,13 @@ export function GreenButtonSync({
               disabled={syncing}
               className="min-h-11 py-3 px-5 bg-green-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60"
             >
-              {syncing ? "Syncing…" : "Sync now"}
+              {syncing ? t("gb.syncing") : t("gb.syncNow")}
             </button>
             <button
               type="button"
               data-testid="gb-disconnect"
               onClick={() => {
-                if (window.confirm("Disconnect live sync? The stored authorisation is wiped from the server.")) {
+                if (window.confirm(t("gb.disconnectConfirm"))) {
                   onDisconnect();
                 }
               }}

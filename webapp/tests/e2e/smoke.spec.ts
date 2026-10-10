@@ -23,7 +23,7 @@ async function uploadFixture(page: Page) {
   await page.goto('/');
   // Fresh browser profile => upload modal is open (empty localStorage)
   await expect(page.getByText('Drop XML Here')).toBeVisible();
-  await page.locator('input[type="file"]').setInputFiles(FIXTURE);
+  await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles(FIXTURE);
   // Modal closes only after a successful parse of all 68 readings
   await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 15_000 });
 }
@@ -74,8 +74,8 @@ test.describe('smoke', () => {
     await expect(page.getByTestId('wfh-annotation')).toBeVisible();
 
     // Readings persisted to localStorage (all 68)
-    const stored = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('energy_data') || '[]'),
+    const stored = await page.evaluate(
+      () => JSON.parse(localStorage.getItem('energy_data_v2') || 'null')?.points || [],
     );
     expect(stored).toHaveLength(68);
 
@@ -143,7 +143,7 @@ test.describe('smoke', () => {
 
     await page.goto('/');
     await expect(page.getByText('Drop XML Here')).toBeVisible();
-    await page.locator('input[type="file"]').setInputFiles([FIXTURE, second]);
+    await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles([FIXTURE, second]);
 
     // The review screen appears BEFORE any reading is written.
     const review = page.getByTestId('merge-review');
@@ -151,7 +151,7 @@ test.describe('smoke', () => {
     await expect(page.getByTestId('merge-rows')).toHaveText('68');
     await expect(page.getByTestId('merge-duplicates')).toHaveText('68 of 136');
     expect(
-      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}').points || []),
     ).toHaveLength(0);
 
     await page.getByTestId('merge-confirm').click();
@@ -160,7 +160,7 @@ test.describe('smoke', () => {
     await expect(page.getByTestId('best-choice-banner')).toBeVisible();
     await expect(page.getByTestId('totals-strip')).toBeVisible();
     expect(
-      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}').points || []),
     ).toHaveLength(68);
   });
 
@@ -170,7 +170,7 @@ test.describe('smoke', () => {
 
     await page.goto('/');
     await expect(page.getByText('Drop XML Here')).toBeVisible();
-    await page.locator('input[type="file"]').setInputFiles([FIXTURE, second]);
+    await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles([FIXTURE, second]);
 
     const review = page.getByTestId('merge-review');
     await expect(review).toBeVisible({ timeout: 15_000 });
@@ -179,7 +179,7 @@ test.describe('smoke', () => {
     // Back to the upload prompt, and still nothing stored.
     await expect(page.getByText('Drop XML Here')).toBeVisible();
     expect(
-      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]')),
+      await page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}').points || []),
     ).toHaveLength(0);
   });
 

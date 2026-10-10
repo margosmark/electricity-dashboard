@@ -31,6 +31,7 @@ import {
   classifyBillLine,
   commodityVerdict,
   currencyLabel,
+  chargeDecomposition,
   deriveExtraCharges,
   deliverySplit,
   parseGreenButtonFeed,
@@ -421,5 +422,108 @@ describe('True Bill inputs derived from the file', () => {
     expect(blended.mode).toBe('blended');
     expect(blended.flat).toBeNull();
     expect(blended.perKwh).toBeCloseTo(102.78 / 2650, 4);
+  });
+});
+
+/* ==========================================================================
+ * Wave T slice 3 — the fixed-vs-volume decomposition of a bill line.
+ *
+ * Three outcomes, and the point of the middle one is that it is REACHABLE:
+ * a split that misses by more than CHARGE_FIT_MAX_RESIDUAL_SHARE of this
+ * period's charge is refused and says so, instead of answering "can I reduce
+ * this?" with a number that does not survive the question.
+ * ========================================================================== */
+
+/** One period's delivery line, multiplied — a utility that repriced itself. */
+function withDeliveryBumped(index: number, by: number): UsageSummary[] {
+  return summaries.map((summary, i) =>
+    i !== index
+      ? summary
+      : {
+          ...summary,
+          items: summary.items.map((item) =>
+            /delivery/i.test(item.note)
+              ? { ...item, amount: item.amount === null ? null : item.amount * by }
+              : item,
+          ),
+        },
+  );
+}
+
+describe('chargeDecomposition', () => {
+  it('splits delivery into the part owed at zero kWh and the part that is not', () => {
+    const d = chargeDecomposition(summaries, [], 'delivery')!;
+    expect(d.status).toBe('split');
+    expect(d.periods).toBe(3);
+    expect(d.amount).toBeCloseTo(billTotals(summaries[summaries.length - 1]).delivery, 6);
+    expect(d.kwh).toBeCloseTo(billedKwh(summaries[summaries.length - 1])!, 6);
+    // The two halves ARE the amount: nothing is created or lost in the split.
+    expect(d.fixed! + d.variable!).toBeCloseTo(d.amount, 2);
+    expect(d.fixedShare!).toBeGreaterThan(0);
+    expect(d.fixedShare!).toBeLessThan(1);
+    expect(d.blendedCentsPerKwh).toBeCloseTo((d.amount / d.kwh) * 100, 2);
+
+    // The sentence the card leads with, in full.
+    expect(d.headline).toContain(`Of your $${d.amount.toFixed(2)} delivery this period`);
+    expect(d.headline).toContain(`$${d.fixed!.toFixed(2)} is fixed (you'd pay it at 0 kWh)`);
+    expect(d.headline).toContain(`$${d.variable!.toFixed(2)} is volume-driven`);
+    expect(d.detail).toContain('across 3 billing periods');
+  });
+
+  it('refuses the split — and shows its working — when the fit misses by too much', () => {
+    const d = chargeDecomposition(withDeliveryBumped(1, 1.5), [], 'delivery')!;
+    expect(d.status).toBe('rejected');
+    expect(d.headline).toBe('Delivery is not linearly decomposable from this data.');
+    // The attempt is still reported: the fit, its worst miss, and the bar.
+    expect(d.fit).not.toBeNull();
+    expect(d.fit!.residualShare).toBeGreaterThan(0.05);
+    expect(d.detail).toContain(`worst miss is $${d.fit!.maxResidual.toFixed(2)}`);
+    expect(d.detail).toContain('over the 5% bar');
+    expect(d.detail).toContain(d.fit!.worstPeriod!);
+    // No fixed/variable numbers are invented — only the blended rate survives.
+    expect(d.fixed).toBeNull();
+    expect(d.variable).toBeNull();
+    expect(d.blendedCentsPerKwh).toBeGreaterThan(0);
+  });
+
+  it('says there was nothing to fit when there are too few periods', () => {
+    const d = chargeDecomposition(summaries.slice(0, 1), [], 'delivery')!;
+    expect(d.status).toBe('unavailable');
+    expect(d.periods).toBe(1);
+    expect(d.fit).toBeNull();
+    expect(d.headline).toBe('Delivery cannot be split into fixed and volume-driven from this data.');
+    expect(d.detail).toContain('only 1 billing period');
+    expect(d.blendedCentsPerKwh).toBeCloseTo((d.amount / d.kwh) * 100, 2);
+  });
+
+  it('gives regulatory the same treatment, under its own name', () => {
+    const d = chargeDecomposition(summaries, [], 'regulatory')!;
+    expect(d.line).toBe('regulatory');
+    expect(d.amount).toBeCloseTo(billTotals(summaries[summaries.length - 1]).regulatory, 6);
+    expect(d.headline.startsWith('Regulatory charges')).toBe(true);
+    if (d.status === 'split') {
+      expect(d.fixed! + d.variable!).toBeCloseTo(d.amount, 2);
+    } else {
+      expect(d.headline).toContain('not linearly decomposable');
+    }
+  });
+
+  it('has nothing to say for a file with no bill at all', () => {
+    expect(chargeDecomposition([], [], 'delivery')).toBeNull();
+    expect(chargeDecomposition(parseUsageSummaries(read('green-button-alliance-sample.xml')), [], 'delivery')).toBeNull();
+  });
+
+  it('shares ONE tolerance bar with the per-line note, so the two cannot disagree', () => {
+    // A fit that fits is quoted as a split by BOTH the headline card and the
+    // delivery line's own note (deliverySplit reads the same function).
+    const good = chargeDecomposition(summaries, [], 'delivery')!;
+    expect(good.status).toBe('split');
+    expect(deliverySplit(summaries)!.mode).toBe('split');
+    expect(deliverySplit(summaries)!.flat).toBeCloseTo(good.fixed!, 2);
+
+    // ...and a fit that does not fit is refused by BOTH.
+    const bad = chargeDecomposition(withDeliveryBumped(1, 1.5), [], 'delivery')!;
+    expect(bad.status).toBe('rejected');
+    expect(deliverySplit(withDeliveryBumped(1, 1.5))!.mode).toBe('blended');
   });
 });

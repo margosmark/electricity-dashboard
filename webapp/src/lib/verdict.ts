@@ -16,6 +16,7 @@
  */
 
 import { PLAN_LABEL, type PlanId } from '@/hooks/useSelectedPlan';
+import { fmtMoney } from '@/i18n';
 
 export type PlanCosts = { TOU: number; Tiered: number; ULO: number };
 
@@ -84,9 +85,12 @@ export function buildVerdict(
   };
 }
 
-/** `-$45.10` / `$0.00` — always signed so a saving never reads as a cost. */
+/**
+ * `-$45.10` / `$0.00` — always signed so a saving never reads as a cost.
+ * Wave U: locale-aware (fr-CA renders "45,10 $"), still always signed.
+ */
 export function formatDelta(amount: number): string {
-  return `$${Math.abs(amount).toFixed(2)}`;
+  return fmtMoney(Math.abs(amount));
 }
 
 /** "TOU → ULO", the switch the verdict is recommending. */
