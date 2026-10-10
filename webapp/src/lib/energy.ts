@@ -973,7 +973,7 @@ export function aggregateChartData(
       key = d.dayStr.slice(0, 7);
     } else if (zoomLevel === 'weekly') {
       const mon = mondayKeyOfDayKey(d.dayStr);
-      label = 'Week of ' + dayLabelOfDayKey(mon);
+      label = t('axis.weekOf', { date: dayLabelOfDayKey(mon) });
       key = mon;
     } else if (zoomLevel === 'daily') {
       label = dayLabelOfDayKey(d.dayStr);
@@ -2775,12 +2775,24 @@ export type ChargeDecomposition = {
 
 const money2 = (n: number) => `$${n.toFixed(2)}`;
 
+/* Wave U — the noun travels into the sentence as a {noun} param, so it must
+ * speak the active language. `be` is the verb that agrees with it ("Delivery
+ * IS" / "Regulatory charges ARE"; French: "est" / "ont lieu"). Both are
+ * resolved with t() at call time. */
 const LINE_NOUNS = {
-  // `be` travels with the noun: "Delivery IS not decomposable", "Regulatory
-  // charges ARE" — a card that gets the grammar wrong reads as if it got the
-  // maths wrong too.
-  delivery: { upper: 'Delivery', lower: 'delivery', be: 'is' },
-  regulatory: { upper: 'Regulatory charges', lower: 'regulatory charges', be: 'are' },
+  // French disagrees with English about the article and the verb, so each
+  // sentence gets a per-line key rather than a {noun} param: "La distribution
+  // n'est pas…" vs "Les charges réglementaires ne sont pas…".
+  delivery: {
+    lowerKey: 'charge.nounDeliveryLower',
+    cannotSplitKey: 'charge.cannotSplitDelivery',
+    notLinearKey: 'charge.notLinearDelivery',
+  },
+  regulatory: {
+    lowerKey: 'charge.nounRegulatoryLower',
+    cannotSplitKey: 'charge.cannotSplitRegulatory',
+    notLinearKey: 'charge.notLinearRegulatory',
+  },
 } as const;
 
 /**
@@ -2807,7 +2819,8 @@ export function chargeDecomposition(
   if (!pairs.some((p) => p.amount !== 0)) return null;
 
   const newest = pairs[pairs.length - 1];
-  const noun = LINE_NOUNS[line];
+  const nouns = LINE_NOUNS[line];
+  const noun = { lower: t(nouns.lowerKey) };
   const blendedCentsPerKwh = newest.kwh > 0 ? (newest.amount / newest.kwh) * 100 : 0;
 
   const outcome = fitChargeCore(pairs.map((p) => p.amount), pairs.map((p) => p.kwh));
@@ -2839,7 +2852,7 @@ export function chargeDecomposition(
       variable: null,
       fixedShare: null,
       blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
-      headline: `${noun.upper} cannot be split into fixed and volume-driven from this data.`,
+      headline: t(nouns.cannotSplitKey),
       detail: `${outcome.why}. The honest number for this line is the ${round(blendedCentsPerKwh, 2)}¢/kWh it averaged this period.`,
     };
   }
@@ -2859,14 +2872,20 @@ export function chargeDecomposition(
       variable: null,
       fixedShare: null,
       blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
-      headline: `${noun.upper} ${noun.be} not linearly decomposable from this data.`,
+      headline: t(nouns.notLinearKey),
       detail:
-        `Fitted ${money2(flat)} fixed + $${perKwh.toFixed(4)}/kWh across ${pairs.length} billing periods, but the ` +
-        `worst miss is ${money2(maxResidual)} — ${((residualShare ?? 0) * 100).toFixed(1)}% of this period's ` +
-        `${money2(newest.amount)} ${noun.lower}, over the ${Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100)}% bar ` +
-        `we quote a split at (the bill it misses most is ${worstPeriod ?? 'unknown'}). ` +
-        `The line is real and large — it just is not a straight line of usage, so ` +
-        `${round(blendedCentsPerKwh, 2)}¢/kWh is the only rate that describes it honestly.`,
+        t('charge.fitUnstable', {
+          flat: money2(flat),
+          perKwh: perKwh.toFixed(4),
+          periods: pairs.length,
+          miss: money2(maxResidual),
+          share: ((residualShare ?? 0) * 100).toFixed(1),
+          amount: money2(newest.amount),
+          noun: noun.lower,
+          bar: Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100),
+          worst: worstPeriod ?? t('charge.unknown'),
+          blended: String(round(blendedCentsPerKwh, 2)),
+        }),
     };
   }
 
@@ -2886,14 +2905,18 @@ export function chargeDecomposition(
     // A line with no fixed part is a DIFFERENT answer, and it is the common
     // one for regulatory charges — say it as such instead of "$0.00 is fixed".
     headline: outcome.fit.throughOrigin
-      ? `Of your ${money2(newest.amount)} ${noun.lower} this period, none of it is fixed — you would pay $0.00 at 0 kWh, and all ${money2(variable)} is volume-driven.`
-      : `Of your ${money2(newest.amount)} ${noun.lower} this period, ${money2(fixed)} is fixed ` +
-        `(you'd pay it at 0 kWh) and ${money2(variable)} is volume-driven.`,
+      ? t('charge.headlineNoFixed', { amount: money2(newest.amount), noun: noun.lower, variable: money2(variable) })
+      : t('charge.headline', { amount: money2(newest.amount), noun: noun.lower, fixed: money2(fixed), variable: money2(variable) }),
     detail:
-      `Fitted ${outcome.fit.throughOrigin ? '' : `${money2(flat)} + `}$${perKwh.toFixed(4)}/kWh across ` +
-      `${pairs.length} billing periods${outcome.fit.throughOrigin ? ' (the line has no fixed part, so the fit runs through zero)' : ''}; ` +
-      `worst miss ${money2(maxResidual)} (${((residualShare ?? 0) * 100).toFixed(1)}% of this period's line` +
-      `${worstPeriod ? `, ${worstPeriod}` : ''}).`,
+      t('charge.detail', {
+        prefix: outcome.fit.throughOrigin ? '' : `${money2(flat)} + `,
+        perKwh: perKwh.toFixed(4),
+        periods: pairs.length,
+        origin: outcome.fit.throughOrigin ? t('charge.throughOrigin') : '',
+        miss: money2(maxResidual),
+        share: ((residualShare ?? 0) * 100).toFixed(1),
+        worst: worstPeriod ? `, ${worstPeriod}` : '',
+      }),
   };
 }
 

@@ -35,6 +35,8 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'delta.chargeCol', // "Charge" — the same word in fr-CA accounting
   'planCard.active', // "ACTIVE" — French writes it the same way
   'track.vs', // "vs {plan}" — "vs" is standard French usage
+  'ev.signedPositive', // "+{amount}" — the sign glyph is the same in both
+  'ev.signedNegative', // "−{amount}" — the minus glyph is the same in both
 ]);
 
 describe('i18n catalogs', () => {

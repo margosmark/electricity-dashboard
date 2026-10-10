@@ -39,6 +39,9 @@ import {
 import PlanBands from '@/components/PlanBands';
 import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
 import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
+// Wave U — every label, badge, aria-label and footnote below speaks the
+// active locale; `t` is a hook, so each component calls useTranslation().
+import { fmtPercent, useTranslation } from '@/i18n';
 import { calculateTrueBill, hasExtraCharges, type ExtraCharges } from '@/lib/energy';
 
 type Mode = 'dollars' | 'share' | 'usage';
@@ -88,11 +91,11 @@ type ChartRow = {
  * The badge every non-billed bar carries, in the chart's table and tooltip.
  * It exists so no hatched bar can ever be read as "you paid this".
  */
-const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string } | null> = {
+const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string; key: string } | null> = {
   billed: null,
-  open: { text: 'Estimate', cls: 'bg-yellow-400 border-black' },
-  gap: { text: 'No bill', cls: 'bg-slate-200 border-black' },
-  derived: { text: 'Billing day', cls: 'bg-slate-200 border-black' },
+  open: { text: 'Estimate', cls: 'bg-yellow-400 border-black', key: 'money.badge.estimate' },
+  gap: { text: 'No bill', cls: 'bg-slate-200 border-black', key: 'money.badge.noBill' },
+  derived: { text: 'Billing day', cls: 'bg-slate-200 border-black', key: 'money.badge.billingDay' },
 };
 
 /** Slices that actually occur in this file — the rest get no bar, no chip. */
@@ -117,6 +120,7 @@ function CompositionTooltip({
   payload?: TooltipRow[];
   mode: Mode;
 }) {
+  const { t } = useTranslation();
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0]?.payload;
   if (!row) return null;
@@ -150,7 +154,11 @@ function CompositionTooltip({
       {mode !== 'usage' && (
         <div className="mt-2 pt-2 border-t-2 border-black flex justify-between gap-4 text-[11px] font-black">
           <span>
-            {row.kind === 'billed' ? 'You paid' : row.kind === 'open' ? 'Estimated' : 'Billed'}
+            {row.kind === 'billed'
+              ? t('money.youPaid')
+              : row.kind === 'open'
+                ? t('money.estimated')
+                : t('money.billed')}
           </span>
           <span>
             {row.kind === 'gap'
@@ -164,13 +172,11 @@ function CompositionTooltip({
           data-testid="money-tooltip-flag"
           className="mt-2 text-[9px] font-black uppercase bg-yellow-100 border-2 border-black px-2 py-1"
         >
-          {row.kind === 'open'
-            ? 'Estimate — not billed yet (commodity only)'
-            : 'No bill in this file covers these days'}
+          {row.kind === 'open' ? t('money.flagOpen') : t('money.flagNoBill')}
         </div>
       )}
       <div className="mt-1 text-[9px] font-bold text-slate-500">
-        Readings cover {Math.round((row.coverage ?? 0) * 100)}% of this period
+        {t('money.readingsCover', { pct: fmtPercent(Math.round((row.coverage ?? 0) * 100)) })}
       </div>
     </div>
   );
@@ -203,6 +209,7 @@ export default function MoneyStackedChart({
   planAnnotations,
   charges = null,
 }: MoneyStackedChartProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('dollars');
   const [showOverlay, setShowOverlay] = useState(true);
 
@@ -355,21 +362,21 @@ export default function MoneyStackedChart({
       <div className="flex flex-wrap items-end justify-between gap-3 md:gap-4">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            {stacks.length} billing period{stacks.length === 1 ? '' : 's'} · straight from your XML
+            {t('money.periodsSubtitle', { count: stacks.length })}
           </div>
           <h3 className="text-xl md:text-4xl italic font-black">
-            {mode === 'usage' ? 'What you used, per period' : 'What you paid for, per period'}
+            {mode === 'usage' ? t('money.titleUsage') : t('money.titlePaid')}
           </h3>
         </div>
         <div
           className="flex flex-wrap gap-2"
           role="group"
-          aria-label="Money chart mode"
+          aria-label={t('money.modeAria')}
           data-testid="money-mode-group"
         >
-          {modeButton('dollars', '$ Dollars', 'money-mode-dollars')}
-          {modeButton('share', '% Share', 'money-mode-share')}
-          {modeButton('usage', 'kWh Usage', 'money-mode-usage')}
+          {modeButton('dollars', t('money.modeDollars'), 'money-mode-dollars')}
+          {modeButton('share', t('money.modeShare'), 'money-mode-share')}
+          {modeButton('usage', t('money.modeUsage'), 'money-mode-usage')}
         </div>
       </div>
 
@@ -419,9 +426,11 @@ export default function MoneyStackedChart({
           data-testid="money-chart-flagged"
           className="mt-2 text-[10px] font-bold normal-case text-slate-500"
         >
-          Hatched bars are not bills: the bar badged <strong>Estimate</strong> is your unbilled
-          tail (commodity only), and a bar badged <strong>No bill</strong> is a stretch of days no
-          bill in this file covers. Solid bars are what you were actually charged.
+          {t('money.flaggedExplainerA')}
+          <strong>{t('money.badge.estimate')}</strong>
+          {t('money.flaggedExplainerB')}
+          <strong>{t('money.badge.noBill')}</strong>
+          {t('money.flaggedExplainerC')}
         </p>
       )}
 
@@ -481,10 +490,10 @@ export default function MoneyStackedChart({
           role="img"
           aria-label={
             mode === 'usage'
-              ? 'Stacked bar chart of billed kilowatt-hours per billing period'
+              ? t('money.ariaUsage')
               : isShare
-                ? 'One hundred percent composition bar for each billing period'
-                : 'Stacked bar chart of charges per billing period'
+                ? t('money.ariaShare')
+                : t('money.ariaDollars')
           }
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -693,18 +702,23 @@ export default function MoneyStackedChart({
               data-testid="money-overlay-lines"
               className="font-black uppercase text-black text-[10px]"
             >
-              {overlay.lines.map((l) => `${l.label} ${money(l.amount)}`).join(' · ')} · you paid{' '}
-              {money(overlay.actual)}
+              {overlay.lines.map((l) => `${l.label} ${money(l.amount)}`).join(' · ')} ·{' '}
+              {t('money.youPaidLower')} {money(overlay.actual)}
             </div>
             <div>
-              Lines cover {overlay.covered} of {overlay.periods} billing period
-              {overlay.periods === 1 ? '' : 's'} (fully-covered ones only), modelled with{' '}
-              {overlay.chargesSource === 'bill' ? "your bill's own" : 'your typed'} delivery /
-              regulatory / HST rates
+              {t('money.overlayCover', {
+                covered: overlay.covered,
+                periods: overlay.periods,
+                charges:
+                  overlay.chargesSource === 'bill'
+                    ? t('money.chargesOwn')
+                    : t('money.chargesTyped'),
+              })}
               {overlay.rebateRate !== null
-                ? ` plus the observed rebate (${(overlay.rebateRate * 100).toFixed(1)}% of the subtotal)`
+                ? t('money.overlayRebate', {
+                    pct: fmtPercent(overlay.rebateRate * 100, 1),
+                  })
                 : ''}
-              .
             </div>
             {overlay.assumptions.map((a) => (
               <div key={a}>— {a}</div>
@@ -715,51 +729,53 @@ export default function MoneyStackedChart({
 
       {isShare && share !== null && (
         <div className="mt-3 text-[10px] md:text-[11px] font-bold normal-case text-slate-600">
-          Each bar is 100% of that period&apos;s charges <em>before</em> the rebate (a credit has no
-          share of a bill — it reduces it). Per dollar charged across these periods:{' '}
+          {t('money.shareExplainerA')} <em>{t('money.shareExplainerB')}</em>{' '}
+          {t('money.shareExplainerC')}{' '}
           <strong>
-            {share.commodityPct.toFixed(1)}¢ electricity · {share.deliveryPct.toFixed(1)}¢ delivery ·{' '}
-            {share.regulatoryPct.toFixed(1)}¢ regulatory · {share.taxPct.toFixed(1)}¢ HST
+            {share.commodityPct.toFixed(1)}¢ {t('money.shareElectricity')} ·{' '}
+            {share.deliveryPct.toFixed(1)}¢ {t('money.shareDelivery')} ·{' '}
+            {share.regulatoryPct.toFixed(1)}¢ {t('money.shareRegulatory')} ·{' '}
+            {share.taxPct.toFixed(1)}¢ {t('money.shareTax')}
           </strong>
-          , then the rebate hands back {share.rebatePct.toFixed(1)}¢.
+          {t('money.shareExplainerD', { rebate: share.rebatePct.toFixed(1) })}
         </div>
       )}
 
       {/* Raw numbers, so the chart is never the only way to read the data. */}
       <div className="mt-4 overflow-x-auto" data-testid="money-table">
         <table className="w-full min-w-[680px] text-[10px] md:text-xs font-black">
-          <caption className="sr-only">Charges per billing period</caption>
+          <caption className="sr-only">{t('money.tableCaption')}</caption>
           <thead>
             <tr className="border-b-4 border-black text-left">
-              <th className="py-1 pr-2 uppercase">Period</th>
+              <th className="py-1 pr-2 uppercase">{t('money.colPeriod')}</th>
               {hasPlanColumn && (
                 <th className="py-1 pr-2 uppercase" data-testid="money-plan-head">
-                  Plan
+                  {t('money.colPlan')}
                 </th>
               )}
               {activeKeys.map((k) => (
                 <th key={k} className="py-1 px-2 uppercase text-right">
-                  {COST_SLICE_META[k as keyof typeof COST_SLICE_META].short}
+                  {t(COST_SLICE_META[k as keyof typeof COST_SLICE_META].shortKey)}
                 </th>
               ))}
               <th className="py-1 px-2 uppercase text-right">
-                {mode === 'usage' ? 'Billed' : 'You paid'}
+                {mode === 'usage' ? t('money.billed') : t('money.youPaid')}
               </th>
               {mode !== 'usage' && (
                 <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
                   <span className="inline-flex items-center gap-1 justify-end">
-                    Est. total
+                    {t('money.estTotal')}
                     <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 border-black">
-                      Estimate
+                      {t('money.badge.estimate')}
                     </span>
                   </span>
                 </th>
               )}
               <th
                 className="py-1 px-2 uppercase text-right"
-                title="Share of this period's days that carry readings — how solid the numbers beside it are."
+                title={t('money.coverageTitle')}
               >
-                Data coverage
+                {t('money.colCoverage')}
               </th>
             </tr>
           </thead>
@@ -776,7 +792,7 @@ export default function MoneyStackedChart({
                         data-testid="money-row-badge"
                         className={`text-[8px] px-1.5 py-0.5 border-2 rounded ${badge.cls}`}
                       >
-                        {badge.text}
+                        {t(badge.key)}
                       </span>
                     )}
                   </span>
@@ -822,7 +838,7 @@ export default function MoneyStackedChart({
                        claim that the utility has billed these days. */
                     <span data-testid="money-open-total">
                       <span className="block text-[8px] text-slate-500 normal-case font-bold">
-                        Est. commodity
+                        {t('money.estCommodity')}
                       </span>
                       ~{money(Number(r.total ?? 0))}
                     </span>
@@ -842,14 +858,14 @@ export default function MoneyStackedChart({
                     ) : r.kind === 'open' ? (
                       <span
                         className="text-slate-400"
-                        title="No delivery / regulatory / HST rates saved yet — add them on the True Bill card and this fills in."
+                        title={t('money.noRatesTitle')}
                       >
                         —
                       </span>
                     ) : (
                       <span
                         className="text-slate-400"
-                        title="A billed period already knows its total — that is the column beside this one."
+                        title={t('money.billedKnownTitle')}
                       >
                         —
                       </span>

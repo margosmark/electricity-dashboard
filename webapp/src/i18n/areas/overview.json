@@ -132,7 +132,17 @@
     "efficiency.subtitle": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded",
     "efficiency.exclTax": "excl. tax",
     "efficiency.inclTax": "incl. tax",
-    "efficiency.firstLast": "{firstLabel}: {firstExcl} excl · {firstIncl} incl → {lastLabel}: {lastExcl} excl · {lastIncl} incl"
+    "efficiency.firstLast": "{firstLabel}: {firstExcl} excl · {firstIncl} incl → {lastLabel}: {lastExcl} excl · {lastIncl} incl",
+    "bgRefresh.newRates": "New OEB rates in effect — re-comparing your plans",
+    "bgRefresh.newRatesTitle": "New Ontario energy rates",
+    "bgRefresh.newRatesBody": "Rates effective {date} are in your readings — the dashboard is re-comparing your plans.",
+    "bgRefresh.planChanged": "Best plan changed to {plan}",
+    "bgRefresh.planChangedBody": "Your readings now put {plan} ~{amount}/mo ahead of {previous}. Open the dashboard to re-compare all three plans.",
+    "bgRefresh.cardHeadline": "Your best plan changed: {best} now saves ~{amount}/mo vs {previous}",
+    "bgRefresh.cardSwitch": "You are on {current} — switching to {best} is ~{amount}/mo on these readings.",
+    "bgRefresh.cardRecomputed": "Recomputed across {kwh} kWh of readings after the latest refresh.",
+    "axis.weekOf": "Week of {date}",
+    "touShift.fixedSchedule": "Looks like a fixed-schedule load (EV timer / appliance cycle)"
   },
   "fr": {
     "legal.commodityShort": "charges d’électricité (variables) seulement — ni distribution, ni charges réglementaires, ni TVH",
@@ -267,6 +277,16 @@
     "efficiency.subtitle": "TOUTES les charges d’électricité (commodité + distribution + réglementaire) ÷ kWh facturés — TVH exclue",
     "efficiency.exclTax": "HT",
     "efficiency.inclTax": "TTC",
-    "efficiency.firstLast": "{firstLabel} : {firstExcl} HT · {firstIncl} TTC → {lastLabel} : {lastExcl} HT · {lastIncl} TTC"
+    "efficiency.firstLast": "{firstLabel} : {firstExcl} HT · {firstIncl} TTC → {lastLabel} : {lastExcl} HT · {lastIncl} TTC",
+    "bgRefresh.newRates": "Nouveaux tarifs CEO en vigueur — comparaison de vos forfaits en cours",
+    "bgRefresh.newRatesTitle": "Nouveaux tarifs de l’énergie en Ontario",
+    "bgRefresh.newRatesBody": "Les tarifs en vigueur depuis le {date} figurent dans vos relevés — le tableau de bord recompare vos forfaits.",
+    "bgRefresh.planChanged": "Meilleur forfait : {plan}",
+    "bgRefresh.planChangedBody": "Vos relevés placent désormais {plan} à ~{amount}/mois devant {previous}. Ouvrez le tableau de bord pour recomparez les trois forfaits.",
+    "bgRefresh.cardHeadline": "Votre meilleur forfait a changé : {best} économise désormais ~{amount}/mois par rapport à {previous}",
+    "bgRefresh.cardSwitch": "Vous êtes sur {current} — passer à {best} économiserait ~{amount}/mois sur ces relevés.",
+    "bgRefresh.cardRecomputed": "Recalculé sur {kwh} kWh de relevés après la dernière mise à jour.",
+    "axis.weekOf": "Semaine du {date}",
+    "touShift.fixedSchedule": "Semble être une charge à horaire fixe (minuteur de VE / cycle d’appareil)"
   }
 }

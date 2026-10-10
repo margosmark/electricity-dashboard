@@ -96,7 +96,7 @@ export const ESTIMATE_KEY_LABEL = 'Money your meter has used, not yet a bill';
 /* Wave U — every user-visible reason/note in this file comes from the
  * locale catalog at call time; the bucket keys and classifier regexes stay
  * canonical English (they are data). */
-import { t } from '@/i18n';
+import { fmtMoney, fmtNumber, t } from '@/i18n';
 /** Wave U — the catalog key the display layer translates instead. */
 export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
 
@@ -805,23 +805,28 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
     .filter((i) => i.measurement && /usage$/.test(i.note.trim().toLowerCase()))
     .reduce((n, i) => n + (i.measurement?.scaled ?? 0), 0);
   const perKwh = (amount: number) =>
-    kwh > 0 ? ` — ${((amount / kwh) * 100).toFixed(2)}¢/kWh across ${kwh.toFixed(0)} kWh` : '';
+    kwh > 0
+      ? t('wf.perKwhSuffix', {
+          cents: fmtNumber((amount / kwh) * 100, 2),
+          kwh: kwh.toFixed(0),
+        })
+      : '';
 
   push(
     'commodity',
-    'Commodity',
+    t('wf.commodity'),
     'start',
     totals.commodity,
-    `The electricity itself${perKwh(totals.commodity)}.`,
+    t('wf.commodityDetail', { suffix: perKwh(totals.commodity) }),
   );
   if (totals.delivery !== 0) {
-    push('delivery', 'Delivery', 'add', totals.delivery, `Bringing it to you${perKwh(totals.delivery)}.`);
+    push('delivery', t('wf.delivery'), 'add', totals.delivery, t('wf.deliveryDetail', { suffix: perKwh(totals.delivery) }));
   }
   if (totals.regulatory !== 0) {
-    push('regulatory', 'Regulatory', 'add', totals.regulatory, `Provincial charges${perKwh(totals.regulatory)}.`);
+    push('regulatory', t('wf.regulatory'), 'add', totals.regulatory, t('wf.regulatoryDetail', { suffix: perKwh(totals.regulatory) }));
   }
   if (totals.other !== 0) {
-    push('other', 'Other lines', 'add', totals.other, 'Lines the file does not classify.');
+    push('other', t('wf.otherLines'), 'add', totals.other, t('wf.otherDetail'));
   }
 
   // The utility's own subtotal. When its stated total and its own itemized
@@ -833,30 +838,30 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
   if (stated !== null) {
     const gap = round2(stated - running);
     if (Math.abs(gap) > 0.005) {
-      push('gap', 'Not itemized', 'add', gap, 'The stated total minus the itemized lines above.');
+      push('gap', t('wf.notItemized'), 'add', gap, t('wf.gapDetail'));
     }
     push(
       'subtotal',
-      'Total electricity charges',
+      t('delta.total'),
       'subtotal',
       stated,
-      'The utility’s own "Total Electricity Charges" line — before HST and the rebate.',
+      t('wf.subtotalStated'),
     );
   } else {
     push(
       'subtotal',
-      'Subtotal',
+      t('wf.subtotal'),
       'subtotal',
       running,
-      'The itemized lines above (this file states no "Total Electricity Charges" line).',
+      t('wf.subtotalItemized'),
     );
   }
 
   if (totals.tax !== 0) {
-    push('tax', 'HST', 'add', totals.tax, 'The tax line as the file states it.');
+    push('tax', t('slice.tax'), 'add', totals.tax, t('wf.taxDetail'));
   }
   if (totals.credit !== 0) {
-    push('credit', 'OEB rebate', 'credit', totals.credit, 'Money back — the Ontario Electricity Rebate.');
+    push('credit', t('wf.oebRebate'), 'credit', totals.credit, t('wf.creditDetail'));
   }
 
   // Land on the bill's OWN payable figure. If these steps have not reached it
@@ -865,19 +870,19 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
   const payable = totals.payable;
   const drift = round2(payable - running);
   if (Math.abs(drift) > 0.005) {
-    push('drift', 'Not itemized', 'add', drift, 'The gap between the steps above and this bill’s own amount due.');
+    push('drift', t('wf.notItemized'), 'add', drift, t('wf.driftDetail'));
   }
 
   const amountDueNote =
     totals.amountDue !== null && Math.abs(totals.amountDue - payable) > 0.005
-      ? ` The file's own "Amount Due" line is $${totals.amountDue.toFixed(2)} — it may carry a balance forward.`
+      ? t('wf.amountDueNote', { amount: fmtMoney(totals.amountDue) })
       : '';
   push(
     'payable',
-    'Amount due',
+    t('wf.amountDue'),
     'total',
     payable,
-    `Total + HST − rebate: what this period cost.${amountDueNote}`,
+    `${t('wf.payableDetail')}${amountDueNote}`,
   );
 
   return {

@@ -18,6 +18,8 @@
  *  - `cleanup` — the write landed but a follow-up cleanup step did not.
  */
 
+/* Wave U — storage failures are surfaced in the UI, so they translate. */
+import { t } from '@/i18n';
 import type { DataPoint } from './energy';
 
 export const SCHEMA_VERSION = 2;
@@ -119,8 +121,8 @@ function safeSetItem(key: string, value: string): WriteOutcome {
     localStorage.setItem(key, value);
     return { ok: true };
   } catch (err) {
-    const reason = isQuotaError(err) ? 'QuotaExceeded' : 'Write failed';
-    return { ok: false, detail: `${reason} storing "${key}": ${describeError(err)}` };
+    const reason = isQuotaError(err) ? t('storage.reasonQuota') : t('storage.reasonWrite');
+    return { ok: false, detail: t('storage.writeFail', { reason, key, detail: describeError(err) }) };
   }
 }
 
@@ -128,7 +130,7 @@ function safeGetItem(key: string): StorageResult<string | null> {
   try {
     return ok(localStorage.getItem(key));
   } catch (err) {
-    return fail<string | null>('quota', `Cannot read browser storage ("${key}"): ${describeError(err)}`);
+    return fail<string | null>('quota', t('storage.readFail', { key, reason: describeError(err) }));
   }
 }
 
@@ -202,7 +204,7 @@ function loadLegacy(): StorageResult<StoredPayload | null> {
     // a warning so the UI can tell the user to export before it is lost.
     warnings.push({
       kind: 'quota',
-      detail: `Legacy data could not be migrated to browser storage — ${written.detail}`,
+      detail: t('storage.migrateFail', { reason: written.detail }),
     });
     return ok<StoredPayload | null>(payload, warnings);
   }
@@ -212,7 +214,7 @@ function loadLegacy(): StorageResult<StoredPayload | null> {
   } catch (err) {
     warnings.push({
       kind: 'cleanup',
-      detail: `Migration written, but the legacy "${LEGACY_ENERGY_KEY}" copy could not be removed: ${describeError(err)}`,
+      detail: t('storage.migrateCleanupFail', { key: LEGACY_ENERGY_KEY, reason: describeError(err) }),
     });
   }
 
@@ -227,7 +229,7 @@ export type SaveOptions = {
 /** Persist points under the versioned key. Quota failures come back as `{ok:false, reason:'quota'}`. */
 export function saveEnergyData(points: DataPoint[], options: SaveOptions = {}): StorageResult<StoredPayload> {
   if (!Array.isArray(points) || !points.every(isDataPoint)) {
-    return fail<StoredPayload>('corrupt', 'Refusing to save: every point must be { timestamp: number, usage_kwh: number }');
+    return fail<StoredPayload>('corrupt', t('storage.errSaveShape'));
   }
 
   const payload = buildPayload(points, options.source ?? 'upload', options.uploadedAt);
@@ -269,7 +271,7 @@ export function loadBillingDay(): StorageResult<number | null> {
 
 export function saveBillingDay(day: number): StorageResult<number> {
   if (!Number.isInteger(day) || day < 1 || day > 31) {
-    return fail<number>('corrupt', `Billing day must be an integer between 1 and 31, got ${String(day)}`);
+    return fail<number>('corrupt', t('storage.errBillingDay', { got: String(day) }));
   }
   const written = safeSetItem(BILLING_DAY_KEY, String(day));
   if (!written.ok) return fail<number>('quota', written.detail);
@@ -281,7 +283,7 @@ export function saveBillingDay(day: number): StorageResult<number> {
 /** Serialize the current payload for download. Works from in-memory points even if the last save failed. */
 export function exportEnergyData(points: DataPoint[], source = 'export'): StorageResult<string> {
   if (!Array.isArray(points) || !points.every(isDataPoint)) {
-    return fail<string>('corrupt', 'Refusing to export: every point must be { timestamp: number, usage_kwh: number }');
+    return fail<string>('corrupt', t('storage.errExportShape'));
   }
   try {
     return ok(JSON.stringify(buildPayload(points, source), null, 2));
@@ -302,19 +304,19 @@ export function parseImport(text: string): StorageResult<StoredPayload> {
   if (Array.isArray(parsed)) {
     const points = parsePointsArray(parsed);
     if (!points) {
-      return fail<StoredPayload>('corrupt', 'Import file is an array, but not every entry is { timestamp, usage_kwh }');
+      return fail<StoredPayload>('corrupt', t('storage.errImportArrayShape'));
     }
     return ok(buildPayload(points, 'import'));
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return fail<StoredPayload>('corrupt', 'Import file must be an exported payload object or an array of points');
+    return fail<StoredPayload>('corrupt', t('storage.errImportKind'));
   }
 
   const obj = parsed as Record<string, unknown>;
   const points = parsePointsArray(obj.points);
   if (!points) {
-    return fail<StoredPayload>('corrupt', 'Import file has no valid "points" array of { timestamp, usage_kwh }');
+    return fail<StoredPayload>('corrupt', t('storage.errImportNoPoints'));
   }
 
   const uploadedAt =
@@ -358,7 +360,7 @@ function removeKeys(keys: readonly string[]): StorageResult<string[]> {
         removed.push(key);
       }
     } catch (err) {
-      return fail<string[]>('quota', `Reset could not remove "${key}": ${describeError(err)}`);
+      return fail<string[]>('quota', t('storage.errReset', { key, reason: describeError(err) }));
     }
   }
   return ok(removed);
