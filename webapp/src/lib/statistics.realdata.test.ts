@@ -19,12 +19,19 @@
  *   • the VERDICT reads the usage component, which is flat on this data
  *     (−0.006¢/period inside a 0.033¢ error bar) — the old two-way split
  *     reported "IMPROVING −0.2¢" here off the delivery term alone.
+ *
+ * And (kanban t_4f100918) the tax dimension of every one of those numbers:
+ *   • each bill's tax line is its own 13% of Total Electricity Charges, so
+ *     the all-time figure is 16.26¢ excl. tax and 18.37¢ incl. tax — both
+ *     computed from the file, neither scaled from the other;
+ *   • the verdict and the split are untouched by the tax line, because a
+ *     constant multiplier moves no slope.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 
 import { parseUsageSummaries, type RateSet } from './energy';
-import { buildEfficiency } from './statistics';
+import { buildEfficiency, impliedTaxPct } from './statistics';
 
 const XML = process.env.WAVE_S_XML;
 const describeReal = XML ? describe : describe.skip;
@@ -83,6 +90,62 @@ describeReal('split hygiene on the owner’s real export', () => {
     // Aug 2025: billed 7.6/12.2/15.8 against today's 9.8/15.7/20.3 → −2.76¢.
     const aug2025 = periods.find((p) => p.startDate === '2025-08-26')!;
     expect(aug2025.rateCents).toBeCloseTo(-2.761, 2);
+  });
+
+  it('prices every bill with its own tax line, and the all-time pair matches the audit', () => {
+    const { periods, allTime } = report();
+    // Independent Python audit (evidence/wave-u-efficiency-tax-audit.py):
+    // ΣTotal Electricity Charges $6,114.64, ΣHST $794.90, ΣkWh 37,611.1.
+    expect(allTime!.cost).toBeCloseTo(6114.64, 2);
+    expect(allTime!.tax).toBeCloseTo(794.90, 2);
+    expect(allTime!.kwh).toBeCloseTo(37611.1, 1);
+    // 6,114.64 ÷ 37,611.1 = 16.2575¢ excl. — the figure the card has always
+    // shipped, now named for what it is. 6,909.54 ÷ 37,611.1 = 18.3710¢
+    // incl. — the same bills with the tax line added back over the same kWh.
+    expect(allTime!.cents).toBeCloseTo(16.2575, 3);
+    expect(allTime!.centsInclTax).toBeCloseTo(18.3710, 3);
+
+    // Per bill: the tax line is 13% of Total Electricity Charges to within
+    // the cent the utility rounded it to (largest observed gap on this file
+    // is 0.86¢), and the incl-tax ¢/kWh is that bill's own two lines over
+    // its own kWh — never a scaled copy of the pre-tax figure.
+    let worstTaxGap = 0;
+    for (const p of periods) {
+      worstTaxGap = Math.max(worstTaxGap, Math.abs(p.tax - p.cost * 0.13));
+      expect(p.centsInclTax).toBeCloseTo(((p.cost + p.tax) / p.kwh) * 100, 10);
+      expect(p.centsInclTax).toBeGreaterThan(p.cents);
+    }
+    expect(worstTaxGap).toBeLessThan(0.01);
+    // Spot check three bills across both rate regimes and both seasons.
+    const pick = (d: string) => periods.find((p) => p.startDate === d)!;
+    expect(pick('2024-08-26').cents).toBeCloseTo(15.8965, 3);
+    expect(pick('2024-08-26').centsInclTax).toBeCloseTo(17.9628, 3);
+    expect(pick('2025-07-25').cents).toBeCloseTo(13.9330, 3);
+    expect(pick('2025-07-25').centsInclTax).toBeCloseTo(15.7443, 3);
+    // The winter bill, the most expensive kWh on the file, in both readings.
+    const jan = pick('2026-01-27');
+    expect(jan.cents).toBeCloseTo(19.3501, 3);
+    // Computed from the bill's own two lines over its own kWh. On this file
+    // that happens to agree with 19.3501 × 1.13 to four decimals, because
+    // every bill really is 13% — the sum path is what runs regardless, so a
+    // file with a different or missing tax line still comes out right.
+    expect(jan.centsInclTax).toBeCloseTo(
+      ((jan.cost + jan.tax) / jan.kwh) * 100,
+      10,
+    );
+    expect(jan.centsInclTax).toBeCloseTo(21.8657, 3);
+  });
+
+  it('leaves the verdict and the split untouched by the tax line', () => {
+    const trend = report().trend;
+    // The tax line scales every ¢/kWh by the same ~1.13, so no slope and no
+    // verdict can move: the pre-tax fits asserted above stand unchanged,
+    // which is exactly why the incl-tax headline needs no refit.
+    expect(trend.net!.slope).toBeCloseTo(0.0552, 3);
+    expect(trend.usage!.slope).toBeCloseTo(-0.0061, 2);
+    expect(trend.verdict).toBe('stable');
+    // The implied rate is read off the bills: 794.90 ÷ 6,114.64 = 13.0%.
+    expect(impliedTaxPct(report().allTime)).toBe(13.0);
   });
 
   it('reproduces the audit’s three slopes and keeps the verdict on usage', () => {

@@ -1,0 +1,304 @@
+{
+  "wave": "U-efficiency-tax",
+  "scope": "¢/kWh numerator honesty — subtitle, excl/incl pair, tax footnote",
+  "base": "http://127.0.0.1:3107/",
+  "deploy": null,
+  "fixture": "doc_0d82612a6e96_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
+  "fixtureSha256": "6a3f0e14040d825ee4123f6d3e7b134e7eb99831e26196a582fea676de4d6e28",
+  "fixtureBytes": 807118,
+  "at": "2026-10-10T21:38:28.442Z",
+  "tz": "America/Toronto",
+  "subtitle": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded",
+  "audit": {
+    "bills": 3,
+    "cost": 1365.03,
+    "tax": 177.46,
+    "kwh": 8083.8,
+    "cents": 16.886,
+    "centsInclTax": 19.0812,
+    "taxPct": 13.0004
+  },
+  "dom": {
+    "subtitle": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded",
+    "headline": {
+      "data-cents": "16.89",
+      "data-cents-incl-tax": "19.08",
+      "data-tax": "177.46",
+      "excl": {
+        "text": "16.9¢/kWh",
+        "label": "16.9¢/kWhexcl. tax"
+      },
+      "incl": {
+        "text": "19.1¢/kWh",
+        "cents": "19.08",
+        "label": "19.1¢/kWhincl. tax"
+      },
+      "billLabel": "All time · 3 bills16.9¢/kWhexcl. tax19.1"
+    },
+    "footnote": {
+      "text": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers.",
+      "pct": "13"
+    },
+    "strip": {
+      "text": "¢/kWh · ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excludedAll time16.9¢excl. tax19.1¢incl. taxIn view16.7¢excl. tax18.9¢incl. tax3 bills · 1 in view",
+      "subtitleHasTaxExcluded": true,
+      "subtitleHasAllCharges": true,
+      "allTime": {
+        "data-cents": "16.89",
+        "data-bills": "3"
+      },
+      "allTimeIncl": {
+        "data-cents": "19.08"
+      },
+      "inView": {
+        "data-cents": "16.74",
+        "data-bills": "1"
+      },
+      "inViewIncl": {
+        "data-cents": "18.91"
+      }
+    },
+    "range": {
+      "text": "May 2026: 17.1¢ excl · 19.4¢ incl → Jul 2026: 16.7¢ excl · 18.9¢ inclOpen the Money tab →",
+      "data-first-cents": "17.13",
+      "data-first-cents-incl-tax": "19.36",
+      "data-last-cents": "16.74",
+      "data-last-cents-incl-tax": "18.91"
+    },
+    "points": [
+      {
+        "start": "2026-05-25",
+        "cents": "17.13",
+        "centsInclTax": "19.36",
+        "tax": "59.07",
+        "kwh": "2651.7"
+      },
+      {
+        "start": "2026-06-23",
+        "cents": "16.79",
+        "centsInclTax": "18.98",
+        "tax": "60.92",
+        "kwh": "2790.4"
+      },
+      {
+        "start": "2026-07-22",
+        "cents": "16.74",
+        "centsInclTax": "18.91",
+        "tax": "57.47",
+        "kwh": "2641.7"
+      }
+    ],
+    "chip": null,
+    "inOverview": true
+  },
+  "total": 41,
+  "passed": 41,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "audit sees bills",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "audit: every bill carries a tax line",
+      "ok": true,
+      "detail": "0 without"
+    },
+    {
+      "name": "audit: the implied rate rounds to 13.0%",
+      "ok": true,
+      "detail": "13.0004%"
+    },
+    {
+      "name": "audit: incl = Σ(cost+tax) ÷ ΣkWh exactly (±0.0001)",
+      "ok": true,
+      "detail": "19.0812 vs 19.0812"
+    },
+    {
+      "name": "audit: incl > excl on every bill",
+      "ok": true,
+      "detail": "3 bills"
+    },
+    {
+      "name": "the card subtitle names the charges, the divisor and the exclusion",
+      "ok": true,
+      "detail": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded"
+    },
+    {
+      "name": "the card subtitle says \"tax excluded\"",
+      "ok": true,
+      "detail": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded"
+    },
+    {
+      "name": "the card subtitle names all three charge classes",
+      "ok": true,
+      "detail": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded"
+    },
+    {
+      "name": "the card is on Overview",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "all-time EXCL. TAX prints 16.9¢",
+      "ok": true,
+      "detail": "16.9¢/kWh (data-cents 16.89)"
+    },
+    {
+      "name": "all-time excl. tax == the audit (±0.011)",
+      "ok": true,
+      "detail": "16.89 vs 16.8860"
+    },
+    {
+      "name": "all-time INCL. TAX prints 19.1¢",
+      "ok": true,
+      "detail": "19.1¢/kWh (data-cents 19.08)"
+    },
+    {
+      "name": "all-time incl. tax == the audit (±0.011)",
+      "ok": true,
+      "detail": "19.08 vs 19.0812"
+    },
+    {
+      "name": "the excl figure is LABELLED \"excl. tax\"",
+      "ok": true,
+      "detail": "16.9¢/kWhexcl. tax"
+    },
+    {
+      "name": "the incl figure is LABELLED \"incl. tax\"",
+      "ok": true,
+      "detail": "19.1¢/kWhincl. tax"
+    },
+    {
+      "name": "BOTH figures live in the same headline block (not a toggle)",
+      "ok": true,
+      "detail": "excl 16.9¢/kWh · incl 19.1¢/kWh"
+    },
+    {
+      "name": "headline block carries the tax dollars the file states",
+      "ok": true,
+      "detail": "177.46 vs 177.46"
+    },
+    {
+      "name": "the bill count still reads 3",
+      "ok": true,
+      "detail": "All time · 3 bills16.9¢/kWhexcl. tax19.1"
+    },
+    {
+      "name": "incl ÷ excl == Σ(cost+tax) ÷ Σcost, both at the published 2dp (±1e-9)",
+      "ok": true,
+      "detail": "1.129663 vs 1.129663"
+    },
+    {
+      "name": "the incl figure is derived from the file's dollars, not scaled (±0.011)",
+      "ok": true,
+      "detail": "19.08 vs 19.0812"
+    },
+    {
+      "name": "the footnote quotes the file's own rate (13.0%)",
+      "ok": true,
+      "detail": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers."
+    },
+    {
+      "name": "the footnote's data attribute is the audit's rate (±0.01)",
+      "ok": true,
+      "detail": "13 vs 13.0004"
+    },
+    {
+      "name": "the footnote says the incl figure adds the line back over the same kWh",
+      "ok": true,
+      "detail": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers."
+    },
+    {
+      "name": "the footnote says water and gas are billed separately",
+      "ok": true,
+      "detail": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers."
+    },
+    {
+      "name": "the footnote says those are never in these numbers",
+      "ok": true,
+      "detail": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers."
+    },
+    {
+      "name": "the footnote leaks no undefined/NaN",
+      "ok": true,
+      "detail": "HST on your bills is 13.0%; the incl.-tax figure adds that line back over the same kWh. Water and gas are billed separately and are never in these numbers."
+    },
+    {
+      "name": "the totals strip uses the SAME subtitle",
+      "ok": true,
+      "detail": "¢/kWh · ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excludedAll time16.9¢excl. tax19."
+    },
+    {
+      "name": "the strip restates the all-time EXCL figure identically",
+      "ok": true,
+      "detail": "16.89 vs 16.89"
+    },
+    {
+      "name": "the strip restates the all-time INCL figure identically",
+      "ok": true,
+      "detail": "19.08 vs 19.08"
+    },
+    {
+      "name": "the strip labels both readings excl/incl",
+      "ok": true,
+      "detail": "¢/kWh · ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excludedAll time16.9¢excl. tax19.1¢incl. taxIn view16.7¢excl. tax18.9¢inc"
+    },
+    {
+      "name": "the strip carries the bill count",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "the in-view block carries BOTH readings too",
+      "ok": true,
+      "detail": "excl 16.74 / incl 18.91"
+    },
+    {
+      "name": "no view disagrees: in-view bills == the bills its incl figure covers",
+      "ok": true,
+      "detail": "1 bills"
+    },
+    {
+      "name": "the mini-line draws 3 bills",
+      "ok": true,
+      "detail": "3 vs 3"
+    },
+    {
+      "name": "every drawn bill matches the audit on excl, incl AND tax (±0.011)",
+      "ok": true,
+      "detail": "0 mismatches"
+    },
+    {
+      "name": "every drawn bill carries a non-null incl-tax figure",
+      "ok": true,
+      "detail": "3 points"
+    },
+    {
+      "name": "the range line prints both readings at both endpoints",
+      "ok": true,
+      "detail": "May 2026: 17.1¢ excl · 19.4¢ incl → Jul 2026: 16.7¢ excl · 18.9¢ inclOpen the Money tab →"
+    },
+    {
+      "name": "the range line carries the incl-tax endpoints as data",
+      "ok": true,
+      "detail": "first 19.36 / last 18.91"
+    },
+    {
+      "name": "a short file still earns the stat with no verdict (trend floor)",
+      "ok": true,
+      "detail": "3 bills, no chip"
+    },
+    {
+      "name": "mobile: both headline readings still render",
+      "ok": true,
+      "detail": "excl 16.89 / incl 19.08"
+    },
+    {
+      "name": "mobile: the subtitle still says tax excluded",
+      "ok": true,
+      "detail": "ALL electricity charges (commodity + delivery + regulatory) ÷ billed kWh — tax excluded"
+    }
+  ]
+}
