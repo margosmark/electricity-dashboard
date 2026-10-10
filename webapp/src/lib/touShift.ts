@@ -194,7 +194,7 @@ export function classifyBlock(input: BlockClassificationInput): BlockClassificat
   if (span >= FIXED_MIN_SPAN_HOURS && flatAcrossHours && steadyAcrossWeeks && sameWindowMostWeeks) {
     return {
       signature: 'fixed-schedule',
-      label: 'Looks like a fixed-schedule load (EV timer / appliance cycle)',
+      label: t('touShift.fixedSchedule'),
       detail: `${span}h in the same slot ${weeksSeen}/5 weeks, flat across every hour (±${pct(intraBlockCv)})`,
     };
   }
