@@ -8,7 +8,8 @@
  *
  * This page parses the payload with the app's own Green Button parser (the
  * exact code path the upload modal uses, so a file that loads here loads
- * there), then writes `energy_data` through the same contract. The one thing
+ * there), then writes the readings through the same storage contract the
+ * dashboard reads (versioned `energy_data_v2`, legacy key migrated). The one thing
  * it adds is a promise the upload flow makes implicitly and this one states
  * out loud: **existing readings are never overwritten without a merge
  * review.** With an empty profile it imports straight away, because there is
@@ -20,6 +21,8 @@
 
 'use client';
 
+/* Wave U — user-visible copy translates; lib code reads the module locale. */
+import { useTranslation } from "@/i18n";
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -36,11 +39,11 @@ import {
   decodeImportPayload,
   mergeForWrite,
   planImport,
-  readStoredRows,
   type ImportPlan,
 } from '@/lib/importPlan';
-
-const ENERGY_KEY = 'energy_data';
+// The readings live under the versioned key; storage.ts owns the read, the
+// legacy-key migration and the write (the dashboard reads exactly this).
+import { loadEnergyData, saveEnergyData } from '@/lib/storage';
 
 /** Only the failure branch is ever rendered as an error box. */
 type FailedDiagnostic = Extract<ParseDiagnostic, { ok: false }>;
@@ -55,14 +58,14 @@ const BTN =
 
 function loadStored(): DataPoint[] {
   if (typeof window === 'undefined') return [];
-  try {
-    return readStoredRows(window.localStorage.getItem(ENERGY_KEY));
-  } catch {
-    return [];
-  }
+  // Unreadable storage reads as "no existing rows" — this page's safe
+  // default, since there is then nothing to merge with or overwrite.
+  const stored = loadEnergyData();
+  return stored.ok && stored.value ? stored.value.points : [];
 }
 
 function ImportFlow() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -85,18 +88,20 @@ function ImportFlow() {
    */
   const commit = useCallback(
     (rows: DataPoint[]) => {
+      const saved = saveEnergyData(rows, { source: 'import-page' });
+      if (!saved.ok) {
+        window.alert(t('backup.errRefused', { detail: saved.detail }));
+        return;
+      }
       try {
-        window.localStorage.setItem(ENERGY_KEY, JSON.stringify(rows));
         window.localStorage.removeItem(EXAMPLE_DATA_KEY);
       } catch {
-        window.alert(
-          'This browser refused to save the readings (storage may be full or blocked). Nothing was changed.',
-        );
-        return;
+        // The flag is bookkeeping; the readings above are what matters.
       }
       router.push('/');
     },
-    [router],
+    // Wave U — `t` in deps so the saved-failure alert recomputes on a switch.
+    [router, t],
   );
 
   /** Everything a confirmed write needs is computed here; nothing writes. */
@@ -104,9 +109,9 @@ function ImportFlow() {
     if (incoming.length === 0) {
       setIssue({
         ok: false,
-        headline: 'No readings found in that file.',
-        detail: 'The document parsed but carried no interval readings to import.',
-        hints: ['Export Green Button XML with interval data from your utility portal.'],
+        headline: t('upload.noReadingsHeadline'),
+        detail: t('upload.noReadingsDetailParsed'),
+        hints: [t('upload.noReadingsHint')],
       });
       return;
     }
@@ -116,7 +121,8 @@ function ImportFlow() {
       return;
     }
     setPlan({ plan: planImport(existing, incoming), incoming, existing });
-  }, [commit]);
+    // Wave U — `t` in deps so the diagnostics recompute on a language switch.
+  }, [commit, t]);
 
   const ingestText = useCallback(
     (text: string) => {
@@ -132,10 +138,9 @@ function ImportFlow() {
             diag.ok
               ? {
                   ok: false,
-                  headline: 'No readings found in that file.',
-                  detail:
-                    'The document was read successfully but carried no interval readings to import.',
-                  hints: ['Export Green Button XML with interval data from your utility portal.'],
+                  headline: t('upload.noReadingsHeadline'),
+                  detail: t('upload.noReadingsDetail'),
+                  hints: [t('upload.noReadingsHint')],
                 }
               : diag,
           );
@@ -153,9 +158,9 @@ function ImportFlow() {
           diag.ok
             ? {
                 ok: false,
-                headline: 'That file could not be read.',
+                headline: t('upload.couldNotReadPlain'),
                 detail: String((e as Error)?.message ?? e),
-                hints: ['Re-download the export and try again.'],
+                hints: [t('upload.redownloadHint')],
               }
             : diag,
         );
@@ -163,7 +168,7 @@ function ImportFlow() {
         setParsing(false);
       }
     },
-    [reviewOrImport],
+    [reviewOrImport, t],
   );
 
   /** Raw XML or base64 in; the parser takes it from there. */
@@ -197,11 +202,12 @@ function ImportFlow() {
       try {
         ingestText(await file.text());
       } catch {
-        setError(`Could not read ${file.name} — the browser failed to open it.`);
+        setError(t('upload.couldNotRead', { name: file.name }));
         setParsing(false);
       }
     },
-    [ingestText],
+    // Wave U — `t` in deps so the read-failure message recomputes on a switch.
+    [ingestText, t],
   );
 
   const reset = () => {
@@ -244,10 +250,10 @@ function ImportFlow() {
 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" data-testid="import-review-stats">
             {[
-              ['In this browser', p.existingRows],
-              ['In the file', p.incomingRows],
-              ['Already have', p.overlapRows],
-              ['New rows', p.addedRows],
+              [t('importReview.inBrowser'), p.existingRows],
+              [t('importReview.inFile'), p.incomingRows],
+              [t('importReview.already'), p.overlapRows],
+              [t('importReview.newRows'), p.addedRows],
             ].map(([label, value]) => (
               <div key={String(label)} className="border-2 md:border-4 border-black rounded-xl p-3 bg-slate-50">
                 <dt className="text-[9px] md:text-[11px] font-black uppercase text-slate-500">{label}</dt>
@@ -359,7 +365,7 @@ function ImportFlow() {
           disabled={parsing}
           onClick={() => applyPayload(pasteRef.current?.value ?? '')}
         >
-          {parsing ? 'Reading…' : 'Parse and import'}
+          {parsing ? t('upload.reading') : t('upload.parseAndImport')}
         </button>
 
         {(issue || error) && (

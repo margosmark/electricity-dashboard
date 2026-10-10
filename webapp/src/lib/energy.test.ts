@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { format } from 'date-fns';
+import type { HourlyTemps } from './openMeteo';
 import {
   getBillingPeriod,
   parseGreenButtonXML,
@@ -35,6 +36,9 @@ import {
   calculateWfhShare,
   calculateAlwaysOnFloor,
   inferIntervalHours,
+  anomalyWeatherContext,
+  ANOMALY_AC_TEMP_C,
+  ANOMALY_HEAT_TEMP_C,
   type RateSet,
   type ProcessedPoint,
   type DataPoint,
@@ -1291,5 +1295,134 @@ describe('cadence equivalence — the same house, 15-minute vs hourly export', (
       }
     }
     expect(checked).toBeGreaterThan(24); // the profile spans more than a day
+  });
+});
+
+/* ==========================================================================
+ * Wave T slice 2 — the anomaly context line: "31°C — that's AC".
+ *
+ * The verdict is about the number it prints: the day's HIGH when it blames
+ * air conditioning, its LOW when it blames heating, its MEAN when it says
+ * weather is not the story. Tests pin both thresholds and all four outcomes,
+ * because a threshold that drifts silently rewrites what the cards claim.
+ * ========================================================================== */
+
+/** A day of readings at `startTs`, one an hour, plus that day's temperatures. */
+function hotDay(startTs: number, temps: (number | null)[]) {
+  const rows = Array.from({ length: temps.length }, (_, i) =>
+    makeProcessedPoint({ timestamp: startTs + i * 3600, usage_kwh: 2 }),
+  );
+  const hourly: HourlyTemps = { startHour: Math.floor(startTs / 3600), values: temps };
+  return { rows, hourly };
+}
+
+const DAY = Date.UTC(2026, 6, 4); // 2026-07-04, 00:00 UTC
+
+describe('anomalyWeatherContext', () => {
+  it('blames air conditioning on a hot day, quoting the day\u2019s HIGH', () => {
+    const temps = [22, 23, 25, 28, 31, 30, 27, 24];
+    const { rows, hourly } = hotDay(DAY, temps);
+    const ctx = anomalyWeatherContext(rows, hourly);
+    expect(ctx.kind).toBe('ac');
+    expect(ctx.tempC).toBe(31);
+    expect(ctx.text).toBe('31°C — that’s AC');
+  });
+
+  it('blames heating on a freezing day, quoting the day\u2019s LOW', () => {
+    const temps = [-9, -12, -14, -13, -11, -10, -14, -12];
+    const { rows, hourly } = hotDay(DAY, temps);
+    const ctx = anomalyWeatherContext(rows, hourly);
+    expect(ctx.kind).toBe('heat');
+    expect(ctx.tempC).toBe(-14);
+    expect(ctx.text).toBe('-14°C — that’s heat');
+  });
+
+  it('says weather is not the story on a mild day, quoting the MEAN', () => {
+    const temps = [12, 14, 16, 18, 20, 22, 19, 17];
+    const { rows, hourly } = hotDay(DAY, temps);
+    const ctx = anomalyWeatherContext(rows, hourly);
+    expect(ctx.kind).toBe('mild');
+    expect(ctx.tempC).toBe(17.25);
+    expect(ctx.text).toBe('no weather signal — worth checking the appliance');
+  });
+
+  it('says "no data" instead of guessing when there is no temperature', () => {
+    const { rows } = hotDay(DAY, [22, 23, 25, 28, 31, 30, 27, 24]);
+    expect(anomalyWeatherContext(rows, null)).toEqual({ kind: 'unknown', tempC: null, text: 'no data' });
+    expect(anomalyWeatherContext(rows, undefined)).toEqual({ kind: 'unknown', tempC: null, text: 'no data' });
+    // A series that ends before the day does is still "no data", not "mild".
+    expect(anomalyWeatherContext(rows, { startHour: 0, values: [] })).toEqual({
+      kind: 'unknown',
+      tempC: null,
+      text: 'no data',
+    });
+  });
+
+  it('uses only the hours it actually has a temperature for', () => {
+    // Two of eight hours missing, and the HOTTEST one is missing too — so the
+    // verdict can only come from what is there, and says the second-highest.
+    const temps = [22, null, 25, 28, null, 30, 27, 24];
+    const { rows, hourly } = hotDay(DAY, temps);
+    const ctx = anomalyWeatherContext(rows, hourly);
+    expect(ctx.kind).toBe('ac');
+    expect(ctx.tempC).toBe(30);
+  });
+
+  it('sits exactly on the thresholds it advertises', () => {
+    const hotEdge = hotDay(DAY, [ANOMALY_AC_TEMP_C, 10, 12]);
+    expect(anomalyWeatherContext(hotEdge.rows, hotEdge.hourly).kind).toBe('ac');
+
+    const coldEdge = hotDay(DAY, [10, 12, ANOMALY_HEAT_TEMP_C]);
+    expect(anomalyWeatherContext(coldEdge.rows, coldEdge.hourly).kind).toBe('heat');
+
+    // Just inside the mild band: a day that reached the threshold minus a
+    // tenth and never dropped below zero.
+    const mild = hotDay(DAY, [ANOMALY_AC_TEMP_C - 0.1, ANOMALY_HEAT_TEMP_C + 0.1, 12]);
+    expect(anomalyWeatherContext(mild.rows, mild.hourly).kind).toBe('mild');
+  });
+});
+
+describe('detectAnomalies with temperatures', () => {
+  /**
+   * A run of flat days plus one spike DAY — five hourly readings, because an
+   * anomaly is a whole day's total and the context is read off that day's
+   * hours. (One point at 00:00 UTC would be 20:00 the previous evening in
+   * Toronto, which is exactly the kind of day-splitting this app's other
+   * hour-grouping code already refuses to do.)
+   */
+  function spikeSet(spikeTs: number) {
+    const normal: ProcessedPoint[] = Array.from({ length: 10 }, (_, i) =>
+      makeProcessedPoint({ timestamp: 1704067200 + i * 86400, usage_kwh: 5.0 }),
+    );
+    const spike: ProcessedPoint[] = Array.from({ length: 5 }, (_, i) =>
+      makeProcessedPoint({ timestamp: spikeTs + i * 3600, usage_kwh: 10.0 }),
+    );
+    return [...normal, ...spike];
+  }
+
+  /** Noon UTC — the same local day either side of the Atlantic. */
+  const SPIKE_DAY = DAY + 12 * 3600;
+
+  it('computes the context alongside detection, from the same day\u2019s rows', () => {
+    const points = spikeSet(SPIKE_DAY);
+    const hourly: HourlyTemps = {
+      startHour: Math.floor(SPIKE_DAY / 3600),
+      values: [20, 24, 29, 31, 27],
+    };
+    const anomalies = detectAnomalies(points, points, hourly);
+    expect(anomalies.length).toBeGreaterThan(0);
+    const spike = anomalies.find((a) => a.usage === 50)!;
+    expect(spike.context).toBeDefined();
+    expect(spike.context!.kind).toBe('ac');
+    expect(spike.context!.text).toBe('31°C — that’s AC');
+  });
+
+  it('still labels the context "no data" when no temperatures were loaded', () => {
+    const points = spikeSet(SPIKE_DAY);
+    const anomalies = detectAnomalies(points, points);
+    expect(anomalies.length).toBeGreaterThan(0);
+    expect(anomalies[0].context).toEqual({ kind: 'unknown', tempC: null, text: 'no data' });
+    // ...and the third argument is optional, so every existing caller holds.
+    expect(detectAnomalies(points, points, null)[0].context!.text).toBe('no data');
   });
 });

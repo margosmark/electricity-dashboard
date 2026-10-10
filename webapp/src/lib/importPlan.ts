@@ -18,6 +18,8 @@
  *    that says what was expected.
  */
 
+/* Wave U — user-visible copy translates; lib code reads the module locale. */
+import { t } from "@/i18n";
 import { format } from 'date-fns';
 import type { DataPoint } from './energy';
 
@@ -31,7 +33,7 @@ const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 export function decodeImportPayload(raw: string): PayloadDecode {
   const trimmed = raw.trim();
   if (trimmed === '') {
-    return { ok: false, error: 'Nothing to import — paste the export or its base64 form.' };
+    return { ok: false, error: t("importPlan.nothing") };
   }
   if (trimmed.startsWith('<')) return { ok: true, text: trimmed };
 
@@ -39,8 +41,7 @@ export function decodeImportPayload(raw: string): PayloadDecode {
   if (!BASE64_RE.test(compact)) {
     return {
       ok: false,
-      error:
-        'That is neither an XML export nor base64 of one. Expected the file to start with "<", or base64 from `dmd_export_b64.py --b64`.',
+      error: t('importPlan.neither'),
     };
   }
   try {
@@ -48,11 +49,11 @@ export function decodeImportPayload(raw: string): PayloadDecode {
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
     const text = new TextDecoder('utf-8').decode(bytes);
     if (!text.trimStart().startsWith('<')) {
-      return { ok: false, error: 'Decoded successfully, but the result is not an XML document.' };
+      return { ok: false, error: t("importPlan.notXml") };
     }
     return { ok: true, text };
   } catch {
-    return { ok: false, error: 'That base64 payload could not be decoded.' };
+    return { ok: false, error: t("importPlan.b64Fail") };
   }
 }
 
@@ -146,23 +147,4 @@ export function mergeForWrite(existing: DataPoint[], incoming: DataPoint[]): Dat
   return [...byTs.values()].sort((a, b) => a.timestamp - b.timestamp);
 }
 
-/** Rows read back from `localStorage.energy_data`, tolerating a corrupt value. */
-export function readStoredRows(raw: string | null): DataPoint[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (r): r is DataPoint =>
-        !!r &&
-        typeof r === 'object' &&
-        typeof (r as DataPoint).timestamp === 'number' &&
-        Number.isFinite((r as DataPoint).timestamp) &&
-        typeof (r as DataPoint).usage_kwh === 'number' &&
-        Number.isFinite((r as DataPoint).usage_kwh) &&
-        (r as DataPoint).usage_kwh >= 0,
-    );
-  } catch {
-    return [];
-  }
-}
+

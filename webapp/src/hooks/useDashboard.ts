@@ -8,6 +8,8 @@
 
 "use client";
 
+/* Wave U — upload/connect copy translates; hooks read the module locale. */
+import { t } from "@/i18n";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
@@ -31,8 +33,22 @@ import {
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
 } from "@/lib/backup";
+// Durable storage (t_a8a54e33): versioned `energy_data_v2` + legacy-key
+// migration, quota failures surfaced instead of swallowed, and a reset that
+// removes THIS app's keys only. Every energy_data / billing_day read and
+// write in src goes through this module — nothing else touches those keys.
+import {
+  type StorageResult,
+  loadEnergyData, saveEnergyData, clearEnergyData,
+  loadBillingDay, saveBillingDay,
+  parseImport, resetStoredData, listOurStoredKeys,
+} from "@/lib/storage";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
+import { PLAN_TIMELINE_KEY } from "@/lib/planTimeline";
+import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import { TAB_STORAGE_KEY } from "@/lib/tabs";
+import { ESTIMATE_LEDGER_KEY } from "@/lib/estimateLedger";
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from "@/lib/parseDiagnostic";
 import { loadExampleReadings } from "@/lib/exampleData";
 // Wave M — one gated entry point for every background refresh, plus the
@@ -40,6 +56,8 @@ import { loadExampleReadings } from "@/lib/exampleData";
 import {
   backgroundRefreshMinMs, shouldBackgroundRefresh,
   GB_CURSOR_CACHE, GB_CURSOR_URL, GB_STAGED_CACHE, GB_STAGED_URL, GB_STAGED_MESSAGE,
+  // Wave M's persisted facts — named constants, listed by the scoped reset.
+  PLAN_ACK_KEY, RATE_ACK_KEY, NOTIFIED_KEY, NOTIFICATIONS_ENABLED_KEY,
   type RefreshTrigger,
 } from "@/lib/backgroundRefresh";
 import {
@@ -218,6 +236,16 @@ export function useActiveRateSet(
 }
 
 /**
+ * A storage operation that did not land cleanly, in the shape the UI renders.
+ *
+ * `quota` and `cleanup` can ride on an otherwise-successful write (the data is
+ * in memory but not on disk); `corrupt` means a read could not be trusted.
+ * Every one of them is shown — a failed write must never look like a saved one.
+ */
+export type StorageNoticeKind = "quota" | "corrupt" | "cleanup";
+export type StorageNotice = { kind: StorageNoticeKind; detail: string };
+
+/**
  * Energy data lifecycle: localStorage restore, /api/rates fetch, upload,
  * emergency reset, billing-day editing, view-scope re-anchoring, and
  * backup/restore (Wave G: the browser profile is the only storage there is).
@@ -270,6 +298,51 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * what was missing instead (see lib/parseDiagnostic.ts).
    */
   const [parseIssue, setParseIssue] = useState<ParseDiagnostic | null>(null);
+
+  /**
+   * The last storage operation that did not land cleanly (see StorageNotice).
+   * Held in the hook rather than the component because every writer lives
+   * here: a write that fails during upload, import, migration or reset has to
+   * reach one place that Dashboard renders.
+   */
+  const [storageNotice, setStorageNotice] = useState<StorageNotice | null>(null);
+
+  /**
+   * Reset is two-step (open the confirm dialog, then confirm) instead of
+   * wiping on the first click: it used to be a single `localStorage.clear()`
+   * behind one toolbar button.
+   */
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  /** The keys the open dialog will remove — read at open time, not guessed. */
+  const [resetKeys, setResetKeys] = useState<string[]>([]);
+
+  /**
+   * Unwrap a StorageResult for the UI: failures and non-clean writes become
+   * the visible notice row; clean reads/writes clear it.
+   *
+   * Returns the value so a caller can keep going after a *warning*, and null
+   * when the operation genuinely failed (the caller decides whether the
+   * in-memory data is still usable — a quota failure is).
+   */
+  const reportStorage = <T,>(res: StorageResult<T>): T | null => {
+    if (!res.ok) {
+      setStorageNotice({ kind: res.reason, detail: res.detail });
+      return null;
+    }
+    const warning = res.warnings[0];
+    if (warning) setStorageNotice({ kind: warning.kind, detail: warning.detail });
+    return res.value;
+  };
+
+  /** The notice row's dismiss button. The failure stays true; the user moves on. */
+  const dismissStorageNotice = () => setStorageNotice(null);
+
+  /**
+   * Raise (or, with null, clear) the notice from a caller outside this hook —
+   * the component's own export path, which fails in storage.ts the same way
+   * every other write does.
+   */
+  const raiseStorageNotice = (notice: StorageNotice | null) => setStorageNotice(notice);
 
   /**
    * The bill half of the dataset (Wave L): UsageSummary periods + the
@@ -435,7 +508,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     bills?: UsageSummary[],
   ) => {
     writeRows(data);
-    localStorage.setItem("energy_data", JSON.stringify(data));
+    // Persist through the storage layer: versioned key, quota surfaced. The
+    // rows below land in memory either way — a full disk must not silently
+    // pretend the upload was saved, and it must not throw the upload away.
+    const saved = saveEnergyData(data, { source });
+    if (saved.ok && saved.warnings.length === 0) setStorageNotice(null);
+    else reportStorage(saved);
     try {
       if (source === "example") localStorage.setItem(EXAMPLE_DATA_KEY, "1");
       else localStorage.removeItem(EXAMPLE_DATA_KEY);
@@ -691,14 +769,26 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // there is anything at all to show, and neither answer needs the network.
       let loadedReadings = false;
       try {
-        const savedBDay = localStorage.getItem("billing_day");
-        const day = savedBDay ? parseInt(savedBDay, 10) : 1;
-        if (savedBDay && mounted) setBillingDayState(day);
-        const savedData = localStorage.getItem("energy_data");
-        if (savedData) {
-          const parsed = JSON.parse(savedData) as DataPoint[];
-          if (mounted && Array.isArray(parsed) && parsed.length > 0) {
+        // Reads go through the storage layer: it migrates a legacy
+        // `energy_data` payload to `energy_data_v2` on the way in, and hands
+        // back a failure instead of throwing, so a corrupt value becomes a
+        // visible notice rather than a silently empty dashboard.
+        const dayRes = loadBillingDay();
+        const savedDay = dayRes.ok ? dayRes.value : null;
+        const day = savedDay ?? 1;
+        if (savedDay !== null && mounted) setBillingDayState(day);
+        else if (!dayRes.ok) reportStorage(dayRes);
+
+        const stored = loadEnergyData();
+        if (!stored.ok) {
+          // Unreadable storage: say so, and open the upload prompt — the
+          // dashboard must not claim to be empty when it cannot tell.
+          reportStorage(stored);
+          if (mounted) setShowUploadModal(true);
+        } else if (stored.value && stored.value.points.length > 0) {
+          if (mounted) {
             loadedReadings = true;
+            const parsed = stored.value.points;
             // Ref first: the Green Button sync runs later in THIS same init
             // pass and must see what was just restored.
             rawDataRef.current = parsed;
@@ -707,10 +797,19 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
             applyInitialWindow(parsed, day, readStoredBillFeed().summaries);
           }
+          // Migration warnings (quota / cleanup) still surface.
+          reportStorage(stored);
         } else if (mounted) {
           setShowUploadModal(true);
         }
-      } catch { /* corrupt localStorage = treat as fresh */ }
+      } catch (err) {
+        // Nothing the storage layer classified: still a visible failure —
+        // never a crash, and never a silently empty dashboard.
+        if (mounted) {
+          setStorageNotice({ kind: "corrupt", detail: `Storage read failed: ${String(err)}` });
+          setShowUploadModal(true);
+        }
+      }
 
       // Wave I item 4 — with no readings the rate schedule has nothing to
       // price and the dashboard renders identically with or without it, so
@@ -747,7 +846,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       setGbStatus(status);
 
       if (gbFlag === "connected") {
-        setGbMessage({ tone: "ok", text: "Connected to Oakville Hydro." });
+        setGbMessage({ tone: "ok", text: t('gb.connectedOk') });
       } else if (gbFlag?.startsWith("error:")) {
         const copy = describeGbError(gbFlag.slice("error:".length));
         setGbMessage({ tone: "error", text: `${copy.headline} — ${copy.detail}` });
@@ -774,9 +873,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             ? {
                 tone: "ok",
                 text: outcome.picker
-                  ? "Connected — pick which meter to load."
-                  : `Live sync: ${outcome.incoming} readings from the feed, ` +
-                    `${outcome.added ?? 0} new.`,
+                  ? t('gb.connectedPicker')
+                  : t('gb.syncCounts', {
+                      incoming: outcome.incoming,
+                      added: outcome.added ?? 0,
+                    }),
               }
             : { tone: "error", text: describeGbError(outcome.code).detail },
         );
@@ -859,9 +960,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         reader.onerror = () =>
           reject({
             ok: false,
-            headline: `Could not read ${file.name}.`,
-            detail: 'The browser failed to open the file — it may have been moved or locked since you picked it.',
-            hints: ['Pick the file again from disk.'],
+            headline: t('upload.couldNotRead', { name: file.name }),
+            detail: t('upload.readFailedDetail'),
+            hints: [t('upload.readFailedHint')],
           } satisfies ParseDiagnostic);
         reader.onload = (ev) => {
           const text = (ev.target?.result as string) ?? "";
@@ -876,9 +977,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
               diag.ok
                 ? ({
                     ok: false,
-                    headline: `Could not read ${file.name}.`,
+                    headline: t('upload.couldNotRead', { name: file.name }),
                     detail: String((e as Error)?.message ?? e),
-                    hints: ['Re-download the export and try again.'],
+                    hints: [t('upload.redownloadHint')],
                   } satisfies ParseDiagnostic)
                 : diag,
             );
@@ -919,9 +1020,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           setParseIssue(
             results.map((r) => r.issue).find(Boolean) ?? {
               ok: false,
-              headline: "No readings found in that file.",
-              detail: "The upload was read successfully but contained no interval readings to import.",
-              hints: ["Export Green Button XML with interval data from your utility portal."],
+              headline: t('upload.noReadingsHeadline'),
+              detail: t('upload.noReadingsDetail'),
+              hints: [t('upload.noReadingsHint')],
             },
           );
           return;
@@ -953,9 +1054,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             ? e
             : {
                 ok: false,
-                headline: "That file could not be read.",
+                headline: t('upload.couldNotReadPlain'),
                 detail: String((e as Error)?.message ?? e),
-                hints: ["Re-download the export from your utility portal and try again."],
+                hints: [t('upload.portalRedownloadHint')],
               },
         );
       })
@@ -1030,9 +1131,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       if (!loaded.ok) {
         setParseIssue({
           ok: false,
-          headline: "Example data unavailable.",
+          headline: t('upload.exampleUnavailable'),
           detail: loaded.detail,
-          hints: ["Upload your own Green Button XML export to continue."],
+          hints: [t('upload.exampleHint')],
         });
         return { ok: false, detail: loaded.detail };
       }
@@ -1053,8 +1154,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * user's own file replaces it.
    */
   const discardExampleData = () => {
+    // Readings: both keys, through the storage layer. The example flag and
+    // the feed half are this hook's own keys (they have no storage.ts shape).
+    reportStorage(clearEnergyData());
     try {
-      localStorage.removeItem("energy_data");
       localStorage.removeItem(EXAMPLE_DATA_KEY);
       localStorage.removeItem(USAGE_SUMMARIES_KEY);
       localStorage.removeItem(LOCAL_TIME_KEY);
@@ -1071,15 +1174,38 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setShowUploadModal(true);
   };
 
-  const emergencyReset = () => {
-    localStorage.clear();
+  const openResetConfirm = () => {
+    // Read the key list NOW so the dialog states exactly what it will remove.
+    const listed = listOurStoredKeys(APP_OWNED_STORAGE_KEYS);
+    setResetKeys(listed.ok ? listed.value : []);
+    setResetConfirmOpen(true);
+  };
+
+  const cancelResetConfirm = () => setResetConfirmOpen(false);
+
+  /**
+   * Step 2 of reset: remove THIS app's keys and nothing else, then reload
+   * into an empty profile. `localStorage.clear()` is gone — it also wiped
+   * whatever else shared the origin.
+   */
+  const confirmReset = () => {
+    setResetConfirmOpen(false);
+    const removed = resetStoredData(APP_OWNED_STORAGE_KEYS);
+    if (!removed.ok) {
+      // Nothing (or too little) came out: say it instead of pretending.
+      reportStorage(removed);
+      return;
+    }
     window.location.reload();
   };
 
   /** Persist a new billing day; re-anchor the BillingPeriod scope onto it. */
   const updateBillingDay = (day: number, anchorStart: string) => {
     setBillingDayState(day);
-    localStorage.setItem("billing_day", day.toString());
+    // Only a whole day in 1..31 reaches storage: a half-typed value is not
+    // data yet (the old blind write happily stored "NaN", which the next load
+    // then had to defend against).
+    if (Number.isInteger(day) && day >= 1 && day <= 31) reportStorage(saveBillingDay(day));
     if (!day || day < 1 || day > 31) return; // typing in progress; skip re-anchor
     // A file that states its own periods ignores this setting (it is the
     // fallback for files that do not), so re-anchoring the window onto a
@@ -1142,37 +1268,76 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   };
 
   /**
-   * Restore a previously exported file.
+   * Restore a previously exported file — BOTH shapes this app writes:
+   *  - Wave G's full profile document (readings + billing day + bill add-ons
+   *    + plan timeline), and
+   *  - the readings-only export storage.ts produces (an object with `points`,
+   *    or a bare array of rows).
    *
    * Validation happens BEFORE any write: a rejected file leaves the existing
    * profile completely untouched (import is all-or-nothing, never partial).
+   * The readings and the billing day land through storage.ts, so an import
+   * writes exactly the versioned key a manual upload writes.
    */
   const importBackupFile = async (file: File): Promise<BackupImportResult> => {
     let text: string;
     try {
       text = await file.text();
     } catch {
-      return { ok: false, error: `Could not read ${file.name}. Choose the JSON file produced by “Export JSON”.` };
+      return { ok: false, error: t('backup.errReadJson', { name: file.name }) };
     }
 
-    const parsed = parseBackup(text);
-    if (!parsed.ok) return { ok: false, error: parsed.error };
-
-    try {
-      const values = storageValuesFromBackup(parsed.value);
-      localStorage.setItem("energy_data", values.energy_data);
-      localStorage.setItem("billing_day", values.billing_day);
-      localStorage.setItem("extra_charges", values.extra_charges);
-      localStorage.setItem("plan_timeline", values.plan_timeline);
-    } catch {
-      return {
-        ok: false,
-        error: "This browser refused to save the backup (storage may be full or blocked). Nothing was changed.",
-      };
+    const profile = parseBackup(text);
+    if (profile.ok) {
+      try {
+        const values = storageValuesFromBackup(profile.value);
+        // Readings first: if this fails nothing else is written, which keeps
+        // the all-or-nothing promise above.
+        const saved = saveEnergyData(profile.value.payload.energy_data, {
+          source: "backup-import",
+          uploadedAt: profile.value.exportedAt,
+        });
+        if (!saved.ok) {
+          reportStorage(saved);
+          return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
+        }
+        const day = saveBillingDay(profile.value.payload.billing_day);
+        if (!day.ok) {
+          reportStorage(day);
+          return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
+        }
+        // The remaining keys are owned by their own hooks (charges, timeline).
+        localStorage.setItem(EXTRA_CHARGES_KEY, values.extra_charges);
+        localStorage.setItem(PLAN_TIMELINE_KEY, values.plan_timeline);
+      } catch {
+        return {
+          ok: false,
+          error: t('backup.errRefusedBackup'),
+        };
+      }
+      onBackupApplied?.();
+      return { ok: true, filename: file.name };
     }
 
-    onBackupApplied?.();
-    return { ok: true, filename: file.name };
+    // Not a profile document — accept the readings-only export instead of
+    // making two export buttons produce files only one of them can read back.
+    const readings = parseImport(text);
+    if (readings.ok) {
+      const saved = saveEnergyData(readings.value.points, {
+        source: readings.value.source,
+        uploadedAt: readings.value.uploadedAt,
+      });
+      if (!saved.ok) {
+        reportStorage(saved);
+        return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
+      }
+      onBackupApplied?.();
+      return { ok: true, filename: file.name };
+    }
+
+    // Neither shape: the profile reader's message is the one that names the
+    // document this app asks for.
+    return { ok: false, error: profile.error };
   };
 
   /** Re-read /greenbutton/status (connect button, post-disconnect, tests). */
@@ -1199,8 +1364,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     await refreshGbStatus();
     setGbMessage(
       ok
-        ? { tone: "ok", text: "Disconnected — stored authorisation wiped from the server." }
-        : { tone: "error", text: "Could not reach the shim to disconnect." },
+        ? { tone: "ok", text: t('gb.disconnectedOk') }
+        : { tone: "error", text: t('gb.disconnectFail') },
     );
     return ok;
   };
@@ -1221,7 +1386,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     viewScope, setViewScope,
-    handleFileUpload, emergencyReset, updateBillingDay, applyViewScope,
+    handleFileUpload, updateBillingDay, applyViewScope,
+    // Storage surfacing + a two-step, scoped reset (t_a8a54e33).
+    storageNotice, dismissStorageNotice, raiseStorageNotice,
+    resetConfirmOpen, resetKeys,
+    openResetConfirm, cancelResetConfirm, confirmReset,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,
     pendingMerge, setPendingMerge, chooseMerge, cancelMerge,
     exportBackup, importBackupFile,
@@ -1361,6 +1530,30 @@ export function useZoomNavigation(
  * -------------------------------------------------------------------------- */
 
 export const EXTRA_CHARGES_KEY = "extra_charges";
+
+/**
+ * Every OTHER localStorage key this app owns — the readings' companions that
+ * a "Reset data" has to clear, or they outlive their own data (a plan choice
+ * and bill add-ons with no readings left to apply them to).
+ *
+ * `energy_data_v2` / `energy_data` / `billing_day` are NOT listed here:
+ * storage.ts owns those and adds them itself. Declared after the constants it
+ * references because module-level const initialisers run in source order.
+ */
+export const APP_OWNED_STORAGE_KEYS: readonly string[] = [
+  EXAMPLE_DATA_KEY,
+  USAGE_SUMMARIES_KEY,
+  LOCAL_TIME_KEY,
+  EXTRA_CHARGES_KEY,
+  PLAN_TIMELINE_KEY,
+  PLAN_STORAGE_KEY,
+  TAB_STORAGE_KEY,
+  ESTIMATE_LEDGER_KEY,
+  PLAN_ACK_KEY,
+  RATE_ACK_KEY,
+  NOTIFIED_KEY,
+  NOTIFICATIONS_ENABLED_KEY,
+];
 
 function readStoredCharges(raw: string): ExtraCharges {
   const parsed = JSON.parse(raw) as Record<string, unknown>;

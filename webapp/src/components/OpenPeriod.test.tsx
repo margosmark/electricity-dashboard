@@ -26,12 +26,20 @@ import {
   type EstimateLedger,
   type OpenEstimateRecord,
 } from '@/lib/estimateLedger';
-import { billTotals, parseUsageSummaries, type ProcessedPoint, type RateSet } from '@/lib/energy';
+import {
+  billTotals,
+  parseGreenButtonFeed,
+  parseUsageSummaries,
+  processRawData,
+  type ProcessedPoint,
+  type RateSet,
+} from '@/lib/energy';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const summaries = parseUsageSummaries(
   fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
 );
+
 
 const DAY = 86400;
 const ts = (iso: string) => Math.floor(new Date(`${iso}T00:00:00Z`).getTime() / 1000);
@@ -81,7 +89,48 @@ function rowsWithTail(tailDays: number): ProcessedPoint[] {
   return out;
 }
 
+/**
+ * The committed open-tail fixture: the same three bills plus readings that
+ * run past the last one. Its whole job is to give the accrual curve a tail
+ * to draw, so this pins that it still HAS one — a fixture that quietly
+ * loses its tail would turn every browser check back into the empty state
+ * without failing anything else.
+ */
+describe('usage-summary-open-tail.xml', () => {
+  const feed = parseGreenButtonFeed(
+    fs.readFileSync(path.join(FIXTURES, 'usage-summary-open-tail.xml'), 'utf8'),
+  );
+  const rows = processRawData(
+    feed.groups.flatMap((g) => g.readings),
+    [{ ...rateSet, effectiveDate: '2025-01-01' }],
+  );
+  const axis = buildBillingAxis({ summaries: feed.summaries, rows });
+
+  it('carries the audited bills verbatim', () => {
+    expect(feed.summaries).toHaveLength(3);
+    expect(billTotals(feed.summaries[2]).payable).toBeCloseTo(
+      billTotals(summaries[2]).payable,
+      2,
+    );
+  });
+
+  it('runs its readings past the last bill, so the accrual has a tail', () => {
+    expect(axis.open).not.toBeNull();
+    // A month of unbilled days, give or take a day of rounding.
+    expect(axis.open!.days).toBeGreaterThanOrEqual(28);
+    expect(axis.open!.days).toBeLessThanOrEqual(34);
+    expect(axis.open!.rows.length).toBeGreaterThan(500);
+  });
+});
+
 const money = (n: number) => `$${n.toFixed(2)}`;
+
+/** The same bills with every non-commodity line stripped: no rates to
+ *  auto-populate, so the EST. TOTAL column has nothing to build from. */
+const bareSummaries = summaries.map((s) => ({
+  ...s,
+  items: s.items.filter((i) => /peak/i.test(i.note)),
+}));
 
 beforeEach(() => {
   localStorage.clear();
@@ -158,6 +207,57 @@ describe('the timeline the money views draw', () => {
     // The billed rows are untouched: exactly what the bills say.
     const totals = summaries.map((s) => billTotals(s).payable);
     totals.forEach((t, i) => expect(rows[i]).toHaveTextContent(money(t)));
+  });
+
+  it('never lets the unbilled row read as a payment, and says what it is', async () => {
+    render(<MoneySection summaries={summaries} allData={rowsWithTail(40)} plan="TOU" />);
+    await screen.findByTestId('money-stacked');
+
+    // The column header still says "You paid" for the rows that are bills —
+    // but the OPEN row labels ITSELF, so the header can never be read as a
+    // claim that the utility has billed these days.
+    const openRow = screen.getAllByTestId('money-row')[3];
+    const cell = within(openRow).getByTestId('money-open-total');
+    expect(cell).toHaveTextContent(/Est\. commodity/);
+    expect(cell).toHaveTextContent(/~\$/);
+
+    // "COVERED %" meant interval-data coverage and now says so, with the
+    // definition on the header for anyone who asks.
+    const headers = [...screen.getAllByRole('columnheader')].map((th) => th.textContent);
+    expect(headers.some((h) => /Data coverage/i.test(h ?? ''))).toBe(true);
+    expect(headers.some((h) => /^Covered$/i.test(h ?? ''))).toBe(false);
+  });
+
+  it('prices the open row an EST. TOTAL from the bill\u2019s own rates, badged as an estimate', async () => {
+    render(<MoneySection summaries={summaries} allData={rowsWithTail(40)} plan="TOU" />);
+    await screen.findByTestId('money-stacked');
+
+    // Wave L auto-populates delivery / regulatory / HST from the file's own
+    // newest bill, so the unbilled tail gets an all-in estimate next to its
+    // commodity line — the header carries the ESTIMATE badge permanently.
+    const head = screen.getByTestId('money-est-total-head');
+    expect(head).toHaveTextContent(/Est\. total/);
+    expect(head).toHaveTextContent(/Estimate/);
+
+    const openRow = screen.getAllByTestId('money-row')[3];
+    const est = within(openRow).getByTestId('money-open-est-total');
+    expect(est).toHaveTextContent(/~\$/);
+    // Commodity-only for the tail, so the all-in estimate must be LARGER
+    // than the commodity figure beside it.
+    const dollars = (node: HTMLElement) => Number(node.textContent!.match(/\$[\d.]+/)![0].slice(1));
+    expect(dollars(est)).toBeGreaterThan(dollars(within(openRow).getByTestId('money-open-total')));
+  });
+
+  it('says why there is no EST. TOTAL when no rates exist, instead of $0 delivery', async () => {
+    // No stored rates and a file whose bills state no delivery lines →
+    // `deriveExtraCharges` returns null, there is nothing to price an
+    // all-in total with, and an honest dash beats an invented total.
+    render(<MoneySection summaries={bareSummaries} allData={rowsWithTail(40)} plan="TOU" />);
+    await screen.findByTestId('money-stacked');
+
+    const openRow = screen.getAllByTestId('money-row')[3];
+    expect(within(openRow).queryByTestId('money-open-est-total')).not.toBeInTheDocument();
+    expect(within(openRow).getByTestId('money-est-total-cell')).toHaveTextContent('—');
   });
 
   it('marks the open column in the delta table instead of inventing a change', async () => {

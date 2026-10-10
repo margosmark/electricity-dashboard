@@ -14,13 +14,15 @@
 'use client';
 
 import React from 'react';
-import { format } from 'date-fns';
 import { dataFreshness } from '@/lib/freshness';
+import {
+  fmtCents, fmtDateLong, fmtDay, fmtKwh, fmtMoney, planLabel, useTranslation,
+} from '@/i18n';
 import type { FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import type { EfficiencyReport } from '@/lib/statistics';
+import { EFFICIENCY_SUBTITLE_KEY, type EfficiencyReport } from '@/lib/statistics';
 import BestChoiceBanner from '@/components/BestChoiceBanner';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
@@ -59,6 +61,8 @@ export default function OverviewPanel({
   onOpenMoney,
   fileStatus,
 }: OverviewPanelProps) {
+  // Wave U — locale subscription; every text useMemo below lists `t`.
+  const { t } = useTranslation();
   // The strip reports the WHOLE dataset, so its unit conversions are anchored
   // on the dataset's own span — never on the visible window.
   const totalDays = totals
@@ -71,9 +75,10 @@ export default function OverviewPanel({
         ) + 1,
       )
     : 1;
+  /** The per-day/per-year figure, formatted with the locale's money rules. */
   const money = (datasetTotal: number): string => {
     const perDay = datasetTotal / totalDays;
-    return (costMode === 'yr' ? perDay * 365.25 : perDay).toFixed(2);
+    return fmtMoney(costMode === 'yr' ? perDay * 365.25 : perDay);
   };
   const freshness = totals ? dataFreshness(totals.lastDate, new Date()) : null;
 
@@ -86,50 +91,91 @@ export default function OverviewPanel({
       {totals && (
         <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
           <div className="bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
-            <div className="text-[8px] md:text-[10px] text-yellow-400">Since {format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
-            <div className="text-xl md:text-3xl italic font-black">{totals.totalKwh.toFixed(0)} kWh</div>
+            <div className="text-[8px] md:text-[10px] text-yellow-400">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+            <div className="text-xl md:text-3xl italic font-black">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
           {/* Wave S — the whole dataset as ONE price: what a kWh actually
               cost, and what it cost in the window on screen. Same math as
-              the EFFICIENCY card, restated where the totals live. */}
+              the EFFICIENCY card, restated where the totals live — with the
+              SAME tax honesty: the subtitle names the charges and the
+              divisor, and every figure is published excl. and incl. tax so
+              no view of the same bills can disagree with another. */}
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
               className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black"
             >
               <div className="text-[8px] md:text-[10px] font-black">
-                ¢/kWh · Total Electricity Charges ÷ billed kWh
+¢/kWh · {t(EFFICIENCY_SUBTITLE_KEY)}
               </div>
               <div className="flex gap-4 md:gap-6 mt-1">
                 <div>
-                  <div className="text-[8px] font-black uppercase">All time</div>
-                  <div
-                    className="text-lg md:text-2xl italic font-black"
-                    data-testid="efficiency-all-time-strip"
-                    data-cents={efficiency.allTime.cents.toFixed(2)}
-                    data-bills={efficiency.allTime.bills}
-                  >
-                    {efficiency.allTime.cents.toFixed(1)}¢
+                  <div className="text-[8px] font-black uppercase">{t('overview.allTime')}</div>
+                  <div className="flex gap-3 md:gap-4">
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-all-time-strip"
+                        data-cents={efficiency.allTime.cents.toFixed(2)}
+                        data-bills={efficiency.allTime.bills}
+                      >
+                        {fmtCents(efficiency.allTime.cents, 1)}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        {t('efficiency.exclTax')}
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-all-time-strip-incl-tax"
+                        data-cents={efficiency.allTime.centsInclTax.toFixed(2)}
+                      >
+                        {fmtCents(efficiency.allTime.centsInclTax, 1)}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        {t('efficiency.inclTax')}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[8px] font-black uppercase">In view</div>
-                  <div
-                    className="text-lg md:text-2xl italic font-black"
-                    data-testid="efficiency-in-view"
-                    data-cents={(efficiency.inView?.cents ?? 0).toFixed(2)}
-                    data-bills={efficiency.inView?.bills ?? 0}
-                  >
-                    {efficiency.inView ? `${efficiency.inView.cents.toFixed(1)}¢` : '—'}
+                  <div className="text-[8px] font-black uppercase">{t('overview.inView')}</div>
+                  <div className="flex gap-3 md:gap-4">
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-in-view"
+                        data-cents={(efficiency.inView?.cents ?? 0).toFixed(2)}
+                        data-bills={efficiency.inView?.bills ?? 0}
+                      >
+                        {efficiency.inView ? fmtCents(efficiency.inView.cents, 1) : '—'}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        {t('efficiency.exclTax')}
+                      </div>
+                    </div>
+                    <div>
+                      <div
+                        className="text-lg md:text-2xl italic font-black"
+                        data-testid="efficiency-in-view-incl-tax"
+                        data-cents={(efficiency.inView?.centsInclTax ?? 0).toFixed(2)}
+                      >
+                        {efficiency.inView ? fmtCents(efficiency.inView.centsInclTax, 1) : '—'}
+                      </div>
+                      <div className="text-[8px] font-black uppercase text-slate-600">
+                        {t('efficiency.inclTax')}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
               <div className="text-[8px] font-black normal-case mt-1">
-                {efficiency.allTime.bills} bill{efficiency.allTime.bills === 1 ? '' : 's'}
+                {t('overview.billsTotal', { count: efficiency.allTime.bills })}
                 {efficiency.inView
-                  ? ` · ${efficiency.inView.bills} in view`
-                  : ' · no bill touches this window'}
+                  ? ` · ${t('overview.billsInView', { count: efficiency.inView.bills })}`
+                  : ` · ${t('overview.billsNone')}`}
               </div>
             </div>
           )}
@@ -138,7 +184,7 @@ export default function OverviewPanel({
           <div
             data-testid="cost-toggle"
             role="group"
-            aria-label="Show costs as"
+            aria-label={t('overview.costModeAria')}
             /* A printed report states one unit; the switch itself is chrome. */
             className="no-print bg-slate-100 p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1"
           >
@@ -152,28 +198,30 @@ export default function OverviewPanel({
                   costMode === mode ? 'bg-black text-white' : 'text-black hover:bg-white'
                 }`}
               >
-                {mode === 'yr' ? '$/yr' : '$/day'}
+                {mode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
               </button>
             ))}
           </div>
 
           <div className="flex flex-wrap gap-3 md:gap-4">
+            {/* Wave U — labels localize (OEB French names); `data-testid`
+                keeps the canonical id, and the id itself stays English. */}
             {([
-              { id: 'TOU', label: 'Time-of-Use', cost: totals.costTOU },
-              { id: 'Tiered', label: 'Tiered', cost: totals.costTiered },
-              { id: 'ULO', label: 'Ultra-Low Overnight', cost: totals.costULO },
-            ] as const).map((p) => (
+              { id: 'TOU' as const, cost: totals.costTOU },
+              { id: 'Tiered' as const, cost: totals.costTiered },
+              { id: 'ULO' as const, cost: totals.costULO },
+            ]).map((p) => (
               <div
                 key={p.id}
                 data-testid={`plan-cost-${p.id}`}
                 data-unit={costMode}
                 className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-black ${p.id === totals.bestPlan ? 'bg-emerald-400' : p.id === totals.worstPlan ? 'bg-red-400' : 'bg-slate-100'}`}
               >
-                <div className="text-[8px] md:text-[10px]">{p.label}</div>
+                <div className="text-[8px] md:text-[10px]">{planLabel(p.id)}</div>
                 <div className="text-lg md:text-2xl italic font-black">
-                  ${money(p.cost)}
+                  {money(p.cost)}
                   <span className="text-[9px] md:text-[11px] not-italic font-black ml-1">
-                    {costMode === 'yr' ? '/yr' : '/day'}
+                    {costMode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
                   </span>
                 </div>
               </div>
@@ -181,11 +229,11 @@ export default function OverviewPanel({
           </div>
 
           <div className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
-            <div className="text-[8px] md:text-[10px]">Best vs worst plan</div>
+            <div className="text-[8px] md:text-[10px]">{t('overview.bestVsWorst')}</div>
             <div className="text-lg md:text-2xl italic font-black">
-              ${money(totals.planDelta)}
+              {money(totals.planDelta)}
               <span className="text-[9px] md:text-[11px] font-black ml-1">
-                {costMode === 'yr' ? '/yr' : '/day'}
+                {costMode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
               </span>
             </div>
             <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>
@@ -204,12 +252,12 @@ export default function OverviewPanel({
             }`}
             title={
               freshness?.stale
-                ? `Your newest reading is ${freshness.relative} — upload a newer export to fill the gap.`
+                ? t('overview.freshnessTitle', { relative: freshness.relative })
                 : undefined
             }
           >
             <div className="text-[8px] md:text-[10px] uppercase font-black">
-              Data as of {format(new Date(totals.lastDate + 'T00:00:00'), 'MMM d, yyyy')}
+              {t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
@@ -217,13 +265,16 @@ export default function OverviewPanel({
               }`}
             >
               {freshness?.stale
-                ? `${freshness.relative} — upload a newer export for a full chart`
+                ? t('overview.freshnessStale', { relative: freshness.relative })
                 : freshness?.relative}
             </div>
           </div>
 
           <div className="text-[8px] md:text-[10px] text-slate-500 max-w-[240px] md:max-w-none">
-            Whole dataset ({format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d')} – {format(new Date(totals.lastDate + 'T00:00:00'), 'MMM d, yyyy')}), variable charges only.
+            {t('overview.wholeDataset', {
+              start: fmtDay(totals.firstDate),
+              end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')),
+            })}
             <span data-testid="cost-reframe" className="block mt-1 text-black font-black normal-case">
               {reframe}
             </span>

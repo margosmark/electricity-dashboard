@@ -29,6 +29,7 @@ import PlanSwitchTimeline from '@/components/PlanSwitchTimeline';
 import { PlanTimelineEditor } from '@/components/PlanTimelineEditor';
 import SwitchTrackRecord from '@/components/SwitchTrackRecord';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
+import { fmtKwh, fmtPercent, useTranslation } from '@/i18n';
 
 export type PlansPanelProps = {
   /** Per-plan cost of the window on screen. */
@@ -67,6 +68,7 @@ export default function PlansPanel({
   summaries,
   allData,
 }: PlansPanelProps) {
+  const { t } = useTranslation();
   return (
     <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}
@@ -84,12 +86,15 @@ export default function PlansPanel({
           data-testid="wfh-annotation"
           className="bg-purple-200 border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-black font-black uppercase"
         >
-          <span className="text-base md:text-2xl italic">{(wfh.share * 100).toFixed(0)}%</span>
-          <span className="text-[10px] md:text-xs">{wfh.label}</span>
+          <span className="text-base md:text-2xl italic">{fmtPercent(wfh.share * 100)}</span>
+          <span className="text-[10px] md:text-xs">{t('wfh.label')}</span>
           <span className="text-[9px] md:text-[11px] font-bold text-slate-600 normal-case">
-            {wfh.kwh.toFixed(1)} of {wfh.totalKwh.toFixed(1)} kWh in view fall on {wfh.weekdays}{' '}
-            weekday{wfh.weekdays === 1 ? '' : 's'} — the hours a daytime-heavy home spends either
-            working or not. Context for the plan cards below, not a forecast.
+            {t('wfh.annotation', {
+              kwh: fmtKwh(wfh.kwh),
+              total: fmtKwh(wfh.totalKwh),
+              count: wfh.weekdays,
+              weekdays: wfh.weekdays,
+            })}
           </span>
         </div>
       )}

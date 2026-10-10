@@ -36,6 +36,8 @@
  */
 
 import { billPeriodLabel, billWindow, getBillingPeriod, type UsageSummary } from './energy';
+// Wave U — the axis's captions come from the locale catalog at call time.
+import { getLocale, t } from '@/i18n';
 
 /** A reading row for axis purposes: only the instant (and its day) matter. */
 export type AxisRow = { timestamp: number; dayStr?: string };
@@ -119,7 +121,7 @@ export const EMPTY_AXIS: BillingAxis = {
   open: null,
   usedFallback: false,
   droppedDuplicates: 0,
-  note: 'No billing periods and no readings — there is no timeline to draw yet.',
+  note: t('axis.emptyNote'),
 };
 
 const p2 = (n: number) => String(n).padStart(2, '0');
@@ -344,8 +346,8 @@ function openPeriod(anchors: AxisPeriod[], rows: AxisRow[]): AxisPeriod | null {
     {
       // `end - start - 1` so the label's own end day is the LAST DAY HELD,
       // not the exclusive boundary one day past the newest reading.
-      label: `${billPeriodLabel(start, end - start - 1)} (not billed yet)`,
-      shortLabel: `Open · ${startDate}`,
+      label: t('axis.openLabel', { label: billPeriodLabel(start, end - start - 1) }),
+      shortLabel: t('axis.openShort', { date: startDate }),
       startDate,
       endDate,
     },
@@ -393,8 +395,8 @@ export function buildBillingAxis(options: BillingAxisOptions): BillingAxis {
       droppedDuplicates: 0,
       note:
         derived.length === 0
-          ? EMPTY_AXIS.note
-          : `No UsageSummary in this file — periods are cut on your billing day (the ${billingDay}${ordinalSuffix(billingDay)}), exactly as before.`,
+          ? t('axis.emptyNote')
+          : t('axis.derivedNote', { day: billingDayLabel(billingDay) }),
     };
   }
 
@@ -418,7 +420,7 @@ export function buildBillingAxis(options: BillingAxisOptions): BillingAxis {
           null,
           rows,
           {
-            label: `${startDate} – ${endDate} (no bill in this file)`,
+            label: t('axis.gapLabel', { start: startDate, end: endDate }),
             shortLabel: startDate,
             startDate,
             endDate,
@@ -436,21 +438,15 @@ export function buildBillingAxis(options: BillingAxisOptions): BillingAxis {
 
   const notes: string[] = [];
   if (dropped > 0) {
-    notes.push(
-      `${dropped} duplicate period${dropped === 1 ? '' : 's'} from an overlapping export folded into the list.`,
-    );
+    notes.push(t('axis.duplicates', { count: dropped }));
   }
   if (gaps.length > 0) {
-    notes.push(
-      `${gaps.length} gap${gaps.length === 1 ? '' : 's'} between bills shown as unknown periods — no bill in the file covers those days.`,
-    );
+    notes.push(t('axis.gapsNote', { count: gaps.length }));
   }
   if (open) {
-    notes.push(`${open.days} days since the last bill are shown as one open, estimated period.`);
+    notes.push(t('axis.openNote', { days: open.days }));
   }
-  notes.push(
-    `${billed.length} billing period${billed.length === 1 ? '' : 's'}, straight from the XML.`,
-  );
+  notes.push(t('axis.billedNote', { count: billed.length }));
 
   return {
     periods,
@@ -466,6 +462,15 @@ export function buildBillingAxis(options: BillingAxisOptions): BillingAxis {
 function ordinalSuffix(n: number): string {
   if (n % 100 >= 11 && n % 100 <= 13) return 'th';
   return n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
+}
+
+/**
+ * Wave U — "the 15th" in English, plain "15" in French (French ordinals are
+ * not spelled into dates: "le 15"). The catalog interpolates whatever this
+ * returns after its own "the"/"le".
+ */
+function billingDayLabel(n: number): string {
+  return getLocale() === 'fr' ? String(n) : `${n}${ordinalSuffix(n)}`;
 }
 
 /** The period containing `ts`, or null. Windows are half-open [start, end). */
