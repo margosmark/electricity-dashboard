@@ -59,6 +59,41 @@ const PLANS = [
   { id: 'ULO', name: 'Ultra-Low Overnight' },
 ] as const;
 
+/** One labelled rate chip on a card. */
+type PlanRate = { l: string; v: string; c?: string };
+
+/**
+ * Render one rate from the active RateSet as displayed cents
+ * (9.75 -> '9.75¢', 10 -> '10.0¢'). Formatting only — never a source of
+ * rate values. Two decimals because that is what the cost math uses: the
+ * cents on the card must rebuild the dollar figure on the same card exactly,
+ * and one decimal quietly rounds 9.75 to 9.8 while the bill still uses 9.75.
+ */
+function formatRate(centsPerKwh: number): string {
+  return `${centsPerKwh.toFixed(2).replace(/0$/, '')}¢`;
+}
+
+/** The rate chips for one plan, straight from the RateSet in force. */
+function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRate[] {
+  return planId === 'Tiered'
+    ? [
+        { l: 'Tier 1', v: formatRate(rates.tiered.tier1) },
+        { l: 'Tier 2', v: formatRate(rates.tiered.tier2) },
+      ]
+    : planId === 'TOU'
+      ? [
+          { l: 'Off-Peak', v: formatRate(rates.tou.offPeak), c: 'text-emerald-600' },
+          { l: 'Mid-Peak', v: formatRate(rates.tou.midPeak), c: 'text-yellow-600' },
+          { l: 'On-Peak', v: formatRate(rates.tou.onPeak), c: 'text-red-600' },
+        ]
+      : [
+          { l: 'Overnight', v: formatRate(rates.ulo.overnight), c: 'text-purple-600' },
+          { l: 'Weekend Off', v: formatRate(rates.ulo.weekendOffPeak), c: 'text-emerald-600' },
+          { l: 'Mid-Peak', v: formatRate(rates.ulo.midPeak), c: 'text-yellow-600' },
+          { l: 'On-Peak', v: formatRate(rates.ulo.onPeak), c: 'text-red-600' },
+        ];
+}
+
 export default function PlanCards({
   comparison,
   userPlan,
@@ -81,24 +116,11 @@ export default function PlanCards({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
       {PLANS.map((plan, i) => {
-        const rates =
-          plan.id === 'Tiered'
-            ? [
-                { l: 'Tier 1', v: `${activeRateSet ? activeRateSet.tiered.tier1.toFixed(1) : '12.0'}¢` },
-                { l: 'Tier 2', v: `${activeRateSet ? activeRateSet.tiered.tier2.toFixed(1) : '14.2'}¢` },
-              ]
-            : plan.id === 'TOU'
-              ? [
-                  { l: 'Off-Peak', v: `${activeRateSet ? activeRateSet.tou.offPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' },
-                  { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.tou.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' },
-                  { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.tou.onPeak.toFixed(1) : '20.3'}¢`, c: 'text-red-600' },
-                ]
-              : [
-                  { l: 'Overnight', v: `${activeRateSet ? activeRateSet.ulo.overnight.toFixed(1) : '3.9'}¢`, c: 'text-purple-600' },
-                  { l: 'Weekend Off', v: `${activeRateSet ? activeRateSet.ulo.weekendOffPeak.toFixed(1) : '9.8'}¢`, c: 'text-emerald-600' },
-                  { l: 'Mid-Peak', v: `${activeRateSet ? activeRateSet.ulo.midPeak.toFixed(1) : '15.7'}¢`, c: 'text-yellow-600' },
-                  { l: 'On-Peak', v: `${activeRateSet ? activeRateSet.ulo.onPeak.toFixed(1) : '39.1'}¢`, c: 'text-red-600' },
-                ];
+        // Single source of truth for the displayed rates: the RateSet in
+        // force, the same one that priced the cost above. No RateSet loaded
+        // -> no rate rows: an honest gap beats a stale literal copy of
+        // last November's schedule.
+        const rates = activeRateSet ? planRates(plan.id, activeRateSet) : [];
 
         return (
           <div
@@ -122,7 +144,7 @@ export default function PlanCards({
               {comparison ? `$${comparison[plan.id].toFixed(2)}` : '—'}
             </div>
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
-              {rates.map((r: { l: string; v: string; c?: string }, j: number) => (
+              {rates.map((r, j) => (
                 <div key={j} className={`flex justify-between ${r.c || ''}`}>
                   <span>{r.l}</span> <span>{r.v}</span>
                 </div>
