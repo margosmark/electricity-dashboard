@@ -10,6 +10,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Dashboard from './Dashboard';
+import { loadEnergyData } from '@/lib/storage';
+
+// The readings live under the versioned key now; read them the way the app
+// does (storage.ts migrates the legacy `energy_data` key on the way in).
+function storedRows() {
+  const res = loadEnergyData();
+  return res.ok && res.value ? res.value.points : [];
+}
+
 
 const mockRates = {
   historicalRates: [
@@ -106,7 +115,7 @@ describe('first-run upload diagnostics', () => {
     await upload('good.xml', GOOD_FEED);
     await waitFor(() => expect(screen.queryByTestId('parse-diagnostic')).not.toBeInTheDocument());
     await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem('energy_data') || '[]')).toHaveLength(1);
+      expect(storedRows()).toHaveLength(1);
     });
   });
 

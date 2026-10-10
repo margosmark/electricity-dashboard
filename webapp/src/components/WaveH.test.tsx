@@ -34,6 +34,15 @@ import {
   type RateSet,
 } from '@/lib/energy';
 import { projectMonthBill } from '@/lib/billProjection';
+import { loadEnergyData, saveEnergyData } from '@/lib/storage';
+
+// The readings live under the versioned key now; read them the way the app
+// does (storage.ts migrates the legacy `energy_data` key on the way in).
+function storedRows() {
+  const res = loadEnergyData();
+  return res.ok && res.value ? res.value.points : [];
+}
+
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEBAPP = path.resolve(HERE, '../..');
@@ -94,7 +103,7 @@ function stubFetch(extra: Partial<Record<string, () => Promise<unknown>>> = {}) 
 }
 
 async function renderLoaded(data: unknown[] | null = mockRawData) {
-  if (data) localStorage.setItem('energy_data', JSON.stringify(data));
+  if (data) saveEnergyData(data as Parameters<typeof saveEnergyData>[0]);
   render(<Dashboard />);
   await waitFor(() => {
     expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
@@ -147,7 +156,7 @@ describe('Wave H 1 — Try with example data', () => {
     await userEvent.click(screen.getByTestId('try-example-data'));
 
     await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem('energy_data') || '[]')).toHaveLength(2);
+      expect(storedRows()).toHaveLength(2);
     });
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(EXAMPLE_DATA_URL);
 

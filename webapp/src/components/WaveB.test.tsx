@@ -13,6 +13,15 @@ import {
   type RateSet,
 } from '@/lib/energy';
 import { EXTRA_CHARGES_KEY } from '@/hooks/useDashboard';
+import { loadEnergyData } from '@/lib/storage';
+
+// The readings live under the versioned key now; read them the way the app
+// does (storage.ts migrates the legacy `energy_data` key on the way in).
+function storedRows() {
+  const res = loadEnergyData();
+  return res.ok && res.value ? res.value.points : [];
+}
+
 
 const mockRates = {
   historicalRates: [
@@ -297,13 +306,10 @@ describe('Dashboard upload with multiple UsagePoints', () => {
     await uploadXml('single.xml', SINGLE_POINT_XML);
 
     await waitFor(() => {
-      const saved = JSON.parse(localStorage.getItem('energy_data') || '[]');
-      expect(saved).toHaveLength(2);
+      expect(storedRows()).toHaveLength(2);
     });
     expect(screen.queryByTestId('usage-point-picker')).not.toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('energy_data') || '[]').map((r: { usage_kwh: number }) => r.usage_kwh)).toEqual([
-      1.5, 2.0,
-    ]);
+    expect(storedRows().map((r) => r.usage_kwh)).toEqual([1.5, 2.0]);
   });
 
   it('multi-UsagePoint file asks first, then loads only the chosen point', async () => {
@@ -314,15 +320,14 @@ describe('Dashboard upload with multiple UsagePoints', () => {
       expect(screen.getByTestId('usage-point-picker')).toBeInTheDocument();
     });
     // Nothing imported while the picker is up.
-    expect(localStorage.getItem('energy_data')).toBeNull();
+    expect(storedRows()).toEqual([]);
 
     await userEvent.click(screen.getByTestId('usage-point-bbbbbbbb-1111-2222-3333-444444444444'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('usage-point-picker')).not.toBeInTheDocument();
     });
-    const saved = JSON.parse(localStorage.getItem('energy_data') || '[]');
-    expect(saved.map((r: { usage_kwh: number }) => r.usage_kwh)).toEqual([9.0, 4.0]);
+    expect(storedRows().map((r) => r.usage_kwh)).toEqual([9.0, 4.0]);
   });
 
   it('multi-UsagePoint file can be combined on request', async () => {
@@ -337,8 +342,7 @@ describe('Dashboard upload with multiple UsagePoints', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('usage-point-picker')).not.toBeInTheDocument();
     });
-    const saved = JSON.parse(localStorage.getItem('energy_data') || '[]');
-    expect(saved.map((r: { usage_kwh: number }) => r.usage_kwh)).toEqual([1.5, 9.0, 2.0, 4.0]);
+    expect(storedRows().map((r) => r.usage_kwh)).toEqual([1.5, 9.0, 2.0, 4.0]);
   });
 
   it('cancelling the picker imports nothing and returns to the upload screen', async () => {
@@ -353,7 +357,7 @@ describe('Dashboard upload with multiple UsagePoints', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('usage-point-picker')).not.toBeInTheDocument();
     });
-    expect(localStorage.getItem('energy_data')).toBeNull();
+    expect(storedRows()).toEqual([]);
     expect(screen.getByText(/Drop XML Here/i)).toBeInTheDocument();
   });
 });
