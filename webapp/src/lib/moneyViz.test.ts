@@ -19,6 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  COST_SLICE_META,
   buildPeriodStacks,
   commodityWindowOf,
   hourCostProfile,
@@ -27,7 +28,17 @@ import {
   shareBreakdown,
   billWaterfall,
 } from './moneyViz';
-import { billedKwh, billTotals, billWindow, deriveExtraCharges, parseUsageSummaries, type ProcessedPoint, type RateSet } from './energy';
+import {
+  billedKwh,
+  billTotals,
+  billWindow,
+  deriveExtraCharges,
+  parseUsageSummaries,
+  type BillLineItem,
+  type ProcessedPoint,
+  type RateSet,
+  type UsageSummary,
+} from './energy';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const summaries = parseUsageSummaries(
@@ -161,6 +172,25 @@ describe('commodityWindowOf', () => {
     expect(commodityWindowOf('Electricity')).toBe('commodityOther');
     // ULO's "Overnight" is not "on peak" (the word boundary is the test).
     expect(commodityWindowOf('Overnight')).toBe('commodityOther');
+  });
+
+  it('maps a Tiered bill to its own tier, spacing variants and all', () => {
+    // The real 24-period export writes BOTH spacings inside one bill:
+    // "BLOCK 1 - Winter" and "BLOCK 1- Summer". Same signature, same tier.
+    expect(commodityWindowOf('BLOCK 1 - Winter')).toBe('tier1');
+    expect(commodityWindowOf('BLOCK 1- Summer')).toBe('tier1');
+    expect(commodityWindowOf('BLOCK 2 - Summer')).toBe('tier2');
+    expect(commodityWindowOf('Tier 1')).toBe('tier1');
+    expect(commodityWindowOf('Tier 2')).toBe('tier2');
+    // …and it must not see a tier where the note names none. "Tiered" has no
+    // block number, "Tier 25" is not tier 1, and a peak line that happens to
+    // mention a tier is still a peak line.
+    expect(commodityWindowOf('Tiered Electricity')).toBe('commodityOther');
+    expect(commodityWindowOf('Block 10')).toBe('commodityOther');
+    expect(commodityWindowOf('Off Peak-Summer')).toBe('offPeak');
+    // The usage lines carry the same notes — the split is for MONEY; the kWh
+    // side folds them back (see usageKeyOf below).
+    expect(commodityWindowOf('BLOCK 1 - Winter Usage')).toBe('tier1');
   });
 });
 
@@ -377,5 +407,194 @@ describe('planOverlay', () => {
     const overlay = planOverlay([], allRows, charges);
     expect(overlay.ready).toBe(false);
     expect(overlay.reason).toMatch(/no billing periods/i);
+  });
+});
+
+/* ==========================================================================
+ * Tiered periods — the commodity split into Tier 1 / Tier 2
+ * ========================================================================== */
+
+/**
+ * A line the way an Oakville TIERED bill carries it: a priced BLOCK line, or
+ * a BLOCK "… Usage" measurement line (uom 72 = kWh). Money is in dollars
+ * already; `rawAmount` is what the file would have sent.
+ */
+const tline = (
+  note: string,
+  dollars: number | null = null,
+  kwh: number | null = null,
+): BillLineItem => ({
+  note,
+  amount: dollars,
+  rawAmount: dollars === null ? null : Math.round(dollars * 100000),
+  itemKind: 10,
+  unitCost: null,
+  measurement:
+    kwh === null
+      ? null
+      : { scaled: kwh, value: Math.round(kwh * 1e6), powerOfTenMultiplier: -6, uom: 72 },
+});
+
+/** A UsageSummary with no read-date lines, so billWindow = billingPeriod. */
+function tieredSummary(startDate: string, days: number, items: BillLineItem[]): UsageSummary {
+  const start = Math.floor(Date.parse(`${startDate}T00:00:00Z`) / 1000);
+  const duration = days * 86400;
+  const end = new Date((start + duration) * 1000);
+  return {
+    source: 'UsageSummary',
+    start,
+    duration,
+    startDate,
+    endDate: end.toISOString().slice(0, 10),
+    days,
+    billLastPeriod: null,
+    billToDate: null,
+    costAdditionalLastPeriod: null,
+    currency: 124,
+    consumption: null,
+    items,
+  };
+}
+
+/**
+ * The three Tiered shapes the real 24-period export bills with, inlined the
+ * way planTimeline.test.ts inlines the BLOCK notes (the export itself never
+ * enters this repo). Every figure is the bill's OWN note → amount pair, and
+ * each checks out as rate × kWh:
+ *
+ *   9.3¢ × 631     = $58.68   BLOCK 1- Summer   (Sep 2025)
+ *  11.0¢ × 828.6   = $91.14   BLOCK 2 - Summer  (Sep 2025)
+ *  12.0¢ × 762     = $91.44   BLOCK 1 - Winter  (Oct 2025)
+ *   9.3¢ × 98      =  $9.11   BLOCK 1- Summer   (Oct 2025, same bill)
+ *  11.0¢ × 58.8    =  $6.47   BLOCK 2 - Summer  (Oct 2025, same bill)
+ *
+ * so BLOCK 1 is the CHEAP tier and BLOCK 2 the dear one — the mapping is
+ * rate-verified, not a convention anybody has to remember.
+ */
+const NOV_2024 = tieredSummary('2024-11-25', 29, [
+  tline('BLOCK 1 - Winter', 85.69),
+  tline('BLOCK 1 - Winter Usage', 0, 921.4),
+  tline('Delivery', 47.31),
+  tline('H.S.T. # 869177972', 17.4),
+]);
+
+const SEP_2025 = tieredSummary('2025-09-25', 32, [
+  tline('BLOCK 1- Summer', 58.68),
+  tline('BLOCK 2 - Summer', 91.14),
+  tline('BLOCK 1- Summer Usage', 0, 631),
+  tline('BLOCK 2 - Summer Usage', 0, 828.6),
+  tline('Delivery', 60.06),
+]);
+
+const OCT_2025 = tieredSummary('2025-10-27', 29, [
+  tline('BLOCK 2 - Summer', 6.47),
+  tline('BLOCK 1 - Winter', 91.44),
+  tline('BLOCK 1- Summer', 9.11),
+  // The odd one out: a wording that names no block number. It must land in
+  // `commodityOther`, never be guessed into whichever tier is closest.
+  tline('Tiered Electricity', 3.5),
+  tline('BLOCK 1 - Winter Usage', 0, 762),
+  tline('BLOCK 1- Summer Usage', 0, 98),
+  tline('BLOCK 2 - Summer Usage', 0, 58.8),
+  tline('Delivery', 57.81),
+]);
+
+describe('Tiered periods — Tier 1 / Tier 2, not one undifferentiated pile', () => {
+  const stacks = buildPeriodStacks([NOV_2024, SEP_2025, OCT_2025], []);
+
+  it('puts every BLOCK line in its own tier, spacing variants and all', () => {
+    expect(stacks[0].cost.tier1).toBeCloseTo(85.69, 2);
+    expect(stacks[0].cost.tier2).toBe(0);
+    expect(stacks[1].cost.tier1).toBeCloseTo(58.68, 2);
+    expect(stacks[1].cost.tier2).toBeCloseTo(91.14, 2);
+    // Both BLOCK 1 lines of the Oct bill are tier 1 — 91.44 + 9.11. Dropping
+    // the summer one would silently lose $9.11 of the bill's own commodity.
+    expect(stacks[2].cost.tier1).toBeCloseTo(100.55, 2);
+    expect(stacks[2].cost.tier2).toBeCloseTo(6.47, 2);
+    expect(stacks[2].cost.commodityOther).toBeCloseTo(3.5, 2);
+    expect(stacks.every((s) => s.cost.offPeak + s.cost.midPeak + s.cost.onPeak === 0)).toBe(true);
+  });
+
+  it('still adds up to the bill’s own commodity, to the cent', () => {
+    // The invariant Wave O exists for: the split must be a SPLIT, not a
+    // reinterpretation. Tiers + the leftovers = exactly what billTotals says
+    // the electricity itself cost, for every period.
+    for (const s of stacks) {
+      const commodity =
+        s.cost.offPeak + s.cost.midPeak + s.cost.onPeak +
+        s.cost.tier1 + s.cost.tier2 + s.cost.commodityOther;
+      expect(commodity).toBeCloseTo(billTotals(s.summary!).commodity, 2);
+      expect(commodity).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps the kWh stack on its four windows — tier usage folds into commodity', () => {
+    expect(stacks[1].usage).not.toBeNull();
+    expect(stacks[1].usage!.commodityOther).toBeCloseTo(631 + 828.6, 3);
+    expect(stacks[1].usageTotal).toBeCloseTo(1459.6, 3);
+    expect(stacks[1].usage!.offPeak).toBe(0);
+    // The tier split is about MONEY; the billed kWh total is unchanged.
+    expect(stacks[1].usageTotal).toBeCloseTo(billedKwh(SEP_2025) ?? 0, 3);
+  });
+
+  it('names the two rows the way the table prints them', () => {
+    expect(COST_SLICE_META.tier1.label).toBe('Tier 1');
+    expect(COST_SLICE_META.tier2.label).toBe('Tier 2');
+    expect(COST_SLICE_META.tier1.color).not.toBe(COST_SLICE_META.tier2.color);
+  });
+
+  it('keeps sharing the bill honestly with tiers in the denominator', () => {
+    const share = shareBreakdown(stacks)!;
+    const total =
+      share.commodityPct + share.deliveryPct + share.regulatoryPct + share.otherPct + share.taxPct;
+    expect(total).toBeCloseTo(100, 6);
+    // Commodity is the electricity itself: every BLOCK dollar is in here.
+    expect(share.commodityPct).toBeGreaterThan(50);
+  });
+});
+
+describe('periodDeltaRows — Tiered periods next to a TOU one', () => {
+  // summaries[0] of the committed fixture is TOU: its columns carry no tier
+  // money at all, which is exactly the shape Mark's mixed file has — TOU
+  // periods keep their off/mid/on-peak rows, and the tier rows read zero
+  // there (the component turns a zero tier cell into a dash).
+  const stacks = buildPeriodStacks([summaries[0], SEP_2025, OCT_2025], []);
+  const table = periodDeltaRows(stacks);
+  const tier1 = table.rows.find((r) => r.key === 'tier1');
+  const tier2 = table.rows.find((r) => r.key === 'tier2');
+
+  it('gives the delta table a Tier 1 and a Tier 2 row', () => {
+    expect(tier1).toBeDefined();
+    expect(tier2).toBeDefined();
+    expect(tier1!.label).toBe('Tier 1');
+    expect(tier2!.label).toBe('Tier 2');
+    // …and the odd-wording bucket survives as its own row when a file has one.
+    expect(table.rows.map((r) => r.key)).toContain('commodityOther');
+  });
+
+  it('prints each Tiered period’s own figures and leaves the TOU one at zero', () => {
+    // Zero, not a missing row: the UI renders a zero tier cell as a dash, so
+    // a TOU column can never claim "you were charged nothing on tier 1" and a
+    // Tiered column still shows the real dollars.
+    expect(tier1!.values).toEqual([0, 58.68, 100.55]);
+    expect(tier2!.values).toEqual([0, 91.14, 6.47]);
+    expect(tier1!.deltas[0]).toBeNull();
+    expect(tier1!.deltas[1]).toBeCloseTo(58.68, 2);
+    expect(tier2!.deltas[1]).toBeCloseTo(91.14, 2);
+    // Tier 1 after Sep: both BLOCK 1 lines of the Oct bill, 100.55 − 58.68.
+    expect(tier1!.deltas[2]).toBeCloseTo(41.87, 2);
+    expect(tier2!.deltas[2]).toBeCloseTo(-84.67, 2);
+  });
+
+  it('does not lose a cent of a Tiered period’s commodity in the split', () => {
+    const other = table.rows.find((r) => r.key === 'commodityOther')!;
+    const commodity = (i: number) => tier1!.values[i] + tier2!.values[i] + other.values[i];
+    // Sep 2025: the two BLOCK lines ARE the whole commodity.
+    expect(commodity(1)).toBeCloseTo(58.68 + 91.14, 2);
+    // Oct 2025: both BLOCK 1 lines + BLOCK 2 + the odd wording, which is the
+    // bill's own commodity figure — dropping the summer BLOCK 1 line (a
+    // plausible-looking shortcut) would be $9.11 short of it.
+    expect(commodity(2)).toBeCloseTo(91.44 + 9.11 + 6.47 + 3.5, 2);
+    expect(commodity(2)).toBeCloseTo(billTotals(OCT_2025).commodity, 2);
   });
 });

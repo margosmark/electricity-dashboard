@@ -1,0 +1,203 @@
+{
+  "wave": "tier-split",
+  "base": "http://127.0.0.1:3100/",
+  "deploy": null,
+  "fixture": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "at": "2026-10-10T15:58:18.107Z",
+  "total": 38,
+  "passed": 38,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "upload produced a totals strip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Money tab opens the money section",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "legend names Tier 1",
+      "ok": true,
+      "detail": "COMMODITY · OFF-PEAK COMMODITY · MID-PEAK COMMODITY · ON-PEAK TIER 1 TIER 2 DELIVERY REGULATORY HST ONTARIO ELECTRICITY REBATE ONTARIO ELECTRICITY REBATE — BELOW THE LINE"
+    },
+    {
+      "name": "legend names Tier 2",
+      "ok": true,
+      "detail": "COMMODITY · OFF-PEAK COMMODITY · MID-PEAK COMMODITY · ON-PEAK TIER 1 TIER 2 DELIVERY REGULATORY HST ONTARIO ELECTRICITY REBATE ONTARIO ELECTRICITY REBATE — BELOW THE LINE"
+    },
+    {
+      "name": "money table rendered",
+      "ok": true,
+      "detail": "25 rows"
+    },
+    {
+      "name": "money table has a Tier 1 column",
+      "ok": true,
+      "detail": "[\"Period\",\"Plan\",\"Off-peak\",\"Mid-peak\",\"On-peak\",\"Tier 1\",\"Tier 2\",\"Delivery\",\"Regulatory\",\"HST\",\"OEB rebate\",\"You paid\",\"Est. totalEstimate\",\"Data coverage\"]"
+    },
+    {
+      "name": "money table has a Tier 2 column",
+      "ok": true,
+      "detail": "[\"Period\",\"Plan\",\"Off-peak\",\"Mid-peak\",\"On-peak\",\"Tier 1\",\"Tier 2\",\"Delivery\",\"Regulatory\",\"HST\",\"OEB rebate\",\"You paid\",\"Est. totalEstimate\",\"Data coverage\"]"
+    },
+    {
+      "name": "Nov 25, 2024 → Tier 1 $85.69",
+      "ok": true,
+      "detail": "$85.69"
+    },
+    {
+      "name": "Nov 25, 2024 → Tier 2 —",
+      "ok": true,
+      "detail": "—"
+    },
+    {
+      "name": "Sep 25, 2025 → Tier 1 $58.68",
+      "ok": true,
+      "detail": "$58.68"
+    },
+    {
+      "name": "Sep 25, 2025 → Tier 2 $91.14",
+      "ok": true,
+      "detail": "$91.14"
+    },
+    {
+      "name": "Oct 27, 2025 → Tier 1 $100.55",
+      "ok": true,
+      "detail": "$100.55"
+    },
+    {
+      "name": "Oct 27, 2025 → Tier 2 $6.47",
+      "ok": true,
+      "detail": "$6.47"
+    },
+    {
+      "name": "Sep 25, 2025: the two tiers add up to the bill’s own $149.82 commodity",
+      "ok": true,
+      "detail": "$58.68 + $91.14 = 149.82"
+    },
+    {
+      "name": "Oct 27, 2025: the two tiers add up to the bill’s own $107.02 commodity",
+      "ok": true,
+      "detail": "$100.55 + $6.47 = 107.02"
+    },
+    {
+      "name": "Aug 26, 2025 (TOU) → Tier 1 —",
+      "ok": true,
+      "detail": "—"
+    },
+    {
+      "name": "Aug 26, 2025 (TOU) → Tier 2 —",
+      "ok": true,
+      "detail": "—"
+    },
+    {
+      "name": "the TOU period keeps its own windows instead",
+      "ok": true,
+      "detail": "$122.82"
+    },
+    {
+      "name": "OPEN row → Tier 1 —",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate: —"
+    },
+    {
+      "name": "OPEN row → Tier 2 —",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate: —"
+    },
+    {
+      "name": "OPEN row is badged as an estimate",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate"
+    },
+    {
+      "name": "OPEN row still states its estimate as an ESTIMATE (not as a tier)",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate | Unknown | $248.04 | $98.39 | $110.50 | — | — | — | — | — | — | Est. commodity~$456.93 | Est. total~$701.65 | 100%"
+    },
+    {
+      "name": "period delta table rendered",
+      "ok": true,
+      "detail": "11 rows"
+    },
+    {
+      "name": "delta table has a Tier 1 row",
+      "ok": true,
+      "detail": "Tier 1"
+    },
+    {
+      "name": "delta table has a Tier 2 row",
+      "ok": true,
+      "detail": "Tier 2"
+    },
+    {
+      "name": "the row is labelled Tier 1 / Tier 2",
+      "ok": true,
+      "detail": "Tier 1 / Tier 2"
+    },
+    {
+      "name": "the OPEN column is badged Estimate",
+      "ok": true,
+      "detail": "Charge | Baseline · Aug 26, 2024 | Δ → Sep 25, 2024 | Δ → Oct 25, 2024 | Δ → Nov 25, 2024 | Δ → Dec 24, 2024 | Δ → Jan 24, 2025 | Δ → Feb 25, 2025 | Δ → Mar 26, 2025 | Δ → Apr 25, 2025 | Δ → May 27, 2025 | Δ → Jun 25, 2025 | Δ → Jul 25, 2025 | Δ → Aug 26, 2025 | Δ → Sep 25, 2025 | Δ → Oct 27, 2025 | Δ → Nov 25, 2025 | Δ → Dec 24, 2025 | Δ → Jan 27, 2026 | Δ → Feb 25, 2026 | Δ → Mar 26, 2026 | Δ → Apr 24, 2026 | Δ → May 25, 2026 | Δ → Jun 23, 2026 | Δ → Jul 22, 2026 | Δ → Open · 2026-08-20Estimate"
+    },
+    {
+      "name": "delta table: OPEN column Tier 1 is a dash (never a paid tier)",
+      "ok": true,
+      "detail": "\"—\""
+    },
+    {
+      "name": "delta table: OPEN column Tier 2 is a dash (never a paid tier)",
+      "ok": true,
+      "detail": "\"—\""
+    },
+    {
+      "name": "delta table renders dashes where a tier does not apply",
+      "ok": true,
+      "detail": "35 dashes"
+    },
+    {
+      "name": "the delta table carries each Tiered period’s tier dollars",
+      "ok": true,
+      "detail": "— — — +$85.69 +$7.44 +$4.52 −$9.21 −$3.37 — — — — — +$58.68 +$41.87 +$9.75 +$19.08 −$31.45 +$14.89 — — — — — —"
+    },
+    {
+      "name": "plan switcher selects Tiered",
+      "ok": true,
+      "detail": "aria-pressed=true"
+    },
+    {
+      "name": "pace-chart tier marker draws on Tiered",
+      "ok": true,
+      "detail": "1 marker(s) on screen"
+    },
+    {
+      "name": "the accrual card still explains its tier marker",
+      "ok": true,
+      "detail": "Pace = your last 7-day average of $5.05/day (Wave F's projection math), carried across all 60 days of this period. Bill date 2026-10-18 = your last bill's read "
+    },
+    {
+      "name": "Tiered selected: Sep 25, 2025 figures are unchanged",
+      "ok": true,
+      "detail": "$58.68 / $91.14"
+    },
+    {
+      "name": "Tiered selected: OPEN row Tier 1 is still a dash",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate → —"
+    },
+    {
+      "name": "Tiered selected: OPEN row Tier 2 is still a dash",
+      "ok": true,
+      "detail": "Open · 2026-08-20Estimate → —"
+    },
+    {
+      "name": "Tiered selected: delta table OPEN column stays dashes in both tier rows",
+      "ok": true,
+      "detail": "— / —"
+    }
+  ]
+}

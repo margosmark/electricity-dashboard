@@ -8,7 +8,8 @@
  *
  * This page parses the payload with the app's own Green Button parser (the
  * exact code path the upload modal uses, so a file that loads here loads
- * there), then writes `energy_data` through the same contract. The one thing
+ * there), then writes the readings through the same storage contract the
+ * dashboard reads (versioned `energy_data_v2`, legacy key migrated). The one thing
  * it adds is a promise the upload flow makes implicitly and this one states
  * out loud: **existing readings are never overwritten without a merge
  * review.** With an empty profile it imports straight away, because there is
@@ -36,11 +37,11 @@ import {
   decodeImportPayload,
   mergeForWrite,
   planImport,
-  readStoredRows,
   type ImportPlan,
 } from '@/lib/importPlan';
-
-const ENERGY_KEY = 'energy_data';
+// The readings live under the versioned key; storage.ts owns the read, the
+// legacy-key migration and the write (the dashboard reads exactly this).
+import { loadEnergyData, saveEnergyData } from '@/lib/storage';
 
 /** Only the failure branch is ever rendered as an error box. */
 type FailedDiagnostic = Extract<ParseDiagnostic, { ok: false }>;
@@ -55,11 +56,10 @@ const BTN =
 
 function loadStored(): DataPoint[] {
   if (typeof window === 'undefined') return [];
-  try {
-    return readStoredRows(window.localStorage.getItem(ENERGY_KEY));
-  } catch {
-    return [];
-  }
+  // Unreadable storage reads as "no existing rows" — this page's safe
+  // default, since there is then nothing to merge with or overwrite.
+  const stored = loadEnergyData();
+  return stored.ok && stored.value ? stored.value.points : [];
 }
 
 function ImportFlow() {
@@ -85,14 +85,17 @@ function ImportFlow() {
    */
   const commit = useCallback(
     (rows: DataPoint[]) => {
-      try {
-        window.localStorage.setItem(ENERGY_KEY, JSON.stringify(rows));
-        window.localStorage.removeItem(EXAMPLE_DATA_KEY);
-      } catch {
+      const saved = saveEnergyData(rows, { source: 'import-page' });
+      if (!saved.ok) {
         window.alert(
-          'This browser refused to save the readings (storage may be full or blocked). Nothing was changed.',
+          `This browser refused to save the readings (${saved.detail}). Nothing was changed.`,
         );
         return;
+      }
+      try {
+        window.localStorage.removeItem(EXAMPLE_DATA_KEY);
+      } catch {
+        // The flag is bookkeeping; the readings above are what matters.
       }
       router.push('/');
     },
