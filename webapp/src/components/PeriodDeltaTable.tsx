@@ -81,6 +81,13 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
           <tbody>
             {table.rows.map((row) => {
               const strong = row.key === 'total' || row.key === 'payable';
+              /* A tier row is only defined for periods billed on that tier:
+                 on a TOU period — or in the OPEN column, where the estimate
+                 is one blended commodity figure we cannot honestly split —
+                 the cell is a dash, never "$0.00" (which would read as "you
+                 were charged nothing on tier 1") and never "TIER X" over an
+                 amount the utility has not billed yet. */
+              const tierRow = row.key === 'tier1' || row.key === 'tier2';
               const meta = COST_SLICE_META[row.key as keyof typeof COST_SLICE_META];
               return (
                 <tr
@@ -106,7 +113,15 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                     const flagged = column && column.kind !== 'billed';
                     return (
                       <td key={i} className="py-1.5 px-3 text-right tabular-nums">
-                        {i === 0 || baselineOnly ? (
+                        {tierRow && Math.abs(value) < 0.005 ? (
+                          <span
+                            className="text-slate-400"
+                            data-testid="money-delta-no-tier"
+                            title={`No ${row.label} charge in this period`}
+                          >
+                            —
+                          </span>
+                        ) : i === 0 || baselineOnly ? (
                           <span className="text-black">{money(value)}</span>
                         ) : !flagged ? (
                           <span className={changeClass(delta)} data-testid="money-delta-value">

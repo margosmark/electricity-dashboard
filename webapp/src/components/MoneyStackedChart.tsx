@@ -54,6 +54,16 @@ const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.to
 const kwhFmt = (n: number) =>
   `${n.toLocaleString('en-CA', { maximumFractionDigits: 1 })} kWh`;
 
+/**
+ * A tier this period was never billed on — a TOU period (it has no tiers at
+ * all) or the OPEN row (whose estimate is one blended commodity figure we
+ * refuse to cut into tiers after the fact). Those cells print a dash: "$0.00"
+ * would read as "charged nothing on tier 1", and "TIER 1 ~$41.00" over an
+ * unbilled tail would read as a charge nobody has made.
+ */
+const TIER_KEYS = new Set(['tier1', 'tier2']);
+const isAbsentTier = (key: string, value: number) => TIER_KEYS.has(key) && Math.abs(value) < 0.005;
+
 /** One row of the chart: fixed metadata + a numeric field per slice. */
 type ChartRow = {
   key: number;
@@ -128,9 +138,14 @@ function CompositionTooltip({
         {row.fullLabel}
       </div>
       <ul className="space-y-1 text-[11px] font-black">
-        {payload.map((p) => (
-          <li key={String(p.dataKey)}>{format(String(p.dataKey), Number(p.value))}</li>
-        ))}
+        {/* A tier the period was never billed on is not a line in this
+            tooltip: "Tier 1: $0.00" over a TOU bar reads like a charge of
+            zero rather than like a tier this plan does not have. */}
+        {payload
+          .filter((p) => !isAbsentTier(String(p.dataKey), Number(p.value)))
+          .map((p) => (
+            <li key={String(p.dataKey)}>{format(String(p.dataKey), Number(p.value))}</li>
+          ))}
       </ul>
       {mode !== 'usage' && (
         <div className="mt-2 pt-2 border-t-2 border-black flex justify-between gap-4 text-[11px] font-black">
@@ -777,20 +792,22 @@ export default function MoneyStackedChart({
                     <td key={k} className="py-1 px-2 text-right tabular-nums">
                       {mode === 'usage'
                         ? v.toLocaleString('en-CA', { maximumFractionDigits: 1 })
-                        : r.kind === 'gap'
-                          /* No bill covers these days: every money cell is a
-                             dash, because "$0.00 delivery" would claim the
-                             utility charged nothing for a period it never
-                             billed. */
+                        : isAbsentTier(k, v)
                           ? '—'
-                          : r.estimated && v === 0
-                            /* Same honesty for the open period: delivery,
-                               regulatory and HST there are not "zero", they
-                               do not exist yet. */
+                          : r.kind === 'gap'
+                            /* No bill covers these days: every money cell is a
+                               dash, because "$0.00 delivery" would claim the
+                               utility charged nothing for a period it never
+                               billed. */
                             ? '—'
-                            : isShare
-                              ? `${v.toFixed(1)}%`
-                              : money(v)}
+                            : r.estimated && v === 0
+                              /* Same honesty for the open period: delivery,
+                                 regulatory and HST there are not "zero", they
+                                 do not exist yet. */
+                              ? '—'
+                              : isShare
+                                ? `${v.toFixed(1)}%`
+                                : money(v)}
                     </td>
                   );
                 })}
