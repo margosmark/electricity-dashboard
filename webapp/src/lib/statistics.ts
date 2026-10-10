@@ -25,7 +25,7 @@
  *    selection are in; the weight is still each bill's own kWh.
  *
  * --------------------------------------------------------------------------------
- * The verdict, and why it is split (the honesty bar)
+ * The verdict, and why it is split three ways (the honesty bar)
  * --------------------------------------------------------------------------------
  * A raw ¢/kWh trend conflates three things that have nothing to do with each
  * other: how you used electricity, what the OEB priced it at, and the season
@@ -35,32 +35,53 @@
  * app refuses to do, and during an OEB rate bump (Nov 1) a raw slope would
  * actively lie.
  *
- * So each period is split into two components that sum to it EXACTLY:
+ * So each period splits into THREE components that sum to it EXACTLY:
  *
- *   behaviour¢/kWh = (usage priced at TODAY's rate set, per category
- *                    + the bill's own delivery/regulatory/other charges as
- *                    billed) ÷ kWh
- *   rate¢/kWh     = observed − behaviour
- *                  = (what the commodity actually cost
- *                     − what today's rates would charge for that same usage)
- *                     ÷ kWh
+ *   usage¢/kWh     = (this bill's commodity, repriced at TODAY's rate set,
+ *                     per category) ÷ kWh — what your usage would cost under
+ *                     today's OEB prices and today's schedule.
+ *   delivery¢/kWh  = (delivery + regulatory + anything else the OEB schedule
+ *                     does not price, as billed) ÷ kWh.
+ *   rate¢/kWh      = observed − usage − delivery
+ *                   = (what the commodity actually cost − what today's rates
+ *                     would charge for that same usage) ÷ kWh.
  *
- * Regression is linear, so slope(observed) = slope(behaviour) + slope(rate)
- * to floating-point precision — the split never loses or invents a cent, and
- * a test asserts it.
+ * Regression is linear, so slope(observed) = slope(usage) + slope(delivery) +
+ * slope(rate) to floating-point precision — the split never loses or invents
+ * a cent, and a test asserts it.
  *
- * The VERDICT (the "am I improving?" claim) reads the behaviour component;
- * the rate component and the net are printed beside it. For the owner's data
- * that is the difference between "you're winning" and the truth: over the
- * last 12 bills the behaviour slope is −0.2¢/period while rates pushed
- * +0.2¢/period, netting a statistically-flat ±0.1¢.
+ * The VERDICT (the "am I improving?" claim) reads the USAGE component and
+ * nothing else; the delivery and rate slopes are printed beside it. That
+ * separation is not cosmetic — it was audited on the owner's 24-bill export
+ * (evidence/wave-s-split-hygiene.py, a second parser that reproduces this
+ * module's split to the cent): the older two-way split folded delivery into
+ * "behaviour", and 96% of the slope it then called an improvement
+ * (−0.157¢/period) was the DELIVERY term (−0.151¢/period) — the fixed charge
+ * spread over a winter's worth of kWh, a seasonal arithmetic artefact the
+ * module's own docs already described. The usage slope behind that same
+ * window was −0.006¢/period against a 0.033¢ error bar: flat. The panel was
+ * crediting the household with an efficiency gain it had not made.
  *
  * Honest limits, stated because they change what the panel means:
- *   • "Behaviour" holds the OEB rate SET constant, not the whole bill —
- *     delivery and regulatory charges are utility-set and have no public rate
- *     schedule we can reprice, so they ride with the bill as issued. A
- *     delivery-rate increase therefore lands on the behaviour side. The
- *     counterfactual only claims what it can compute.
+ *   • "Usage" holds the OEB rate SET (prices AND today's schedule) constant
+ *     but keeps each bill's own billed block split: TOU windows are re-drawn
+ *     on Nov 1 and tiered thresholds move (600 kWh/month summer, 1,000
+ *     winter), so a rate-schedule season change can still move this component
+ *     without any change in usage. Measured on the owner's data: re-splitting
+ *     the same metered hours under one fixed window set moves it by ≤0.13¢
+ *     (TOU), and the tier-threshold season by 0.63–0.88¢ on tiered bills
+ *     (a winter bill is 100% BLOCK 1 at the cheap tier). Both are small next
+ *     to a full ¢/kWh headline but not next to a 0.15¢ slope — hence the
+ *     12-bill window below.
+ *   • A plan switch (TOU ↔ tiered, which this owner made four times in two
+ *     years) reprices the counterfactual in the bill's OWN structure, so the
+ *     usage component steps by +0.89¢ / +0.55¢ at the two switches inside the
+ *     current window. The Money tab shows the switch; this panel does not
+ *     smooth it away.
+ *   • Delivery and regulatory charges are utility-set with no public rate
+ *     schedule we can reprice, so they ride with the bill as issued and get
+ *     their OWN component — never the verdict. A delivery-rate increase shows
+ *     up as the delivery slope, which is where it belongs.
  *   • The rate baseline is TODAY's set (`latestRateSet`), so the rate
  *     component reads "how much cheaper/more expensive than right now was
  *     this bill" — zero for bills already priced at the current set, and its
@@ -118,9 +139,14 @@ export type PeriodEfficiency = {
   cost: number;
   /** Observed ¢/kWh: cost ÷ kwh. */
   cents: number;
-  /** ¢/kWh had TODAY's rates priced this usage — null when unpriceable. */
-  behaviorCents: number | null;
-  /** observed − behaviour: the rate-schedule part, null when unpriceable. */
+  /**
+   * ¢/kWh of this bill's COMMODITY repriced at today's rate set — what your
+   * usage would cost under today's OEB prices. null when unpriceable.
+   */
+  usageCents: number | null;
+  /** ¢/kWh of delivery + regulatory + other, as billed (never repriced). */
+  deliveryCents: number | null;
+  /** observed − usage − delivery: the price-schedule part, null when unpriceable. */
   rateCents: number | null;
   /** Usage kWh this bill's categories we could NOT map to a rate key. */
   unmappedKwh: number;
@@ -213,7 +239,8 @@ export function efficiencyPeriods(
     if (!Number.isFinite(cost)) continue;
 
     const cents = (cost / kwh) * 100;
-    let behaviorCents: number | null = null;
+    let usageCents: number | null = null;
+    let deliveryCents: number | null = null;
     let rateCents: number | null = null;
     let unmappedKwh = 0;
 
@@ -221,11 +248,16 @@ export function efficiencyPeriods(
       const cf = counterfactualCommodity(summary, latest);
       unmappedKwh = cf.unmappedKwh;
       if (cf.unmappedKwh === 0) {
-        // Everything the rate set does NOT price rides with the bill as
-        // issued, so behaviour + rate recombines to `cents` exactly.
-        const nonCommodity = cost - totals.commodity;
-        behaviorCents = ((cf.dollars + nonCommodity) / kwh) * 100;
-        rateCents = cents - behaviorCents;
+        // Three components, exact by construction: the commodity repriced at
+        // today's rates, the bill's own delivery/regulatory/other as issued,
+        // and the residual — which is precisely the price-schedule delta.
+        // Delivery gets its own slice because folding it into the usage half
+        // made the verdict read a seasonal fixed-charge artefact as an
+        // efficiency gain (see the module header: 96% of the old "behaviour"
+        // slope on the owner's export was this term).
+        usageCents = (cf.dollars / kwh) * 100;
+        deliveryCents = ((cost - totals.commodity) / kwh) * 100;
+        rateCents = cents - usageCents - deliveryCents;
       }
     }
 
@@ -237,7 +269,8 @@ export function efficiencyPeriods(
       kwh,
       cost,
       cents,
-      behaviorCents,
+      usageCents,
+      deliveryCents,
       rateCents,
       unmappedKwh,
       season: seasonForDay(summary.startDate),
@@ -382,13 +415,16 @@ export type EfficiencyTrend = {
   windowLabel: string;
   /** Fit over observed ¢/kWh. */
   net: LinearFit | null;
-  /** Fit over the behaviour component (what today's rates + your usage cost). */
-  behavior: LinearFit | null;
+  /** Fit over the usage component (your commodity at today's rates). */
+  usage: LinearFit | null;
+  /** Fit over delivery/regulatory/other per kWh — reported, never credited. */
+  delivery: LinearFit | null;
   /** Fit over the rate component (what rates did, versus today). */
   rate: LinearFit | null;
   /**
-   * The headline claim. Reads BEHAVIOUR when the split is computable — the
-   * panel never credits you with a rate change — else the net fit.
+   * The headline claim. Reads USAGE when the split is computable — the panel
+   * never credits you with a rate change, and never with the delivery/fixed
+   * charge riding along either — else the net fit.
    */
   verdict: TrendVerdict | null;
   /** The slope the verdict was read from, ¢/kWh per period. */
@@ -399,6 +435,8 @@ export type EfficiencyTrend = {
   netVerdict: TrendVerdict | null;
   /** What the rate component did over the window. */
   rateDirection: TrendDirection | null;
+  /** What delivery/other per kWh did over the window. */
+  deliveryDirection: TrendDirection | null;
   /** One honest sentence; null when there is no verdict to phrase. */
   sentence: string | null;
   splitAvailable: boolean;
@@ -426,6 +464,12 @@ function behaviorClause(dir: TrendDirection, slope: number): string {
   if (dir === 'down')
     return `your usage mix improved (${fmtSigned(slope)}¢/kWh behavior-driven)`;
   return `your usage mix got worse (${fmtSigned(slope)}¢/kWh behavior-driven)`;
+}
+
+function deliveryClause(dir: TrendDirection, slope: number): string {
+  if (dir === 'flat') return `delivery & fixed charges flat (±${fmtBand(slope)}¢)`;
+  if (dir === 'up') return `delivery & fixed charges rose (${fmtSigned(slope)}¢/kWh)`;
+  return `delivery & fixed charges fell (${fmtSigned(slope)}¢/kWh)`;
 }
 
 function rateClause(dir: TrendDirection, slope: number): string {
@@ -464,13 +508,15 @@ export function efficiencyTrend(
     windowSize,
     windowLabel,
     net: null,
-    behavior: null,
+    usage: null,
+    delivery: null,
     rate: null,
     verdict: null,
     slope: null,
     band: 0,
     netVerdict: null,
     rateDirection: null,
+    deliveryDirection: null,
     sentence: null,
     splitAvailable: false,
     splitNote: null,
@@ -489,12 +535,14 @@ export function efficiencyTrend(
   // deserves to be told whether its bills could be priced at today's rates.
   const splitAvailable =
     window.length > 0 &&
-    window.every((p) => p.behaviorCents !== null && p.rateCents !== null);
+    window.every(
+      (p) => p.usageCents !== null && p.deliveryCents !== null && p.rateCents !== null,
+    );
   const splitNote = splitAvailable
     ? null
     : window.some((p) => p.unmappedKwh > 0)
-      ? 'A usage category on a recent bill can’t be priced against today’s rates, so the rate/behaviour split is off for this window.'
-      : 'No OEB rate set is loaded, so this trend can’t be split into rate vs behaviour yet.';
+      ? 'A usage category on a recent bill can’t be priced against today’s rates, so the usage/rate split is off for this window.'
+      : 'No OEB rate set is loaded, so this trend can’t be split into usage, rates and delivery yet.';
 
   if (points.length < TREND_MIN_PERIODS) {
     return {
@@ -510,27 +558,33 @@ export function efficiencyTrend(
     return { ...base, splitAvailable, splitNote, emptyMessage: 'Not enough variation in the bills to fit a line.' };
   }
 
-  const behavior = splitAvailable
-    ? linearFit(window.map((p) => p.behaviorCents as number))
+  const usage = splitAvailable
+    ? linearFit(window.map((p) => p.usageCents as number))
+    : null;
+  const delivery = splitAvailable
+    ? linearFit(window.map((p) => p.deliveryCents as number))
     : null;
   const rate = splitAvailable
     ? linearFit(window.map((p) => p.rateCents as number))
     : null;
 
-  const headline = behavior ?? net;
+  const headline = usage ?? net;
   const verdict = verdictOf(headline);
   const netVerdict = verdictOf(net);
   const rateDirection = directionOf(rate);
+  const deliveryDirection = directionOf(delivery);
 
   let sentence: string | null = null;
-  if (behavior && rate && netVerdict) {
-    const bDir = directionOf(behavior) as TrendDirection;
+  if (usage && delivery && rate && netVerdict) {
+    const bDir = directionOf(usage) as TrendDirection;
+    const dDir = deliveryDirection as TrendDirection;
     const rDir = directionOf(rate) as TrendDirection;
     // "but" only where the two really conflict: you got better AND paid more.
     const connector = bDir === 'down' && rDir === 'up' ? 'but ' : '';
     sentence =
-      `${behaviorClause(bDir, behavior.slope)}, ${connector}` +
-      `${rateClause(rDir, rate.slope)} — ${netClause(netVerdict, net)}.`;
+      `${behaviorClause(bDir, usage.slope)}, ${connector}` +
+      `${rateClause(rDir, rate.slope)}; ${deliveryClause(dDir, delivery.slope)}` +
+      ` — ${netClause(netVerdict, net)}.`;
   } else if (netVerdict) {
     // Split off (no rate set / an unpriceable category): report what the
     // OBSERVED line did, and put the reason in the same sentence.
@@ -548,13 +602,15 @@ export function efficiencyTrend(
     ...base,
     ready: true,
     net,
-    behavior,
+    usage,
+    delivery,
     rate,
     verdict,
     slope: headline.slope,
     band: headline.stderr,
     netVerdict,
     rateDirection,
+    deliveryDirection,
     sentence,
     splitAvailable,
     splitNote,

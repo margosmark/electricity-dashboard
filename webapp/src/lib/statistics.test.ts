@@ -7,11 +7,14 @@
  * published ($1,365.03 over 8,080 kWh), so the all-time assertion below is
  * the audited arithmetic, not a number made up for the test.
  *
- * The split (behaviour + rate ≡ observed, exactly) and the verdict rules are
- * checked on constructed periods, because the interesting behaviour is the
- * RULE, not any one dataset:
+ * The split (usage + delivery + rate ≡ observed, exactly) and the verdict
+ * rules are checked on constructed periods, because the interesting behaviour
+ * is the RULE, not any one dataset:
  *   • a slope inside its own standard error is flat — no hand-picked band;
- *   • the verdict reads the BEHAVIOUR component, never the raw slope;
+ *   • the verdict reads the USAGE component — never the raw slope, and never
+ *     the delivery/fixed-charge term (the regression test for the Wave S
+ *     follow-through audit: on the owner's real export 96% of the slope the
+ *     old two-way split called an improvement was that delivery term);
  *   • the split is additive to floating-point precision;
  *   • too few bills says so instead of guessing.
  */
@@ -64,8 +67,9 @@ const rates: RateSet[] = [
 function period(
   i: number,
   cents: number,
-  behavior: number | null = cents,
+  usage: number | null = cents,
   rate: number | null = 0,
+  delivery: number | null = 0,
 ): PeriodEfficiency {
   const month = String((i % 12) + 1).padStart(2, '0');
   return {
@@ -76,7 +80,8 @@ function period(
     kwh: 1000,
     cost: cents * 10,
     cents,
-    behaviorCents: behavior,
+    usageCents: usage,
+    deliveryCents: delivery,
     rateCents: rate,
     unmappedKwh: 0,
     season: 'summer',
@@ -162,22 +167,27 @@ describe('Wave S 2 — all-time and in-view averages', () => {
   });
 });
 
-describe('Wave S 3 — the behaviour/rate split', () => {
-  it('splits each bill so behaviour + rate recombines to the observed ¢/kWh exactly', () => {
+describe('Wave S 3 — the usage/rate/delivery split', () => {
+  it('splits each bill so usage + delivery + rate recombines to observed exactly', () => {
     for (const p of efficiencyPeriods(summaries, rates)) {
-      expect(p.behaviorCents).not.toBeNull();
+      expect(p.usageCents).not.toBeNull();
+      expect(p.deliveryCents).not.toBeNull();
       expect(p.rateCents).not.toBeNull();
-      expect(p.behaviorCents! + p.rateCents!).toBeCloseTo(p.cents, 10);
+      expect(p.usageCents! + p.deliveryCents! + p.rateCents!).toBeCloseTo(p.cents, 10);
     }
   });
 
   it('prices the counterfactual commodity at today’s rates, per category', () => {
     const [first] = efficiencyPeriods(summaries, rates);
-    // Usage 1,800 off + 450 mid + 400 on at 9.8 / 15.7 / 20.3 ¢ = $328.25,
-    // plus the bill's own non-commodity $114.40, over 2,650 kWh.
-    expect(first.behaviorCents!).toBeCloseTo(((328.25 + 114.4) / 2650) * 100, 3);
+    // Usage 1,800 off + 450 mid + 400 on at 9.8 / 15.7 / 20.3 ¢ = $328.25 over
+    // 2,650 kWh — the USAGE component alone, delivery not folded in.
+    expect(first.usageCents!).toBeCloseTo((328.25 / 2650) * 100, 3);
+    // The bill's own non-commodity $114.40 is the DELIVERY component, kept
+    // out of the verdict on purpose (the audit's whole finding).
+    expect(first.deliveryCents!).toBeCloseTo((114.4 / 2650) * 100, 3);
     // The bill charged $383.05 of commodity — more than today's rates → the
-    // rate component is positive (rates rose since), not negative.
+    // rate component is positive (rates rose since), not negative. Same
+    // 2.0679¢ the two-way split produced: the residual is untouched.
     expect(first.rateCents!).toBeCloseTo(2.0679, 3);
     expect(first.rateCents!).toBeGreaterThan(0);
   });
@@ -193,7 +203,8 @@ describe('Wave S 3 — the behaviour/rate split', () => {
     ];
     const [p] = efficiencyPeriods(weird, rates);
     expect(p.cents).toBeCloseTo(18.7717, 3);
-    expect(p.behaviorCents).toBeNull();
+    expect(p.usageCents).toBeNull();
+    expect(p.deliveryCents).toBeNull();
     expect(p.rateCents).toBeNull();
     expect(p.unmappedKwh).toBeGreaterThan(0);
   });
@@ -201,7 +212,8 @@ describe('Wave S 3 — the behaviour/rate split', () => {
   it('has no split at all without a rate set', () => {
     const [p] = efficiencyPeriods(summaries, null);
     expect(p.cents).toBeCloseTo(18.7717, 3);
-    expect(p.behaviorCents).toBeNull();
+    expect(p.usageCents).toBeNull();
+    expect(p.deliveryCents).toBeNull();
     expect(p.rateCents).toBeNull();
   });
 
@@ -268,38 +280,60 @@ describe('Wave S 4 — regression and the no-massage verdict', () => {
 });
 
 describe('Wave S 5 — the trend report', () => {
-  it('splits a mixed trend: behaviour improving, rates rising, net flat', () => {
-    // Twelve periods: behaviour −0.2¢/period, rate +0.2¢/period → observed flat.
+  it('splits a mixed trend: usage improving, rates rising, delivery flat, net flat', () => {
+    // Twelve periods summing to a flat 19¢: usage −0.2¢/period, rate
+    // +0.2¢/period, delivery a constant 4¢ that must not move the verdict.
     const periods = Array.from({ length: 12 }, (_, i) =>
-      period(i, 19, 20 - 0.2 * i, -1 + 0.2 * i),
+      period(i, 19, 16 - 0.2 * i, -1 + 0.2 * i, 4),
     );
     const t = efficiencyTrend(periods, rates);
     expect(t.ready).toBe(true);
     expect(t.windowSize).toBe(12);
     expect(t.windowLabel).toBe('your last 12 bills');
     expect(t.splitAvailable).toBe(true);
-    expect(t.behavior!.slope).toBeCloseTo(-0.2, 10);
+    expect(t.usage!.slope).toBeCloseTo(-0.2, 10);
+    expect(t.delivery!.slope).toBeCloseTo(0, 10);
     expect(t.rate!.slope).toBeCloseTo(+0.2, 10);
     expect(t.net!.slope).toBeCloseTo(0, 10);
     expect(t.verdict).toBe('improving');
     expect(t.netVerdict).toBe('stable');
     expect(t.rateDirection).toBe('up');
+    expect(t.deliveryDirection).toBe('flat');
     expect(t.sentence).toBe(
-      'Your usage mix improved (-0.2¢/kWh behavior-driven), but rates rose (+0.2¢/kWh) — net stable ±0.0¢.',
+      'Your usage mix improved (-0.2¢/kWh behavior-driven), but rates rose (+0.2¢/kWh); delivery & fixed charges flat (±0.0¢) — net stable ±0.0¢.',
     );
   });
 
   it('never credits the user with a rate-driven improvement', () => {
-    // Observed falling purely because RATES fell: behaviour flat, rate down.
+    // Observed falling purely because RATES fell: usage flat, rate down.
     const periods = Array.from({ length: 6 }, (_, i) =>
-      period(i, 18 - 0.3 * i, 20, -2 - 0.3 * i),
+      period(i, 21 - 0.3 * i, 20, -2 - 0.3 * i, 3),
     );
     const t = efficiencyTrend(periods, rates);
-    expect(t.behavior!.slope).toBeCloseTo(0, 10);
+    expect(t.usage!.slope).toBeCloseTo(0, 10);
     expect(t.verdict).toBe('stable');
     expect(t.rateDirection).toBe('down');
     expect(t.sentence).toContain('usage mix is flat');
     expect(t.sentence).toContain('rates fell');
+  });
+
+  it('never credits the user with a DELIVERY-driven improvement either', () => {
+    // The audit finding, as a rule: observed falling because the fixed charge
+    // spread over a summer's worth of kWh — usage flat, delivery collapsing.
+    // The old two-way split reported this as "your usage mix improved"; the
+    // verdict must now stay on usage and put delivery beside it.
+    const periods = Array.from({ length: 12 }, (_, i) =>
+      period(i, 16 - 0.25 * i, 12, 0, 4 - 0.25 * i),
+    );
+    const t = efficiencyTrend(periods, rates);
+    expect(t.usage!.slope).toBeCloseTo(0, 10);
+    expect(t.delivery!.slope).toBeCloseTo(-0.25, 10);
+    expect(t.net!.slope).toBeCloseTo(-0.25, 10);
+    expect(t.netVerdict).toBe('improving');
+    expect(t.verdict).toBe('stable');
+    expect(t.deliveryDirection).toBe('down');
+    expect(t.sentence).toContain('usage mix is flat');
+    expect(t.sentence).toContain('delivery & fixed charges fell (-0.2¢/kWh)'); // fmtSigned rounds -0.25 → -0.2
   });
 
   it('caps the window at the newest 12 periods', () => {
@@ -311,6 +345,7 @@ describe('Wave S 5 — the trend report', () => {
     expect(t.window[t.window.length - 1].start).toBe(periods[19].start);
     // 0.5¢/period over the window → worsening, and the fit sees exactly that.
     expect(t.verdict).toBe('worsening');
+    expect(t.usage!.slope).toBeCloseTo(0.5, 10);
     expect(t.net!.slope).toBeCloseTo(0.5, 10);
   });
 
@@ -328,12 +363,15 @@ describe('Wave S 5 — the trend report', () => {
   });
 
   it('still earns a net verdict when the split is off, and says why', () => {
-    const periods = Array.from({ length: 6 }, (_, i) => period(i, 10 + i, null, null));
+    const periods = Array.from({ length: 6 }, (_, i) =>
+      period(i, 10 + i, null, null, null),
+    );
     const t = efficiencyTrend(periods, rates);
     expect(t.ready).toBe(true);
     expect(t.splitAvailable).toBe(false);
     expect(t.splitNote).toBeTruthy();
-    expect(t.behavior).toBeNull();
+    expect(t.usage).toBeNull();
+    expect(t.delivery).toBeNull();
     // Headline falls back to the observed fit — it never invents a split.
     expect(t.verdict).toBe('worsening');
     expect(t.sentence).toContain(t.splitNote as string);
