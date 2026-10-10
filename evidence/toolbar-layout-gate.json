@@ -1,0 +1,90 @@
+{
+  "wave": "toolbar-gate",
+  "fixture": "green-button-alliance-sample.xml",
+  "at": "2026-10-10T23:31:53.362Z",
+  "sweep": [
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 639,
+      "height": 900
+    },
+    {
+      "width": 640,
+      "height": 900
+    },
+    {
+      "width": 767,
+      "height": 900
+    },
+    {
+      "width": 768,
+      "height": 900
+    },
+    {
+      "width": 939,
+      "height": 900
+    },
+    {
+      "width": 940,
+      "height": 900
+    },
+    {
+      "width": 1023,
+      "height": 900
+    },
+    {
+      "width": 1024,
+      "height": 700
+    },
+    {
+      "width": 1100,
+      "height": 900
+    },
+    {
+      "width": 1279,
+      "height": 900
+    },
+    {
+      "width": 1280,
+      "height": 700
+    },
+    {
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "budgets": {
+    "note": "see webapp/tests/e2e/toolbar-geometry.js TOOLBAR_BUDGETS"
+  },
+  "total": 90,
+  "failed": 0,
+  "failures": [],
+  "layouts": {
+    "390x844": "rows 318x231@239 | 318x171@486 · card 358x458 · void 8816px² · painted 84%",
+    "639x900": "rows 567x162@239 | 567x80@417 · card 607x298 · void 9840px² · painted 84%",
+    "640x900": "rows 568x162@247 | 568x80@425 · card 608x298 · void 19680px² · painted 75%",
+    "767x900": "rows 695x110@247 | 695x80@373 · card 735x246 · void 18688px² · painted 76%",
+    "768x900": "rows 648x131@324 | 648x121@479 · card 704x332 · void 15200px² · painted 69%",
+    "939x900": "rows 819x126@324 | 819x127@474 · card 875x333 · void 25600px² · painted 67%",
+    "940x900": "rows 820x126@324 | 820x127@474 · card 876x333 · void 25600px² · painted 67%",
+    "1023x900": "rows 903x121@324 | 903x127@469 · card 959x328 · void 15520px² · painted 77%",
+    "1024x700": "rows 904x121@324 | 904x96@469 · card 960x297 · void 14592px² · painted 78%",
+    "1100x900": "rows 980x121@324 | 980x96@469 · card 1036x297 · void 15808px² · painted 77%",
+    "1279x900": "rows 1159x62@324 | 1159x96@410 · card 1215x238 · void 18688px² · painted 78%",
+    "1280x700": "rows 1160x62@324 | 1160x96@410 · card 1216x238 · void 18688px² · painted 78%",
+    "1366x768": "rows 1224x58@324 | 1224x96@406 · card 1280x234 · void 19712px² · painted 78%",
+    "1440x900": "rows 1224x58@324 | 1224x96@406 · card 1280x234 · void 19712px² · painted 78%",
+    "1920x1080": "rows 1224x58@324 | 1224x96@406 · card 1280x234 · void 19712px² · painted 78%"
+  }
+}
