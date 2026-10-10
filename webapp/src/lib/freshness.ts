@@ -27,23 +27,27 @@ export type Freshness = {
 };
 
 /** Parse a `yyyy-MM-dd` as LOCAL midnight (no UTC off-by-one on the age). */
+import { t } from '@/i18n';
+
+
 function startOfDay(dateStr: string): number {
   const [y, m, d] = dateStr.split('-').map(Number);
   if (!y || !m || !d) return Number.NaN;
   return new Date(y, m - 1, d).getTime();
 }
 
-/** How old the newest reading is, in the user's words. */
+/**
+ * How old the newest reading is, in the user's words.
+ *
+ * Wave U: the words come from the locale catalog (`freshness.*`, with
+ * `_one`/`_other` variants so French pluralizes by its own rules). Called at
+ * render time, so a language switch re-ages the data in the new language.
+ */
 export function relativeAge(ageDays: number): string {
-  if (ageDays <= 0) return 'today';
-  if (ageDays === 1) return '1 day ago';
-  if (ageDays < 30) return `${ageDays} days ago`;
-  if (ageDays < 365) {
-    const months = Math.round(ageDays / 30);
-    return months <= 1 ? '1 month ago' : `${months} months ago`;
-  }
-  const years = Math.round(ageDays / 365);
-  return years <= 1 ? '1 year ago' : `${years} years ago`;
+  if (ageDays <= 0) return t('freshness.today');
+  if (ageDays < 30) return t('freshness.days', { count: ageDays });
+  if (ageDays < 365) return t('freshness.months', { count: Math.round(ageDays / 30) });
+  return t('freshness.years', { count: Math.round(ageDays / 365) });
 }
 
 /**

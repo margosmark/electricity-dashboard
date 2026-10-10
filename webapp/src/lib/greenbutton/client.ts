@@ -6,6 +6,9 @@
  * server, so this file can be read by anyone who can read the app bundle.
  */
 
+/* Wave U — the connect-flow copy translates; lib code reads the module locale. */
+import { t } from '@/i18n';
+
 export type GbStatus = {
   configured: boolean;
   unconfiguredReason: string | null;
@@ -95,49 +98,46 @@ export function describeGbError(code: string): { headline: string; detail: strin
   switch (code) {
     case "not_configured":
       return {
-        headline: "Live sync is not set up yet",
-        detail: "Oakville Hydro has not issued this app its Green Button credentials.",
-        hints: ["Upload your Green Button XML export instead — everything still works offline."],
+        headline: t('gb.notConfiguredHeadline'),
+        detail: t('gb.notConfiguredDetail'),
+        hints: [t('gb.notConfiguredHint')],
       };
     case "not_connected":
     case "session_required":
       return {
-        headline: "Not connected in this browser",
-        detail: "The dashboard has no Green Button authorisation for this device yet.",
-        hints: ["Press “Authorise with Oakville Hydro” to authorise, or keep uploading exports."],
+        headline: t('gb.notConnectedHeadline'),
+        detail: t('gb.notConnectedDetail'),
+        hints: [t('gb.notConnectedHint')],
       };
     case "grant_revoked":
       return {
-        headline: "Oakville Hydro disconnected us",
-        detail: "The authorisation was revoked or has expired, so live sync stopped.",
-        hints: ["Press “Authorise with Oakville Hydro” to authorise again."],
+        headline: t('gb.revokedHeadline'),
+        detail: t('gb.revokedDetail'),
+        hints: [t('gb.revokedHint')],
       };
     case "client_auth":
       return {
-        headline: "Shim credentials rejected",
-        detail: "The token endpoint rejected this app's client_id/client_secret.",
-        hints: [
-          "This is a server-side configuration problem, not something re-authorising can fix.",
-          "Check GB_CLIENT_ID / GB_CLIENT_SECRET on .110.",
-        ],
+        headline: t('gb.clientAuthHeadline'),
+        detail: t('gb.clientAuthDetail'),
+        hints: [t('gb.clientAuthHint1'), t('gb.clientAuthHint2')],
       };
     case "data_pending":
       return {
-        headline: "The utility is still assembling your data",
-        detail: "Green Button answered 202 Accepted — the batch is being prepared in the background.",
-        hints: ["Try again in a few minutes."],
+        headline: t('gb.dataPendingHeadline'),
+        detail: t('gb.dataPendingDetail'),
+        hints: [t('gb.dataPendingHint')],
       };
     case "unreachable":
       return {
-        headline: "Could not reach live sync",
-        detail: "The shim did not answer in time.",
-        hints: ["Check the connection and try again; your existing data is untouched."],
+        headline: t('gb.unreachableHeadline'),
+        detail: t('gb.unreachableDetail'),
+        hints: [t('gb.unreachableHint')],
       };
     default:
       return {
-        headline: "Live sync failed",
+        headline: t('gb.failedHeadline'),
         detail: code,
-        hints: ["Your existing readings were not changed."],
+        hints: [t('gb.failedHint')],
       };
   }
 }

@@ -26,6 +26,7 @@
 import React, { useMemo } from 'react';
 import { Thermometer } from 'lucide-react';
 
+import { fmtNumber, useTranslation } from '@/i18n';
 import { OPEN_METEO, type TempFetchStatus } from '@/lib/openMeteo';
 import { TEMP_BANDS, tempBandEmpty, type TempBandReport } from '@/lib/tempBands';
 
@@ -47,7 +48,26 @@ const SHARE_MAX_H = 22;
 /** Cold bins are blue, hot bins red — the axis reads as a thermometer. */
 const BAR_FILL = ['#1d4ed8', '#2563eb', '#3b82f6', '#f59e0b', '#f97316', '#ef4444', '#b91c1c'];
 
+/**
+ * Wave U — the axis tick under each bar is prose ("-10 to 5", "over 30"),
+ * so it translates. `TEMP_BANDS[].label` stays canonical: it is the bin's
+ * data identity (`data-label`, and the `{cold}`/`{hot}` slot in the verdict
+ * sentence, which supplies its own °C).
+ */
+const BAND_LABEL_KEY: Record<string, string> = {
+  'lt-10': 'tempBand.bandLt10',
+  '-10..5': 'tempBand.band10to5',
+  '5..12': 'tempBand.band5to12',
+  '12..18': 'tempBand.band12to18',
+  '18..24': 'tempBand.band18to24',
+  '24..30': 'tempBand.band24to30',
+  'gt-30': 'tempBand.bandGt30',
+};
+
 function Chart({ report }: { report: TempBandReport }) {
+  // Wave U — the axis titles translate; `t` is a hook, and Chart is a real
+  // component so it can use it directly.
+  const { t } = useTranslation();
   const geo = useMemo(() => {
     const innerW = W - PAD.left - PAD.right;
     const step = innerW / TEMP_BANDS.length;
@@ -151,7 +171,7 @@ function Chart({ report }: { report: TempBandReport }) {
               {row.hours > 0 ? `${Math.round(row.shareOfKwh * 100)}%` : ''}
             </text>
             <text x={x(i)} y={SHARE_TOP + SHARE_MAX_H + 27} textAnchor="middle" fontSize={10} fontWeight={900} fill="#64748b">
-              {row.band.label}
+              {t(BAND_LABEL_KEY[row.band.id] ?? '') || row.band.label}
             </text>
           </g>
         );
@@ -159,16 +179,17 @@ function Chart({ report }: { report: TempBandReport }) {
 
       {/* Axis titles, because a bar height without a unit is a rumour. */}
       <text x={PAD.left} y={14} fontSize={10} fontWeight={900} fill="#000">
-        kWh per hour (average draw)
+        {t('tempBand.axisKwh')}
       </text>
       <text x={W - PAD.right} y={SHARE_TOP - 4} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
-        share of this window&apos;s kWh
+        {t('tempBand.axisShare')}
       </text>
     </svg>
   );
 }
 
 export default function TempBandCard({ report, status, loading, source, spanLabel }: TempBandCardProps) {
+  const { t } = useTranslation();
   const empty = tempBandEmpty(report);
   const fetching = loading || status === 'idle';
 
@@ -188,10 +209,10 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
         </span>
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-500 font-black uppercase">
-            Every reading, binned by how hot it was that hour
+            {t('tempBand.subtitle')}
           </div>
           <h3 id="temp-band-heading" className="text-xl md:text-3xl italic font-black uppercase">
-            Usage vs outdoor temperature
+            {t('tempBand.title')}
           </h3>
         </div>
       </div>
@@ -201,18 +222,15 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
           data-testid="temp-band-loading"
           className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[120px] flex items-center"
         >
-          Asking Open-Meteo for the temperature of{' '}
-          {spanLabel ?? 'the dates your readings cover'}…
+          {t('tempBand.loading', { span: spanLabel ?? t('tempBand.loadingSpan') })}
         </p>
       ) : status === 'error' ? (
         <p data-testid="temp-band-error" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[80px]">
-          No temperature data for these dates — the weather service did not answer, so this chart has
-          nothing honest to draw. Your readings are unaffected; everything else on this tab still works.
+          {t('tempBand.error')}
         </p>
       ) : empty ? (
         <p data-testid="temp-band-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[80px]">
-          None of the hours in this window could be matched to a temperature, so there is nothing to
-          band. Widen the window, or import a longer export.
+          {t('tempBand.empty')}
         </p>
       ) : (
         <>
@@ -228,8 +246,15 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
               const base = cold.hours > 0 ? cold.meanKwhPerHour : 0;
               const ratio = base > 0 && hot.hours > 0 ? hot.meanKwhPerHour / base : 0;
               return ratio > 0
-                ? `Draw at ${cold.band.label}°C averages ${base.toFixed(2)} kWh/h; at ${hot.band.label}°C it is ${hot.meanKwhPerHour.toFixed(2)} — ${ratio.toFixed(1)}× as much. ${Math.round(hot.shareOfKwh * 100)}% of this window's energy was used in those hours.`
-                : 'Not enough hours in a temperature band yet to compare them.';
+                ? t('tempBand.verdict', {
+                    cold: cold.band.label,
+                    base: base.toFixed(2),
+                    hot: hot.band.label,
+                    hotval: hot.meanKwhPerHour.toFixed(2),
+                    ratio: ratio.toFixed(1),
+                    pct: String(Math.round(hot.shareOfKwh * 100)),
+                  })
+                : t('tempBand.verdictThin');
             })()}
           </p>
         </>
@@ -238,19 +263,23 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
       <p className="mt-3 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
         {report.matchedHours > 0 || status === 'ready' ? (
           <>
-            Temperature:{' '}
+            {t('tempBand.footTemp')}{' '}
             {status === 'error'
-              ? 'unavailable.'
-              : `Open-Meteo (${OPEN_METEO.label}), fetched by THIS browser from their CDN for ${
-                  spanLabel ?? 'your data\u2019s dates'
-                } — the dates your readings cover, never a date you have no data for — and cached here. ${
-                  report.matchedHours === report.totalHours
-                    ? `All ${report.totalHours.toLocaleString('en-CA')} hours matched.`
-                    : `${report.matchedHours.toLocaleString('en-CA')} of ${report.totalHours.toLocaleString('en-CA')} hours matched; the rest are left out of the averages rather than guessed.`
-                } No server saw this request.`}
+              ? t('tempBand.footUnavailable')
+              : t('tempBand.footSource', {
+                  label: OPEN_METEO.label,
+                  span: spanLabel ?? t('tempBand.footSpan'),
+                  matched:
+                    report.matchedHours === report.totalHours
+                      ? t('tempBand.matchAll', { n: fmtNumber(report.totalHours) })
+                      : t('tempBand.matchSome', {
+                          matched: fmtNumber(report.matchedHours),
+                          total: fmtNumber(report.totalHours),
+                        }),
+                })}
           </>
         ) : (
-          'Temperature comes from Open-Meteo, fetched by this browser and cached here — no server involved.'
+          t('tempBand.footIdle')
         )}
       </p>
     </section>

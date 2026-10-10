@@ -194,7 +194,7 @@ export function classifyBlock(input: BlockClassificationInput): BlockClassificat
   if (span >= FIXED_MIN_SPAN_HOURS && flatAcrossHours && steadyAcrossWeeks && sameWindowMostWeeks) {
     return {
       signature: 'fixed-schedule',
-      label: 'Looks like a fixed-schedule load (EV timer / appliance cycle)',
+      label: t('touShift.fixedSchedule'),
       detail: `${span}h in the same slot ${weeksSeen}/5 weeks, flat across every hour (±${pct(intraBlockCv)})`,
     };
   }
@@ -203,17 +203,25 @@ export function classifyBlock(input: BlockClassificationInput): BlockClassificat
   if (span >= HVAC_MIN_SPAN_HOURS && daytime && (!flatAcrossHours || !steadyAcrossWeeks)) {
     return {
       signature: 'hvac-like',
-      label: 'Looks like HVAC-like whole-house load',
-      detail: `${span}h daytime span, ${flatAcrossHours ? `weekly total moves ±${pct(consistencyCv)}` : `ramps ±${pct(intraBlockCv)} across the day`} — tracks the day, not a timer`,
+      label: t('shift.sigHvac'),
+      detail: t(flatAcrossHours ? 'shift.sigHvacDetailFlat' : 'shift.sigHvacDetailRamp', {
+        span,
+        cv: pct(consistencyCv),
+        ramp: pct(intraBlockCv),
+      }),
     };
   }
 
   return {
     signature: 'unidentified',
-    label: 'Unidentified weekday routine',
-    detail: `${span}h window, ±${pct(consistencyCv)} week to week — too short or too unsteady to call`,
+    label: t('shift.sigUnidentified'),
+    detail: t('shift.sigUnidentifiedDetail', { span, cv: pct(consistencyCv) }),
   };
 }
+
+/* Wave U — the optimizer's user-visible sentences come from the locale
+ * catalog at call time; the analysis numbers and target ids stay canonical. */
+import { fmtMoney, t } from '@/i18n';
 
 export const VERY_CONSISTENT_MAX_CV = 0.15;
 
@@ -225,21 +233,21 @@ export function confidenceBadge(cv: number, weeksSeen: number): ConfidenceBadge 
   if (cv < VERY_CONSISTENT_MAX_CV && weeksSeen >= LOOKBACK_WEEKS) {
     return {
       level: 'very-consistent',
-      label: 'Very consistent',
-      detail: `steady all ${LOOKBACK_WEEKS} weeks (±${pct(cv)} week to week)`,
+      label: t('shift.confVery'),
+      detail: t('shift.confVeryDetail', { weeks: LOOKBACK_WEEKS, cv: pct(cv) }),
     };
   }
   if (cv < CONSISTENCY_MAX_CV) {
     return {
       level: 'somewhat',
-      label: 'Somewhat',
-      detail: `present ${weeksSeen}/${LOOKBACK_WEEKS} weeks, ±${pct(cv)} week to week`,
+      label: t('shift.confSomewhat'),
+      detail: t('shift.confSomewhatDetail', { seen: weeksSeen, weeks: LOOKBACK_WEEKS, cv: pct(cv) }),
     };
   }
   return {
     level: 'irregular',
-    label: 'Irregular',
-    detail: `swings ±${pct(cv)} week to week — treat as a rough estimate`,
+    label: t('shift.confIrregular'),
+    detail: t('shift.confIrregularDetail', { cv: pct(cv) }),
   };
 }
 
@@ -282,18 +290,18 @@ export type ShiftHeadline = {
 
 function routineLabel(blocks: ShiftBlock[]): string {
   const weekend = (b: ShiftBlock) => b.weekday === 0 || b.weekday === 6;
-  if (blocks.every(weekend)) return 'weekend routine';
+  if (blocks.every(weekend)) return t('shift.routineWeekend');
   const daytime = blocks.every(
     (b) => b.startHour >= DAYTIME_START_HOUR && b.endHour <= DAYTIME_END_HOUR,
   );
-  return daytime ? 'weekday daytime routine' : 'weekday routine';
+  return daytime ? t('shift.routineDaytime') : t('shift.routineWeekday');
 }
 
 function headlineSentence(target: ShiftTarget, routine: string, savings: number): string {
-  const money = `~$${savings.toFixed(2)}/mo`;
-  if (target === 'overnight_ulo') return `Switch to ULO and move your ${routine} → ${money}`;
-  if (target === 'weekend') return `Move your ${routine} to cheaper weekend hours → ${money}`;
-  return `Shift your ${routine} to off-peak hours → ${money}`;
+  const money = fmtMoney(savings);
+  if (target === 'overnight_ulo') return t('shift.headlineUlo', { routine, money });
+  if (target === 'weekend') return t('shift.headlineWeekend', { routine, money });
+  return t('shift.headlineOffpeak', { routine, money });
 }
 
 /**
@@ -402,35 +410,31 @@ function buildOptions(
   const candidates: Omit<ShiftOption, 'monthlySavings' | 'savingsCentsPerKwh'>[] = [
     {
       target: 'overnight_ulo',
-      label: 'Overnight (ULO 23:00–07:00)',
+      label: t('shift.optUloLabel'),
       destRateCents: rates.ulo.overnight,
       effort: plan === 'ULO' ? 'no-plan-switch' : 'plan-switch-required',
       assumption:
-        plan === 'ULO'
-          ? 'You are already on ULO — move the load into 23:00–07:00.'
-          : 'Requires switching to the ULO plan and moving the load into 23:00–07:00.',
+        plan === 'ULO' ? t('shift.optUloAssumeOn') : t('shift.optUloAssumeSwitch'),
     },
     {
       target: 'weekend',
-      label: 'Weekend off-peak',
+      label: t('shift.optWeekendLabel'),
       destRateCents: weekendRate,
       effort: plan === 'Tiered' ? 'plan-switch-required' : 'no-plan-switch',
       assumption:
         plan === 'Tiered'
-          ? 'Move the activity to any weekend hour — requires switching to TOU or ULO, tiered has no off-peak window.'
+          ? t('shift.optWeekendAssumeTiered')
           : plan === 'ULO'
-            ? 'Move the activity to any weekend hour — weekend off-peak on ULO, no plan switch.'
-            : 'Move the activity to any weekend hour — off-peak on TOU, no plan switch.',
+            ? t('shift.optWeekendAssumeUlo')
+            : t('shift.optWeekendAssumeTou'),
     },
     {
       target: 'offpeak_tou',
-      label: 'Off-peak same day (19:00–07:00)',
+      label: t('shift.optOffpeakLabel'),
       destRateCents: rates.tou.offPeak,
       effort: plan === 'TOU' ? 'no-plan-switch' : 'plan-switch-required',
       assumption:
-        plan === 'TOU'
-          ? 'Shift the load later the same day — off-peak hours on TOU, no plan switch.'
-          : 'Shift the load later the same day — the TOU off-peak window 19:00–07:00, requires switching to TOU.',
+        plan === 'TOU' ? t('shift.optOffpeakAssumeTou') : t('shift.optOffpeakAssumeSwitch'),
     },
   ];
 

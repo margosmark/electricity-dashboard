@@ -10,6 +10,7 @@
 import { format } from 'date-fns';
 import { Combine, Gauge, X } from 'lucide-react';
 import { type UsagePointGroup, type DataPoint, combineUsagePointGroups } from '@/lib/energy';
+import { fmtKwh, useTranslation } from '@/i18n';
 
 export function usagePointStats(group: UsagePointGroup): {
   kwh: number;
@@ -39,6 +40,7 @@ type Props = {
 };
 
 export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props) {
+  const { t } = useTranslation();
   const combined = combineUsagePointGroups(groups);
 
   return (
@@ -46,18 +48,18 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
       className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex justify-center overflow-y-auto overlay-safe"
       role="dialog"
       aria-modal="true"
-      aria-label="Choose usage point"
+      aria-label={t('picker.aria')}
       data-testid="usage-point-picker"
     >
       <div className="my-auto bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black font-black uppercase max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4 mb-4 md:mb-6">
           <h2 className="text-2xl md:text-4xl tracking-tighter flex items-center gap-2 md:gap-3">
-            <Gauge size={24} strokeWidth={4} /> {groups.length} Usage Points Found
+            <Gauge size={24} strokeWidth={4} /> {t('picker.title', { count: groups.length })}
           </h2>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-black rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all"
           >
             <X size={18} strokeWidth={4} />
@@ -65,8 +67,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
         </div>
 
         <p className="text-[10px] md:text-sm text-slate-600 mb-4 md:mb-8 break-all normal-case">
-          <span className="font-black uppercase">{fileName}</span> holds data for more than one meter. Pick the
-          usage point to load — nothing has been imported yet.
+          <span className="font-black uppercase">{fileName}</span> {t('picker.blurb')}
         </p>
 
         <div className="space-y-3 md:space-y-4">
@@ -82,11 +83,11 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-base md:text-2xl">{group.label}</span>
-                  <span className="text-xl md:text-3xl italic">{stats.kwh.toFixed(1)} kWh</span>
+                  <span className="text-xl md:text-3xl italic">{fmtKwh(stats.kwh)}</span>
                 </div>
                 <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-slate-500 flex flex-wrap gap-x-4 gap-y-1 normal-case">
-                  <span>{group.id || 'no UsagePoint id in feed'}</span>
-                  <span>{stats.count} readings</span>
+                  <span>{group.id || t('picker.noId')}</span>
+                  <span>{t('picker.readings', { count: stats.count })}</span>
                   <span>
                     {stats.from} → {stats.to}
                   </span>
@@ -103,14 +104,14 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
             onClick={() => onChoose(combined)}
             className="min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-black text-white rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 active:bg-blue-700 transition-colors"
           >
-            <Combine size={16} strokeWidth={4} /> Combine all {groups.length} points ({combined.length} readings)
+            <Combine size={16} strokeWidth={4} /> {t('picker.combine', { count: groups.length, readings: combined.length })}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="min-h-11 py-3 md:py-4 px-6 bg-slate-100 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs hover:bg-slate-200 active:bg-slate-300 transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </div>

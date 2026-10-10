@@ -28,6 +28,10 @@ import { buildSwitchTimeline, type SwitchTimeline } from '@/lib/switchTimeline';
 import { PLAN_BAND_STYLE, UNKNOWN_PLAN_FILL } from '@/lib/planStyles';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import type { ProcessedPoint, UsageSummary } from '@/lib/energy';
+// Wave U — the timeline's captions translate; the segment PLAN labels stay
+// the canonical TOU/TIERED/ULO codes (they are data keys shared with the
+// money chart's bands).
+import { fmtMoney, useTranslation } from '@/i18n';
 
 export type PlanSwitchTimelineProps = {
   /** Bill periods parsed out of the imported file (Wave L). */
@@ -37,10 +41,11 @@ export type PlanSwitchTimelineProps = {
 };
 
 function money(n: number): string {
-  return n < 0 ? `-$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`;
+  return n < 0 ? `-${fmtMoney(Math.abs(n))}` : fmtMoney(n);
 }
 
 export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelineProps) {
+  const { t } = useTranslation();
   const [timeline] = usePlanTimeline();
   const report = useMemo(
     () => buildSwitchReport(summaries, allData, timeline),
@@ -67,7 +72,7 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
         className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-black text-black"
       >
         <h3 id="switch-timeline-heading" className="text-xl md:text-3xl italic font-black uppercase mb-2">
-          Plan-switch decision timeline
+          {t('switchTimeline.title')}
         </h3>
         <p data-testid="switch-timeline-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case">
           {model.note}
@@ -90,10 +95,10 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
         </span>
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
-            The audit trail, as a picture
+            {t('switchTimeline.eyebrow')}
           </div>
           <h3 id="switch-timeline-heading" className="text-xl md:text-3xl italic font-black uppercase text-black">
-            Plan-switch decision timeline
+            {t('switchTimeline.title')}
           </h3>
         </div>
       </div>
@@ -108,9 +113,9 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
               const known = style !== null;
               const summary = [
                 segment.label,
-                known ? style!.label : 'plan unknown',
-                `${segment.days} day${segment.days === 1 ? '' : 's'}`,
-                segment.saving !== null ? `saving ${money(segment.saving)}` : null,
+                known ? style!.label : t('switchTimeline.planUnknown'),
+                t('switchTimeline.days', { count: segment.days, days: segment.days }),
+                segment.saving !== null ? t('switchTimeline.saving', { amount: money(segment.saving) }) : null,
                 segment.reason,
               ]
                 .filter(Boolean)
@@ -166,7 +171,7 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
                       }`}
                     >
                       {money(segment.saving)}
-                      {!segment.counted && ' untrusted'}
+                      {!segment.counted && ` ${t('switchTimeline.untrusted')}`}
                     </span>
                   )}
                 </div>
@@ -193,14 +198,12 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
             className="w-3 h-3 border-2 border-black"
             style={{ background: `repeating-linear-gradient(45deg, ${UNKNOWN_PLAN_FILL} 0 4px, #cbd5e1 4px 8px)` }}
           />
-          No bill
+          {t('switchTimeline.noBill')}
         </span>
       </div>
 
       <p data-testid="switch-timeline-note" className="text-[10px] md:text-xs font-bold text-slate-600 normal-case">
-        {model.note} A bubble is what that period shows you over-paid by staying on its plan;
-        grey bubbles are periods the model could not reproduce, so they are shown but never
-        counted. Segment widths are real days. Every figure is also in the table below.
+        {model.note} {t('switchTimeline.footnote')}
       </p>
     </section>
   );

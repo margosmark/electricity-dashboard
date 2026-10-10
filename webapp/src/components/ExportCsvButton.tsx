@@ -8,6 +8,8 @@
 
 "use client";
 
+/* Wave U — user-visible copy translates; lib/hook code reads the module locale. */
+import { useTranslation } from "@/i18n";
 import { Download } from 'lucide-react';
 import { type ProcessedPoint, processedDataToCSV, csvFilenameForRows } from '@/lib/energy';
 
@@ -40,13 +42,14 @@ type Props = {
 };
 
 export function ExportCsvButton({ rows, className = '', printHidden = false }: Props) {
+  const { t } = useTranslation();
   const disabled = rows.length === 0;
   return (
     <button
       type="button"
       data-testid="export-csv"
-      aria-label="Export CSV"
-      title="Download the selected interval table as CSV"
+      aria-label={t("csv.exportAria")}
+      title={t("csv.exportTitle")}
       disabled={disabled}
       onClick={() => downloadCSV(rows)}
       className={

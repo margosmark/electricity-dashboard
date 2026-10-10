@@ -13,14 +13,15 @@
 
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { StalenessResult } from '@/hooks/useRateStaleness';
+import { fmtCentsAuto, fmtKwh, fmtMoney, fmtSignedMoney, useTranslation } from '@/i18n';
 
 export const RATES_FILE_EDIT_URL =
   'https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts';
 
-const money = (n: number) =>
-  `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(2)}`;
+const money = (n: number) => (n < 0 ? `-${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
 export default function RateStalenessBanner({ result }: { result: StalenessResult }) {
+  const { t } = useTranslation();
   if (!result.stale) return null;
   const { oebEffectiveDate, shippedEffectiveDate, deltas, impact, newSet } = result.stale;
 
@@ -33,43 +34,46 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
       <div className="flex flex-wrap items-center gap-2 md:gap-4">
         <AlertTriangle size={22} strokeWidth={4} className="shrink-0" />
         <h3 className="text-lg md:text-2xl leading-tight">
-          Ontario rates changed – update /api/rates
+          {t('staleness.title')}
         </h3>
       </div>
 
       <div className="text-[10px] md:text-sm font-black space-y-1 normal-case">
         <p data-testid="banner-dates">
-          OEB now publishes rates effective{' '}
+          {t('staleness.datesA')}{' '}
           <span className="bg-black text-orange-400 px-2 py-0.5 rounded">{oebEffectiveDate}</span>
           {' — '}
-          this build ships{' '}
+          {t('staleness.datesB')}{' '}
           <span className="bg-white px-2 py-0.5 rounded border-2 border-black">{shippedEffectiveDate}</span>
         </p>
 
         {deltas.length > 0 && (
           <p data-testid="banner-deltas">
-            {newSet && `New rates (${oebEffectiveDate}): `}
-            {deltas.map((d) => `${d.label} ${d.current}¢→${d.next}¢`).join(' · ')}
+            {newSet ? `${t('staleness.newRates', { date: oebEffectiveDate })} ` : ''}
+            {deltas
+              .map((d) => `${d.label} ${fmtCentsAuto(d.current)}→${fmtCentsAuto(d.next)}`)
+              .join(' · ')}
           </p>
         )}
 
         {impact && impact.delta !== 0 && (
           <p data-testid="banner-impact">
-            Sample impact — last {impact.windowDays} days of your data ({impact.kwh.toFixed(0)} kWh):{' '}
+            {t('staleness.impactIntro', { days: impact.windowDays, kwh: fmtKwh(impact.kwh, 0) })}{' '}
             <span className="bg-white px-1.5 py-0.5 rounded border-2 border-black">
-              {money(impact.costCurrent)} → {money(impact.costNew)} ({impact.delta > 0 ? '+' : ''}{money(impact.delta)})
+              {money(impact.costCurrent)} → {money(impact.costNew)} ({fmtSignedMoney(impact.delta)})
             </span>
             {' · '}
+            {/* The canonical plan id stays: this is the operator's own
+                rates-file triage line, and Wave C's test pins "TOU +$1.40". */}
             {impact.perPlan
-              .map((p) => `${p.plan} ${p.delta > 0 ? '+' : ''}${money(p.delta)}`)
+              .map((p) => `${p.plan} ${fmtSignedMoney(p.delta)}`)
               .join(' · ')}
           </p>
         )}
 
         {!newSet && (
           <p data-testid="banner-partial">
-            Date detected but the price tables could not be parsed — verify the OEB page manually
-            before editing.
+            {t('staleness.partial')}
           </p>
         )}
       </div>
@@ -81,7 +85,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
         data-testid="banner-edit-link"
         className="inline-flex items-center gap-2 bg-black text-orange-400 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-black text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors"
       >
-        Edit webapp/src/app/api/rates/route.ts
+        {t('staleness.editLink')}
         <ExternalLink size={14} strokeWidth={4} />
       </a>
     </div>

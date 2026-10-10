@@ -15,7 +15,8 @@
 
 import { Award, ArrowRight } from 'lucide-react';
 import { buildVerdict, type PlanCosts } from '@/lib/verdict';
-import { PLAN_LABEL, type PlanId } from '@/hooks/useSelectedPlan';
+import { type PlanId } from '@/hooks/useSelectedPlan';
+import { fmtMoney, fmtMoney0, planLabel, useTranslation } from '@/i18n';
 
 export type BestChoiceChipProps = {
   comparison: PlanCosts | null;
@@ -28,17 +29,28 @@ export type BestChoiceChipProps = {
 };
 
 export default function BestChoiceChip({ comparison, userPlan, days, onJump, active }: BestChoiceChipProps) {
+  // Wave U — `t` is in the label strings' deps implicitly (this whole
+  // function re-runs on locale change because the component re-renders).
+  const { t } = useTranslation();
   const verdict = buildVerdict(comparison, userPlan, days);
   if (!verdict) return null;
 
   const perMonth = verdict.deltaPerMonth;
+  // The compact chip keeps the canonical plan CODE (TOU/…) in both
+  // locales — it is an identifier a user matches against the switcher,
+  // and "Meilleur : −45 $" still reads correctly next to it.
   const short = verdict.alreadyBest
-    ? 'Best: ' + verdict.best + ' ✓'
-    : `Best: ${verdict.best} -$${perMonth.toFixed(0)}/mo`;
+    ? t('bestChip.shortAlready', { plan: verdict.best })
+    : t('bestChip.shortSave', { plan: verdict.best, amount: fmtMoney0(perMonth) });
 
   const label = verdict.alreadyBest
-    ? `Best choice: ${verdict.bestLabel}. You are already on it. Show the Overview.`
-    : `Best choice: ${verdict.bestLabel} — $${perMonth.toFixed(2)} per month less than ${PLAN_LABEL[userPlan]}, scaled from the ${verdict.days}-day window on screen. Show the Overview.`;
+    ? t('bestChip.labelAlready', { plan: planLabel(verdict.best) })
+    : t('bestChip.labelSave', {
+        plan: planLabel(verdict.best),
+        amount: fmtMoney(perMonth),
+        current: planLabel(userPlan),
+        days: verdict.days,
+      });
 
   const jump = () => {
     if (!active) {
@@ -58,7 +70,7 @@ export default function BestChoiceChip({ comparison, userPlan, days, onJump, act
       data-delta-per-month={perMonth.toFixed(2)}
       data-window-days={verdict.days}
       onClick={jump}
-      title={`${label} Click to jump to the full answer.`}
+      title={`${label} ${t('bestChip.clickHint')}`}
       aria-label={label}
       className={`inline-flex min-h-11 items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs transition-all ${
         verdict.alreadyBest

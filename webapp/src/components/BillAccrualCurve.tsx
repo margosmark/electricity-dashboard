@@ -35,8 +35,8 @@
 
 'use client';
 
+import { fmtDate, useTranslation } from '@/i18n';
 import { useId, useMemo, useState } from 'react';
-import { format } from 'date-fns';
 import { TrendingUp } from 'lucide-react';
 import {
   buildAccrualCurve,
@@ -82,6 +82,8 @@ const SPARK_PAD = { top: 8, right: 6, bottom: 8, left: 6 };
 /** The one sentence that explains every line. Fixed copy, by design. */
 export const ACCRUAL_EXPLAINER =
   'Grey line = spent so far this period (your estimate). Yellow dashed = where you’re on pace to land by the bill date. Dotted = your average of the last 3 bills.';
+/** Wave U — the display translates; ACCRUAL_EXPLAINER stays canonical. */
+export const ACCRUAL_EXPLAINER_KEY = 'accrual.explainer';
 
 function money(n: number): string {
   return `$${n.toFixed(2)}`;
@@ -334,6 +336,9 @@ export default function BillAccrualCurve({
   billDate,
   today,
 }: BillAccrualCurveProps) {
+  const { t, locale } = useTranslation();
+  // Wave U — month abbreviations follow the toggle ("Aug 26" / "26 août").
+  const billDatePattern = locale === 'fr' ? 'd MMM' : 'MMM d';
   const [showFull, setShowFull] = useState(false);
   const explainerId = useId();
   const now = useMemo(() => today ?? new Date(), [today]);
@@ -372,12 +377,12 @@ export default function BillAccrualCurve({
   const { gap, overPace } = curve;
   const verdict =
     overPace === null
-      ? 'No pace line yet'
+      ? t('accrual.curvePaceNone')
       : Math.abs(gap) < 0.01
-        ? 'Exactly on the line'
+        ? t('accrual.paceOnLine')
         : overPace
-          ? `Ahead of the line by ${money(gap)}`
-          : `Behind the line by ${money(-gap)}`;
+          ? t('accrual.paceAhead', { amount: money(gap) })
+          : t('accrual.paceBehind', { amount: money(-gap) });
 
   // The glance: landing vs the last ≤3 bills. A colour before a number.
   const chip =
@@ -386,10 +391,10 @@ export default function BillAccrualCurve({
       : Math.abs(curve.paceVsAvg) < 0.01
         ? { tone: 'bg-slate-200', direction: 'even' as const, text: 'right on your 3-bill average' }
         : curve.overAvg
-          ? { tone: 'bg-red-400', direction: 'above' as const, text: `pacing ${money(curve.paceVsAvg)} ABOVE` }
-          : { tone: 'bg-emerald-300', direction: 'below' as const, text: `pacing BELOW by ${money(-curve.paceVsAvg)}` };
+          ? { tone: 'bg-red-400', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }
+          : { tone: 'bg-emerald-300', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };
 
-  const billDateLabel = format(new Date(`${curve.billDate}T12:00:00`), 'MMM d');
+  const billDateLabel = fmtDate(new Date(`${curve.billDate}T12:00:00`), billDatePattern);
 
   return (
     <section
@@ -410,7 +415,7 @@ export default function BillAccrualCurve({
         </span>
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
-            {format(new Date(`${curve.periodStart}T12:00:00`), 'MMM d')} – {billDateLabel} · open period
+            {fmtDate(new Date(`${curve.periodStart}T12:00:00`), billDatePattern)} – {billDateLabel} · {t('accrual.openPeriod')}
           </div>
           <h3 id="accrual-heading" className="text-xl md:text-3xl italic font-black uppercase text-black">
             Is my bill on pace?
@@ -451,7 +456,7 @@ export default function BillAccrualCurve({
         data-testid="accrual-explainer"
         className="mb-4 text-[10px] md:text-xs font-bold normal-case text-slate-600 leading-relaxed"
       >
-        {ACCRUAL_EXPLAINER}
+        {t(ACCRUAL_EXPLAINER_KEY)}
       </p>
 
       {/* ---- the picture ------------------------------------------------- */}
@@ -472,7 +477,7 @@ export default function BillAccrualCurve({
         onClick={() => setShowFull((v) => !v)}
         className="md:hidden mt-2 w-full min-h-[44px] border-2 border-black rounded-xl bg-slate-100 text-[10px] font-black uppercase hover:bg-yellow-400 active:bg-yellow-500"
       >
-        {showFull ? 'Hide the full chart' : 'Show the full chart'}
+        {showFull ? t('accrual.hideFull') : t('accrual.showFull')}
       </button>
 
       {/* The chart is decorative; every number it draws is here as text. */}

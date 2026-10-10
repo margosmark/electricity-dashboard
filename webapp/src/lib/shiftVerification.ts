@@ -14,6 +14,8 @@
 
 import { addDays, format } from 'date-fns';
 import type { ProcessedPoint } from './energy';
+// Wave U — the weekly before/after verdict speaks the active language.
+import { fmtKwh, fmtMoney, fmtPercent, fmtDay, t } from '@/i18n';
 
 export type PlanId = 'TOU' | 'Tiered' | 'ULO';
 
@@ -70,13 +72,12 @@ export type ShiftVerification = {
   caveat: string;
 };
 
-const CAVEAT =
-  'Weekly cost also moves with weather and how much time you were home — one week is a hint, not proof.';
+const CAVEAT_KEY = 'verify.caveat';
 
 /** What a plan calls the cheap hours (null = it has none). */
 export function offPeakLabelFor(plan: PlanId): string | null {
-  if (plan === 'TOU') return 'off-peak';
-  if (plan === 'ULO') return 'overnight + weekend off-peak';
+  if (plan === 'TOU') return t('verify.offPeakTou');
+  if (plan === 'ULO') return t('verify.offPeakUlo');
   return null;
 }
 
@@ -176,15 +177,15 @@ function dayRange(start: string, days: number): { start: string; end: string } {
 }
 
 function shortDate(iso: string): string {
-  return format(new Date(iso + 'T00:00:00'), 'MMM d');
+  return fmtDay(iso);
 }
 
 function pct(share: number): string {
-  return `${(share * 100).toFixed(1)}%`;
+  return fmtPercent(share * 100, 1);
 }
 
 function money(v: number): string {
-  return `$${Math.abs(v).toFixed(2)}`;
+  return fmtMoney(Math.abs(v));
 }
 
 export function analyzeShiftVerification(
@@ -204,15 +205,15 @@ export function analyzeShiftVerification(
     verdict: 'no-change' as ShiftVerdict,
     headline: '',
     detail: '',
-    caveat: CAVEAT,
+    caveat: t(CAVEAT_KEY),
   };
 
   if (rows.length === 0) {
     return {
       ...base,
       emptyReason: 'no-data',
-      headline: 'NO DATA TO VERIFY AGAINST',
-      detail: 'Upload a Green Button XML export covering at least two weeks and this will compare your last 7 days with the 7 before.',
+      headline: t('verify.emptyNoData'),
+      detail: t('verify.emptyNoDataDetail'),
     };
   }
 
@@ -233,8 +234,12 @@ export function analyzeShiftVerification(
       recent,
       prior,
       emptyReason: 'insufficient-history',
-      headline: 'NEED TWO FULL WEEKS',
-      detail: `Comparing two 7-day windows needs at least ${MIN_DAYS_PER_WINDOW} recorded days in each. This data has ${recent.days} in the last window and ${prior.days} in the one before — upload a longer export (or a second one) to get a before/after.`,
+      headline: t('verify.emptyShort'),
+      detail: t('verify.emptyShortDetail', {
+        min: MIN_DAYS_PER_WINDOW,
+        recent: recent.days,
+        prior: prior.days,
+      }),
     };
   }
 
@@ -246,8 +251,13 @@ export function analyzeShiftVerification(
 
   const windowLine = (label: string, w: VerificationWindow) =>
     `${label} (${shortDate(w.start)} – ${shortDate(w.end)}): ` +
-    (w.offPeakShare !== null ? `${pct(w.offPeakShare)} off-peak · ` : '') +
-    `$${w.totalCost.toFixed(2)} · ${w.totalKwh.toFixed(1)} kWh over ${w.days} day${w.days === 1 ? '' : 's'}`;
+    (w.offPeakShare !== null ? `${pct(w.offPeakShare)} ${t('verify.offPeakWord')} · ` : '') +
+    t('verify.windowTail', {
+      cost: fmtMoney(w.totalCost),
+      kwh: fmtKwh(w.totalKwh),
+      count: w.days,
+      days: w.days,
+    });
 
   // Tiered charges one flat rate per kWh: moving hours cannot show up here,
   // and claiming a verdict from it would be a lie.
@@ -260,8 +270,8 @@ export function analyzeShiftVerification(
       prior,
       costDelta,
       verdict: 'no-offpeak',
-      headline: 'TIERED HAS NO OFF-PEAK WINDOW — MOVING HOURS WILL NOT CHANGE THIS BILL',
-      detail: `${windowLine('Last 7 days', recent)}. ${windowLine('Prior 7 days', prior)}. Tiered charges a flat rate for every hour, so only how much you used moves this number.`,
+      headline: t('verify.tieredHeadline'),
+      detail: `${windowLine(t('verify.last7'), recent)}. ${windowLine(t('verify.prior7'), prior)}. ${t('verify.tieredDetail')}`,
     };
   }
 
@@ -276,25 +286,33 @@ export function analyzeShiftVerification(
 
   if (shareUp && !dearer) {
     verdict = 'improved';
-    headline = `Off-peak share up ${pts.toFixed(0)} pts · ${money(costDelta)}/wk ${cheaper ? 'better' : 'flat'} than the prior 7 days`;
+    headline = t(cheaper ? 'verify.improvedBetter' : 'verify.improvedFlat', {
+      pts: pts.toFixed(0),
+      cost: money(costDelta),
+    });
   } else if (shareDown && !cheaper) {
     verdict = 'worse';
-    headline = `Off-peak share down ${pts.toFixed(0)} pts · ${money(costDelta)}/wk worse than the prior 7 days`;
+    headline = t('verify.worse', { pts: pts.toFixed(0), cost: money(costDelta) });
   } else if (shareUp && dearer) {
     verdict = 'diverged';
-    headline = `Off-peak share up ${pts.toFixed(0)} pts, but the week cost ${money(costDelta)} more — weather or time at home can swamp a shift`;
+    headline = t('verify.divergedCost', { pts: pts.toFixed(0), cost: money(costDelta) });
   } else if (shareDown && cheaper) {
     verdict = 'diverged';
-    headline = `Cheaper week (${money(costDelta)}), but off-peak share fell ${pts.toFixed(0)} pts — that is less usage, not a shift`;
+    headline = t('verify.divergedShare', { pts: pts.toFixed(0), cost: money(costDelta) });
   } else {
     verdict = 'no-change';
-    headline = 'No measurable change yet';
+    headline = t('verify.noChange');
   }
 
   const deltaLine =
     shareDeltaPts === null
       ? ''
-      : ` Share ${shareDeltaPts >= 0 ? '+' : '−'}${Math.abs(shareDeltaPts).toFixed(1)} pts; cost ${costDelta >= 0 ? '+' : '−'}${money(costDelta)} per week.`;
+      : ` ${t('verify.deltaLine', {
+          shareSign: shareDeltaPts >= 0 ? '+' : '−',
+          share: Math.abs(shareDeltaPts).toFixed(1),
+          costSign: costDelta >= 0 ? '+' : '−',
+          cost: money(costDelta),
+        })}`;
 
   return {
     ...base,
@@ -306,7 +324,7 @@ export function analyzeShiftVerification(
     costDelta,
     verdict,
     headline,
-    detail: `${windowLine('Last 7 days', recent)}. ${windowLine('Prior 7 days', prior)}.${deltaLine}`,
-    caveat: CAVEAT,
+    detail: `${windowLine(t('verify.last7'), recent)}. ${windowLine(t('verify.prior7'), prior)}.${deltaLine}`,
+    caveat: t(CAVEAT_KEY),
   };
 }
