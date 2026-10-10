@@ -1,5 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { isOntarioHoliday } from './ontarioHolidays';
+import type { HourlyTemps } from './openMeteo';
+import { tempAtC } from './openMeteo';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -45,7 +47,96 @@ export type Anomaly = {
   diffPct: number;
   /** What the DAY ITSELF looks like, not just that it was expensive. */
   signature: ApplianceSignature;
+  /** What the WEATHER looked like — present only when temperatures are. */
+  context?: AnomalyContext;
 };
+
+/* ==========================================================================
+ * Anomaly context — "31°C, that's AC" (Wave T slice 2)
+ *
+ * A spike is a fact ("you used 104 kWh, 74% over a normal Thursday"); WHY is
+ * a guess. The weather half of the guess is cheap and checkable: if the day
+ * was hot, air conditioning is the obvious culprit; if it was freezing,
+ * heating; if it was mild, weather did not do it and the appliance list is
+ * where to look. That is all this label claims — it does not name a device,
+ * it says whether looking at the weather explains anything at all.
+ *
+ * Thresholds are the ones the household's OWN temperature curve justifies
+ * (lib/tempBands.ts): 24°C is the bin where draw leaves the cold baseline and
+ * roughly doubles, and 0°C is the freezing point that starts heating season.
+ * Both are exported constants so a test can pin them and a reader can see
+ * they were chosen, not discovered to fit one week.
+ * ========================================================================== */
+
+/** Above this day-high the verdict is "that's AC". */
+export const ANOMALY_AC_TEMP_C = 24;
+/** Below this day-low the verdict is "that's heat". */
+export const ANOMALY_HEAT_TEMP_C = 0;
+
+export type AnomalyContextKind = 'ac' | 'heat' | 'mild' | 'unknown';
+
+/**
+ * What the card says. `tempC` is the number the verdict is ABOUT — the day's
+ * high when it is blaming heat, its low when it is blaming cold, its mean
+ * when it is saying weather is not the story — so the label and the number
+ * can never disagree.
+ */
+export type AnomalyContext = {
+  kind: AnomalyContextKind;
+  tempC: number | null;
+  text: string;
+};
+
+/** Temperatures for one calendar day, as the UTC hours that fall in it. */
+function dayTemps(
+  rows: { timestamp: number }[],
+  temps: HourlyTemps | null | undefined,
+): { mean: number | null; high: number | null; low: number | null; hours: number } {
+  let sum = 0;
+  let high = -Infinity;
+  let low = Infinity;
+  let hours = 0;
+  for (const r of rows) {
+    const t = tempAtC(temps, r.timestamp);
+    if (t === null) continue;
+    hours += 1;
+    sum += t;
+    if (t > high) high = t;
+    if (t < low) low = t;
+  }
+  if (hours === 0) return { mean: null, high: null, low: null, hours: 0 };
+  return { mean: sum / hours, high, low, hours };
+}
+
+const whole = (v: number) => String(Math.round(v));
+
+/**
+ * The verdict string for one anomaly day.
+ *
+ * Four honest outcomes, no fifth: the day's high (air conditioning), its low
+ * (heating), mild enough that weather is not an explanation, or no
+ * temperature at all — in which case we say "no data" instead of guessing.
+ */
+export function anomalyWeatherContext(
+  rows: { timestamp: number }[],
+  temps: HourlyTemps | null | undefined,
+): AnomalyContext {
+  const day = dayTemps(rows, temps);
+  if (day.mean === null || day.high === null || day.low === null) {
+    return { kind: 'unknown', tempC: null, text: 'no data' };
+  }
+  if (day.high >= ANOMALY_AC_TEMP_C) {
+    return { kind: 'ac', tempC: day.high, text: `${whole(day.high)}°C — that's AC` };
+  }
+  if (day.low <= ANOMALY_HEAT_TEMP_C) {
+    return { kind: 'heat', tempC: day.low, text: `${whole(day.low)}°C — that's heat` };
+  }
+  return {
+    kind: 'mild',
+    tempC: day.mean,
+    text: 'no weather signal — worth checking the appliance',
+  };
+}
 
 /* ==========================================================================
  * Appliance-signature labelling for anomaly days
@@ -1220,6 +1311,7 @@ export function calculateAlwaysOnFloor(
 export function detectAnomalies(
   processedData: ProcessedPoint[],
   filteredData: ProcessedPoint[],
+  temps?: HourlyTemps | null,
 ): Anomaly[] {
   const dayStats = Array.from({ length: 7 }, () => ({ sum: 0, days: new Set<string>() }));
   processedData.forEach((d) => {
@@ -1251,6 +1343,10 @@ export function detectAnomalies(
         diffPct: ((val.usage - exp) / exp) * 100,
         // Why was it expensive — the SHAPE of that day, not just its total.
         signature: classifyDayShape(val.rows),
+        // ...and the weather it happened in, when we hold temperatures at all.
+        // Computed HERE, next to the rows that made the day an anomaly, so the
+        // card never has to reconstruct which hours belonged to it.
+        context: anomalyWeatherContext(val.rows, temps),
       });
     }
   });
@@ -2288,6 +2384,108 @@ const round = (v: number, dp: number) => Number(v.toFixed(dp));
 const rate = (v: number) => String(round(v, 4));
 
 /**
+ * How badly a split may miss before it stops being quotable.
+ *
+ * Measured against THIS period's charge for the line being split — the amount
+ * the user is about to read a fixed/variable sentence about — because that is
+ * the number the claim is about. A $6 miss on a $102 delivery line is 6% of
+ * what the user is looking at and the split does not earn the right to be
+ * quoted; the same $6 against a $900 line would be nothing. (The absolute $0.50
+ * bar this replaced had exactly that flaw: it meant a different thing on every
+ * bill size.)
+ */
+export const CHARGE_FIT_MAX_RESIDUAL_SHARE = 0.05;
+
+/** Periods needed before "fixed + variable" is a fit and not a coincidence. */
+export const CHARGE_FIT_MIN_PERIODS = 3;
+
+type ChargeFitCore = {
+  flat: number;
+  perKwh: number;
+  maxResidual: number;
+  worstIndex: number;
+  /** True when the intercept came out negative and the line was forced
+   *  through zero — i.e. the charge has no fixed part at all. */
+  throughOrigin: boolean;
+};
+type ChargeFitOutcome =
+  | { ok: true; fit: ChargeFitCore }
+  | { ok: false; why: string };
+
+/**
+ * Least squares of a charge against usage — the fit, and its worst miss,
+ * with NO verdict on whether that miss is acceptable.
+ *
+ * The verdict belongs to the caller: "is a $6 miss tolerable?" is a question
+ * about the dollar amount on screen, so it is answered there (see
+ * `CHARGE_FIT_MAX_RESIDUAL_SHARE`) instead of being baked in here where the
+ * next caller could not see it.
+ *
+ * Structural refusals still belong to the core, because no tolerance fixes
+ * them: too few periods, usage that never moved, or a line that would need a
+ * negative fixed charge or a negative rate to fit (both of which mean the
+ * straight line is the wrong shape, not that it is slightly off).
+ */
+function fitChargeCore(amounts: number[], kwh: number[]): ChargeFitOutcome {
+  if (amounts.length !== kwh.length) {
+    return { ok: false, why: 'the periods and their kWh do not line up' };
+  }
+  const n = amounts.length;
+  if (n < CHARGE_FIT_MIN_PERIODS) {
+    return {
+      ok: false,
+      why: `only ${n} billing period${n === 1 ? '' : 's'} — at least ${CHARGE_FIT_MIN_PERIODS} are needed`,
+    };
+  }
+  const meanX = kwh.reduce((a, b) => a + b, 0) / n;
+  const meanY = amounts.reduce((a, b) => a + b, 0) / n;
+  const spread = Math.max(...kwh) - Math.min(...kwh);
+  if (meanX <= 0 || spread < meanX * 0.03) {
+    return { ok: false, why: 'usage barely moves between periods, so a slope would be noise' };
+  }
+  let sxy = 0;
+  let sxx = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxy += (kwh[i] - meanX) * (amounts[i] - meanY);
+    sxx += (kwh[i] - meanX) ** 2;
+  }
+  if (sxx <= 0) return { ok: false, why: 'every period used the same amount' };
+  const slope = sxy / sxx;
+  const intercept = meanY - slope * meanX;
+  if (slope < 0) return { ok: false, why: 'the fitted rate is negative (cheaper as you use more)' };
+
+  // A NEGATIVE intercept does not mean "the fit is bad" — it means the line
+  // has no fixed part at all, which is a real answer ("regulatory charges are
+  // entirely volume-driven"). Forcing it through zero is the fit that
+  // describes that shape; refusing to answer would throw away the answer.
+  const throughOrigin = intercept < 0;
+  let perKwh = slope;
+  if (throughOrigin) {
+    let sxy0 = 0;
+    let sxx0 = 0;
+    for (let i = 0; i < n; i += 1) {
+      sxy0 += kwh[i] * amounts[i];
+      sxx0 += kwh[i] * kwh[i];
+    }
+    if (sxx0 <= 0) return { ok: false, why: 'no period used any electricity' };
+    perKwh = sxy0 / sxx0;
+    if (perKwh < 0) return { ok: false, why: 'the fitted rate is negative (cheaper as you use more)' };
+  }
+  const flat = throughOrigin ? 0 : intercept;
+
+  let maxResidual = 0;
+  let worstIndex = 0;
+  for (let i = 0; i < n; i += 1) {
+    const residual = Math.abs(amounts[i] - (flat + perKwh * kwh[i]));
+    if (residual > maxResidual) {
+      maxResidual = residual;
+      worstIndex = i;
+    }
+  }
+  return { ok: true, fit: { flat, perKwh, maxResidual, worstIndex, throughOrigin } };
+}
+
+/**
  * Least-squares split of a charge into a fixed part and a $/kWh part across
  * several billing periods, or null when the periods are too alike (or too
  * noisy) for the split to mean anything.
@@ -2295,33 +2493,18 @@ const rate = (v: number) => String(round(v, 4));
  * With three Oakville periods the delivery line fits $35.70 + $0.0253/kWh to
  * ±$0.20; when usage barely moves between periods the slope is noise, and
  * then we say so and use one blended rate instead of inventing a fixed part.
+ * A fit that misses THIS period's charge by more than
+ * `CHARGE_FIT_MAX_RESIDUAL_SHARE` of it is refused for the same reason: it
+ * would answer a dollar question with a number that does not survive the
+ * question. Every caller shares that one bar, so two panels can never quote
+ * two different splits of the same line.
  */
-function fitCharge(
-  amounts: number[],
-  kwh: number[],
-): { flat: number; perKwh: number; maxResidual: number } | null {
-  if (amounts.length < 3 || amounts.length !== kwh.length) return null;
-  const n = amounts.length;
-  const meanX = kwh.reduce((a, b) => a + b, 0) / n;
-  const meanY = amounts.reduce((a, b) => a + b, 0) / n;
-  const spread = Math.max(...kwh) - Math.min(...kwh);
-  if (meanX <= 0 || spread < meanX * 0.03) return null; // usage must actually move
-  let sxy = 0;
-  let sxx = 0;
-  for (let i = 0; i < n; i += 1) {
-    sxy += (kwh[i] - meanX) * (amounts[i] - meanY);
-    sxx += (kwh[i] - meanX) ** 2;
-  }
-  if (sxx <= 0) return null;
-  const slope = sxy / sxx;
-  const flat = meanY - slope * meanX;
-  if (slope < 0 || flat < 0) return null;
-  let maxResidual = 0;
-  for (let i = 0; i < n; i += 1) {
-    maxResidual = Math.max(maxResidual, Math.abs(amounts[i] - (flat + slope * kwh[i])));
-  }
-  if (maxResidual > 0.5) return null; // the fit is not telling the truth
-  return { flat, perKwh: slope, maxResidual };
+function fitCharge(amounts: number[], kwh: number[]): ChargeFitCore | null {
+  const outcome = fitChargeCore(amounts, kwh);
+  if (!outcome.ok) return null;
+  // The LAST pair is the newest period — the one every caller quotes.
+  const tolerance = amounts[amounts.length - 1] * CHARGE_FIT_MAX_RESIDUAL_SHARE;
+  return outcome.fit.maxResidual > tolerance ? null : outcome.fit;
 }
 
 /**
@@ -2469,6 +2652,187 @@ export function deliverySplit(
     maxResidual: round(fit.maxResidual, 2),
     periods: pairs.length,
     mode: 'split',
+  };
+}
+
+/* ==========================================================================
+ * Fixed-vs-usage decomposition of a bill line (Wave T slice 3)
+ *
+ * "Can I actually reduce this?" is the question the delivery line invites and
+ * the one a ¢/kWh average cannot answer, because an average cannot tell a
+ * charge you would still owe at ZERO kWh (a monthly service charge, a fixed
+ * rider) from one that scales with volume. Fitting the line against usage
+ * across every billing period the file holds separates them — and, just as
+ * importantly, says when it cannot.
+ *
+ * Two honest refusals, and they are different:
+ *   • `unavailable` — there is not enough to fit (too few periods, usage that
+ *     never moved). Nothing was tested.
+ *   • `rejected` — it WAS fitted and the fit misses by more than
+ *     CHARGE_FIT_MAX_RESIDUAL_SHARE of this period's charge. Quoting "$F is
+ *     fixed" then would be a number that cannot survive its own question.
+ *
+ * The rejection is not hypothetical: on the reference 24-bill Oakville export
+ * the delivery line misses by $6.56 at worst — 6.4% of the newest period's
+ * $102.34 — because the utility repriced delivery between rate years. The
+ * card says so, names the bill it misses, and falls back to the blended rate
+ * that does not pretend to be two numbers. (evidence/wave-t-notes.md)
+ * ========================================================================== */
+
+export type ChargeDecompositionStatus = 'split' | 'rejected' | 'unavailable';
+
+export type ChargeDecomposition = {
+  line: 'delivery' | 'regulatory';
+  /** This period's charge for that line — the amount being explained. */
+  amount: number;
+  /** The kWh this period's charges are priced off. */
+  kwh: number;
+  /** Periods the fit was taken over. */
+  periods: number;
+  status: ChargeDecompositionStatus;
+  /** The fit, whether or not it was accepted — the attempt is never hidden. */
+  fit: {
+    flat: number;
+    perKwh: number;
+    maxResidual: number;
+    /** Worst miss ÷ this period's charge. */
+    residualShare: number;
+    /** The bill the fit misses most, for the sentence. */
+    worstPeriod: string | null;
+  } | null;
+  /** $ of this period's charge that owes at zero kWh. */
+  fixed: number | null;
+  /** $ of this period's charge that is volume-driven. */
+  variable: number | null;
+  fixedShare: number | null;
+  /** One blended rate for the line — what survives every refusal. */
+  blendedCentsPerKwh: number;
+  /** The sentence the card leads with. */
+  headline: string;
+  detail: string;
+};
+
+const money2 = (n: number) => `$${n.toFixed(2)}`;
+
+const LINE_NOUNS = {
+  // `be` travels with the noun: "Delivery IS not decomposable", "Regulatory
+  // charges ARE" — a card that gets the grammar wrong reads as if it got the
+  // maths wrong too.
+  delivery: { upper: 'Delivery', lower: 'delivery', be: 'is' },
+  regulatory: { upper: 'Regulatory charges', lower: 'regulatory charges', be: 'are' },
+} as const;
+
+/**
+ * Split one charge line into the part you would owe anyway and the part you
+ * can act on, or say exactly why that split cannot be made.
+ */
+export function chargeDecomposition(
+  summaries: UsageSummary[],
+  rows: ProcessedPoint[] | undefined,
+  line: 'delivery' | 'regulatory',
+): ChargeDecomposition | null {
+  if (summaries.length === 0) return null;
+  const stats = periodStats(summaries, rows);
+  const pairs: { amount: number; kwh: number; summary: UsageSummary }[] = [];
+  for (const s of summaries) {
+    const q = chargeBasisKwh(s, stats.get(s.start));
+    if (q === null || q <= 0) continue;
+    pairs.push({ amount: billTotals(s)[line], kwh: q, summary: s });
+  }
+  if (pairs.length === 0) return null;
+  // A file whose every period says zero for this line (a sample feed, a bill
+  // with nothing itemized) has nothing to explain — a "0.00 fixed, 0.00
+  // variable" answer would be theatre.
+  if (!pairs.some((p) => p.amount !== 0)) return null;
+
+  const newest = pairs[pairs.length - 1];
+  const noun = LINE_NOUNS[line];
+  const blendedCentsPerKwh = newest.kwh > 0 ? (newest.amount / newest.kwh) * 100 : 0;
+
+  const outcome = fitChargeCore(pairs.map((p) => p.amount), pairs.map((p) => p.kwh));
+  const residualShare = outcome.ok ? outcome.fit.maxResidual / (newest.amount || 1) : null;
+  const worstPeriod = outcome.ok
+    ? billPeriodLabel(pairs[outcome.fit.worstIndex].summary.start, pairs[outcome.fit.worstIndex].summary.duration)
+    : null;
+
+  const fit =
+    outcome.ok && residualShare !== null
+      ? {
+          flat: round(outcome.fit.flat, 2),
+          perKwh: round(outcome.fit.perKwh, 4),
+          maxResidual: round(outcome.fit.maxResidual, 2),
+          residualShare: round(residualShare, 4),
+          worstPeriod,
+        }
+      : null;
+
+  if (!outcome.ok) {
+    return {
+      line,
+      amount: newest.amount,
+      kwh: newest.kwh,
+      periods: pairs.length,
+      status: 'unavailable',
+      fit: null,
+      fixed: null,
+      variable: null,
+      fixedShare: null,
+      blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+      headline: `${noun.upper} cannot be split into fixed and volume-driven from this data.`,
+      detail: `${outcome.why}. The honest number for this line is the ${round(blendedCentsPerKwh, 2)}¢/kWh it averaged this period.`,
+    };
+  }
+
+  const { flat, perKwh, maxResidual } = outcome.fit;
+  const rejected = (residualShare ?? 0) > CHARGE_FIT_MAX_RESIDUAL_SHARE;
+
+  if (rejected) {
+    return {
+      line,
+      amount: newest.amount,
+      kwh: newest.kwh,
+      periods: pairs.length,
+      status: 'rejected',
+      fit,
+      fixed: null,
+      variable: null,
+      fixedShare: null,
+      blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+      headline: `${noun.upper} ${noun.be} not linearly decomposable from this data.`,
+      detail:
+        `Fitted ${money2(flat)} fixed + $${perKwh.toFixed(4)}/kWh across ${pairs.length} billing periods, but the ` +
+        `worst miss is ${money2(maxResidual)} — ${((residualShare ?? 0) * 100).toFixed(1)}% of this period's ` +
+        `${money2(newest.amount)} ${noun.lower}, over the ${Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100)}% bar ` +
+        `we quote a split at (the bill it misses most is ${worstPeriod ?? 'unknown'}). ` +
+        `The line is real and large — it just is not a straight line of usage, so ` +
+        `${round(blendedCentsPerKwh, 2)}¢/kWh is the only rate that describes it honestly.`,
+    };
+  }
+
+  const fixed = round(flat, 2);
+  const variable = round(newest.amount - flat, 2);
+  return {
+    line,
+    amount: newest.amount,
+    kwh: newest.kwh,
+    periods: pairs.length,
+    status: 'split',
+    fit,
+    fixed,
+    variable,
+    fixedShare: newest.amount > 0 ? round(fixed / newest.amount, 4) : null,
+    blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
+    // A line with no fixed part is a DIFFERENT answer, and it is the common
+    // one for regulatory charges — say it as such instead of "$0.00 is fixed".
+    headline: outcome.fit.throughOrigin
+      ? `Of your ${money2(newest.amount)} ${noun.lower} this period, none of it is fixed — you would pay $0.00 at 0 kWh, and all ${money2(variable)} is volume-driven.`
+      : `Of your ${money2(newest.amount)} ${noun.lower} this period, ${money2(fixed)} is fixed ` +
+        `(you'd pay it at 0 kWh) and ${money2(variable)} is volume-driven.`,
+    detail:
+      `Fitted ${outcome.fit.throughOrigin ? '' : `${money2(flat)} + `}$${perKwh.toFixed(4)}/kWh across ` +
+      `${pairs.length} billing periods${outcome.fit.throughOrigin ? ' (the line has no fixed part, so the fit runs through zero)' : ''}; ` +
+      `worst miss ${money2(maxResidual)} (${((residualShare ?? 0) * 100).toFixed(1)}% of this period's line` +
+      `${worstPeriod ? `, ${worstPeriod}` : ''}).`,
   };
 }
 
