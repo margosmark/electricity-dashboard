@@ -20,8 +20,10 @@ import type { FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
+import type { EfficiencyReport } from '@/lib/statistics';
 import BestChoiceBanner from '@/components/BestChoiceBanner';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
+import EfficiencyCard from '@/components/EfficiencyCard';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -36,6 +38,10 @@ export type OverviewPanelProps = {
   /** The "$3.42/day is $1,249/yr" sentence under the strip. */
   reframe: string;
   projection: BillProjection;
+  /** Wave S — ¢/kWh per bill, the all-time/in-view averages, the verdict. */
+  efficiency: EfficiencyReport;
+  /** Wired by Dashboard: the mini-line jumps to the MONEY tab. */
+  onOpenMoney: () => void;
   /** Green Button / file-status chip, wired by Dashboard. */
   fileStatus?: React.ReactNode;
 };
@@ -49,6 +55,8 @@ export default function OverviewPanel({
   setCostMode,
   reframe,
   projection,
+  efficiency,
+  onOpenMoney,
   fileStatus,
 }: OverviewPanelProps) {
   // The strip reports the WHOLE dataset, so its unit conversions are anchored
@@ -81,6 +89,50 @@ export default function OverviewPanel({
             <div className="text-[8px] md:text-[10px] text-yellow-400">Since {format(new Date(totals.firstDate + 'T00:00:00'), 'MMM d, yyyy')}</div>
             <div className="text-xl md:text-3xl italic font-black">{totals.totalKwh.toFixed(0)} kWh</div>
           </div>
+
+          {/* Wave S — the whole dataset as ONE price: what a kWh actually
+              cost, and what it cost in the window on screen. Same math as
+              the EFFICIENCY card, restated where the totals live. */}
+          {efficiency.allTime && (
+            <div
+              data-testid="efficiency-strip"
+              className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black"
+            >
+              <div className="text-[8px] md:text-[10px] font-black">
+                ¢/kWh · Total Electricity Charges ÷ billed kWh
+              </div>
+              <div className="flex gap-4 md:gap-6 mt-1">
+                <div>
+                  <div className="text-[8px] font-black uppercase">All time</div>
+                  <div
+                    className="text-lg md:text-2xl italic font-black"
+                    data-testid="efficiency-all-time-strip"
+                    data-cents={efficiency.allTime.cents.toFixed(2)}
+                    data-bills={efficiency.allTime.bills}
+                  >
+                    {efficiency.allTime.cents.toFixed(1)}¢
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[8px] font-black uppercase">In view</div>
+                  <div
+                    className="text-lg md:text-2xl italic font-black"
+                    data-testid="efficiency-in-view"
+                    data-cents={(efficiency.inView?.cents ?? 0).toFixed(2)}
+                    data-bills={efficiency.inView?.bills ?? 0}
+                  >
+                    {efficiency.inView ? `${efficiency.inView.cents.toFixed(1)}¢` : '—'}
+                  </div>
+                </div>
+              </div>
+              <div className="text-[8px] font-black normal-case mt-1">
+                {efficiency.allTime.bills} bill{efficiency.allTime.bills === 1 ? '' : 's'}
+                {efficiency.inView
+                  ? ` · ${efficiency.inView.bills} in view`
+                  : ' · no bill touches this window'}
+              </div>
+            </div>
+          )}
 
           {/* Wave H item 7 — same numbers, either unit. */}
           <div
@@ -179,10 +231,18 @@ export default function OverviewPanel({
         </div>
       )}
 
-      {/* 3. Which file / feed this is, and whether it is connected. */}
+      {/* 3. What a kWh cost, and whether that is getting better — the
+          split verdict (behaviour vs rate) plus the 24-bill mini-line.
+          Only when the file actually carries bills: readings alone can
+          price a plan but cannot price a kWh against a real bill. */}
+      {efficiency.periods.length > 0 && (
+        <EfficiencyCard report={efficiency} onOpenMoney={onOpenMoney} />
+      )}
+
+      {/* 4. Which file / feed this is, and whether it is connected. */}
       {fileStatus}
 
-      {/* 4. What this month is going to cost. */}
+      {/* 5. What this month is going to cost. */}
       <BillProjectionBanner projection={projection} />
     </div>
   );
