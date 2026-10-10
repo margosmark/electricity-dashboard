@@ -22,7 +22,6 @@
 
 import { useMemo } from 'react';
 
-import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import {
   MODEL_TRUST_TOLERANCE,
@@ -31,6 +30,7 @@ import {
   type SwitchPeriodRow,
 } from '@/lib/planTimeline';
 import { PERIOD_MIN_COVERAGE, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
+import { fmtMoney, planLabel, useTranslation } from '@/i18n';
 
 type Props = {
   /** Bill periods parsed out of the imported file (Wave L parser). */
@@ -39,7 +39,7 @@ type Props = {
   allData: ProcessedPoint[];
 };
 
-const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
+const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
 /** Which plans this row shows as alternatives (both non-actual, or all 3). */
 function alternativePlans(row: SwitchPeriodRow): PlanType[] {
@@ -48,6 +48,7 @@ function alternativePlans(row: SwitchPeriodRow): PlanType[] {
 }
 
 function Row({ row }: { row: SwitchPeriodRow }) {
+  const { t } = useTranslation();
   const unknown = row.plan === 'unknown';
   // Captured: the narrowing from `modeled && …` does not survive into the
   // map callback below otherwise.
@@ -68,21 +69,23 @@ function Row({ row }: { row: SwitchPeriodRow }) {
               unknown ? 'bg-slate-200' : 'bg-yellow-400'
             }`}
           >
-            {row.plan === 'unknown' ? 'PLAN UNKNOWN' : `ON ${PLAN_LABEL[row.plan].toUpperCase()}`}
+            {row.plan === 'unknown'
+              ? t('track.planUnknown')
+              : t('track.onPlan', { plan: planLabel(row.plan).toUpperCase() })}
           </span>
           <span className="px-2 py-0.5 rounded border-2 border-black text-[8px] md:text-[9px] font-black bg-slate-100">
             {row.origin === 'detected'
-              ? 'FROM BILL LINES'
+              ? t('track.fromBill')
               : row.origin === 'declared'
-                ? 'YOUR ENTRY'
-                : 'NOT IN FILE'}
+                ? t('track.yourEntry')
+                : t('track.notInFile')}
           </span>
           {row.conflict && row.detection.plan !== 'unknown' && (
             <span
               data-testid="switch-conflict"
               className="px-2 py-0.5 rounded border-2 border-red-600 text-[8px] md:text-[9px] font-black text-red-700"
             >
-              YOUR ENTRY DISAGREES — BILL WINS
+              {t('track.conflict')}
             </span>
           )}
         </span>
@@ -93,12 +96,12 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           data-testid="switch-skip"
           className="mt-2 md:mt-3 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-slate-600 normal-case"
         >
-          Not modeled — {row.skipped}. You paid {money(row.actual)}.
+          {t('track.notModeled', { reason: row.skipped, amount: money(row.actual) })}
         </div>
       ) : (
         <div className="mt-2 md:mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-slate-400 text-[8px] uppercase">You paid</div>
+            <div className="text-slate-400 text-[8px] uppercase">{t('track.youPaid')}</div>
             <div className="italic text-base md:text-lg" data-testid="switch-actual">
               {money(row.actual)}
             </div>
@@ -114,7 +117,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
                 }`}
               >
                 <div className="text-slate-400 text-[8px] uppercase">
-                  {PLAN_LABEL[plan]} · <span className="text-blue-600">modeled</span>
+                  {planLabel(plan)} · <span className="text-blue-600">{t('track.modeled')}</span>
                 </div>
                 <div className="italic text-base md:text-lg">{money(modeled[plan])}</div>
               </div>
@@ -127,13 +130,13 @@ function Row({ row }: { row: SwitchPeriodRow }) {
               }`}
             >
               <div className="text-slate-400 text-[8px] uppercase">
-                {unknown ? 'Saving' : 'Best saving'}
+                {unknown ? t('track.saving') : t('track.bestSaving')}
               </div>
               <div className="italic text-base md:text-lg" data-testid="switch-saving">
                 {row.saving === null ? '—' : money(row.saving)}
               </div>
               {!unknown && row.bestPlan && (
-                <div className="text-[8px] text-slate-400 font-bold">vs {PLAN_LABEL[row.bestPlan]}</div>
+                <div className="text-[8px] text-slate-400 font-bold">{t('track.vs', { plan: planLabel(row.bestPlan) })}</div>
               )}
             </div>
           )}
@@ -142,8 +145,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
 
       {unknown && modeled && (
         <div className="mt-2 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
-          No plan is known for this period, so no saving is claimed — the numbers above are what
-          each plan WOULD have cost. Declare the period in the timeline above to count it.
+          {t('track.unknownNote')}
         </div>
       )}
 
@@ -157,8 +159,8 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           }`}
         >
           {Math.abs(row.modelDelta) <= MODEL_TRUST_TOLERANCE
-            ? `Model check ✓ — re-pricing your plan lands back on this bill within ${money(Math.abs(row.modelDelta))} · counted`
-            : `Model check Δ ${money(row.modelDelta)} — ${row.excluded} · shown, excluded from the total`}
+            ? t('track.modelOk', { amount: money(Math.abs(row.modelDelta)) })
+            : t('track.modelOff', { delta: money(row.modelDelta), reason: row.excluded ?? '' })}
         </div>
       )}
     </div>
@@ -166,6 +168,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
 }
 
 export function SwitchTrackRecord({ summaries, allData }: Props) {
+  const { t } = useTranslation();
   const [timeline] = usePlanTimeline();
   const report = useMemo(
     () => buildSwitchReport(summaries, allData, timeline),
@@ -185,13 +188,12 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            Audited history · not a forecast
+            {t('track.eyebrow')}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">Switch track record</h2>
+          <h2 className="text-2xl md:text-4xl italic font-black">{t('track.title')}</h2>
         </div>
         <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-md">
-          Period by period: what you actually paid, what the same readings would have cost on each
-          other plan, and what staying put has cost over the whole file.
+          {t('track.blurb')}
         </div>
       </div>
 
@@ -199,18 +201,20 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
       <div className="mt-4 md:mt-6 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6">
         {overpaid === null ? (
           <div data-testid="switch-headline-empty" className="text-[11px] md:text-sm font-black">
-            Not enough trustworthy periods to audit yet — {counted} of {rows.length} periods have a
-            known plan type, {Math.round(PERIOD_MIN_COVERAGE * 100)}% readings coverage, and a model
-            that re-prices their own bill within $1.
+            {t('track.headlineEmpty', {
+              counted,
+              total: rows.length,
+              coverage: Math.round(PERIOD_MIN_COVERAGE * 100),
+            })}
           </div>
         ) : (
           <>
             <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-yellow-400">
               {overpaid > 0
                 ? byPlan.length === 1 && byPlan[0]
-                  ? `Over-paid by staying on ${PLAN_LABEL[byPlan[0].plan]}`
-                  : 'Over-paid by staying the course'
-                : 'Net saving — your actual plans beat every alternative'}
+                  ? t('track.overpaidOn', { plan: planLabel(byPlan[0].plan) })
+                  : t('track.overpaidCourse')
+                : t('track.netSaving')}
             </div>
             <div
               data-testid="switch-overpaid-total"
@@ -224,18 +228,17 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
               {money(overpaid > 0 ? overpaid : -overpaid)}
             </div>
             <div className="mt-1 text-[10px] md:text-xs font-black" data-testid="switch-headline-sub">
-              across {counted} counted period{counted === 1 ? '' : 's'} of {rows.length} in this
-              file
-              {untrusted > 0 ? ` · ${untrusted} modeled but excluded (model miss > $1)` : ''}
+              {t('track.headlineSub', { count: counted, counted, total: rows.length })}
+              {untrusted > 0 ? ` · ${t('track.untrustedNote', { count: untrusted })}` : ''}
             </div>
             <ul className="mt-2 md:mt-3 space-y-1" data-testid="switch-by-plan">
               {byPlan.map((g) => (
                 <li key={g.plan} className="text-[10px] md:text-xs font-black">
-                  {PLAN_LABEL[g.plan]}: {g.periods} period{g.periods === 1 ? '' : 's'} ·{' '}
+                  {planLabel(g.plan)}: {t('track.byPlanLine', { count: g.periods, periods: g.periods })}{' '}
                   <span className={g.overpaid > 0 ? 'text-yellow-400' : 'text-emerald-400'}>
                     {money(g.overpaid > 0 ? g.overpaid : -g.overpaid)}
                   </span>{' '}
-                  {g.overpaid > 0 ? 'over-paid' : 'saved'}
+                  {g.overpaid > 0 ? t('track.overpaid') : t('track.saved')}
                 </li>
               ))}
             </ul>
@@ -252,10 +255,15 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
               data-testid={`switch-callout-${c.summary.startDate}`}
               className="border-2 border-black rounded-lg bg-yellow-50 p-3"
             >
-              <div className="text-[8px] uppercase text-slate-400">Biggest miss · {c.label}</div>
+              <div className="text-[8px] uppercase text-slate-400">{t('track.biggestMiss', { label: c.label })}</div>
               <div className="italic font-black text-base md:text-xl">{money(c.saving ?? 0)}</div>
               <div className="text-[9px] font-bold normal-case text-slate-600">
-                {c.bestPlan ? `would have been ${money(c.modeled?.[c.bestPlan] ?? 0)} on ${PLAN_LABEL[c.bestPlan]} (modeled)` : ''}
+                {c.bestPlan
+                  ? t('track.wouldHaveBeen', {
+                      amount: money(c.modeled?.[c.bestPlan] ?? 0),
+                      plan: planLabel(c.bestPlan),
+                    })
+                  : ''}
               </div>
             </div>
           ))}
@@ -272,19 +280,14 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
       {/* ---- what the numbers mean -------------------------------------- */}
       <div className="mt-4 md:mt-6 border-t-4 border-black pt-3 md:pt-4 text-[10px] md:text-xs font-bold text-slate-500 normal-case space-y-1">
         <p>
-          <strong className="font-black">Modeled</strong> = your own interval readings repriced with
-          the OEB rate set in force during that period; delivery, regulatory, HST and the Ontario
-          Electricity Rebate are held and scaled exactly as your bill states them — only the
-          commodity moves with the plan.
+          <strong className="font-black">{t('track.legendModeledWord')}</strong>{' '}
+          {t('track.legendModeledB')}
         </p>
         <p>
-          {known} of {rows.length} periods have a known plan type
-          {unknownPlan > 0 ? ` (${unknownPlan} excluded — declare them above)` : ''} · {counted}{' '}
-          counted into the total
-          {untrusted > 0
-            ? ` · ${untrusted} shown but excluded (the model misses their bill by more than $1)`
-            : ''}
-          {skipped > 0 ? ` · ${skipped} skipped for low readings coverage` : ''}.
+          {t('track.legendMeta', { known, total: rows.length, counted })}
+          {unknownPlan > 0 ? ` ${t('track.legendExcluded', { count: unknownPlan })}` : ''}
+          {untrusted > 0 ? ` · ${t('track.legendUntrusted', { count: untrusted })}` : ''}
+          {skipped > 0 ? ` · ${t('track.legendSkipped', { count: skipped })}` : ''}.
         </p>
       </div>
     </section>

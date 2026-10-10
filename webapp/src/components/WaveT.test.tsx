@@ -216,7 +216,7 @@ describe('the anomaly card\u2019s weather line', () => {
       />,
     );
     const line = screen.getByTestId('anomaly-context-0');
-    expect(line.textContent).toBe("31°C — that's AC");
+    expect(line.textContent).toBe('31°C — that’s AC');
     expect(line).toHaveAttribute('data-kind', 'ac');
     expect(line).toHaveAttribute('data-temp', '31');
   });

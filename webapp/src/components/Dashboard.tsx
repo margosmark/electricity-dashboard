@@ -41,6 +41,7 @@ import { useRateStaleness } from '@/hooks/useRateStaleness';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import { NotificationToggle } from '@/components/NotificationToggle';
+import LocaleToggle from '@/components/LocaleToggle';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
@@ -49,28 +50,37 @@ import UsagePanel from '@/components/UsagePanel';
 import PlansPanel from '@/components/PlansPanel';
 import MoneyPanel from '@/components/MoneyPanel';
 import { useTabs } from '@/hooks/useTabs';
-import { useSelectedPlan, PLAN_LABEL } from '@/hooks/useSelectedPlan';
+import { useSelectedPlan } from '@/hooks/useSelectedPlan';
+// Wave U — locale, translation and locale-aware formatters. Every text-
+// producing memo below lists `t` in its deps so a language switch recomputes.
+import {
+  planLabel, FR_PLAN_SHORT, fmtMoney, fmtMoney0, useTranslation,
+} from '@/i18n';
 import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
 import { projectMonthBill } from '@/lib/billProjection';
 
-/** One row per storage problem — never let a failed write look like a saved one. */
-const STORAGE_MESSAGES: Record<StorageNotice['kind'], string> = {
-  quota: 'Data too large for browser storage — export and clear old data',
-  corrupt: 'Saved data could not be read — re-upload your XML or import a backup',
-  cleanup: 'Saved data could not be fully cleaned up — export a backup now',
+/**
+ * One row per storage problem — never let a failed write look like a saved one.
+ * Wave U: keys, not sentences, so the row translates with the app.
+ */
+const STORAGE_MESSAGE_KEYS: Record<StorageNotice['kind'], string> = {
+  quota: 'storage.quota',
+  corrupt: 'storage.corrupt',
+  cleanup: 'storage.cleanup',
 };
 
 /** Visible, dismissible row for any storage failure — quota / corrupt / cleanup. */
 function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDismiss: () => void }) {
+  const { t } = useTranslation();
   return (
     <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] font-black uppercase">
       <AlertTriangle size={20} strokeWidth={4} className="shrink-0 mt-1" />
       <div className="flex-1 min-w-[200px]">
-        <div className="text-xs md:text-base">{STORAGE_MESSAGES[notice.kind]}</div>
+        <div className="text-xs md:text-base">{t(STORAGE_MESSAGE_KEYS[notice.kind])}</div>
         <div className="text-[10px] md:text-xs opacity-90 normal-case mt-1 break-all">{notice.detail}</div>
       </div>
-      <button onClick={onDismiss} title="Dismiss storage notice" aria-label="Dismiss storage notice" className="ml-auto p-2 bg-white text-black border-2 border-black rounded-lg hover:bg-slate-100 transition-all">
+      <button onClick={onDismiss} title={t('storage.dismiss')} aria-label={t('storage.dismiss')} className="ml-auto p-2 bg-white text-black border-2 border-black rounded-lg hover:bg-slate-100 transition-all">
         <X size={16} strokeWidth={4} />
       </button>
     </div>
@@ -103,6 +113,9 @@ export default function Dashboard() {
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
 
+  // Wave U — the shell's locale subscription. `t` is the memo key for every
+  // text-producing computation below.
+  const { t, locale } = useTranslation();
   const [showFloorHelp, setShowFloorHelp] = React.useState(false);
   // Wave H item 2: the plan is a stored fact shared with the header chip,
   // not component state that forgets itself on reload.
@@ -220,11 +233,11 @@ export default function Dashboard() {
       // Inside the modal the parse-diagnostic box is where failures are read.
       setParseIssue({
         ok: false,
-        headline: 'That backup could not be imported.',
-        detail: res.error ?? 'The file was not recognised as an export of this app.',
+        headline: t('backup.import.failHeadline'),
+        detail: res.error ?? t('backup.import.failDetail'),
         hints: [
-          'Pick the JSON produced by “Export JSON” (the full profile) or by the toolbar’s download button (readings only).',
-          'Nothing was changed: an import is accepted whole or not at all.',
+          t('backup.import.failHintPick'),
+          t('backup.import.failHintAtomic'),
         ],
       });
     });
@@ -272,9 +285,12 @@ export default function Dashboard() {
 
   // "This month's bill" projection: month-to-date + the recent daily average
   // carried to month end, gated on day 5 (see lib/billProjection).
+  // Wave U: `t` in deps — projectMonthBill builds its gate note/caption in
+  // the active language, so a toggle must re-run it.
   const projection = useMemo(
     () => projectMonthBill(processedData, userPlan, new Date()),
-    [processedData, userPlan],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [processedData, userPlan, t],
   );
 
   // Weekly before/after: last 7 full days vs the 7 before, on the full
@@ -386,11 +402,15 @@ export default function Dashboard() {
     : 0;
   const bestDaily = perDayOf(bestCostTotal);
   const bestYearly = perYearOf(bestCostTotal);
-  const reframe = totals
-    ? costMode === 'yr'
-      ? `$${bestYearly.toFixed(0)}/yr for ${PLAN_LABEL[totals.bestPlan]} is $${bestDaily.toFixed(2)}/day`
-      : `$${bestDaily.toFixed(2)}/day for ${PLAN_LABEL[totals.bestPlan]} is $${bestYearly.toFixed(0)}/yr`
-    : '';
+  // Wave U: locale-aware money + localized plan name; `t` in deps so the
+  // sentence recomputes on toggle instead of staying in the old language.
+  const reframe = React.useMemo(() => {
+    if (!totals) return '';
+    const name = planLabel(totals.bestPlan);
+    return costMode === 'yr'
+      ? t('totals.reframe.yr', { yearly: fmtMoney0(bestYearly), daily: fmtMoney(bestDaily), plan: name })
+      : t('totals.reframe.day', { yearly: fmtMoney0(bestYearly), daily: fmtMoney(bestDaily), plan: name });
+  }, [totals, costMode, bestYearly, bestDaily, t]);
 
   // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
   const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
@@ -440,7 +460,7 @@ export default function Dashboard() {
           data-testid="preparing-optimizer"
           className="p-6 text-center font-black text-black text-3xl md:text-4xl animate-pulse uppercase tracking-tighter"
         >
-          PREPARING OPTIMIZER...
+          {t('loading.preparing')}
         </div>
       </div>
     );
@@ -465,11 +485,10 @@ export default function Dashboard() {
           className="relative z-[100] bg-amber-200 border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-black"
         >
           <div className="text-[11px] md:text-sm font-black uppercase">
-            Example data — not real usage
+            {t('example.banner.title')}
           </div>
           <div className="text-[10px] md:text-xs font-bold normal-case text-slate-700 max-w-2xl">
-            You are looking at a synthetic year modelled on an Ontario home with an EV,
-            so the charts have something to draw. Do not quote these numbers on a bill.
+            {t('example.banner.body')}
           </div>
           <button
             type="button"
@@ -478,7 +497,7 @@ export default function Dashboard() {
             /* The provenance note prints; the button that swaps data is chrome. */
             className="no-print ml-auto min-h-11 px-4 py-2 bg-black text-white border-4 border-black rounded-lg md:rounded-xl font-black uppercase text-[10px] md:text-xs shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all"
           >
-            Use my own data
+            {t('example.banner.useOwn')}
           </button>
         </div>
       )}
@@ -488,24 +507,24 @@ export default function Dashboard() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Link your Green Button data"
+          aria-label={t('upload.modal.aria')}
           data-testid="upload-modal"
           className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
         >
           <div className="my-auto bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black">
-             <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-black font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> Link Data</h2>
-             <p className="font-bold text-slate-600 text-sm md:text-lg mb-6 md:mb-10 text-black">Privacy-First: Data stays in your browser. <span className="underline decoration-blue-500">Upload your XML to begin.</span></p>
+             <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-black font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> {t('upload.modal.title')}</h2>
+             <p className="font-bold text-slate-600 text-sm md:text-lg mb-6 md:mb-10 text-black">{t('upload.modal.privacy')} <span className="underline decoration-blue-500">{t('upload.modal.privacyHighlight')}</span></p>
              {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} /></div>}
-             <p className="text-[10px] md:text-xs font-black uppercase text-slate-500 mb-3">Pick one export, or hold Ctrl / ⌘ to pick 2+ and merge them.</p>
+             <p className="text-[10px] md:text-xs font-black uppercase text-slate-500 mb-3">{t('upload.modal.mergeHint')}</p>
              <div className="relative">
-               <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label="Upload Green Button XML" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? "ANALYZING..." : "Drop XML Here"}</div></div>
+               <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label={t('upload.xml.aria')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-yellow-50' : 'border-black bg-slate-50'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-black">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
              </div>
              {/* The other way in with no utility file at all: a JSON this app
                  exported before (full profile or readings only). */}
              <label className="mt-4 block cursor-pointer">
-               <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label="Import JSON backup" className="sr-only" />
-               <span className="block min-h-11 w-full py-3 bg-emerald-50 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs text-black text-center">…or import a previous export (.json)</span>
+               <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label={t('upload.importJson.aria')} className="sr-only" />
+               <span className="block min-h-11 w-full py-3 bg-emerald-50 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs text-black text-center">{t('upload.importJson.label')}</span>
              </label>
              {/* Wave K — the other way to get data in: authorise once and
                  let the shim pipe ESPI straight through to localStorage. */}
@@ -543,7 +562,7 @@ export default function Dashboard() {
                  disabled={parsing}
                  className="flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
                >
-                 {parsing ? 'Loading example…' : 'Try with example data'}
+                 {parsing ? t('upload.tryExample.loading') : t('upload.tryExample.idle')}
                </button>
                {/* Reachable at every width: `md:hidden` used to hide it on
                    desktop, where the overlay has no backdrop/close affordance,
@@ -555,15 +574,13 @@ export default function Dashboard() {
                    onClick={() => { setParseIssue(null); setShowUploadModal(false); }}
                    className="min-h-11 py-3 md:py-4 px-6 bg-slate-100 border-2 border-black rounded-xl font-black uppercase text-[10px] md:text-xs"
                  >
-                   Cancel
-                 </button>
+                   {t('common.cancel')}
+                   </button>
                )}
              </div>
              <p className="mt-3 text-[9px] md:text-[11px] font-bold text-slate-500 normal-case">
-               <span className="font-black uppercase">Example data — not real usage.</span>{' '}
-               A synthetic year modelled on an Ontario home with an EV (generated in this
-               repo, no real meter or account). Nothing is uploaded anywhere — analysis
-               stays in this browser, your own files included.
+               <span className="font-black uppercase">{t('example.modal.title')}</span>{' '}
+               {t('example.modal.body')}
              </p>
           </div>
         </div>
@@ -572,13 +589,13 @@ export default function Dashboard() {
       {/* Reset: two-step confirm, scoped to this app's keys only */}
       {resetConfirmOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[350] flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-label="Confirm reset" data-testid="reset-confirm" className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-lg w-full text-black">
-            <h2 className="text-xl md:text-3xl uppercase tracking-tighter mb-3 md:mb-4 flex items-center gap-2 md:gap-3 text-red-600 font-black"><AlertTriangle size={22} strokeWidth={4} /> Erase saved data?</h2>
-            <p className="font-bold text-slate-700 text-xs md:text-sm mb-2">This removes {resetKeys.length} saved {resetKeys.length === 1 ? 'item' : 'items'} from <em>this browser only</em>:</p>
-            <p className="font-black uppercase text-[10px] md:text-xs text-slate-500 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : 'nothing stored yet'} — other site data is untouched.</p>
+          <div role="dialog" aria-modal="true" aria-label={t('reset.aria')} data-testid="reset-confirm" className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-lg w-full text-black">
+            <h2 className="text-xl md:text-3xl uppercase tracking-tighter mb-3 md:mb-4 flex items-center gap-2 md:gap-3 text-red-600 font-black"><AlertTriangle size={22} strokeWidth={4} /> {t('reset.title')}</h2>
+            <p className="font-bold text-slate-700 text-xs md:text-sm mb-2">{t('reset.body', { count: resetKeys.length })} <em>{t('reset.browserOnly')}</em></p>
+            <p className="font-black uppercase text-[10px] md:text-xs text-slate-500 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : t('reset.nothingStored')} — {t('reset.otherUntouched')}</p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button type="button" onClick={confirmReset} title="Confirm Reset" className="min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors">Yes, erase it</button>
-              <button type="button" onClick={cancelResetConfirm} title="Cancel Reset" className="min-h-11 flex-1 py-3 md:py-4 bg-slate-100 border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-slate-200 active:translate-y-0.5 transition-colors">Cancel</button>
+              <button type="button" onClick={confirmReset} title={t('reset.confirmTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors">{t('reset.confirm')}</button>
+              <button type="button" onClick={cancelResetConfirm} title={t('reset.cancelTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-slate-100 border-2 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-slate-200 active:translate-y-0.5 transition-colors">{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -619,9 +636,9 @@ export default function Dashboard() {
           floor button) absorb the slack instead of white space doing it. */}
       <div className="no-print relative z-[200] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-col gap-4 md:gap-6 text-black">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
-           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title="Upload XML" aria-label="Upload XML" className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={openResetConfirm} title="Reset Data" aria-label="Reset all data in this browser" className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={handleExportData} title="Export Data" aria-label="Export readings as JSON" disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-blue-700 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="min-h-11 min-w-11 p-3 md:p-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-white text-blue-700 border-4 border-black rounded-xl md:rounded-2xl shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
@@ -636,15 +653,15 @@ export default function Dashboard() {
           />
 
           <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
-            <input type="date" aria-label="Window start date" value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
+            <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
             {/* The quiet separator between the two window dates. Explicit hex
                 instead of `text-black opacity-40`: 40% black on white is
                 #999999 = 2.84:1 at 10px (axe color-contrast — small text
                 needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still
                 reads as secondary; the hex is literal so the regression test
                 can measure the ratio instead of trusting a palette name. */}
-            <span data-testid="window-separator" className="text-[#475569] font-black text-[10px]">TO</span>
-            <input type="date" aria-label="Window end date" value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
+            <span data-testid="window-separator" className="text-[#475569] font-black text-[10px]">{t('toolbar.to')}</span>
+            <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-base md:text-sm text-black bg-white" />
           </div>
 
           {/* The scope switch is row 1's flexible member: it eats the
@@ -652,11 +669,11 @@ export default function Dashboard() {
               ending in white space (it is alone on its line below ~940px, where
               it stretches across the whole row). */}
           <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Billing Period</button>
+            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>{t('scope.billingPeriod')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>Month</button>
+            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>{t('scope.month')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>YTD</button>
+            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-black rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400' : 'bg-white hover:bg-slate-50'}`}>{t('scope.ytd')}</button>
           </div>
         </div>
 
@@ -667,7 +684,7 @@ export default function Dashboard() {
         <div className="w-full flex flex-wrap items-center gap-3 md:gap-4 lg:gap-6">
           <div className="bg-slate-100 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex items-center gap-2 md:gap-3">
              <Settings2 size={16} className="text-slate-500" />
-             <input type="number" min="1" max="31" aria-label="Billing day of month" title={billFeed.summaries.length > 0 ? "Your file states its own billing periods, so this is only the fallback for exports that don't" : "Which day of the month your utility bills you on"} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
+             <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-black font-black" />
           </div>
           <div data-testid="plan-switcher" className="bg-slate-100 p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
@@ -675,13 +692,23 @@ export default function Dashboard() {
                   "TOU" from the name (axe label-content-name-mismatch — the
                   name must contain what a sighted user reads), and the toggle
                   role already carries the state via aria-pressed. */}
-              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{p}</button>)}
+              {/* Wave U — in French the switcher shows the compact OEB names
+                  (Heures / Paliers / Nuit); in English the canonical
+                  Tiered/TOU/ULO, which stay the accessible name (the visible
+                  text IS the name — see the note above). `data-plan` always
+                  carries the canonical id. */}
+              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-black text-white shadow-lg' : 'text-black hover:bg-white'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
+          {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
+              the language of the answer belongs beside the answer. A real
+              <button> in the tab order with aria-pressed and a localized
+              name (Wave H's a11y bar). */}
+          <LocaleToggle />
           {floor && (
-          <button type="button" onClick={() => setShowFloorHelp(true)} title="Always-on floor" aria-label="Always-on floor: what it is and how we measure yours" aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4 xl:gap-8">
-            <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">Always-on floor <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
-            <div className="text-xl md:text-4xl italic lg:flex-1">${floor.annualCost.toFixed(0)}/yr</div>
-            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{floor.kwhPerDay.toFixed(1)} kWh/day</div>
+          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 md:border-4 border-black text-center font-black relative hover:scale-105 active:scale-105 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4 xl:gap-8">
+            <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
+            <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
+            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: floor.kwhPerDay.toFixed(1) })}</div>
           </button>
           )}
         </div>
@@ -778,27 +805,27 @@ export default function Dashboard() {
 
       {/* Always-on floor help modal */}
       {showFloorHelp && (
-        <div className="no-print fixed inset-0 bg-black/80 backdrop-blur-md z-[400] flex justify-center overflow-y-auto overlay-safe" role="dialog" aria-modal="true" aria-label="What is the always-on floor?" data-testid="floor-help-modal">
+        <div className="no-print fixed inset-0 bg-black/80 backdrop-blur-md z-[400] flex justify-center overflow-y-auto overlay-safe" role="dialog" aria-modal="true" aria-label={t('floor.modalAria')} data-testid="floor-help-modal">
           <div className="my-auto bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-xl w-full text-black relative">
-            <button type="button" onClick={() => setShowFloorHelp(false)} aria-label="Close" className="absolute top-4 right-4 md:top-6 md:right-6 min-h-11 min-w-11 inline-flex items-center justify-center p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full transition-all"><X size={24} className="md:w-8 md:h-8" strokeWidth={4} /></button>
-            <h2 className="text-2xl md:text-4xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 font-black"><Zap size={24} className="text-blue-600 md:w-10 md:h-10" strokeWidth={4} /> What is the always-on floor?</h2>
+            <button type="button" onClick={() => setShowFloorHelp(false)} aria-label={t('common.close')} className="absolute top-4 right-4 md:top-6 md:right-6 min-h-11 min-w-11 inline-flex items-center justify-center p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full transition-all"><X size={24} className="md:w-8 md:h-8" strokeWidth={4} /></button>
+            <h2 className="text-2xl md:text-4xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 font-black"><Zap size={24} className="text-blue-600 md:w-10 md:h-10" strokeWidth={4} /> {t('floor.modalTitle')}</h2>
             <div className="space-y-4 md:space-y-6 font-bold text-slate-700">
-              <p className="text-xs md:text-base">The floor is the slice of your bill that never switches off — the fridge, the chargers, the clocks, the standby lights. It is there whether you are home or not, and it is the one part of the bill you can actually switch.</p>
+              <p className="text-xs md:text-base">{t('floor.explainer')}</p>
               {floor ? (
                 <div className="bg-blue-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-blue-200 text-blue-900">
-                  <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">How we measure yours:</h4>
+                  <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">{t('floor.measureTitle')}</h4>
                   <ul className="list-disc ml-4 md:ml-5 space-y-1 md:space-y-2 text-[10px] md:text-sm">
-                    <li>We look at your whole visible window and take the <strong>lowest 5% of readings</strong> — the stretches when nothing should have been running.</li>
-                    <li>That floor draws <span className="font-black text-blue-600">{floor.watts.toFixed(0)} Watts</span>, about <span className="font-black text-blue-600">{floor.kwhPerDay.toFixed(1)} kWh a day</span>.</li>
-                    <li>Priced at your blended <span className="font-black text-blue-600">{floor.blendedRateCents.toFixed(1)}¢/kWh</span>, that is <span className="font-black text-blue-600">${floor.annualCost.toFixed(0)} a year</span> of never-off energy.</li>
+                    <li>{t('floor.measureStep1a')}<strong>{t('floor.measureStep1b')}</strong>{t('floor.measureStep1c')}</li>
+                    <li>{t('floor.measureStep2a')}<span className="font-black text-blue-600">{t('unit.watts', { watts: floor.watts.toFixed(0) })}</span>{t('floor.measureStep2b')}<span className="font-black text-blue-600">{t('unit.kwhPerDay', { kwh: floor.kwhPerDay.toFixed(1) })}</span>.</li>
+                    <li>{t('floor.measureStep3a')}<span className="font-black text-blue-600">{t('unit.centsPerKwh', { cents: floor.blendedRateCents.toFixed(1) })}</span>{t('floor.measureStep3b')}<span className="font-black text-blue-600">{t('floor.yearlyCost', { cost: fmtMoney0(floor.annualCost) })}</span>{t('floor.measureStep3c')}</li>
                     <li>{floor.detail}</li>
                   </ul>
                 </div>
               ) : (
-                <p className="text-xs md:text-sm">No readings in the current window yet — widen the date range above and the number appears here.</p>
+                <p className="text-xs md:text-sm">{t('floor.noWindow')}</p>
               )}
-              <p className="text-[10px] md:text-sm">Costs are commodity (variable) charges only — no delivery, regulatory charges or HST.</p>
-              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-black text-white rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4">Got it</button>
+              <p className="text-[10px] md:text-sm">{t('legal.commodityOnly')}</p>
+              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-black text-white rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4">{t('common.gotIt')}</button>
             </div>
           </div>
         </div>

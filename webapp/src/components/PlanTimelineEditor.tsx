@@ -19,8 +19,8 @@
 
 import { useMemo, useState } from 'react';
 
-import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
+import { planLabel, useTranslation } from '@/i18n';
 import {
   PLAN_TYPES,
   assignPeriodPlan,
@@ -35,10 +35,14 @@ type Props = {
   summaries: UsageSummary[];
 };
 
-const ORIGIN_LABEL: Record<PeriodPlan['origin'], string> = {
-  detected: 'DETECTED FROM BILL LINES',
-  declared: 'YOUR ENTRY',
-  unknown: 'UNKNOWN',
+/**
+ * Wave U — origin captions are catalog keys (the map stays a lookup so the
+ * style/label pairs cannot drift apart).
+ */
+const ORIGIN_KEY: Record<PeriodPlan['origin'], string> = {
+  detected: 'timeline.originDetected',
+  declared: 'timeline.originDeclared',
+  unknown: 'timeline.originUnknown',
 };
 
 const ORIGIN_STYLE: Record<PeriodPlan['origin'], string> = {
@@ -57,6 +61,7 @@ function todayIso(): string {
 }
 
 export function PlanTimelineEditor({ summaries }: Props) {
+  const { t } = useTranslation();
   const [entries, { add, update, remove }] = usePlanTimeline();
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +86,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
 
   const patch = (id: string, next: Parameters<typeof update>[1]) => {
     if (update(id, next)) setError(null);
-    else setError('Every entry needs a real start and end day, with the start on or before the end.');
+    else setError(t('timeline.errorInvalid'));
   };
 
   return (
@@ -92,13 +97,12 @@ export function PlanTimelineEditor({ summaries }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-            Read off your bill · editable by you
+            {t('timeline.eyebrow')}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">Plan-type timeline</h2>
+          <h2 className="text-2xl md:text-4xl italic font-black">{t('timeline.title')}</h2>
         </div>
         <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-md">
-          Which price plan you were on, period by period. We fingerprint it from the utility&apos;s
-          own charge lines — and where the lines say nothing, you can say it yourself.
+          {t('timeline.blurb')}
         </div>
       </div>
 
@@ -122,13 +126,15 @@ export function PlanTimelineEditor({ summaries }: Props) {
                     data-testid="plan-timeline-plan-badge"
                     className="px-2 md:px-3 py-0.5 rounded-full border-2 border-black text-[9px] md:text-[11px] font-black"
                   >
-                    {assignment.plan === 'unknown' ? 'UNKNOWN' : PLAN_LABEL[assignment.plan]}
+                    {assignment.plan === 'unknown'
+                      ? t('timeline.originUnknown')
+                      : planLabel(assignment.plan)}
                   </span>
                   <span
                     data-testid="plan-timeline-origin"
                     className={`px-2 py-0.5 rounded border-2 border-black text-[8px] md:text-[9px] font-black ${ORIGIN_STYLE[assignment.origin]}`}
                   >
-                    {ORIGIN_LABEL[assignment.origin]}
+                    {t(ORIGIN_KEY[assignment.origin])}
                   </span>
                 </span>
               </div>
@@ -138,14 +144,14 @@ export function PlanTimelineEditor({ summaries }: Props) {
                   data-testid="plan-timeline-evidence"
                   className="mt-1 text-[9px] md:text-[10px] text-slate-500 font-bold normal-case"
                 >
-                  Lines we matched:{' '}
+                  {t('timeline.evidence')}{' '}
                   {detection.evidence.slice(0, 3).join(' · ')}
-                  {detection.evidence.length > 3 ? ` · +${detection.evidence.length - 3} more` : ''}
+                  {detection.evidence.length > 3 ? ` · ${t('timeline.evidenceMore', { count: detection.evidence.length - 3 })}` : ''}
                 </div>
               )}
               {assignment.origin === 'unknown' && (
                 <div className="mt-1 text-[9px] md:text-[10px] text-slate-500 font-bold normal-case">
-                  {detection.reason} — no guess made. Declare it below if you know.
+                  {t('timeline.noGuess', { reason: detection.reason ?? '' })}
                 </div>
               )}
               {assignment.conflict && assignment.declared && (
@@ -153,9 +159,10 @@ export function PlanTimelineEditor({ summaries }: Props) {
                   data-testid="plan-timeline-conflict"
                   className="mt-1 text-[9px] md:text-[10px] font-bold normal-case text-red-700"
                 >
-                  You declared {PLAN_LABEL[assignment.declared.plan]} for these dates, but the
-                  bill&apos;s own lines say {PLAN_LABEL[detection.plan as PlanType]} — the bill wins
-                  for this period.
+                  {t('timeline.conflict', {
+                    declared: planLabel(assignment.declared.plan),
+                    detected: planLabel(detection.plan as PlanType),
+                  })}
                 </div>
               )}
             </li>
@@ -166,24 +173,22 @@ export function PlanTimelineEditor({ summaries }: Props) {
       {/* ---- the user's own entries ------------------------------------- */}
       <div className="mt-6 md:mt-8 border-t-4 border-black pt-4 md:pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg md:text-2xl italic font-black">Your entries</h3>
+          <h3 className="text-lg md:text-2xl italic font-black">{t('timeline.yourEntries')}</h3>
           <button
             type="button"
             data-testid="plan-timeline-add"
             onClick={() => {
               const day = todayIso();
               if (add({ plan: 'TOU', from: day, to: day })) setError(null);
-              else setError('Could not add that entry.');
+              else setError(t('timeline.errorAdd'));
             }}
             className="min-h-11 px-4 md:px-6 py-2 bg-yellow-400 border-2 border-black rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-yellow-300 active:bg-yellow-500 transition-colors"
           >
-            + Add entry
+            {t('timeline.addEntry')}
           </button>
         </div>
         <p className="mt-1 md:mt-2 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
-          For periods your exports don&apos;t cover — “I was on Tiered from 2024-11-01 to
-          2025-03-31”. Entries are stored in this browser next to your billing day and travel with
-          your backup.
+          {t('timeline.entriesBlurb')}
         </p>
 
         {entries.length === 0 ? (
@@ -191,7 +196,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
             data-testid="plan-timeline-empty"
             className="mt-3 md:mt-4 bg-slate-50 border-2 border-black rounded-lg px-3 py-3 md:px-4 text-[10px] md:text-xs font-black text-slate-500 normal-case"
           >
-            No entries yet — every period above comes from the file itself.
+            {t('timeline.empty')}
           </div>
         ) : (
           <ul className="mt-3 md:mt-4 space-y-2 md:space-y-3">
@@ -201,10 +206,10 @@ export function PlanTimelineEditor({ summaries }: Props) {
                 data-testid="plan-timeline-entry"
                 className="flex flex-wrap items-center gap-2 md:gap-3 border-2 border-black rounded-lg bg-white px-3 py-2 md:px-4"
               >
-                <span className="text-[9px] md:text-[10px] font-black text-slate-400">I was on</span>
+                <span className="text-[9px] md:text-[10px] font-black text-slate-400">{t('timeline.iWasOn')}</span>
                 <select
                   data-testid="plan-timeline-entry-plan"
-                  aria-label="Plan"
+                  aria-label={t('timeline.planAria')}
                   value={e.plan}
                   onChange={(ev) => {
                     const v = ev.target.value;
@@ -214,14 +219,14 @@ export function PlanTimelineEditor({ summaries }: Props) {
                 >
                   {PLAN_TYPES.map((p) => (
                     <option key={p} value={p}>
-                      {PLAN_LABEL[p]}
+                      {planLabel(p)}
                     </option>
                   ))}
                 </select>
-                <span className="text-[9px] md:text-[10px] font-black text-slate-400">from</span>
+                <span className="text-[9px] md:text-[10px] font-black text-slate-400">{t('timeline.from')}</span>
                 <input
                   data-testid="plan-timeline-entry-from"
-                  aria-label="Entry start date"
+                  aria-label={t('timeline.fromAria')}
                   type="date"
                   value={e.from}
                   onChange={(ev) => {
@@ -230,10 +235,10 @@ export function PlanTimelineEditor({ summaries }: Props) {
                   }}
                   className={FIELD_CLASS}
                 />
-                <span className="text-[9px] md:text-[10px] font-black text-slate-400">to</span>
+                <span className="text-[9px] md:text-[10px] font-black text-slate-400">{t('timeline.to')}</span>
                 <input
                   data-testid="plan-timeline-entry-to"
-                  aria-label="Entry end date"
+                  aria-label={t('timeline.toAria')}
                   type="date"
                   value={e.to}
                   onChange={(ev) => {
@@ -245,7 +250,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                 <button
                   type="button"
                   data-testid="plan-timeline-entry-remove"
-                  aria-label="Remove entry"
+                  aria-label={t('timeline.removeAria')}
                   onClick={() => {
                     remove(e.id);
                     setError(null);

@@ -22,6 +22,8 @@
 
 "use client";
 
+/* Wave U — user-visible copy translates; lib code reads the module locale. */
+import { fmtMoney, t, useTranslation } from "@/i18n";
 import { useMemo, useState } from 'react';
 import { Car, TriangleAlert, Moon, Info, Clock } from 'lucide-react';
 import { type ProcessedPoint, type RateSet } from '@/lib/energy';
@@ -50,7 +52,9 @@ const hh = (h: number) => String(h).padStart(2, '0');
  */
 function signedMoney(v: number): string {
   const cents = Math.abs(v) < 0.005 ? 0 : v;
-  return `${cents < 0 ? '−' : '+'}$${Math.abs(cents).toFixed(2)}`;
+  return cents < 0
+    ? t('ev.signedNegative', { amount: fmtMoney(Math.abs(cents)) })
+    : t('ev.signedPositive', { amount: fmtMoney(Math.abs(cents)) });
 }
 
 /**
@@ -60,17 +64,19 @@ function signedMoney(v: number): string {
  * hour is not the story, and the sentence says so instead of implying a shift.
  */
 function moveSentence(cm: EvChargeMove, planLabel: string): string {
-  const stay = `$${cm.stayCostPerMonth.toFixed(2)}/mo`;
-  const move = `$${cm.moveCostPerMonth.toFixed(2)}/mo`;
-  const delta = `$${Math.abs(cm.totalSavingPerMonth).toFixed(2)}/mo`;
+  // Wave U — the money strings below are locale-aware, so the sentence
+  // reads "12,34 $/mois" in French.
+  const stay = fmtMoney(cm.stayCostPerMonth) + t('ev.perMonth');
+  const move = fmtMoney(cm.moveCostPerMonth) + t('ev.perMonth');
+  const delta = fmtMoney(Math.abs(cm.totalSavingPerMonth)) + t('ev.perMonth');
   if (cm.alreadyOvernight) {
     return Math.abs(cm.totalSavingPerMonth) < 0.005
-      ? `You already charge ${cm.stayLabel} — inside ULO's 23:00–07:00 window, at the cheapest rate those hours ever get: ${stay} now, ${move} after a switch. Nothing to gain by moving this charge.`
-      : `You already charge ${cm.stayLabel}, inside 23:00–07:00 — nothing to shift. ${stay} now on ${planLabel} vs ${move} on Ultra-Low Overnight: that ${delta} is the plan, not the clock.`;
+      ? t('ev.alreadyOvernightSame', { label: cm.stayLabel, stay, move })
+      : t('ev.alreadyOvernightDiff', { label: cm.stayLabel, stay, plan: planLabel, move, delta });
   }
   return cm.totalSavingPerMonth >= 0
-    ? `Staying at ${cm.stayLabel} on ${planLabel} costs ${stay}. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs ${move} — ${delta} better off every month.`
-    : `Staying at ${cm.stayLabel} on ${planLabel} costs ${stay}. Moving the same charge to 23:00–07:00 on Ultra-Low Overnight costs ${move} — ${delta} worse off every month. Don't move it.`;
+    ? t('ev.betterOff', { label: cm.stayLabel, plan: planLabel, stay, move, delta })
+    : t('ev.worseOff', { label: cm.stayLabel, plan: planLabel, stay, move, delta });
 }
 
 export default function EvScenarioCard({
@@ -87,6 +93,7 @@ export default function EvScenarioCard({
    */
   plan?: EvPlan;
 }) {
+  const { t } = useTranslation();
   const candidate = useMemo(() => detectEvCandidate(rows), [rows]);
 
   // `kwhText` stays null until the household types — before that we show the
@@ -188,16 +195,16 @@ export default function EvScenarioCard({
         </label>
         <div className="text-[9px] md:text-[11px] font-bold text-slate-500 normal-case max-w-md">
           {scenario.source === 'detected' && candidate
-            ? `From your own data: ${candidate.label}, ${candidate.detail}.`
+            ? t('ev.fromData', { label: candidate.label, detail: candidate.detail })
             : dailyKwh > 0
-              ? 'Using the number you typed.'
-              : 'We could not find an overnight charging block in your data — type yours and we will price it.'}
+              ? t('ev.usingTyped')
+              : t('ev.noBlock')}
           {' '}
           {shownHour === null
-            ? 'Pick the hour your car draws the most power and we will price staying there against moving to midnight.'
+            ? t('ev.pickHour')
             : chargeHourSource === 'detected'
-              ? `Charging hour prefilled from the block we found (${candidate?.label ?? `${hh(shownHour)}:00`}).`
-              : `Using the ${hh(shownHour)}:00 you picked.`}
+              ? t('ev.hourPrefilled', { label: candidate?.label ?? `${hh(shownHour)}:00` })
+              : t('ev.usingHour', { hour: hh(shownHour) })}
         </div>
       </div>
 
@@ -337,9 +344,10 @@ export default function EvScenarioCard({
                   {moveSentence(cm, PLAN_LABEL[plan])}
                 </div>
                 <div className="text-[9px] md:text-[11px] font-bold text-slate-600 mt-1">
-                  Of that: {signedMoney(cm.shiftSavingPerMonth)}/mo for moving the hour,{' '}
-                  {signedMoney(cm.planSavingPerMonth)}/mo for changing plan at your hour. The two
-                  add up to the total and are never counted twice.
+                  {t('ev.ofThat', {
+                    shift: signedMoney(cm.shiftSavingPerMonth),
+                    plan: signedMoney(cm.planSavingPerMonth),
+                  })}
                 </div>
                 <div className="text-[9px] md:text-[11px] font-bold text-slate-500 normal-case mt-1">
                   {cm.detail}

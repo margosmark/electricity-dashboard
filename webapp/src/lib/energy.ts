@@ -2,6 +2,10 @@ import { XMLParser } from 'fast-xml-parser';
 import { isOntarioHoliday } from './ontarioHolidays';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
+/* Wave U — user-visible sentences in this file come from the locale catalog
+ * at call time (lib code reads the module locale; components re-render on
+ * toggle via useTranslation). Numeric fields stay numeric. */
+import { fmtMoney0, getLocale, t } from '@/i18n';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -123,18 +127,18 @@ export function anomalyWeatherContext(
 ): AnomalyContext {
   const day = dayTemps(rows, temps);
   if (day.mean === null || day.high === null || day.low === null) {
-    return { kind: 'unknown', tempC: null, text: 'no data' };
+    return { kind: 'unknown', tempC: null, text: t('anomalies.ctxNoData') };
   }
   if (day.high >= ANOMALY_AC_TEMP_C) {
-    return { kind: 'ac', tempC: day.high, text: `${whole(day.high)}°C — that's AC` };
+    return { kind: 'ac', tempC: day.high, text: t('anomalies.ctxAc', { temp: whole(day.high) }) };
   }
   if (day.low <= ANOMALY_HEAT_TEMP_C) {
-    return { kind: 'heat', tempC: day.low, text: `${whole(day.low)}°C — that's heat` };
+    return { kind: 'heat', tempC: day.low, text: t('anomalies.ctxHeat', { temp: whole(day.low) }) };
   }
   return {
     kind: 'mild',
     tempC: day.mean,
-    text: 'no weather signal — worth checking the appliance',
+    text: t('anomalies.ctxMild'),
   };
 }
 
@@ -222,6 +226,23 @@ function longestRunAbove(
   return best;
 }
 
+/* Wave U — user-visible sentences in this file come from the locale catalog
+ * at call time (lib code reads the module locale; components re-render on
+ * toggle via useTranslation). Numeric fields stay numeric. */
+
+/**
+ * "$0.0412/kWh" / "$3.95/month" — the true-bill receipt's rate format.
+ * fr-CA moves the symbol: "0,0412 $/kWh".
+ */
+function fmtCharge(rate: number, digits: number, unit: 'kWh' | 'month'): string {
+  const fr = getLocale() === 'fr';
+  const n = new Intl.NumberFormat(fr ? 'fr-CA' : 'en-CA', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(rate);
+  return fr ? `${n} $/${unit}` : `$${n}/${unit}`;
+}
+
 function hourRange(start: number, hours: number): string {
   const end = start + hours;
   return `${String(start).padStart(2, '0')}:00–${String(end).padStart(2, '0')}:00`;
@@ -247,16 +268,25 @@ export function classifyDayShape(
   if (sustained.hours >= SIGNATURE_SUSTAINED_HOURS) {
     return {
       id: 'sustained-high',
-      label: 'Looks like a water heater / EV / space heater',
-      detail: `${sustained.hours} h straight at ${SIGNATURE_SUSTAINED_KW} kW or more (${sustained.avg.toFixed(1)} kW average, ${hourRange(sustained.start, sustained.hours)})`,
+      label: t('sig.sustained.label'),
+      detail: t('sig.sustained.detail', {
+        hours: sustained.hours,
+        kw: SIGNATURE_SUSTAINED_KW,
+        avg: sustained.avg.toFixed(1),
+        range: hourRange(sustained.start, sustained.hours),
+      }),
     };
   }
 
   if (sustained.hours >= 1 && sustained.hours <= SIGNATURE_SPIKE_MAX_HOURS) {
     return {
       id: 'short-spike',
-      label: 'Looks like a motor / kettle',
-      detail: `Brief ${sustained.hours} h spike to ${sustained.peak.toFixed(1)} kW (${hourRange(sustained.start, sustained.hours)}) — sharp and short, like a well pump, kettle or power tool`,
+      label: t('sig.spike.label'),
+      detail: t('sig.spike.detail', {
+        hours: sustained.hours,
+        peak: sustained.peak.toFixed(1),
+        range: hourRange(sustained.start, sustained.hours),
+      }),
     };
   }
 
@@ -270,16 +300,23 @@ export function classifyDayShape(
     if (mean >= SIGNATURE_TAIL_MIN_KW && cv <= SIGNATURE_TAIL_MAX_CV) {
       return {
         id: 'overnight-flat-tail',
-        label: 'Looks like a left-on load',
-        detail: `${tailValues.length} hours from 23:00 to 07:00 held ${mean.toFixed(1)} kW and never dipped (${Math.round(cv * 100)}% spread) — something ran all night instead of switching off`,
+        label: t('sig.tail.label'),
+        detail: t('sig.tail.detail', {
+          hours: tailValues.length,
+          kw: mean.toFixed(1),
+          spread: Math.round(cv * 100),
+        }),
       };
     }
   }
 
   return {
     id: 'unclassified',
-    label: 'Unclassified — nothing we can name',
-    detail: `No ${SIGNATURE_SUSTAINED_KW} kW run lasting ${SIGNATURE_SUSTAINED_HOURS} h, no sharp short spike and no flat 23:00–07:00 block in this day's readings`,
+    label: t('sig.unclassified.label'),
+    detail: t('sig.unclassified.detail', {
+      kw: SIGNATURE_SUSTAINED_KW,
+      hours: SIGNATURE_SUSTAINED_HOURS,
+    }),
   };
 }
 
@@ -729,10 +766,20 @@ export function getUloRateKey(category: string): 'overnight' | 'weekendOffPeak' 
  * file actually uses with plain arithmetic in local time, which is what
  * `format()` does too, so no displayed value changes.
  * ------------------------------------------------------------------------- */
-const MONTH_ABBR = [
+const MONTH_ABBR_EN = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+// Wave U — the French chart labels, same array-lookup cost as English. The
+// French abbreviations drop date-fns' trailing dot ("sept.") to match the
+// OEB-style period captions elsewhere in the app.
+const MONTH_ABBR_FR = [
+  'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+  'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
+];
+/** Active-locale month abbreviations — one property read per call. */
+const MONTH_ABBR = (): readonly string[] =>
+  getLocale() === 'fr' ? MONTH_ABBR_FR : MONTH_ABBR_EN;
 const p2 = (n: number): string => (n < 10 ? `0${n}` : String(n));
 
 /** `yyyy-MM-dd` in local time — the app's day key everywhere. */
@@ -747,12 +794,12 @@ export function fmtMonthKey(dt: Date): string {
 
 /** `MMM yyyy` — the monthly bar label ("Sep 2026"). */
 export function fmtMonthLabel(dt: Date): string {
-  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getFullYear()}`;
+  return `${MONTH_ABBR()[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 /** `MMM dd` — the daily bar label ("Oct 04"), zero-padded exactly like date-fns. */
 export function fmtDayLabel(dt: Date): string {
-  return `${MONTH_ABBR[dt.getMonth()]} ${p2(dt.getDate())}`;
+  return `${MONTH_ABBR()[dt.getMonth()]} ${p2(dt.getDate())}`;
 }
 
 /** `HH:mm` — the hourly bar label ("07:00"), zero-padded. */
@@ -783,14 +830,14 @@ function dayKeyParts(key: string): { year: number; month: number; day: number } 
 function dayLabelOfDayKey(key: string): string {
   const p = dayKeyParts(key);
   if (!p) return key;
-  return `${MONTH_ABBR[p.month - 1]} ${p2(p.day)}`;
+  return `${MONTH_ABBR()[p.month - 1]} ${p2(p.day)}`;
 }
 
 /** `MMM yyyy` for a day key ("Sep 2026"). */
 function monthLabelOfDayKey(key: string): string {
   const p = dayKeyParts(key);
   if (!p) return key;
-  return `${MONTH_ABBR[p.month - 1]} ${p.year}`;
+  return `${MONTH_ABBR()[p.month - 1]} ${p.year}`;
 }
 
 /** Monday's day key for a day key — mondayOf's arithmetic, timezone-free. */
@@ -926,7 +973,7 @@ export function aggregateChartData(
       key = d.dayStr.slice(0, 7);
     } else if (zoomLevel === 'weekly') {
       const mon = mondayKeyOfDayKey(d.dayStr);
-      label = 'Week of ' + dayLabelOfDayKey(mon);
+      label = t('axis.weekOf', { date: dayLabelOfDayKey(mon) });
       key = mon;
     } else if (zoomLevel === 'daily') {
       label = dayLabelOfDayKey(d.dayStr);
@@ -1303,8 +1350,11 @@ export function calculateAlwaysOnFloor(
     billShare,
     benchmarkShare: ALWAYS_ON_BENCHMARK_SHARE,
     verdict,
-    label: `Always-on floor ≈ ${kwhPerDay.toFixed(1)} kWh/day ≈ $${annualCost.toFixed(0)}/yr`,
-    detail: `Community benchmark is about ${Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100)}% of the bill — yours works out at ${(billShare * 100).toFixed(0)}% (${verdict === 'near' ? 'in line with it' : verdict === 'below' ? 'below it, nicely low' : 'above it, worth a plug-hunt'}).`,
+    label: t('floor.calcLabel', { kwh: kwhPerDay.toFixed(1), cost: fmtMoney0(annualCost) }),
+    detail: t(`floor.benchmark.${verdict}`, {
+      benchmark: Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100),
+      actual: (billShare * 100).toFixed(0),
+    }),
   };
 }
 
@@ -1621,11 +1671,16 @@ export function calculateTrueBill(input: {
   const hst = hstPct === null ? 0 : preTax * (hstPct / 100);
   const total = preTax + hst;
 
-  const included: string[] = ['variable energy charges'];
-  if (deliveryPerKwh !== null) included.push(`delivery ($${deliveryPerKwh.toFixed(4)}/kWh)`);
-  if (deliveryFlat !== null) included.push(`delivery ($${deliveryFlat.toFixed(2)}/month)`);
-  if (regulatoryPerKwh !== null) included.push(`regulatory ($${regulatoryPerKwh.toFixed(4)}/kWh)`);
-  if (hstPct !== null) included.push(`HST (${hstPct}%)`);
+  // Wave U — the receipt line names each included charge in the active
+  // language; the rates themselves stay numbers (fmtTrueBillRate below).
+  const included: string[] = [t('trueBill.include.variable')];
+  if (deliveryPerKwh !== null)
+    included.push(t('trueBill.include.deliveryPerKwh', { rate: fmtCharge(deliveryPerKwh, 4, 'kWh') }));
+  if (deliveryFlat !== null)
+    included.push(t('trueBill.include.deliveryFlat', { rate: fmtCharge(deliveryFlat, 2, 'month') }));
+  if (regulatoryPerKwh !== null)
+    included.push(t('trueBill.include.regulatory', { rate: fmtCharge(regulatoryPerKwh, 4, 'kWh') }));
+  if (hstPct !== null) included.push(t('trueBill.include.hst', { pct: hstPct }));
 
   return {
     variable: variableCost,
@@ -1640,7 +1695,7 @@ export function calculateTrueBill(input: {
     months,
     totalKwh,
     included,
-    caption: `Includes: ${included.join(' + ')}.`,
+    caption: `${t('trueBill.includes', { list: included.join(' + ') })}.`,
   };
 }
 
@@ -2374,8 +2429,14 @@ export type DerivedCharges = {
 export function billPeriodLabel(ts: number, duration: number): string {
   const start = new Date(ts * 1000);
   const end = new Date((ts + duration) * 1000);
-  const a = `${MONTH_ABBR[start.getUTCMonth()]} ${start.getUTCDate()}, ${start.getUTCFullYear()}`;
-  const b = `${MONTH_ABBR[end.getUTCMonth()]} ${end.getUTCDate()}`;
+  // French ranges put the day first and drop the comma ("26 août – 24 sept").
+  const fr = getLocale() === 'fr';
+  const a = fr
+    ? `${start.getUTCDate()} ${MONTH_ABBR()[start.getUTCMonth()]} ${start.getUTCFullYear()}`
+    : `${MONTH_ABBR()[start.getUTCMonth()]} ${start.getUTCDate()}, ${start.getUTCFullYear()}`;
+  const b = fr
+    ? `${end.getUTCDate()} ${MONTH_ABBR()[end.getUTCMonth()]}`
+    : `${MONTH_ABBR()[end.getUTCMonth()]} ${end.getUTCDate()}`;
   return duration >= 86400 ? `${a} – ${b}` : a;
 }
 
@@ -2714,12 +2775,24 @@ export type ChargeDecomposition = {
 
 const money2 = (n: number) => `$${n.toFixed(2)}`;
 
+/* Wave U — the noun travels into the sentence as a {noun} param, so it must
+ * speak the active language. `be` is the verb that agrees with it ("Delivery
+ * IS" / "Regulatory charges ARE"; French: "est" / "ont lieu"). Both are
+ * resolved with t() at call time. */
 const LINE_NOUNS = {
-  // `be` travels with the noun: "Delivery IS not decomposable", "Regulatory
-  // charges ARE" — a card that gets the grammar wrong reads as if it got the
-  // maths wrong too.
-  delivery: { upper: 'Delivery', lower: 'delivery', be: 'is' },
-  regulatory: { upper: 'Regulatory charges', lower: 'regulatory charges', be: 'are' },
+  // French disagrees with English about the article and the verb, so each
+  // sentence gets a per-line key rather than a {noun} param: "La distribution
+  // n'est pas…" vs "Les charges réglementaires ne sont pas…".
+  delivery: {
+    lowerKey: 'charge.nounDeliveryLower',
+    cannotSplitKey: 'charge.cannotSplitDelivery',
+    notLinearKey: 'charge.notLinearDelivery',
+  },
+  regulatory: {
+    lowerKey: 'charge.nounRegulatoryLower',
+    cannotSplitKey: 'charge.cannotSplitRegulatory',
+    notLinearKey: 'charge.notLinearRegulatory',
+  },
 } as const;
 
 /**
@@ -2746,7 +2819,8 @@ export function chargeDecomposition(
   if (!pairs.some((p) => p.amount !== 0)) return null;
 
   const newest = pairs[pairs.length - 1];
-  const noun = LINE_NOUNS[line];
+  const nouns = LINE_NOUNS[line];
+  const noun = { lower: t(nouns.lowerKey) };
   const blendedCentsPerKwh = newest.kwh > 0 ? (newest.amount / newest.kwh) * 100 : 0;
 
   const outcome = fitChargeCore(pairs.map((p) => p.amount), pairs.map((p) => p.kwh));
@@ -2778,7 +2852,7 @@ export function chargeDecomposition(
       variable: null,
       fixedShare: null,
       blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
-      headline: `${noun.upper} cannot be split into fixed and volume-driven from this data.`,
+      headline: t(nouns.cannotSplitKey),
       detail: `${outcome.why}. The honest number for this line is the ${round(blendedCentsPerKwh, 2)}¢/kWh it averaged this period.`,
     };
   }
@@ -2798,14 +2872,20 @@ export function chargeDecomposition(
       variable: null,
       fixedShare: null,
       blendedCentsPerKwh: round(blendedCentsPerKwh, 2),
-      headline: `${noun.upper} ${noun.be} not linearly decomposable from this data.`,
+      headline: t(nouns.notLinearKey),
       detail:
-        `Fitted ${money2(flat)} fixed + $${perKwh.toFixed(4)}/kWh across ${pairs.length} billing periods, but the ` +
-        `worst miss is ${money2(maxResidual)} — ${((residualShare ?? 0) * 100).toFixed(1)}% of this period's ` +
-        `${money2(newest.amount)} ${noun.lower}, over the ${Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100)}% bar ` +
-        `we quote a split at (the bill it misses most is ${worstPeriod ?? 'unknown'}). ` +
-        `The line is real and large — it just is not a straight line of usage, so ` +
-        `${round(blendedCentsPerKwh, 2)}¢/kWh is the only rate that describes it honestly.`,
+        t('charge.fitUnstable', {
+          flat: money2(flat),
+          perKwh: perKwh.toFixed(4),
+          periods: pairs.length,
+          miss: money2(maxResidual),
+          share: ((residualShare ?? 0) * 100).toFixed(1),
+          amount: money2(newest.amount),
+          noun: noun.lower,
+          bar: Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100),
+          worst: worstPeriod ?? t('charge.unknown'),
+          blended: String(round(blendedCentsPerKwh, 2)),
+        }),
     };
   }
 
@@ -2825,14 +2905,18 @@ export function chargeDecomposition(
     // A line with no fixed part is a DIFFERENT answer, and it is the common
     // one for regulatory charges — say it as such instead of "$0.00 is fixed".
     headline: outcome.fit.throughOrigin
-      ? `Of your ${money2(newest.amount)} ${noun.lower} this period, none of it is fixed — you would pay $0.00 at 0 kWh, and all ${money2(variable)} is volume-driven.`
-      : `Of your ${money2(newest.amount)} ${noun.lower} this period, ${money2(fixed)} is fixed ` +
-        `(you'd pay it at 0 kWh) and ${money2(variable)} is volume-driven.`,
+      ? t('charge.headlineNoFixed', { amount: money2(newest.amount), noun: noun.lower, variable: money2(variable) })
+      : t('charge.headline', { amount: money2(newest.amount), noun: noun.lower, fixed: money2(fixed), variable: money2(variable) }),
     detail:
-      `Fitted ${outcome.fit.throughOrigin ? '' : `${money2(flat)} + `}$${perKwh.toFixed(4)}/kWh across ` +
-      `${pairs.length} billing periods${outcome.fit.throughOrigin ? ' (the line has no fixed part, so the fit runs through zero)' : ''}; ` +
-      `worst miss ${money2(maxResidual)} (${((residualShare ?? 0) * 100).toFixed(1)}% of this period's line` +
-      `${worstPeriod ? `, ${worstPeriod}` : ''}).`,
+      t('charge.detail', {
+        prefix: outcome.fit.throughOrigin ? '' : `${money2(flat)} + `,
+        perKwh: perKwh.toFixed(4),
+        periods: pairs.length,
+        origin: outcome.fit.throughOrigin ? t('charge.throughOrigin') : '',
+        miss: money2(maxResidual),
+        share: ((residualShare ?? 0) * 100).toFixed(1),
+        worst: worstPeriod ? `, ${worstPeriod}` : '',
+      }),
   };
 }
 
@@ -2964,6 +3048,6 @@ export function calculateWfhShare(rows: ProcessedPoint[]): WfhShare | null {
     kwh,
     totalKwh,
     weekdays: weekdays.size,
-    label: `Work-from-home window (07:00–19:00 weekdays)`,
+    label: t('wfh.label'),
   };
 }

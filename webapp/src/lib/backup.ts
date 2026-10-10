@@ -20,6 +20,8 @@
  *    `__proto__` / `constructor` in the file are never assigned anywhere.
  */
 
+/* Wave U — restore errors are shown in the backup drawer, so they translate. */
+import { t } from '@/i18n';
 import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges } from './energy';
 import { isValidPlanTimelineEntry, type PlanTimelineEntry } from './planTimeline';
 
@@ -124,7 +126,7 @@ function whitelistCharges(raw: unknown): ExtraCharges {
  */
 export function parseBackup(text: string): ParseResult<BackupDocument> {
   if (text.trim() === '') {
-    return { ok: false, error: 'That file is empty. Choose a file produced by “Export JSON”.' };
+    return { ok: false, error: t('backup.errEmpty') };
   }
 
   let raw: unknown;
@@ -133,12 +135,12 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
   } catch (e) {
     return {
       ok: false,
-      error: `That file is not valid JSON (${e instanceof Error ? e.message : String(e)}). Choose a file produced by “Export JSON”.`,
+      error: t('backup.errBadJson', { reason: e instanceof Error ? e.message : String(e) }),
     };
   }
 
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { ok: false, error: 'That file is not an energy-dashboard backup (expected a JSON object).' };
+    return { ok: false, error: t('backup.errNotBackup') };
   }
 
   const doc = raw as Record<string, unknown>;
@@ -147,26 +149,24 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
   if (schema === undefined || schema === null) {
     return {
       ok: false,
-      error: `That file has no "schema" marker, so it is not an energy-dashboard backup. Expected "${BACKUP_SCHEMA}".`,
+      error: t('backup.errNoSchema', { expected: BACKUP_SCHEMA }),
     };
   }
   if (schema !== BACKUP_SCHEMA) {
     return {
       ok: false,
-      error: `That file belongs to a different app: its schema is "${String(schema)}", expected "${BACKUP_SCHEMA}".`,
+      error: t('backup.errWrongSchema', { schema: String(schema), expected: BACKUP_SCHEMA }),
     };
   }
 
   const version = doc.version;
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
-    return { ok: false, error: `That backup has a missing or invalid "version" (got ${JSON.stringify(version)}).` };
+    return { ok: false, error: t('backup.errBadVersion', { got: JSON.stringify(version) }) };
   }
   if (version > BACKUP_VERSION) {
     return {
       ok: false,
-      error:
-        `This backup was created by a newer version of the app (schema v${version}; this build understands up to v${BACKUP_VERSION}). ` +
-        'Update the app, then try the import again.',
+      error: t('backup.errNewer', { version, max: BACKUP_VERSION }),
     };
   }
   if (version < BACKUP_VERSION) {
@@ -174,13 +174,13 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
     // future v2 build has an obvious place to add the migration shim.
     return {
       ok: false,
-      error: `That backup uses schema v${version}, which this build (v${BACKUP_VERSION}) cannot restore.`,
+      error: t('backup.errUnsupportedSchema', { version, max: BACKUP_VERSION }),
     };
   }
 
   const payload = doc.payload;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return { ok: false, error: 'That backup has no "payload" object — nothing to restore.' };
+    return { ok: false, error: t('backup.errNoPayload') };
   }
   const p = payload as Record<string, unknown>;
 
@@ -191,7 +191,7 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
   if (p.billing_day !== undefined && p.billing_day !== null) {
     const n = p.billing_day;
     if (typeof n !== 'number' || !Number.isInteger(n) || n < 1 || n > 31) {
-      return { ok: false, error: `That backup has an invalid billing_day (got ${JSON.stringify(p.billing_day)}, expected an integer 1–31).` };
+      return { ok: false, error: t('backup.errBillingDay', { got: JSON.stringify(p.billing_day) }) };
     }
     billingDay = n;
   }
@@ -206,7 +206,7 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
     if (!Array.isArray(p.plan_timeline)) {
       return {
         ok: false,
-        error: `That backup has an invalid plan_timeline (got ${describe(p.plan_timeline)}, expected an array of {id, plan, from, to}).`,
+        error: t('backup.errPlanTimeline', { got: describe(p.plan_timeline) }),
       };
     }
     planTimeline = [];
@@ -216,9 +216,7 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
         return {
           ok: false,
           error:
-            `That backup's plan_timeline entry ${i + 1} is invalid — each entry needs an id, a plan ` +
-            `(TOU, Tiered or ULO) and from/to days in yyyy-MM-dd with from on or before to ` +
-            `(got ${JSON.stringify(candidate)}).`,
+            t('backup.errPlanEntry', { n: i + 1, got: JSON.stringify(candidate) }),
         };
       }
       planTimeline.push(candidate);
@@ -244,23 +242,23 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
 /** Strict row validation: every row must be a finite, non-negative reading. */
 function parseEnergyData(raw: unknown): ParseResult<DataPoint[]> {
   if (!Array.isArray(raw)) {
-    return { ok: false, error: `That backup's energy_data is not an array (got ${describe(raw)}).` };
+    return { ok: false, error: t('backup.errEnergyNotArray', { got: describe(raw) }) };
   }
   if (raw.length === 0) {
-    return { ok: false, error: 'That backup contains no readings — restoring it would wipe your data.' };
+    return { ok: false, error: t('backup.errNoReadings') };
   }
   const out: DataPoint[] = [];
   for (let i = 0; i < raw.length; i++) {
     const row = raw[i];
     if (!row || typeof row !== 'object' || Array.isArray(row)) {
-      return { ok: false, error: `Row ${i + 1} of the backup is not a reading object (got ${describe(row)}).` };
+      return { ok: false, error: t('backup.errRowNotReading', { n: i + 1, got: describe(row) }) };
     }
     const { timestamp, usage_kwh } = row as Record<string, unknown>;
     if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) {
-      return { ok: false, error: `Row ${i + 1} has an invalid timestamp (got ${JSON.stringify(timestamp)}).` };
+      return { ok: false, error: t('backup.errRowTimestamp', { n: i + 1, got: JSON.stringify(timestamp) }) };
     }
     if (typeof usage_kwh !== 'number' || !Number.isFinite(usage_kwh) || usage_kwh < 0) {
-      return { ok: false, error: `Row ${i + 1} has an invalid usage_kwh (got ${JSON.stringify(usage_kwh)}).` };
+      return { ok: false, error: t('backup.errRowUsage', { n: i + 1, got: JSON.stringify(usage_kwh) }) };
     }
     out.push({ timestamp, usage_kwh });
   }

@@ -14,11 +14,24 @@
 
 import { format } from 'date-fns';
 import type { ProcessedPoint } from './energy';
+// Wave U — month labels and empty-state text follow the active locale.
+import { fmtDate, getLocale, t } from '@/i18n';
 
 export const MONTH_LABELS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const;
+
+/**
+ * Wave U — the same 12 headers in the active language. English is the
+ * canonical array above (which tests pin); French reads date-fns' `fr`.
+ */
+export function monthLabelsFor(locale: string = getLocale()): readonly string[] {
+  if (locale !== 'fr') return MONTH_LABELS;
+  return Array.from({ length: 12 }, (_, m) =>
+    fmtDate(new Date(2026, m, 1), 'MMM').replace(/\.$/, ''),
+  );
+}
 
 export type TrendSeries = {
   year: number;
@@ -62,7 +75,7 @@ function monthKey(d: Date): string {
 }
 
 function monthLabel(d: Date): string {
-  return `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`;
+  return `${monthLabelsFor()[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function daysInMonth(year: number, monthIdx: number): number {
@@ -92,8 +105,7 @@ export function buildYearOverYear(data: ProcessedPoint[]): YearOverYearTrend {
   if (data.length === 0) {
     return {
       ...base,
-      emptyMessage:
-        'No data loaded yet — upload your Green Button XML to build year-over-year history.',
+      emptyMessage: t('yoy.emptyNoDataLib'),
     };
   }
 
@@ -180,9 +192,12 @@ export function buildYearOverYear(data: ProcessedPoint[]): YearOverYearTrend {
   if (!ready) {
     emptyMessage =
       data.length > 0
-        ? `Need 12+ months of data — you have ${monthSet.size} month${
-            monthSet.size === 1 ? '' : 's'
-          } (${monthLabel(first)} – ${monthLabel(last)}).`
+        ? t('yoy.emptyNeedMonths', {
+            count: monthSet.size,
+            months: monthSet.size,
+            first: monthLabel(first),
+            last: monthLabel(last),
+          })
         : null;
   }
 

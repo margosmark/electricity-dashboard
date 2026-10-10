@@ -19,6 +19,7 @@ import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis
 
 import { hourCostProfile, type PlanId } from '@/lib/moneyViz';
 import type { ProcessedPoint } from '@/lib/energy';
+import { fmtCents, fmtMoney, fmtNumber, periodLabel, planLabel, useTranslation } from '@/i18n';
 
 const WINDOW_COLOR: Record<string, string> = {
   'Off-Peak': '#10B981',
@@ -27,7 +28,7 @@ const WINDOW_COLOR: Record<string, string> = {
   other: '#94A3B8',
 };
 
-const money = (n: number) => `$${n.toFixed(2)}`;
+const money = (n: number) => fmtMoney(n);
 
 export default function HourCostHistogram({
   rows,
@@ -36,6 +37,7 @@ export default function HourCostHistogram({
   rows: ProcessedPoint[];
   plan: PlanId;
 }) {
+  const { t } = useTranslation();
   const profile = useMemo(() => hourCostProfile(rows, plan), [rows, plan]);
 
   return (
@@ -44,9 +46,9 @@ export default function HourCostHistogram({
       className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
     >
       <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-        ¢ per kWh · {plan} · commodity only
+        {t('hourCost.caption', { plan: planLabel(plan) })}
       </div>
-      <h3 className="text-lg md:text-2xl italic font-black">What each hour of the day costs</h3>
+      <h3 className="text-lg md:text-2xl italic font-black">{t('hourCost.title')}</h3>
 
       {!profile.ready ? (
         <div
@@ -59,13 +61,13 @@ export default function HourCostHistogram({
         <>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[10px] md:text-xs font-black">
             <span>
-              Window average{' '}
+              {t('hourCost.windowAverage')}{' '}
               <span className="italic text-base md:text-xl" data-testid="money-hour-average">
-                {profile.averageCents?.toFixed(1)}¢
+                {profile.averageCents != null ? fmtCents(profile.averageCents) : '—'}
               </span>
             </span>
             <span className="text-slate-500 font-bold normal-case">
-              {profile.rows.toLocaleString('en-CA')} readings priced at your current plan
+              {t('hourCost.readings', { count: profile.rows, rows: fmtNumber(profile.rows) })}
             </span>
           </div>
 
@@ -73,7 +75,7 @@ export default function HourCostHistogram({
             className="mt-3 h-[220px] md:h-[260px]"
             data-testid="money-hour-chart"
             role="img"
-            aria-label="Average cents per kilowatt-hour for each hour of the day"
+            aria-label={t('hourCost.chartAria')}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={profile.buckets} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
@@ -106,13 +108,19 @@ export default function HourCostHistogram({
                         style={{ pointerEvents: 'none' }}
                       >
                         <div className="text-xs font-black uppercase border-b-2 border-black pb-1 mb-1">
-                          {String(label ?? b.label)} hour
+                          {t('hourCost.tooltipHour', { hour: String(label ?? b.label) })}
                         </div>
                         <div className="text-[11px] font-black">
-                          {b.cents === null ? 'No energy in this hour' : `${b.cents.toFixed(2)}¢/kWh`}
+                          {b.cents === null
+                            ? t('hourCost.noEnergy')
+                            : `${fmtCents(b.cents, 2)}/kWh`}
                         </div>
                         <div className="text-[10px] font-bold text-slate-500">
-                          {money(b.cost)} over {b.kwh.toFixed(1)} kWh · {b.dominant}
+                          {t('hourCost.tooltipDetail', {
+                            cost: money(b.cost),
+                            kwh: b.kwh.toFixed(1),
+                            window: periodLabel(b.dominant),
+                          })}
                         </div>
                       </div>
                     );
@@ -124,7 +132,7 @@ export default function HourCostHistogram({
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   label={{
-                    value: 'average',
+                    value: t('hourCost.averageTick'),
                     position: 'insideTopRight',
                     fill: '#000',
                     fontSize: 10,
@@ -148,15 +156,12 @@ export default function HourCostHistogram({
                   className="inline-block w-3 h-3 border-2 border-black"
                   style={{ background: WINDOW_COLOR[w] }}
                 />
-                {w} hours
+                {periodLabel(w)} {t('hourCost.hoursWord')}
               </span>
             ))}
           </div>
           <p className="mt-2 text-[10px] font-bold normal-case text-slate-500">
-            Commodity only — delivery, regulatory and HST are charged once per billing period with
-            no hour attached, so there is no honest per-hour figure for them. Bars are coloured by
-            the rate window your readings fell in (switch the plan on the chart tab and the price
-            follows).
+            {t('hourCost.footnote')}
           </p>
         </>
       )}

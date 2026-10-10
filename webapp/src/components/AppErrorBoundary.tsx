@@ -18,6 +18,11 @@
 "use client";
 
 import React from 'react';
+// Wave U — this class predates hooks, so it subscribes to the locale store
+// directly (the same external-store pattern `useSelectedPlan` uses) instead
+// of `useTranslation()`. Without the subscription the crash screen would be
+// the one surface that stayed English after a toggle.
+import { subscribeLocale, t } from '@/i18n';
 
 type Props = { children: React.ReactNode };
 type State = {
@@ -42,6 +47,9 @@ export function incidentIdFor(message: string): string {
 }
 
 export default class AppErrorBoundary extends React.Component<Props, State> {
+  /** Wave U — teardown for the locale subscription (instance, not state). */
+  private unsubscribeLocale?: () => void;
+
   state: State = {
     error: null,
     incidentId: null,
@@ -63,11 +71,14 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
     // React boundary — they would otherwise only appear in the console.
     window.addEventListener('error', this.onWindowError);
     window.addEventListener('unhandledrejection', this.onRejection);
+    // Wave U: re-render (in the current language) when the locale flips.
+    this.unsubscribeLocale = subscribeLocale(() => this.forceUpdate());
   }
 
   componentWillUnmount() {
     window.removeEventListener('error', this.onWindowError);
     window.removeEventListener('unhandledrejection', this.onRejection);
+    this.unsubscribeLocale?.();
   }
 
   private onWindowError = (event: ErrorEvent) => {
@@ -131,22 +142,20 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
         >
           <div className="max-w-xl w-full bg-white border-4 md:border-8 border-black rounded-[2rem] md:rounded-[3rem] shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-6 md:p-10 text-black font-black uppercase">
             <div className="text-[10px] md:text-xs tracking-[0.3em] text-red-600 mb-3">
-              {source === 'runtime' ? 'Runtime error' : 'Render error'}
+              {source === 'runtime' ? t('error.runtime') : t('error.render')}
             </div>
             <h1 className="text-3xl md:text-5xl leading-none tracking-tighter mb-4">
-              Something broke.
+              {t('error.headline')}
             </h1>
             <p className="text-[11px] md:text-sm font-bold normal-case text-slate-700 mb-5">
-              The dashboard hit an unexpected error and stopped drawing.{' '}
-              <span className="font-black">
-                Your readings were not touched — they are still in this browser.
-              </span>{' '}
-              Try again, or reload the page if the same screen comes back.
+              {t('error.body')}{' '}
+              <span className="font-black">{t('error.dataSafe')}</span>{' '}
+              {t('error.retryHint')}
             </p>
 
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <div className="bg-slate-100 border-4 border-black rounded-xl px-3 py-2">
-                <div className="text-[8px] md:text-[10px] text-slate-500">Incident id</div>
+                <div className="text-[8px] md:text-[10px] text-slate-500">{t('error.incidentId')}</div>
                 <code
                   data-testid="crash-id"
                   className="text-sm md:text-base font-black select-all"
@@ -160,7 +169,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
                 onClick={this.copyId}
                 className="px-4 py-3 bg-slate-100 border-4 border-black rounded-xl font-black uppercase text-[10px] md:text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all"
               >
-                {copied ? 'Copied!' : 'Copy id'}
+                {copied ? t('error.copied') : t('error.copy')}
               </button>
             </div>
 
@@ -171,7 +180,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
                 onClick={this.reset}
                 className="flex-1 py-4 bg-yellow-400 border-4 border-black rounded-xl font-black uppercase text-xs md:text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all"
               >
-                Try again
+                {t('error.tryAgain')}
               </button>
               <button
                 type="button"
@@ -179,13 +188,13 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
                 onClick={() => window.location.reload()}
                 className="flex-1 py-4 bg-black text-white border-4 border-black rounded-xl font-black uppercase text-xs md:text-sm shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all"
               >
-                Reload page
+                {t('error.reloadPage')}
               </button>
             </div>
 
             <details className="mt-5 text-left normal-case">
               <summary className="text-[10px] font-black uppercase cursor-pointer">
-                Technical detail
+                {t('error.technicalDetail')}
               </summary>
               <pre
                 data-testid="crash-detail"

@@ -41,6 +41,9 @@
 import { differenceInCalendarDays, format, parseISO, addDays } from 'date-fns';
 import { billTotals, type ProcessedPoint, type UsageSummary } from './energy';
 import type { BillProjection } from './billProjection';
+// Wave U — the pace/bill-date note comes from the locale catalog at call
+// time; the EN catalog keeps the Wave F wording the tests pin verbatim.
+import { fmtMoney, t } from '@/i18n';
 
 export type AccrualPlan = 'TOU' | 'Tiered' | 'ULO';
 
@@ -150,7 +153,7 @@ export const EMPTY_ACCRUAL: AccrualCurve = {
   tierThresholdKwh: null,
   tierCrossingDay: null,
   tierCrossingProjected: false,
-  note: 'No open billing period to accrue against yet.',
+  note: t('accrual.emptyNote'),
 };
 
 /** Half a cent: being a float ULP over the line is not "over budget". */
@@ -297,7 +300,7 @@ export function buildAccrualCurve({
       billDate: billDay,
       billDateSource,
       daysInPeriod,
-      note: 'The open period starts after your newest reading — nothing has accrued yet.',
+      note: t('accrual.notStartedNote'),
     };
   }
 
@@ -386,17 +389,26 @@ export function buildAccrualCurve({
 
   const note =
     (paceSource === 'projection'
-      ? `Pace = your last ${projection.recentDays}-day average of $${projection.avgDailyCost.toFixed(2)}/day (Wave F's projection math), carried across all ${daysInPeriod} days of this period.`
+      ? t('accrual.paceProjection', {
+          days: projection.recentDays,
+          daily: fmtMoney(projection.avgDailyCost),
+          period: daysInPeriod,
+        })
       : paceSource === 'run-rate'
-        ? `Pace = this period's own run-rate of $${paceDaily.toFixed(2)}/day — no projection is available yet.`
-        : 'Not enough readings yet to draw a pace line.') +
+        ? t('accrual.paceRunRate', { daily: fmtMoney(paceDaily) })
+        : t('accrual.paceNone')) +
     (billDateSource === 'file-cadence'
-      ? ` Bill date ${billDay} = your last bill's read date + its median length.`
+      ? t('accrual.billDateCadence', { day: billDay })
       : billDateSource === 'billing-day'
-        ? ` Bill date ${billDay} = your billing-day setting (no bills in this file).`
-        : ` Chart stops at ${billDay}, the newest day you have readings for.`) +
+        ? t('accrual.billDateBillingDay', { day: billDay })
+        : t('accrual.billDateNewest', { day: billDay })) +
     (tierCrossingDay
-      ? ` Tier 1's ${tierThresholdKwh} kWh runs out ${tierCrossingDay}${tierCrossingProjected ? ' at this pace' : ''} — everything after bills at the tier-2 rate, which this line does not include.`
+      ? t(tierCrossingProjected ? 'accrual.tierCrossPace' : 'accrual.tierCross', {
+          // tierCrossingDay can only be set inside the Tiered branch that
+          // also always assigns tierThresholdKwh, so this ?? never fires.
+          kwh: tierThresholdKwh ?? 0,
+          day: tierCrossingDay,
+        })
       : '');
 
   return {
