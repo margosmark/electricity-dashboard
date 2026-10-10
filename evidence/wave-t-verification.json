@@ -1,0 +1,377 @@
+{
+  "wave": "T",
+  "generatedAt": "2026-10-10T18:14:22.570Z",
+  "baseUrl": "http://10.10.11.110:3939/",
+  "deployedCommit": "58202db",
+  "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "fixtureBytes": 6424909,
+  "audit": {
+    "readings": {
+      "count": 17539,
+      "first": "2024-10-06T05:00:00+00:00",
+      "last": "2026-10-06T23:00:00+00:00"
+    },
+    "hours": {
+      "total": 17539,
+      "matched": 17539,
+      "unmatched": 0
+    },
+    "totalKwh": 38738.695,
+    "location": {
+      "latitude": 43.6532,
+      "longitude": -79.3832,
+      "timezone": "UTC"
+    },
+    "bands": [
+      {
+        "id": "lt-10",
+        "label": "< -10",
+        "hours": 783,
+        "kwh": 1048.19,
+        "meanKwhPerHour": 1.3387,
+        "shareOfKwh": 0.027058
+      },
+      {
+        "id": "-10..5",
+        "label": "-10 to 5",
+        "hours": 5942,
+        "kwh": 7888.902,
+        "meanKwhPerHour": 1.3277,
+        "shareOfKwh": 0.203644
+      },
+      {
+        "id": "5..12",
+        "label": "5 to 12",
+        "hours": 3154,
+        "kwh": 5142.751,
+        "meanKwhPerHour": 1.6305,
+        "shareOfKwh": 0.132755
+      },
+      {
+        "id": "12..18",
+        "label": "12 to 18",
+        "hours": 2811,
+        "kwh": 6909.973,
+        "meanKwhPerHour": 2.4582,
+        "shareOfKwh": 0.178374
+      },
+      {
+        "id": "18..24",
+        "label": "18 to 24",
+        "hours": 3388,
+        "kwh": 11315.192,
+        "meanKwhPerHour": 3.3398,
+        "shareOfKwh": 0.29209
+      },
+      {
+        "id": "24..30",
+        "label": "24 to 30",
+        "hours": 1322,
+        "kwh": 5742.197,
+        "meanKwhPerHour": 4.3436,
+        "shareOfKwh": 0.148229
+      },
+      {
+        "id": "gt-30",
+        "label": "over 30",
+        "hours": 139,
+        "kwh": 691.49,
+        "meanKwhPerHour": 4.9747,
+        "shareOfKwh": 0.01785
+      }
+    ],
+    "deliveryFit": {
+      "flat": 36.51,
+      "perKwh": 0.0255,
+      "maxResidual": 6.56,
+      "residualShare": 0.0641,
+      "throughOrigin": false,
+      "worstPeriod": "2024-08-26",
+      "periods": 24,
+      "status": "rejected",
+      "amount": 102.34
+    },
+    "regulatoryFit": {
+      "flat": 0.43,
+      "perKwh": 0.0058,
+      "maxResidual": 1.13,
+      "residualShare": 0.0768,
+      "throughOrigin": false,
+      "worstPeriod": "2026-06-23",
+      "periods": 24,
+      "status": "rejected",
+      "amount": 14.76
+    },
+    "anomalies": [
+      {
+        "date": "2026-09-25",
+        "usage": 88.82,
+        "expected": 52.34,
+        "meanTempC": 15.28,
+        "highTempC": 21.4,
+        "lowTempC": 9.8,
+        "hours": 24,
+        "kind": "mild",
+        "temp": 15,
+        "text": "no weather signal — worth checking the appliance"
+      },
+      {
+        "date": "2026-09-24",
+        "usage": 88.51,
+        "expected": 50.89,
+        "meanTempC": 15.2,
+        "highTempC": 18.5,
+        "lowTempC": 12.2,
+        "hours": 24,
+        "kind": "mild",
+        "temp": 15,
+        "text": "no weather signal — worth checking the appliance"
+      },
+      {
+        "date": "2026-09-19",
+        "usage": 100.66,
+        "expected": 57.5,
+        "meanTempC": 14.63,
+        "highTempC": 16.6,
+        "lowTempC": 12.2,
+        "hours": 24,
+        "kind": "mild",
+        "temp": 15,
+        "text": "no weather signal — worth checking the appliance"
+      },
+      {
+        "date": "2026-09-16",
+        "usage": 108.53,
+        "expected": 50.83,
+        "meanTempC": 20.94,
+        "highTempC": 24.7,
+        "lowTempC": 17.5,
+        "hours": 24,
+        "kind": "ac",
+        "temp": 25,
+        "text": "25°C — that's AC"
+      },
+      {
+        "date": "2026-09-13",
+        "usage": 107.78,
+        "expected": 58.84,
+        "meanTempC": 22.6,
+        "highTempC": 28.5,
+        "lowTempC": 17.4,
+        "hours": 24,
+        "kind": "ac",
+        "temp": 29,
+        "text": "29°C — that's AC"
+      }
+    ]
+  },
+  "passed": 41,
+  "total": 41,
+  "checks": [
+    {
+      "name": "the temperature card renders on the USAGE tab",
+      "ok": true,
+      "detail": "visible"
+    },
+    {
+      "name": "the card reports where its temperatures came from",
+      "ok": true,
+      "detail": "network"
+    },
+    {
+      "name": "the card matched every hour of the export",
+      "ok": true,
+      "detail": "17539/17539 vs audit 17539"
+    },
+    {
+      "name": "the card names the no-server invariant",
+      "ok": true,
+      "detail": "stated"
+    },
+    {
+      "name": "the card is NOT on the Money tab",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "seven bins are drawn",
+      "ok": true,
+      "detail": "7"
+    },
+    {
+      "name": "a share strip is drawn for every bin",
+      "ok": true,
+      "detail": "7"
+    },
+    {
+      "name": "every bin's hour count matches the second parser (17539 hours)",
+      "ok": true,
+      "detail": "7 matched"
+    },
+    {
+      "name": "every bin's mean kWh/h matches",
+      "ok": true,
+      "detail": "7 matched"
+    },
+    {
+      "name": "every bin's kWh (mean × hours) matches",
+      "ok": true,
+      "detail": "7 matched"
+    },
+    {
+      "name": "every bin's share of the window's kWh matches",
+      "ok": true,
+      "detail": "7 matched"
+    },
+    {
+      "name": "the cold half is flat and the hot half is not (the AC story)",
+      "ok": true,
+      "detail": "1.33 → 4.34 → 4.97 kWh/h"
+    },
+    {
+      "name": "the footer sentence quotes the curve’s shape in words",
+      "ok": true,
+      "detail": "1.33 / 4.34 kWh/h, 15% of kWh"
+    },
+    {
+      "name": "five anomaly cards carry a weather line",
+      "ok": true,
+      "detail": "5 vs audit 5"
+    },
+    {
+      "name": "each verdict matches the audit’s own thresholds",
+      "ok": true,
+      "detail": "2026-09-25 no weather signal — worth checking the appliance | 2026-09-24 no weather signal — worth checking the appliance | 2026-09-19 no weather signal — worth checking the appliance | 2026-09-16 25°C — that's AC | 2026-09-13 29°C — that's AC"
+    },
+    {
+      "name": "delivery card rendered",
+      "ok": true,
+      "detail": "rejected"
+    },
+    {
+      "name": "delivery status == the audit's verdict (rejected)",
+      "ok": true,
+      "detail": "rejected vs rejected"
+    },
+    {
+      "name": "delivery amount == the audit's 102.34",
+      "ok": true,
+      "detail": "102.34 vs 102.34"
+    },
+    {
+      "name": "delivery periods == 24",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "delivery worst miss == the audit's 6.56",
+      "ok": true,
+      "detail": "6.56 vs 6.56"
+    },
+    {
+      "name": "delivery residual share == the audit's 0.0641",
+      "ok": true,
+      "detail": "0.0641 vs 0.0641"
+    },
+    {
+      "name": "delivery headline is the honest refusal",
+      "ok": true,
+      "detail": "Delivery is not linearly decomposable from this data."
+    },
+    {
+      "name": "delivery card still shows the rate that IS true",
+      "ok": true,
+      "detail": "3.87¢/kWh"
+    },
+    {
+      "name": "delivery invents no fixed/variable numbers",
+      "ok": true,
+      "detail": "fixed= variable="
+    },
+    {
+      "name": "regulatory card rendered",
+      "ok": true,
+      "detail": "rejected"
+    },
+    {
+      "name": "regulatory status == the audit's verdict (rejected)",
+      "ok": true,
+      "detail": "rejected vs rejected"
+    },
+    {
+      "name": "regulatory amount == the audit's 14.76",
+      "ok": true,
+      "detail": "14.76 vs 14.76"
+    },
+    {
+      "name": "regulatory periods == 24",
+      "ok": true,
+      "detail": "24"
+    },
+    {
+      "name": "regulatory worst miss == the audit's 1.13",
+      "ok": true,
+      "detail": "1.13 vs 1.13"
+    },
+    {
+      "name": "regulatory residual share == the audit's 0.0768",
+      "ok": true,
+      "detail": "0.0768 vs 0.0768"
+    },
+    {
+      "name": "regulatory headline is the honest refusal",
+      "ok": true,
+      "detail": "Regulatory charges are not linearly decomposable from this data."
+    },
+    {
+      "name": "regulatory card still shows the rate that IS true",
+      "ok": true,
+      "detail": "0.56¢/kWh"
+    },
+    {
+      "name": "regulatory invents no fixed/variable numbers",
+      "ok": true,
+      "detail": "fixed= variable="
+    },
+    {
+      "name": "the ONLY cross-origin host is Open-Meteo’s CDN",
+      "ok": true,
+      "detail": "4 Open-Meteo requests"
+    },
+    {
+      "name": "no request ever goes to this app’s server for weather",
+      "ok": true,
+      "detail": "/v1/archive, /v1/archive, /v1/archive, /v1/archive"
+    },
+    {
+      "name": "every temperature request is inside the data's own dates (2024-10-06..2026-10-06)",
+      "ok": true,
+      "detail": "2024-10-06..2025-04-06, 2025-04-07..2025-10-06, 2025-10-07..2026-04-07, 2026-04-08..2026-10-06"
+    },
+    {
+      "name": "the requests ask for hourly temperature_2m, aligned on UTC",
+      "ok": true,
+      "detail": "hourly=temperature_2m timezone=UTC"
+    },
+    {
+      "name": "the requests carry only the configured city coordinates",
+      "ok": true,
+      "detail": "43.6532,-79.3832"
+    },
+    {
+      "name": "mobile: the temperature card renders",
+      "ok": true,
+      "detail": "ready"
+    },
+    {
+      "name": "mobile: every bin still carries its numbers",
+      "ok": true,
+      "detail": "7 bars"
+    },
+    {
+      "name": "mobile: no sideways scrolling",
+      "ok": true,
+      "detail": "0px"
+    }
+  ]
+}
