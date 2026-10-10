@@ -851,7 +851,7 @@ export default function MoneyStackedChart({
                     {r.kind === 'open' && r.estTotal != null ? (
                       <span data-testid="money-open-est-total">
                         <span className="block text-[8px] text-slate-500 normal-case font-bold">
-                          Est. total
+                          {t('money.estTotal')}
                         </span>
                         ~{money(Number(r.estTotal))}
                       </span>

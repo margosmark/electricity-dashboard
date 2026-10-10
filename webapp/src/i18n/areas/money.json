@@ -262,7 +262,10 @@
     "ev.assumeStay": "The stay side prices your charge where your own data puts it ({label}), read back from the readings' period charges.",
     "ev.assumeDoubleCount": "Stay vs move prices only your charging kWh — the SAME energy the three-plan comparison credits once, below. Two views of one credit: don't add them together.",
     "ev.seasonsAnd": " and ",
-    "ev.noSeason": "no season"
+    "ev.noSeason": "no season",
+    "ev.stayDetail": "Priced from your own readings at {label}: {hours}.",
+    "ev.stayDetailUpper": "No readings at {label}, so the stay side is priced at each plan's most expensive rate — an upper bound, not a measurement.",
+    "ev.categoriesAnd": " + "
   },
   "fr": {
     "moneyViz.estimateKeyLabel": "Énergie déjà consommée par votre compteur, pas encore facturée",
@@ -527,6 +530,9 @@
     "ev.assumeStay": "Le volet « rester » chiffre votre recharge là où vos propres données la placent ({label}), relu à partir des charges de période des relevés.",
     "ev.assumeDoubleCount": "Rester vs déplacer ne chiffre que vos kWh de recharge — la MÊME énergie que la comparaison à trois forfaits crédite une fois, ci-dessous. Deux vues d’un même crédit : ne les additionnez pas.",
     "ev.seasonsAnd": " et ",
-    "ev.noSeason": "aucune saison"
+    "ev.noSeason": "aucune saison",
+    "ev.stayDetail": "Chiffré d’après vos propres relevés à {label} : {hours}.",
+    "ev.stayDetailUpper": "Aucun relevé à {label} ; le volet « rester » est donc chiffré au taux le plus cher de chaque forfait — une borne supérieure, pas une mesure.",
+    "ev.categoriesAnd": " + "
   }
 }
