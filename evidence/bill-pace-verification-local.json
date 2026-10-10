@@ -4,9 +4,9 @@
   "base": "http://127.0.0.1:3107/",
   "fixture": "usage-summary-open-tail.xml",
   "fixtureSha256": "324a0297c84daba813a12d80d8104188a0dc37ecfc22f0f98daa67c0dc70e49d",
-  "at": "2026-10-10T03:44:59.146Z",
-  "total": 47,
-  "passed": 47,
+  "at": "2026-10-10T04:04:46.223Z",
+  "total": 53,
+  "passed": 53,
   "failed": 0,
   "checks": [
     {
@@ -163,6 +163,36 @@
       "name": "EST. TOTAL is larger than commodity alone",
       "ok": true,
       "detail": "251.07 > 149.56"
+    },
+    {
+      "name": "Tiered plan names a tier-1 run-out date",
+      "ok": true,
+      "detail": "2026-09-21"
+    },
+    {
+      "name": "tier marker draws",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "tier marker is finite",
+      "ok": true,
+      "detail": "423.82758620689657"
+    },
+    {
+      "name": "tier marker sits PAST the drawn data (the -1 bug is back otherwise)",
+      "ok": true,
+      "detail": "marker x=423.82758620689657, accrual ends x=412.6206896551724, crossing 2026-09-21"
+    },
+    {
+      "name": "tier marker is not parked on the left axis",
+      "ok": true,
+      "detail": "left edge x=65.20689655172414"
+    },
+    {
+      "name": "projected crossing is drawn lighter than a fact",
+      "ok": true,
+      "detail": "0.45"
     },
     {
       "name": "no horizontal overflow at 1440px",
