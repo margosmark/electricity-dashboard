@@ -168,6 +168,14 @@ describe('Wave S 1 — the EFFICIENCY card', () => {
     expect(screen.getByTestId('efficiency-regression-line')).toBeInTheDocument();
     expect(screen.getByTestId('efficiency-series')).toBeInTheDocument();
 
+    // One circle per bill, carrying the number it draws — this is what the
+    // deployed browser check reads back against the data audit.
+    const points = screen.getAllByTestId('efficiency-point');
+    expect(points).toHaveLength(12);
+    expect(points[0]).toHaveAttribute('data-start', '2024-01-01');
+    expect(points[0]).toHaveAttribute('data-cents', '19.00');
+    expect(points[0]).toHaveAttribute('data-kwh', '1000.0');
+
     // Nov 1 rate season + the Jun 15 set: exactly one tick inside 2024.
     const ticks = screen.getAllByTestId('efficiency-rate-tick');
     expect(ticks).toHaveLength(1);
