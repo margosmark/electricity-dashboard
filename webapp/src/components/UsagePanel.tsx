@@ -25,7 +25,7 @@ import { type Anomaly, type HeatmapData, type ProcessedPoint } from '@/lib/energ
 import { buildTempBandReport } from '@/lib/tempBands';
 // Wave U — the anomalies card translates; the day label uses the locale's
 // weekday/month names (fmtDate is date-fns bound to it).
-import { fmtDateLong, fmtKwh, fmtPercent, fmtWeekdayDate, useTranslation } from '@/i18n';
+import { fmtDate, fmtKwh, fmtPercent, fmtWeekdayDate, useTranslation } from '@/i18n';
 import RateStalenessBanner from '@/components/RateStalenessBanner';
 import ChartView, { type ChartViewProps } from '@/components/ChartView';
 import DualHeatmap from '@/components/DualHeatmap';
@@ -59,13 +59,14 @@ export type UsagePanelProps = ChartViewProps & {
 
 /**
  * `Oct 6, 2024 – Oct 6, 2026` for the rows on screen, or null when empty.
- * Wave U — `fmtDateLong` is date-fns bound to the active locale, so the
- * caption follows the toggle (`6 oct. 2024 – 6 oct. 2026` in French).
+ * Wave U — `locale` is taken as a parameter (and used to pick the pattern)
+ * so the memo's dependency is real: the caption recomputes on a toggle.
  */
-function windowLabel(rows: ProcessedPoint[]): string | null {
+function windowLabel(rows: ProcessedPoint[], locale: string): string | null {
   if (rows.length === 0) return null;
-  const first = fmtDateLong(new Date(rows[0].timestamp * 1000));
-  const last = fmtDateLong(new Date(rows[rows.length - 1].timestamp * 1000));
+  const pattern = locale === 'fr' ? 'd MMM yyyy' : 'MMM d, yyyy';
+  const first = fmtDate(new Date(rows[0].timestamp * 1000), pattern);
+  const last = fmtDate(new Date(rows[rows.length - 1].timestamp * 1000), pattern);
   return first === last ? first : `${first} – ${last}`;
 }
 
@@ -82,9 +83,9 @@ export default function UsagePanel({
     [chart.filteredData, temps.temps, chart.userPlan],
   );
   // Wave U — `t`/`locale` in deps so the window caption recomputes on a
-  // language switch (fmtDateLong reads the module-level locale).
+  // language switch (fmtDate reads the module locale for month names).
   const { t, locale } = useTranslation();
-  const spanLabel = useMemo(() => windowLabel(chart.filteredData), [chart.filteredData, locale]);
+  const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
   return (
     <div id="panel-usage" role="tabpanel" aria-labelledby="tab-usage" className="space-y-6 md:space-y-10" data-testid="tab-panel-usage">
       {/* Are the rates this chart prices with still the current ones? */}
