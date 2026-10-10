@@ -12,7 +12,6 @@ import {
   decodeImportPayload,
   mergeForWrite,
   planImport,
-  readStoredRows,
 } from '@/lib/importPlan';
 
 const H = 3600;
@@ -154,30 +153,7 @@ describe('mergeForWrite', () => {
   });
 });
 
-describe('readStoredRows', () => {
-  it('reads a healthy payload', () => {
-    expect(readStoredRows(JSON.stringify([at(0, 1)]))).toEqual([at(0, 1)]);
-  });
-
-  it('returns [] for a missing or corrupt value', () => {
-    expect(readStoredRows(null)).toEqual([]);
-    expect(readStoredRows('{not json')).toEqual([]);
-    expect(readStoredRows('"a string"')).toEqual([]);
-    expect(readStoredRows('{"0":1}')).toEqual([]);
-  });
-
-  it('drops malformed rows instead of trusting the whole array', () => {
-    const rows = readStoredRows(
-      JSON.stringify([
-        at(0, 1),
-        { timestamp: 'yesterday', usage_kwh: 1 },
-        { timestamp: 5, usage_kwh: -3 },
-        { timestamp: 6, usage_kwh: Number.NaN },
-        null,
-        'row',
-        at(1, 2),
-      ]),
-    );
-    expect(rows).toEqual([at(0, 1), at(1, 2)]);
-  });
-});
+/* readStoredRows is gone with the raw read it served: the app no longer
+   touches `localStorage.energy_data`. lib/storage.ts owns that read —
+   versioned key, legacy migration, corrupt values reported instead of
+   silently emptied (see storage.test.ts). */

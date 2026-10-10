@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { saveEnergyData, saveBillingDay } from '@/lib/storage';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,9 +73,9 @@ beforeEach(() => {
     vi.fn().mockResolvedValue({ json: () => Promise.resolve(mockRates) }),
   );
   localStorage.clear();
-  localStorage.setItem('energy_data', JSON.stringify(dailyReadings('2026-05-01', '2026-10-06')));
+  saveEnergyData(dailyReadings('2026-05-01', '2026-10-06'));
   localStorage.setItem('usage_summaries', JSON.stringify(summaries));
-  localStorage.setItem('billing_day', '1');
+  saveBillingDay(1);
 });
 
 describe('the view’s timeline is the file’s own', () => {
