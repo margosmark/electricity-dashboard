@@ -3,7 +3,11 @@
  *
  * Goal: the app is installable and fully usable with no connection. All math
  * is client-side and readings live in localStorage, so the only network
- * dependencies are the HTML shell and /api/rates.
+ * dependencies are the HTML shell and /api/rates. (Wave T adds ONE more, and
+ * it is optional: the browser's own fetch of historical temperatures from
+ * Open-Meteo's CDN for the dates the loaded readings cover — never proxied
+ * through this worker, never cached here, and every consumer renders an
+ * honest "no data" when it fails.)
  *
  * Strategy:
  *  - install:  precache the shell (HTML + manifest + icons), skipWaiting

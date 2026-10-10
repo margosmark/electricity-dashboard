@@ -43,7 +43,7 @@ export const TABS: readonly TabDef[] = [
     id: 'usage',
     label: 'Usage',
     title: 'Usage',
-    description: 'The chart, rate seasons, anomalies and the weekday/hour routine.',
+    description: 'The chart, the temperature curve behind it, rate seasons, anomalies and the weekday/hour routine.',
   },
   {
     id: 'plans',

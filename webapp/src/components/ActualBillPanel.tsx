@@ -25,6 +25,7 @@ import {
   PERIOD_MIN_COVERAGE,
   billedKwh,
   billPeriodLabel,
+  chargeDecomposition,
   classifyBillLine,
   commodityVerdict,
   currencyLabel,
@@ -32,6 +33,7 @@ import {
   reconcileBillingPeriods,
   type BillLineClass,
   type BillLineItem,
+  type ChargeDecomposition,
   type PeriodReconciliation,
   type ProcessedPoint,
   type UsageSummary,
@@ -110,6 +112,57 @@ function splitNote(
     return `${((amount / taxBase) * 100).toFixed(2)}% of the subtotal`;
   }
   return null;
+}
+
+/**
+ * Wave T slice 3 — "of your $X delivery this period, $F is fixed and $V is
+ * volume-driven", or the honest reason that sentence cannot be made.
+ *
+ * Three states, and the middle one is the interesting one. A split that
+ * passes is printed as a split. A split that was fitted and then REJECTED —
+ * because its worst miss exceeds the bar we quote splits at — prints the
+ * rejected numbers, the miss, and the bill it came from, because "we could
+ * not split this" is only trustworthy when you can see what was tried. And
+ * when there was nothing to fit (too few bills, usage that never moved) it
+ * says that instead, and quotes the one blended rate that is always true.
+ */
+function DecompositionCard({ split }: { split: ChargeDecomposition }) {
+  const tone =
+    split.status === 'split'
+      ? 'bg-emerald-50'
+      : split.status === 'rejected'
+        ? 'bg-amber-50'
+        : 'bg-slate-50';
+  return (
+    <div
+      data-testid={`charge-decomposition-${split.line}`}
+      data-status={split.status}
+      data-amount={split.amount.toFixed(2)}
+      data-kwh={split.kwh.toFixed(1)}
+      data-periods={split.periods}
+      data-blended-cents={split.blendedCentsPerKwh.toFixed(2)}
+      data-fixed={split.fixed === null ? '' : split.fixed.toFixed(2)}
+      data-variable={split.variable === null ? '' : split.variable.toFixed(2)}
+      data-max-residual={split.fit === null ? '' : split.fit.maxResidual.toFixed(2)}
+      data-residual-share={split.fit === null ? '' : split.fit.residualShare.toFixed(4)}
+      className={`${tone} border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6`}
+    >
+      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400 font-black uppercase">
+        {split.line === 'delivery'
+          ? 'Delivery · fixed vs volume-driven'
+          : 'Regulatory charges · fixed vs volume-driven'}
+      </div>
+      <div
+        data-testid={`decomposition-headline-${split.line}`}
+        className="text-lg md:text-2xl font-black normal-case mt-1"
+      >
+        {split.headline}
+      </div>
+      <div className="mt-1 md:mt-2 text-[11px] md:text-xs font-bold text-slate-600 normal-case">
+        {split.detail}
+      </div>
+    </div>
+  );
 }
 
 function PeriodCard({
@@ -264,6 +317,17 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
   );
   const split = useMemo(() => deliverySplit(summaries, allData), [summaries, allData]);
 
+  // Wave T slice 3: the fixed-vs-volume answer for the two lines that invite
+  // the question. Same periods, same kWh basis, same tolerance bar as the
+  // per-line notes below — one fit, one truth, two places to read it.
+  const decompositions = useMemo(
+    () =>
+      (['delivery', 'regulatory'] as const)
+        .map((line) => chargeDecomposition(summaries, allData, line))
+        .filter((d): d is ChargeDecomposition => d !== null),
+    [summaries, allData],
+  );
+
   if (summaries.length === 0) return null;
 
   const shown = selected === 'all' ? recs : recs.filter((r) => r.summary.startDate === selected);
@@ -333,6 +397,14 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
           At least one billing period does not match this app&apos;s rate assumptions. The estimate
           is using the wrong price for your electricity — fix the rate schedule before trusting the
           projections below it.
+        </div>
+      )}
+
+      {decompositions.length > 0 && (
+        <div className="mt-4 md:mt-6 space-y-3 md:space-y-4" data-testid="charge-decompositions">
+          {decompositions.map((d) => (
+            <DecompositionCard key={d.line} split={d} />
+          ))}
         </div>
       )}
 

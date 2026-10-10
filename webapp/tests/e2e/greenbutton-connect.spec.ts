@@ -80,7 +80,7 @@ function tokenMaterialIn(snap: Snapshot): string[] {
 }
 
 async function storedReadings(page: Page): Promise<Array<{ timestamp: number }>> {
-  return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]'));
+  return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || 'null')?.points || []);
 }
 
 test.describe('Green Button connect flow (browser)', () => {

@@ -47,7 +47,7 @@ test.describe('full journey', () => {
     // NOTE the drop zone is NOT the signal: it flips to "ANALYZING..." the
     // moment parsing starts, so it disappears long before the commit. Wait
     // for the dashboard's own evidence that readings are in.
-    await page.locator('input[type="file"]').setInputFiles(SAMPLE);
+    await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles(SAMPLE);
     await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 60_000 });
     await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
 
@@ -56,7 +56,7 @@ test.describe('full journey', () => {
     await expect
       .poll(
         async () =>
-          page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]').length),
+          page.evaluate(() => (JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}')?.points || []).length),
         { timeout: 30_000 },
       )
       .toBe(8760);
@@ -144,7 +144,7 @@ test.describe('full journey', () => {
     await expect
       .poll(
         async () =>
-          page.evaluate(() => JSON.parse(localStorage.getItem('energy_data') || '[]').length),
+          page.evaluate(() => (JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}')?.points || []).length),
         { timeout: 30_000 },
       )
       .toBe(8760);
@@ -175,7 +175,10 @@ test.describe('full journey', () => {
     // ...and can be handed back to the user's own file.
     await page.getByTestId('replace-example-data').click();
     await expect(page.getByText('Drop XML Here')).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem('energy_data'))).toBeNull();
+    // Neither key may hold rows: the versioned one and the legacy copy.
+    expect(
+      await page.evaluate(() => localStorage.getItem('energy_data_v2') ?? localStorage.getItem('energy_data')),
+    ).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem('energy_data_is_example'))).toBeNull();
   });
 });
@@ -276,7 +279,7 @@ test.describe('keyboard, print and crash', () => {
   }) => {
     test.setTimeout(120_000);
     await page.goto('/');
-    await page.locator('input[type="file"]').setInputFiles(SAMPLE);
+    await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles(SAMPLE);
     await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
     await page.getByRole('tab', { name: 'Plans' }).click();
     await expect(page.getByTestId('tab-panel-plans')).toBeVisible();

@@ -1,0 +1,227 @@
+{
+  "wave": "S",
+  "generatedAt": "2026-10-10T04:15:35.832Z",
+  "baseUrl": "http://10.10.11.110:3939/",
+  "deployedCommit": "8fdc1ec",
+  "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
+  "fixtureBytes": 6424909,
+  "audit": {
+    "bills": 24,
+    "readings": {
+      "first": "2024-10-06",
+      "last": "2026-10-06"
+    },
+    "allTimeCents": 16.2575,
+    "netSlope": 0.0552,
+    "netStderr": 0.1326,
+    "netVerdict": "stable",
+    "rateBoundaries": [
+      "2024-11-01",
+      "2025-11-01"
+    ]
+  },
+  "passed": 40,
+  "total": 40,
+  "checks": [
+    {
+      "name": "the EFFICIENCY card renders on Overview",
+      "ok": true,
+      "detail": "24 bills"
+    },
+    {
+      "name": "the card is NOT on the Money tab",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "exactly one totals strip (no new strip)",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "the ¢/kWh numbers live INSIDE the existing totals strip",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "card bills == audit (24)",
+      "ok": true,
+      "detail": "24 vs 24"
+    },
+    {
+      "name": "all-time ¢/kWh == audit weighted mean (±0.011)",
+      "ok": true,
+      "detail": "16.26 vs 16.2575"
+    },
+    {
+      "name": "all-time headline prints the audit value to 1dp",
+      "ok": true,
+      "detail": "16.3¢/kWh vs 16.3"
+    },
+    {
+      "name": "totals strip all-time agrees with the card (same cents, same bills)",
+      "ok": true,
+      "detail": "16.26¢ / 24 bills"
+    },
+    {
+      "name": "in-view == the 1 bills overlapping the window on screen (2026-08-20..2026-10-06)",
+      "ok": true,
+      "detail": "1 bills / 16.74¢ vs audit 1 bills / 16.7354¢"
+    },
+    {
+      "name": "mini-line draws all 24 bills",
+      "ok": true,
+      "detail": "data-points=24, circles=24"
+    },
+    {
+      "name": "every point sits on its own bill (month order)",
+      "ok": true,
+      "detail": "24 matched"
+    },
+    {
+      "name": "every point carries the audited ¢/kWh",
+      "ok": true,
+      "detail": "24 matched"
+    },
+    {
+      "name": "every point carries the audited kWh",
+      "ok": true,
+      "detail": "24 matched"
+    },
+    {
+      "name": "spot 2024-08 == 15.9¢",
+      "ok": true,
+      "detail": "15.90¢ (306.42 / 1927.6 kWh)"
+    },
+    {
+      "name": "spot 2025-07 == 13.9¢",
+      "ok": true,
+      "detail": "13.93¢ (432.07 / 3101 kWh)"
+    },
+    {
+      "name": "spot 2026-01 == 19.4¢",
+      "ok": true,
+      "detail": "19.35¢ (157.92 / 816.1 kWh)"
+    },
+    {
+      "name": "regression line drawn over the window (12)",
+      "ok": true,
+      "detail": "data-window=12, lines=1"
+    },
+    {
+      "name": "rate-change ticks == the Nov 1 boundaries inside the span (2)",
+      "ok": true,
+      "detail": "[\"2024-11-01\",\"2025-11-01\"] vs [\"2024-11-01\",\"2025-11-01\"]"
+    },
+    {
+      "name": "the footer NAMES every rate-change date",
+      "ok": true,
+      "detail": "Nov 1, 2024, Nov 1, 2025"
+    },
+    {
+      "name": "season bands drawn (both of them)",
+      "ok": true,
+      "detail": "data-season-bands=5 (summer/winter)"
+    },
+    {
+      "name": "season bands are LABELLED Winter and Summer",
+      "ok": true,
+      "detail": "Summer, Winter, Summer, Winter, Summer"
+    },
+    {
+      "name": "the split is available (rate set loaded, every bill priceable)",
+      "ok": true,
+      "detail": "data-split=true"
+    },
+    {
+      "name": "trend chip carries a verdict",
+      "ok": true,
+      "detail": "improving — IMPROVING -0.2¢/kWh per period(your last 12 bills)"
+    },
+    {
+      "name": "chip window == 12 bills and says so",
+      "ok": true,
+      "detail": "IMPROVING -0.2¢/kWh per period(your last 12 bills)"
+    },
+    {
+      "name": "the VERDICT is read from the behaviour component (data-slope == data-behavior-slope)",
+      "ok": true,
+      "detail": "slope=-0.157, behavior=-0.157"
+    },
+    {
+      "name": "behaviour + rate slopes recombine to the net slope (±0.01)",
+      "ok": true,
+      "detail": "-0.157 + 0.212 vs net 0.055"
+    },
+    {
+      "name": "net slope == an independent OLS over the same window (±0.01)",
+      "ok": true,
+      "detail": "0.055 vs 0.0552"
+    },
+    {
+      "name": "net verdict matches the independent OLS (stable)",
+      "ok": true,
+      "detail": "stable — net stable ±0.1¢"
+    },
+    {
+      "name": "the stable band IS the slope stderr (±0.1¢ on this data)",
+      "ok": true,
+      "detail": "0.076 vs stderr 0.1326"
+    },
+    {
+      "name": "the sentence names BOTH halves (behaviour and rates)",
+      "ok": true,
+      "detail": "Your usage mix improved (-0.2¢/kWh behavior-driven), but rates rose (+0.2¢/kWh) — net stable ±0.1¢."
+    },
+    {
+      "name": "rates rose over the window — the half a raw verdict would hide",
+      "ok": true,
+      "detail": "up — rates +0.2¢/period"
+    },
+    {
+      "name": "clicking the mini-line opens the MONEY tab",
+      "ok": true,
+      "detail": "aria-selected=true"
+    },
+    {
+      "name": "in-view == every bill overlapping the metered span (23 of 24)",
+      "ok": true,
+      "detail": "23 bills / 16.28¢ vs audit 23 bills / 16.2770¢"
+    },
+    {
+      "name": "all-time still counts the bill the metered span cannot show",
+      "ok": true,
+      "detail": "all-time 24 bills vs in-view 23 (first reading 2024-10-06, bill 1 ends 2024-09-25)"
+    },
+    {
+      "name": "in-view re-scopes to the 13 bills overlapping 2025-01-01..2025-12-31",
+      "ok": true,
+      "detail": "13 vs 13"
+    },
+    {
+      "name": "in-view ¢/kWh is the weighted mean of THAT window",
+      "ok": true,
+      "detail": "15.47 vs 15.4665"
+    },
+    {
+      "name": "all-time stays whole while the view is narrowed (Σ unchanged)",
+      "ok": true,
+      "detail": "16.26 vs 16.2575"
+    },
+    {
+      "name": "mobile: the card renders",
+      "ok": true,
+      "detail": "24 bills"
+    },
+    {
+      "name": "mobile: mini-line draws every bill",
+      "ok": true,
+      "detail": "24 points"
+    },
+    {
+      "name": "mobile: no sideways scrolling",
+      "ok": true,
+      "detail": "0px"
+    }
+  ]
+}

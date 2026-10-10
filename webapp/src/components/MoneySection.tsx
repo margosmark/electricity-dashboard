@@ -148,7 +148,12 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
             ledger={ledger}
             axisNote={axis.note}
           />
-          <MoneyStackedChart stacks={stacks} overlay={overlay} planAnnotations={annotations} />
+          <MoneyStackedChart
+            stacks={stacks}
+            overlay={overlay}
+            planAnnotations={annotations}
+            charges={charges}
+          />
           <PeriodDeltaTable table={deltaTable} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <HourCostHistogram rows={allData} plan={plan} />
