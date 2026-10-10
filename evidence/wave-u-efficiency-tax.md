@@ -67,8 +67,20 @@ against that audit, twice over, on both exports:
 | implied HST rate | 13.0004% | 12.9999% |
 | verdict | none (3 bills < the 4-bill trend floor) | **stable**, unchanged |
 
-- **short export**: 41/41 checks (`wave-u-efficiency-tax-verification-local-short.json`)
-- **2-year export**: 43/43 checks (`wave-u-efficiency-tax-verification-local-long.json`)
+On the **deployed** stack at `da0a7dc` (the merged tree, verified
+byte-identical to the tested one):
+
+- **short export**: **41/41** (`wave-u-efficiency-tax-verification-short.json`)
+- **2-year export**: **43/43** (`wave-u-efficiency-tax-verification.json`)
+
+And the same two runs against a local `next start` of the same tree, before
+the deploy:
+
+- **short export**: 41/41 (`wave-u-efficiency-tax-verification-local-short.json`)
+- **2-year export**: 43/43 (`wave-u-efficiency-tax-verification-local-long.json`)
+
+Both deployed runs also re-check a 390 px mobile viewport: the excl/incl pair
+and the subtitle survive the narrow layout unchanged.
 
 Also pinned by unit tests that fail loudly if either parser drifts:
 `src/lib/statistics.test.ts` (Wave U block — subtitle text, per-bill tax
@@ -88,6 +100,19 @@ fixture that reproduces this file's arithmetic, so the pre-existing number was
 right and the task's estimate was the outlier. The 2-year export *does* match
 the task's other expectation exactly (16.3¢ excl. → 18.4¢ incl.). Both figures
 above are the arithmetic, unrounded, with no games.
+
+## Observed, not fixed (out of scope for this card)
+
+Reviewing the deployed card's screenshot surfaced a **pre-existing** cosmetic
+bug in the mini-line's y-axis: the two scale labels are `hi.toFixed(0)¢` and
+`lo.toFixed(0)¢`, so on a file whose ¢/kWh range is under ~1¢ both ends round
+to the same integer. On the 3-bill export the axis spans 16.66–17.21¢ and
+prints **17¢ at both ends**, which tells the reader nothing about the scale.
+This change does not touch that code (verified: no diff on those lines) and
+the chart is decorative — every number it draws is also text, and the
+excl/incl figures are printed as text on the card and in the strip. Flagged
+here rather than fixed so the fix gets its own test instead of riding along
+unverified.
 
 ## Files touched
 
