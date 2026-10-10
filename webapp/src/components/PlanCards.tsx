@@ -16,7 +16,7 @@ import { type RateSet } from '@/lib/energy';
 import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import { fmtCents, fmtMoney, fmtNumber, periodLabel, useTranslation } from '@/i18n';
+import { fmtCentsAuto, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -66,6 +66,45 @@ const PLANS = [
   { id: 'ULO', name: 'Ultra-Low Overnight', nameKey: 'planCard.ULO' },
 ] as const;
 
+/** One labelled rate chip on a card. */
+type PlanRate = { l: string; v: string; c?: string };
+
+/**
+ * The rate chips for one plan, straight from the RateSet in force — the same
+ * schedule the cost above was priced with, so the card cannot display a
+ * different number than the one it charged.
+ *
+ * Display SSOT, two halves:
+ * - values go through `fmtCentsAuto`, the rate-table formatter (the one
+ *   RateStalenessBanner already uses): source precision, max 2 digits. A
+ *   forced single digit would print 9.75 as 9.8¢ while the bill on the same
+ *   card still used 9.75, and this card's own test rebuilds the dollar figure
+ *   from the chips alone.
+ * - names go through the i18n keys / `periodLabel`, so Wave U's EN↔FR toggle
+ *   still reaches this card.
+ *
+ * Formatting only — never a source of rate values.
+ */
+function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRate[] {
+  return planId === 'Tiered'
+    ? [
+        { l: t('rate.tier1'), v: fmtCentsAuto(rates.tiered.tier1) },
+        { l: t('rate.tier2'), v: fmtCentsAuto(rates.tiered.tier2) },
+      ]
+    : planId === 'TOU'
+      ? [
+          { l: periodLabel('Off-Peak'), v: fmtCentsAuto(rates.tou.offPeak), c: 'text-emerald-600' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.tou.midPeak), c: 'text-yellow-600' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.tou.onPeak), c: 'text-red-600' },
+        ]
+      : [
+          { l: t('rate.overnight'), v: fmtCentsAuto(rates.ulo.overnight), c: 'text-purple-600' },
+          { l: t('rate.weekendOff'), v: fmtCentsAuto(rates.ulo.weekendOffPeak), c: 'text-emerald-600' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.ulo.midPeak), c: 'text-yellow-600' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.ulo.onPeak), c: 'text-red-600' },
+        ];
+}
+
 export default function PlanCards({
   comparison,
   userPlan,
@@ -89,26 +128,11 @@ export default function PlanCards({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
       {PLANS.map((plan, i) => {
-        // Wave U: the period NAMES localize (OEB French), the ¢ values go
-        // through fmtCents so the decimal comma follows the toggle.
-        const rates =
-          plan.id === 'Tiered'
-            ? [
-                { l: t('rate.tier1'), v: fmtCents(activeRateSet ? activeRateSet.tiered.tier1 : 12.0) },
-                { l: t('rate.tier2'), v: fmtCents(activeRateSet ? activeRateSet.tiered.tier2 : 14.2) },
-              ]
-            : plan.id === 'TOU'
-              ? [
-                  { l: periodLabel('Off-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.offPeak : 9.8), c: 'text-emerald-600' },
-                  { l: periodLabel('Mid-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.midPeak : 15.7), c: 'text-yellow-600' },
-                  { l: periodLabel('On-Peak'), v: fmtCents(activeRateSet ? activeRateSet.tou.onPeak : 20.3), c: 'text-red-600' },
-                ]
-              : [
-                  { l: t('rate.overnight'), v: fmtCents(activeRateSet ? activeRateSet.ulo.overnight : 3.9), c: 'text-purple-600' },
-                  { l: t('rate.weekendOff'), v: fmtCents(activeRateSet ? activeRateSet.ulo.weekendOffPeak : 9.8), c: 'text-emerald-600' },
-                  { l: periodLabel('Mid-Peak'), v: fmtCents(activeRateSet ? activeRateSet.ulo.midPeak : 15.7), c: 'text-yellow-600' },
-                  { l: periodLabel('On-Peak'), v: fmtCents(activeRateSet ? activeRateSet.ulo.onPeak : 39.1), c: 'text-red-600' },
-                ];
+        // Single source of truth for the displayed rates: the RateSet in
+        // force, the same one that priced the cost above. No RateSet loaded
+        // -> no rate rows: an honest gap beats a stale literal copy of last
+        // November's schedule.
+        const rates = activeRateSet ? planRates(plan.id, activeRateSet) : [];
 
         return (
           <div
@@ -132,7 +156,7 @@ export default function PlanCards({
               {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
-              {rates.map((r: { l: string; v: string; c?: string }, j: number) => (
+              {rates.map((r, j) => (
                 <div key={j} className={`flex justify-between ${r.c || ''}`}>
                   <span>{r.l}</span> <span>{r.v}</span>
                 </div>
