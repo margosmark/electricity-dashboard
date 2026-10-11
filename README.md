@@ -74,6 +74,12 @@ cd webapp
 npm ci && npm run dev        # http://localhost:3000, proxies same routes
 npm run test                 # vitest
 npm run typecheck && npm run lint
+
+# layout gate: the toolbar's dead-band budgets, swept across every
+# breakpoint. Needs a server on :3107 — a build plus either
+# `npm run start -- -p 3107` or `node .next/standalone/server.js`
+# (what CI's container runs)
+SMOKE_BASE_URL=http://localhost:3107 npx playwright test toolbar-layout
 ```
 
 Python parser prototype (legacy, tests only):
@@ -83,4 +89,6 @@ pytest tests/ -v
 ```
 
 CI runs the webapp gate (lint/typecheck/test/build) plus the Python test job
-on every push/PR to `main`.
+on every push/PR to `main`; the smoke job's Playwright run carries the
+toolbar layout-regression gate (`webapp/tests/e2e/toolbar-layout.spec.ts`,
+15 vw/vh viewports, 90 checks — see `DECISIONS.md`).
