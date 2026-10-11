@@ -141,7 +141,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
           className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[340px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="text-xs md:text-sm">Backup &amp; Restore</div>
+            <div className="text-xs md:text-sm">{t('backup.drawerTitle')}</div>
             <button
               type="button"
               aria-label={t("backup.closeAria")}
@@ -153,8 +153,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
           </div>
 
           <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-500 font-black mb-4">
-            Everything lives in this browser — no server copy. Export a JSON backup before clearing your profile,
-            switching devices, or just to keep one.
+            {t('backup.everything')}
           </p>
 
           <div className="flex flex-col gap-2">
@@ -165,7 +164,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               disabled={disabled}
               className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-yellow-400 text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
-              <Download size={14} strokeWidth={4} /> Export JSON
+              <Download size={14} strokeWidth={4} /> {t('backup.exportJson')}
             </button>
 
             <button
@@ -175,7 +174,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               disabled={disabled || busy}
               className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-white text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
-              <Upload size={14} strokeWidth={4} /> Import JSON
+              <Upload size={14} strokeWidth={4} /> {t('backup.importJson')}
             </button>
             <input
               ref={inputRef}

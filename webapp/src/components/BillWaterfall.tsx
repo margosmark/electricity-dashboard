@@ -21,6 +21,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 
 import { billWaterfall, type WaterfallKind, type WaterfallStep } from '@/lib/moneyViz';
 import type { UsageSummary } from '@/lib/energy';
+import { useTranslation } from '@/i18n';
 
 const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
 
@@ -58,10 +59,11 @@ type Row = {
 };
 
 /** Steps are labelled for an axis, so the long ones are shortened here. */
-const axisLabel = (step: WaterfallStep) =>
-  step.key === 'subtotal' ? 'Total elec. charges' : step.label;
+const axisLabel = (step: WaterfallStep, t: (key: string) => string) =>
+  step.key === 'subtotal' ? t('wf.subtotalShort') : step.label;
 
 export default function BillWaterfall({ summaries }: { summaries: UsageSummary[] }) {
+  const { t } = useTranslation();
   // Newest period first: it is the one whose rates the rest of the app uses.
   const [selected, setSelected] = useState<string>(
     summaries.length > 0 ? summaries[summaries.length - 1].startDate : '',
@@ -74,23 +76,28 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
     );
   }, [summaries, selected]);
 
+  // `t` in both deps: the lib labels these steps with the module locale, so
+  // a language switch has to re-run the chain or the chart keeps English.
   const waterfall = useMemo(
     () => (summary ? billWaterfall(summary) : null),
-    [summary],
+    // `billWaterfall` reads the module locale; `t` is what changes when the
+    // locale does, so it has to be a dep even though eslint cannot see why.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [summary, t],
   );
 
   const rows = useMemo<Row[]>(
     () =>
       (waterfall?.steps ?? []).map((s) => ({
         key: s.key,
-        label: axisLabel(s),
+        label: axisLabel(s, t),
         base: s.base,
         value: s.value,
         running: s.running,
         kind: s.kind,
         detail: s.detail,
       })),
-    [waterfall],
+    [waterfall, t],
   );
 
   if (summaries.length === 0 || !waterfall) return null;
@@ -101,9 +108,9 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
       className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
     >
       <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
-        Where one period&apos;s money goes
+        {t('wf.eyebrow')}
       </div>
-      <h3 className="text-lg md:text-2xl italic font-black">How the bill adds up</h3>
+      <h3 className="text-lg md:text-2xl italic font-black">{t('wf.title')}</h3>
 
       {summaries.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-2" data-testid="money-waterfall-picker">
@@ -134,12 +141,12 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
       ) : (
         <>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-4 text-[10px] md:text-xs font-black">
-            <span className="text-slate-500 uppercase">Amount due</span>
+            <span className="text-slate-500 uppercase">{t('wf.amountDue')}</span>
             <span className="text-2xl md:text-3xl italic" data-testid="money-waterfall-total">
               {money(waterfall.amountDue)}
             </span>
             <span className="text-slate-500 font-bold normal-case">
-              over {summary ? summary.days : 0} days · the same figure the bill panel prints
+              {t('wf.daysNote', { days: summary ? summary.days : 0 })}
             </span>
           </div>
 
@@ -148,9 +155,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
               className="h-[260px] md:h-[300px] min-w-[560px]"
               data-testid="money-waterfall-chart"
               role="img"
-              aria-label={`Waterfall of charges for one billing period, ending at ${money(
-                waterfall.amountDue,
-              )}`}
+              aria-label={t('wf.chartAria', { amount: money(waterfall.amountDue) })}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 40 }}>
@@ -192,7 +197,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                             {r.detail}
                           </div>
                           <div className="text-[10px] font-black mt-1">
-                            Running: {money(r.running)}
+                            {t('wf.running')} {money(r.running)}
                           </div>
                         </div>
                       );

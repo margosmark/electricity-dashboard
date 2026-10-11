@@ -25,6 +25,7 @@ import { Banknote } from 'lucide-react';
 import { deriveExtraCharges, hasExtraCharges, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
 import { buildBillingAxis } from '@/lib/billingAxis';
 import { useExtraCharges } from '@/hooks/useDashboard';
+import { useTranslation } from '@/i18n';
 import { useEstimateLedger, type OpenClaim } from '@/hooks/useEstimateLedger';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import { planAnnotations } from '@/lib/planTimeline';
@@ -45,6 +46,7 @@ export type MoneySectionProps = {
 };
 
 export default function MoneySection({ summaries, allData, plan }: MoneySectionProps) {
+  const { t } = useTranslation();
   const { charges: storedCharges } = useExtraCharges();
   // Wave P: which plan each period was billed under (detected from the bill,
   // filled in by the timeline) — the chart's background bands + table column.
@@ -116,10 +118,10 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
         </span>
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
-            Your bill, visualized
+            {t('money.eyebrow')}
           </div>
           <h2 id="money-heading" className="text-2xl md:text-4xl italic font-black uppercase text-black">
-            Money
+            {t('tab.money')}
           </h2>
         </div>
       </div>
@@ -130,14 +132,10 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
           className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-dashed border-black text-black font-black uppercase"
         >
           <p className="text-lg md:text-2xl">
-            Upload a Green Button export with billing periods to unlock the money views.
+            {t('money.emptyTitle')}
           </p>
           <p className="mt-3 text-[11px] md:text-sm font-bold normal-case text-slate-600 max-w-2xl">
-            The utility&apos;s own file carries an itemized bill for every billing period — commodity
-            split into off/mid/on-peak, delivery, regulatory, the Ontario Electricity Rebate and
-            HST. Once one is imported this section shows what each period was made of, what changed
-            between periods, what each hour of the day costs, where one period&apos;s money goes, and
-            how the three plans compare against what you actually paid.
+            {t('money.emptyBlurb')}
           </p>
         </div>
       ) : (

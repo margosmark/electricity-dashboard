@@ -142,7 +142,18 @@
     "bgRefresh.cardSwitch": "You are on {current} — switching to {best} is ~{amount}/mo on these readings.",
     "bgRefresh.cardRecomputed": "Recomputed across {kwh} kWh of readings after the latest refresh.",
     "axis.weekOf": "Week of {date}",
-    "touShift.fixedSchedule": "Looks like a fixed-schedule load (EV timer / appliance cycle)"
+    "touShift.fixedSchedule": "Looks like a fixed-schedule load (EV timer / appliance cycle)",
+    "season.bandWinter": "WINTER",
+    "season.bandSummer": "SUMMER",
+    "bgRefresh.recomputed": "· Recomputed across your whole dataset after the latest refresh.",
+    "bgRefresh.alertsOnDevice": "Alerts stay in this browser — no account, so no email or SMS.",
+    "bgRefresh.bestVsCurrent": "Best vs what you are on",
+    "bgRefresh.dismissPlanAria": "Dismiss plan change notice",
+    "bgRefresh.dismissRateAria": "Dismiss rate change notice",
+    "overview.centsPerKwh": "¢/kWh ·",
+    "efficiency.deliveryFixed": "delivery & fixed",
+    "efficiency.perPeriod": "¢/period",
+    "efficiency.deliveryNotSplit": "delivery & fixed: not split"
   },
   "fr": {
     "legal.commodityShort": "charges d’électricité (variables) seulement — ni distribution, ni charges réglementaires, ni TVH",
@@ -287,6 +298,17 @@
     "bgRefresh.cardSwitch": "Vous êtes sur {current} — passer à {best} économiserait ~{amount}/mois sur ces relevés.",
     "bgRefresh.cardRecomputed": "Recalculé sur {kwh} kWh de relevés après la dernière mise à jour.",
     "axis.weekOf": "Semaine du {date}",
-    "touShift.fixedSchedule": "Semble être une charge à horaire fixe (minuteur de VE / cycle d’appareil)"
+    "touShift.fixedSchedule": "Semble être une charge à horaire fixe (minuteur de VE / cycle d’appareil)",
+    "season.bandWinter": "HIVER",
+    "season.bandSummer": "ÉTÉ",
+    "bgRefresh.recomputed": "· Recalculé sur l’ensemble de vos données après la dernière actualisation.",
+    "bgRefresh.alertsOnDevice": "Les alertes restent dans ce navigateur — aucun compte, donc ni courriel ni SMS.",
+    "bgRefresh.bestVsCurrent": "Meilleur choix par rapport à votre grille actuelle",
+    "bgRefresh.dismissPlanAria": "Masquer l’avis de changement de forfait",
+    "bgRefresh.dismissRateAria": "Masquer l’avis de changement de tarif",
+    "overview.centsPerKwh": "¢/kWh ·",
+    "efficiency.deliveryFixed": "livraison et charges fixes",
+    "efficiency.perPeriod": "¢/période",
+    "efficiency.deliveryNotSplit": "livraison et charges fixes : non ventilées"
   }
 }

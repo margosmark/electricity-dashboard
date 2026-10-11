@@ -72,11 +72,10 @@ export function GreenButtonSync({
           className="mt-4 md:mt-6 border-2 border-dashed border-slate-300 rounded-xl md:rounded-2xl p-4 text-left"
         >
           <div className="text-[11px] md:text-xs font-black uppercase text-slate-500">
-            Live sync from Oakville Hydro
+            {t("gb.liveSyncTitle")}
           </div>
           <p className="mt-1 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
-            Not switched on yet — Oakville Hydro has not issued this app its Green Button
-            credentials. Uploading your XML export keeps working exactly as before.
+            {t("gb.notSwitchedOn")}
           </p>
         </div>
       );
@@ -116,7 +115,7 @@ export function GreenButtonSync({
             >
               <RefreshCw size={14} strokeWidth={4} className={syncing ? "animate-spin" : ""} />
               <span className="hidden md:inline">
-                {syncing ? "Syncing…" : state === "synced" ? "Live" : "Authorised"}
+                {syncing ? t("gb.syncing") : state === "synced" ? t("gb.live") : t("gb.authorised")}
               </span>
             </button>
             <button
@@ -141,7 +140,7 @@ export function GreenButtonSync({
             className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-black rounded-xl md:rounded-2xl bg-green-600 text-white shadow-[4px_4px_0px_0px_rgba(37,99,235,1)] active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
           >
             <Link2 size={14} strokeWidth={4} />
-            <span className="hidden md:inline">Authorise with Oakville Hydro</span>
+            <span className="hidden md:inline">{t("gb.authorise")}</span>
           </button>
         )}
       </div>
@@ -158,7 +157,7 @@ export function GreenButtonSync({
       <div className="flex items-center gap-2">
         <Link2 size={16} strokeWidth={4} />
         <span className="text-[11px] md:text-sm font-black uppercase">
-          Live sync from Oakville Hydro
+          {t("gb.liveSyncTitle")}
         </span>
       </div>
 
@@ -172,7 +171,7 @@ export function GreenButtonSync({
         >
           {message.text}{" "}
           <button type="button" onClick={onDismissMessage} className="font-black underline ml-1">
-            dismiss
+            {t("gb.dismiss")}
           </button>
         </div>
       )}
@@ -180,7 +179,7 @@ export function GreenButtonSync({
       {connected ? (
         <>
           <p className="mt-2 text-[10px] md:text-xs font-bold text-slate-600 normal-case" data-testid="gb-status">
-            {lastSyncLine(status)} · readings stay in this browser only.
+            {lastSyncLine(status)} {t("gb.readingsStayLocal")}
           </p>
           <div className="mt-3 flex flex-col md:flex-row gap-2">
             <button
@@ -202,16 +201,14 @@ export function GreenButtonSync({
               }}
               className="min-h-11 py-3 px-5 bg-white text-red-600 border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs"
             >
-              Disconnect
+              {t("gb.disconnect")}
             </button>
           </div>
         </>
       ) : (
         <>
           <p className="mt-2 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
-            Authorise once and the dashboard refreshes itself — no more re-downloading the export.
-            You sign in on Oakville Hydro&apos;s own page; we never see that password, and the
-            readings are parsed here, in your browser.
+            {t("gb.authoriseBlurb")}
           </p>
           <button
             type="button"
@@ -219,7 +216,7 @@ export function GreenButtonSync({
             onClick={onConnect}
             className="mt-3 min-h-11 w-full py-3 md:py-4 bg-green-600 text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all"
           >
-            Authorise with Oakville Hydro
+            {t("gb.authorise")}
           </button>
         </>
       )}
