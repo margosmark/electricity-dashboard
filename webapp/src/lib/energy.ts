@@ -2233,7 +2233,24 @@ export function billTotals(summary: UsageSummary): BillTotals {
 }
 
 /**
- * kWh the bill charged for, from the "… Usage" measurement lines (Oakville
+ * Does this bill state ANY money at all?
+ *
+ * `billTotals` sums whatever itemized lines the file carries, so a summary
+ * with no priced lines — the Green Button Alliance reference sample emits a
+ * bare ElectricPowerUsageSummary, and so do exports that stamp only
+ * measurements — comes back as a perfect $0.00. That zero is the absence of
+ * a statement, not a bill of nothing, and a panel that prints it under a
+ * "you paid" header asserts a payment the utility never quoted. Callers use
+ * this to drop to a dash and say so.
+ *
+ * A bill that genuinely totals zero (credits cancelling every charge) still
+ * states an amount on one of its lines, so it stays a real $0.00.
+ */
+export function summaryStatesMoney(summary: UsageSummary): boolean {
+  return summary.items.some((item) => item.amount !== null);
+}
+
+/** kWh the bill charged for, from the "… Usage" measurement lines (Oakville
  * stamps one per TOU window; they sum to the billed quantity exactly). Null
  * when the file says nothing usable — callers fall back to the metered
  * readings, which are unambiguous, before they ever fall back to

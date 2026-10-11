@@ -40,6 +40,7 @@ import {
   billTotals,
   billWindow,
   classifyBillLine,
+  summaryStatesMoney,
   type BillLineClass,
   type BillLineItem,
   type ProcessedPoint,
@@ -545,6 +546,18 @@ export function buildSwitchReport(
       counted: false,
       excluded: null,
     };
+
+    // A bill that states no charge lines (the Green Button Alliance sample is
+    // one: a bare ElectricPowerUsageSummary) has no actual to compare an
+    // alternative against. billTotals sums it to a clean $0.00, and modeling
+    // against that zero would report a "saving" that is really the whole
+    // modeled bill — with a model check "miss" accusing the utility of
+    // charging a number it never quoted. This check runs BEFORE the coverage
+    // gate: full coverage could not rescue a comparison against nothing, and
+    // the reason the row skips has to be the reason that would still hold.
+    if (!summaryStatesMoney(summary)) {
+      return { ...base, skipped: t('planTimeline.skipNoChargeLines') };
+    }
 
     if (!model.comparable) {
       return {

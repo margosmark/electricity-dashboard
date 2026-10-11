@@ -29,7 +29,7 @@ import {
   type PlanType,
   type SwitchPeriodRow,
 } from '@/lib/planTimeline';
-import { PERIOD_MIN_COVERAGE, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
+import { PERIOD_MIN_COVERAGE, summaryStatesMoney, type ProcessedPoint, type UsageSummary } from '@/lib/energy';
 import { fmtMoney, planLabel, useTranslation } from '@/i18n';
 
 type Props = {
@@ -53,6 +53,12 @@ function Row({ row }: { row: SwitchPeriodRow }) {
   // Captured: the narrowing from `modeled && …` does not survive into the
   // map callback below otherwise.
   const modeled = row.modeled;
+  /**
+   * A bill that states no charge lines sums to $0.00 without anybody quoting
+   * it — the same shape the money chart hit as an unbilled row under a
+   * "You paid" header. No money stated, no payment claimed.
+   */
+  const statesMoney = summaryStatesMoney(row.summary);
   return (
     <div
       data-testid={`switch-row-${row.summary.startDate}`}
@@ -96,14 +102,21 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           data-testid="switch-skip"
           className="mt-2 md:mt-3 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-slate-600 normal-case"
         >
-          {t('track.notModeled', { reason: row.skipped, amount: money(row.actual) })}
+          {/* No money stated, no payment asserted: "You paid $0.00" on a bill
+              that never quoted a charge is the accrual card's unbilled-row bug
+              wearing a period label. */}
+          {statesMoney
+            ? t('track.notModeled', { reason: row.skipped, amount: money(row.actual) })
+            : t('track.notModeledNoMoney', { reason: row.skipped })}
         </div>
       ) : (
         <div className="mt-2 md:mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-slate-400 text-[8px] uppercase">{t('track.youPaid')}</div>
+            <div className="text-slate-400 text-[8px] uppercase">
+              {statesMoney ? t('track.youPaid') : t('track.noAmountInFile')}
+            </div>
             <div className="italic text-base md:text-lg" data-testid="switch-actual">
-              {money(row.actual)}
+              {statesMoney ? money(row.actual) : '—'}
             </div>
           </div>
 
