@@ -186,8 +186,15 @@ cd webapp && npm run lint && npm run typecheck && npm run test && npm run build
 cd .. && pytest tests/ -v        # only if root parser changed
 ```
 
-Then commit/push (CI runs the same gates on push/PR to main) and rebuild the
-container. The `husky` pre-commit hook runs on every local commit.
+Then commit/push and rebuild the container. CI's workflow is
+**disabled server-side** (2026-10-10, Actions minutes exhausted — push/PR
+runs died in 3–4s with zero steps scheduled, so the run-history reds were
+billing, not failures; see the header proposed for
+`.github/workflows/ci.yml` and the note in README). The gate order above
+is the gate, and merges land on local-green. Don't re-enable CI before
+cutting its triggers to `workflow_dispatch` (needs a token with the
+`workflow` scope) — otherwise the same instant reds come back. The
+`husky` pre-commit hook runs on every local commit.
 
 ## Known sharp edges
 
