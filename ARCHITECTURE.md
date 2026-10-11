@@ -204,7 +204,9 @@ function + test first, then wiring.
   `standalone` output, non-root user. No secrets, no volumes, no env vars.
 - **Data safety:** everything user-related is browser-local. A container
   rebuild loses nothing; clearing browser storage is the only way to lose data.
-- **CI** (`.github/workflows/ci.yml`, push/PR to main): three jobs —
+- **CI** (`.github/workflows/ci.yml`): disabled server-side 2026-10-10 —
+  Actions minutes exhausted, so push/PR runs died in 3–4s with zero steps
+  scheduled (the reds were billing, not failures). Three jobs —
   `frontend`: lint → typecheck → vitest → build; `smoke`: build the real
   Docker image, boot it, HTTP checks, Playwright (Wave D smoke + Wave H
   full journey, `tests/e2e/*.spec.ts`) and **two Lighthouse performance

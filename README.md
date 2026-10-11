@@ -88,7 +88,15 @@ Python parser prototype (legacy, tests only):
 pytest tests/ -v
 ```
 
-CI runs the webapp gate (lint/typecheck/test/build) plus the Python test job
-on every push/PR to `main`; the smoke job's Playwright run carries the
-toolbar layout-regression gate (`webapp/tests/e2e/toolbar-layout.spec.ts`,
-15 vw/vh viewports, 90 checks — see `DECISIONS.md`).
+CI is **workflow-disabled** (2026-10-10): GitHub Actions minutes are
+exhausted on this account, so every push/PR run died in 3–4s with zero
+steps scheduled — the reds in the run history are billing, not test
+failures. The gate above IS the gate. `.github/workflows/ci.yml` still
+defines the three jobs (`frontend`: lint/typecheck/test/build, `smoke`:
+container boot + HTTP + Playwright — carrying the toolbar
+layout-regression gate `webapp/tests/e2e/toolbar-layout.spec.ts`, 15 vw/vh
+viewports, 90 checks, see `DECISIONS.md` — plus both Lighthouse budgets,
+`python`: pytest) for when billing returns. Do NOT `gh workflow enable CI`
+before cutting its triggers to `workflow_dispatch` — the file still has
+push/PR triggers and would resurrect the same instant reds (that file
+edit needs a GitHub token with the `workflow` scope).
