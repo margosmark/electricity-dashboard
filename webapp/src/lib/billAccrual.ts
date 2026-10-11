@@ -299,10 +299,17 @@ export function buildAccrualCurve({
 
   // Tiered is priced on the WINDOW, never per reading (see `costOf`), so the
   // day's cost is booked as the MARGINAL increase of the shared month-scoped
-  // rule over the days so far. Every point then foots to `tieredCostFor`, the
-  // curve stays monotonic (a day only ever adds usage, and the prorated
-  // allowance only ever grows), and this line can no longer disagree with the
-  // pace slope above it — which is what shipping both on different rules did.
+  // rule over the days so far. Every point then foots to `tieredCostFor` of
+  // the days through it, and this line can no longer disagree with the pace
+  // slope above it — which is what shipping both on different rules did.
+  //
+  // The marginals are NOT monotonic, and that is the rule speaking, not a bug
+  // here: each added day also grows the prorated allowance, which shifts kWh
+  // from tier 2 (14.2¢) back down to tier 1 (12¢). On a near-empty day after
+  // an over-threshold month that reclassification can outweigh the day's own
+  // cost, so the day books NEGATIVE and the running total dips. Measured: 10
+  // days of 24 kWh then one 2 kWh day costs −$0.1502 (29.7379 → 29.5877). A
+  // curve that never dipped would mean we were summing the tier-1 column.
   if (plan === 'Tiered' && inPeriod.length > 0) {
     const ordered = [...inPeriod].sort((a, b) => a.timestamp - b.timestamp);
     // `running` only ever grows: it is the window from the period's first

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { processRawData, type DataPoint, type ProcessedPoint, type RateSet } from './energy';
+import {
+  processRawData,
+  tieredCostFor,
+  type DataPoint,
+  type ProcessedPoint,
+  type RateSet,
+} from './energy';
 import { projectMonthBill, type BillProjection } from './billProjection';
 import {
   buildAccrualCurve,
@@ -100,7 +106,11 @@ describe('buildAccrualCurve — the accrual itself', () => {
     expect(curve.total).toBeCloseTo(10 * DAILY, 6);
     expect(curve.points[0].cumulative).toBeCloseTo(DAILY, 6);
     expect(curve.points[9].cumulative).toBeCloseTo(10 * DAILY, 6);
-    // Monotonic: energy costs money, so the curve never dips.
+    // This fixture is a flat load, so the marginals never dip. That is a
+    // property of FLAT, not of the rule — a sparse day after an over-threshold
+    // month can book negative (see the dip test below). The invariant that
+    // always holds is footing: every cumulative is `tieredCostFor` of the
+    // days through it.
     for (let i = 1; i < curve.points.length; i++) {
       expect(curve.points[i].cumulative).toBeGreaterThanOrEqual(curve.points[i - 1].cumulative);
     }
@@ -126,6 +136,35 @@ describe('buildAccrualCurve — the accrual itself', () => {
     const tou = buildAccrualCurve({ rows, plan: 'TOU', period: OCTOBER, today: oct(10), projection });
     expect(tou.total).not.toBe(curve.total);
     expect(tou.points).toHaveLength(curve.points.length);
+  });
+
+  it('a sparse day after an over-threshold month books negative and the total dips', () => {
+    // The window rule is prorated, so its marginals are NOT monotonic: adding
+    // a day also grows the allowance (600/30.4 = 19.7368 kWh), shifting kWh
+    // from tier 2 (14.2¢) back to tier 1 (12¢). On a near-empty day that
+    // reclassification outweighs the day's own cost. This pins the known
+    // property so the comment in billAccrual.ts stays honest.
+    const sparse = [...hourly(oct(1), 10, KWH), ...hourly(oct(11), 1, 2 / 24)];
+    const sparseCurve = buildAccrualCurve({
+      rows: sparse,
+      plan: 'Tiered',
+      period: OCTOBER,
+      today: oct(11),
+      projection: projectMonthBill(sparse, 'Tiered', oct(11)),
+    });
+
+    const last = sparseCurve.points[sparseCurve.points.length - 1];
+    const prev = sparseCurve.points[sparseCurve.points.length - 2];
+    expect(last.day).toBe('2026-10-11');
+    expect(last.dayCost).toBeCloseTo(-0.1502, 4);
+    expect(last.cumulative).toBeLessThan(prev.cumulative);
+
+    // The invariant that DOES hold is footing, not monotonicity.
+    const ordered = [...sparse].sort((a, b) => a.timestamp - b.timestamp);
+    for (const p of sparseCurve.points) {
+      const prefix = ordered.filter((r) => r.dayStr <= p.day);
+      expect(p.cumulative).toBeCloseTo(tieredCostFor(prefix), 9);
+    }
   });
 });
 
