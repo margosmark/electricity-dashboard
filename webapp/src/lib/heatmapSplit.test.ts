@@ -78,21 +78,25 @@ describe('splitHeatmap', () => {
     const empty = { grid: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ sum: 0, count: 0, days: 0, avg: 0 }))), maxAvg: 0 };
     const split = splitHeatmap(empty);
     expect(split.weekday.rows).toHaveLength(5);
-    expect(heatColor(0, split.maxAvg)).toBe('bg-slate-100');
+    expect(heatColor(0, split.maxAvg)).toBe('bg-[var(--heat-0)]');
   });
 });
 
 describe('heatColor', () => {
   it('uses the same buckets as the original 7×24 grid', () => {
-    expect(heatColor(1, 10)).toBe('bg-slate-100'); // 0.10
-    expect(heatColor(3, 10)).toBe('bg-blue-300 border-blue-500'); // 0.30
+    // t_d5d0a86b: the two PALE steps are theme tokens now (slate-100 was a
+    // white hole on a dark card, blue-300 a pastel that fought the navy).
+    // The three saturated steps stay literal — they read on both themes, and
+    // keeping them literal is what keeps this bucket test honest.
+    expect(heatColor(1, 10)).toBe('bg-[var(--heat-0)]'); // 0.10
+    expect(heatColor(3, 10)).toBe('bg-[var(--heat-1)] border-blue-500'); // 0.30
     expect(heatColor(5, 10)).toBe('bg-yellow-400 border-yellow-600'); // 0.50
     expect(heatColor(7, 10)).toBe('bg-orange-500 border-orange-700'); // 0.70
     expect(heatColor(9, 10)).toBe('bg-red-600 border-red-800'); // 0.90
   });
 
   it('treats zero as "no data", not as "the quietest reading"', () => {
-    expect(heatColor(0, 10)).toBe('bg-slate-100');
-    expect(heatColor(5, 0)).toBe('bg-slate-100');
+    expect(heatColor(0, 10)).toBe('bg-[var(--heat-0)]');
+    expect(heatColor(5, 0)).toBe('bg-[var(--heat-0)]');
   });
 });

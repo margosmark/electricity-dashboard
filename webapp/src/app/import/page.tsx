@@ -49,11 +49,11 @@ import { loadEnergyData, saveEnergyData } from '@/lib/storage';
 type FailedDiagnostic = Extract<ParseDiagnostic, { ok: false }>;
 
 const CARD =
-  'bg-white border-4 md:border-8 border-black rounded-[2rem] md:rounded-[3rem] ' +
-  'shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] p-5 md:p-10 text-black';
+  'bg-card border-4 md:border-8 border-edge rounded-[2rem] md:rounded-[3rem] ' +
+  'shadow-hard-10 p-5 md:p-10 text-ink';
 const BTN =
   'min-h-11 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl ' +
-  'border-4 border-black font-black uppercase text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ' +
+  'border-4 border-edge font-black uppercase text-xs shadow-hard-4 ' +
   'active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40';
 
 function loadStored(): DataPoint[] {
@@ -240,7 +240,7 @@ function ImportFlow() {
           <h1 className="text-xl md:text-3xl uppercase tracking-tighter font-black mb-2 flex items-center gap-2">
             <GitMerge strokeWidth={4} size={22} /> {t('import.reviewTitle')}
           </h1>
-          <p className="text-xs md:text-sm font-bold text-slate-600 mb-5">
+          <p className="text-xs md:text-sm font-bold text-ink-2 mb-5">
             {t('import.thisBrowserHolds')} <strong>{p.existingRows}</strong> {t('import.readings', { count: p.existingRows })}
             {p.existingFirst ? ` (${p.existingFirst} → ${p.existingLast})` : ''}{t('import.newExportCarries')} <strong>{p.incomingRows}</strong>
             {p.incomingFirst ? ` (${p.incomingFirst} → ${p.incomingLast})` : ''}{t('import.nothingWritten')}
@@ -253,8 +253,8 @@ function ImportFlow() {
               [t('importReview.already'), p.overlapRows],
               [t('importReview.newRows'), p.addedRows],
             ].map(([label, value]) => (
-              <div key={String(label)} className="border-2 md:border-4 border-black rounded-xl p-3 bg-slate-50">
-                <dt className="text-[9px] md:text-[11px] font-black uppercase text-slate-500">{label}</dt>
+              <div key={String(label)} className="border-2 md:border-4 border-edge rounded-xl p-3 bg-inset">
+                <dt className="text-[9px] md:text-[11px] font-black uppercase text-ink-3">{label}</dt>
                 <dd className="text-lg md:text-2xl font-black" data-testid={`import-stat-${label}`}>
                   {value as number}
                 </dd>
@@ -263,7 +263,7 @@ function ImportFlow() {
           </dl>
 
           {p.identical && (
-            <p className="text-[11px] font-black uppercase text-amber-700 mb-4" data-testid="import-identical">
+            <p className="text-[11px] font-black uppercase text-warn mb-4" data-testid="import-identical">
               {t('import.identical')}
             </p>
           )}
@@ -285,11 +285,11 @@ function ImportFlow() {
             >
               <Replace size={14} strokeWidth={4} /> {t('import.replaceBtn')} ({p.replaceRows} {t('import.rows', { count: p.replaceRows })})
             </button>
-            <button type="button" data-testid="import-cancel" className={BTN + ' bg-white'} onClick={reset}>
+            <button type="button" data-testid="import-cancel" className={BTN + ' bg-card'} onClick={reset}>
               <X size={14} strokeWidth={4} /> {t('common.cancel')}
             </button>
           </div>
-          <p className="text-[10px] font-bold text-slate-500 mt-4">
+          <p className="text-[10px] font-bold text-ink-3 mt-4">
             {t('import.mergeNote')}
           </p>
         </section>
@@ -301,7 +301,7 @@ function ImportFlow() {
         <h1 className="text-xl md:text-3xl uppercase tracking-tighter font-black mb-2 flex items-center gap-2">
           <FileDown strokeWidth={4} size={22} /> {t('import.title')}
         </h1>
-        <p className="text-xs md:text-sm font-bold text-slate-600 mb-5">
+        <p className="text-xs md:text-sm font-bold text-ink-2 mb-5">
           {t('import.clientOnlyLead')} <code>dmd_export_b64.py --b64</code> {t('import.orDropFile')}
         </p>
 
@@ -320,7 +320,7 @@ function ImportFlow() {
           }}
           className={
             'border-4 border-dashed rounded-2xl p-6 md:p-10 text-center mb-5 transition-colors ' +
-            (dragging ? 'border-purple-600 bg-purple-50' : 'border-black bg-slate-50')
+            (dragging ? 'border-purple-600 bg-purple-50' : 'border-edge bg-inset')
           }
         >
           <p className="font-black uppercase text-sm md:text-base mb-3">{t('upload.dropzone')}</p>
@@ -336,7 +336,7 @@ function ImportFlow() {
               e.target.value = '';
             }}
           />
-          <button type="button" className={BTN + ' bg-white'} onClick={() => fileRef.current?.click()}>
+          <button type="button" className={BTN + ' bg-card'} onClick={() => fileRef.current?.click()}>
             {t('import.chooseFile')}
           </button>
         </div>
@@ -350,7 +350,7 @@ function ImportFlow() {
           data-testid="import-paste"
           rows={6}
           spellCheck={false}
-          className="w-full border-4 border-black rounded-xl p-3 font-mono text-xs mb-3"
+          className="w-full border-4 border-edge rounded-xl p-3 font-mono text-xs mb-3"
           placeholder={t('import.pastePlaceholder')}
         />
         <button
@@ -367,7 +367,7 @@ function ImportFlow() {
           <div
             role="alert"
             data-testid="import-error"
-            className="mt-4 border-4 border-red-600 rounded-xl p-4 bg-red-50 text-red-700"
+            className="mt-4 border-4 border-bad rounded-xl p-4 bg-bad-soft text-bad"
           >
             <p className="font-black uppercase text-sm">{issue?.headline ?? 'Import failed'}</p>
             <p className="text-xs font-bold mt-1">{issue?.detail ?? error}</p>
@@ -381,20 +381,20 @@ function ImportFlow() {
           </div>
         )}
 
-        <p className="text-[10px] font-bold text-slate-500 mt-5">
+        <p className="text-[10px] font-bold text-ink-3 mt-5">
           {t('import.alreadyHave')} <Link className="underline" href="/">{t('import.openIt')}</Link> {t('import.neverReplaces')}
         </p>
       </section>
     );
   })();
 
-  return <div className="fixed inset-0 overflow-y-auto bg-slate-50 p-4 md:p-8">{body}</div>;
+  return <div className="fixed inset-0 overflow-y-auto bg-inset p-4 md:p-8">{body}</div>;
 }
 
 export default function ImportPage() {
   const { t } = useTranslation();
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-inset">
       <Suspense
         fallback={<div className="p-8 font-black uppercase">{t('import.loading')}</div>}
       >

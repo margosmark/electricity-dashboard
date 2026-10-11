@@ -55,11 +55,11 @@ export function ExportCsvButton({ rows, className = '', printHidden = false }: P
       className={
         (printHidden ? 'no-print ' : '') +
         'min-h-11 flex items-center gap-1 md:gap-2 px-3 md:px-5 py-2 md:py-3 rounded-lg md:rounded-xl ' +
-        'border-2 md:border-4 border-black bg-white text-black font-black uppercase ' +
+        'border-2 md:border-4 border-edge bg-card text-ink font-black uppercase ' +
         'text-[8px] md:text-[10px] whitespace-nowrap ' +
-        'shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ' +
+        'shadow-hard-2 md:shadow-hard-4 ' +
         'hover:bg-yellow-400 active:translate-y-0.5 active:shadow-none transition-all ' +
-        'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white ' +
+        'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card ' +
         className
       }
     >

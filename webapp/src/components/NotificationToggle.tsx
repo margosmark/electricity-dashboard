@@ -36,8 +36,8 @@ import { useTranslation } from "@/i18n";
 
 const TOGGLE_CLASS =
   "min-h-11 min-w-11 inline-flex items-center justify-center " +
-  "p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl " +
-  "shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all";
+  "p-3 md:p-4 bg-card text-ink border-4 border-edge rounded-xl md:rounded-2xl " +
+  "shadow-hard-red-4 hover:translate-y-1 active:translate-y-0 active:shadow-hard-2 transition-all";
 
 /* Wave U — the availability and sync copy translates. These maps hold CATALOG
  * KEYS rather than text, because they are module-level and a hook cannot run
@@ -154,7 +154,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
           data-testid="notification-drawer"
           role="dialog"
           aria-label={t("alerts.settingsTitle")}
-          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
+          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-card border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 p-4 md:p-5 text-ink font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">{t('alerts.title')}</div>
@@ -162,13 +162,13 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
               type="button"
               aria-label={t("alerts.closeAria")}
               onClick={() => setOpen(false)}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-hover active:bg-track rounded"
             >
               <X size={16} strokeWidth={4} />
             </button>
           </div>
 
-          <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-600 font-black mb-3 normal-case">
+          <p className="text-[9px] md:text-[10px] leading-relaxed text-ink-2 font-black mb-3 normal-case">
             {t('alerts.watchesTwo')}
           </p>
 
@@ -179,7 +179,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
             onClick={() => void handleToggle()}
             disabled={busy}
             aria-pressed={availability === "on"}
-            className={`min-h-11 w-full px-4 py-3 rounded-lg border-4 border-black text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 ${
+            className={`min-h-11 w-full px-4 py-3 rounded-lg border-4 border-edge text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 ${
               availability === "on" ? "bg-emerald-400" : "bg-yellow-400"
             }`}
           >
@@ -192,7 +192,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
 
           <div
             data-testid="notification-availability"
-            className="mt-2 text-[9px] md:text-[10px] text-slate-600 normal-case font-bold leading-relaxed"
+            className="mt-2 text-[9px] md:text-[10px] text-ink-2 normal-case font-bold leading-relaxed"
           >
             {t(AVAILABILITY_COPY[availability])}
           </div>
@@ -200,18 +200,18 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
           <div
             data-testid="notification-background-sync"
             data-state={backgroundSync}
-            className="mt-3 pt-3 border-t-2 border-black text-[9px] md:text-[10px] text-slate-600 normal-case font-bold leading-relaxed"
+            className="mt-3 pt-3 border-t-2 border-edge text-[9px] md:text-[10px] text-ink-2 normal-case font-bold leading-relaxed"
           >
             {t(SYNC_COPY[backgroundSync])}
           </div>
 
           {/* The tradeoff, stated where the user decides — not buried in a doc. */}
-          <p className="mt-3 text-[9px] leading-relaxed text-slate-500 font-black normal-case">
+          <p className="mt-3 text-[9px] leading-relaxed text-ink-3 font-black normal-case">
             {t('alerts.onDeviceOnly')}
           </p>
 
           {status && (
-            <div data-testid="notification-status" className="mt-2 text-[9px] md:text-[10px] text-emerald-700 normal-case font-bold">
+            <div data-testid="notification-status" className="mt-2 text-[9px] md:text-[10px] text-good normal-case font-bold">
               {status}
             </div>
           )}

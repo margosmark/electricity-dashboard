@@ -150,7 +150,7 @@ export default function EvScenarioCard({
     <div
       data-testid="ev-scenario"
       data-source={scenario.source ?? 'none'}
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink font-black uppercase"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <h3 className="text-2xl md:text-4xl italic flex items-center gap-2 md:gap-3">
@@ -159,13 +159,13 @@ export default function EvScenarioCard({
         {scenario.source === 'detected' && (
           <span
             data-testid="ev-detect-note"
-            className="bg-emerald-400 border-2 border-black rounded-full px-3 py-1 text-[9px] md:text-[11px]"
+            className="bg-emerald-400 text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]"
           >
             {t('ev.prefilled')}
           </span>
         )}
       </div>
-      <p className="text-[10px] md:text-xs font-bold text-slate-500 normal-case mb-4 md:mb-6">
+      <p className="text-[10px] md:text-xs font-bold text-ink-3 normal-case mb-4 md:mb-6">
         {t('ev.blurb')}
       </p>
 
@@ -184,7 +184,7 @@ export default function EvScenarioCard({
             value={shownKwh}
             onChange={(e) => setKwhText(e.target.value)}
             placeholder={candidate ? candidate.kwhPerNight.toFixed(1) : t('ev.kwhPlaceholder')}
-            className="w-32 md:w-40 p-3 md:p-4 border-4 border-black rounded-xl md:rounded-2xl bg-yellow-50 text-lg md:text-2xl font-black text-black"
+            className="w-32 md:w-40 p-3 md:p-4 border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft text-lg md:text-2xl font-black text-ink"
           />
         </label>
         {/* --- The hour anchor: the question the shipped card never asked --- */}
@@ -196,7 +196,7 @@ export default function EvScenarioCard({
             data-testid="ev-charge-hour"
             value={shownHour === null ? '' : String(shownHour)}
             onChange={(e) => setHourPicked(e.target.value === '' ? null : Number(e.target.value))}
-            className="w-32 md:w-40 p-3 md:p-4 border-4 border-black rounded-xl md:rounded-2xl bg-yellow-50 text-lg md:text-2xl font-black text-black"
+            className="w-32 md:w-40 p-3 md:p-4 border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft text-lg md:text-2xl font-black text-ink"
           >
             <option value="" disabled>
               {t('ev.pickPlaceholder')}
@@ -208,7 +208,7 @@ export default function EvScenarioCard({
             ))}
           </select>
         </label>
-        <div className="text-[9px] md:text-[11px] font-bold text-slate-500 normal-case max-w-md">
+        <div className="text-[9px] md:text-[11px] font-bold text-ink-3 normal-case max-w-md">
           {scenario.source === 'detected' && candidate
             ? t('ev.fromData', { label: candidate.label, detail: candidate.detail })
             : dailyKwh > 0
@@ -226,7 +226,7 @@ export default function EvScenarioCard({
       {!scenario.ready ? (
         <div
           data-testid="ev-scenario-empty"
-          className="bg-slate-100 border-2 md:border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6 font-bold text-slate-600 text-xs md:text-sm normal-case"
+          className="bg-hover border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 font-bold text-ink-2 text-xs md:text-sm normal-case"
         >
           {t('ev.notReady')}
         </div>
@@ -238,12 +238,12 @@ export default function EvScenarioCard({
               <div
                 key={plan}
                 data-testid={`ev-plan-${plan}`}
-                className={`border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-5 ${
-                  plan === 'ULO' ? 'bg-emerald-400' : plan === 'TOU' ? 'bg-slate-100' : 'bg-white'
+                className={`border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-5 ${
+                  plan === 'ULO' ? 'bg-emerald-400 text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'
                 }`}
               >
                 <div className="text-[10px] md:text-xs font-black uppercase">{planLabel(plan)}</div>
-                <div className="text-[8px] md:text-[10px] font-bold text-slate-600">
+                <div className={`text-[8px] md:text-[10px] font-bold ${plan === 'ULO' ? 'text-accent-ink' : 'text-ink-2'}`}>
                   {scenario.prices[plan].rateCents.toFixed(1)}{t('ev.rateOvernight')}
                 </div>
                 <div
@@ -270,7 +270,7 @@ export default function EvScenarioCard({
 
           <div
             data-testid="ev-headline"
-            className="bg-yellow-400 border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
+            className="bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
           >
             {t('ev.headlineLead')}{' '}
             <span className="italic">${scenario.prices.ULO.perCharge.toFixed(2)}</span> {t('ev.vs')}{' '}
@@ -285,20 +285,20 @@ export default function EvScenarioCard({
           {cm ? (
             <div
               data-testid="ev-charge-move"
-              className="border-4 border-black rounded-xl md:rounded-2xl overflow-hidden bg-sky-100"
+              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-100"
             >
-              <div className="bg-black text-white px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
+              <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
                 <span className="flex items-center gap-2">
                   <Clock size={14} strokeWidth={4} />
                   {t('ev.stayAtTitle')} {cm.stayLabel} {t('ev.vsMoveTo')}
                 </span>
-                <span className="text-yellow-400">{t('ev.pricedOn')} {planLabel(plan)}</span>
+                <span className="text-accent-yellow">{t('ev.pricedOn')} {planLabel(plan)}</span>
               </div>
 
               {cm.alreadyOvernight && (
                 <div
                   data-testid="ev-already-overnight"
-                  className="bg-emerald-300 border-b-4 border-black px-4 py-2 text-[10px] md:text-xs font-black uppercase"
+                  className="bg-emerald-300 text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase"
                 >
                   {t('ev.alreadyOptimal')}
                 </div>
@@ -307,12 +307,12 @@ export default function EvScenarioCard({
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div
                   data-testid="ev-stay-side"
-                  className="p-3 md:p-4 border-b-4 md:border-b-0 md:border-r-4 border-black bg-white"
+                  className="p-3 md:p-4 border-b-4 md:border-b-0 md:border-r-4 border-edge bg-card"
                 >
                   <div className="text-[10px] md:text-xs font-black uppercase">
                     {t('ev.stayPut')} {planLabel(plan)}
                   </div>
-                  <div className="text-[8px] md:text-[10px] font-bold text-slate-500">
+                  <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
                     {cm.stayLabel} · {cm.stayRateCents.toFixed(1)}{t('ev.perKwh')}
                     {cm.stayBasis === 'worst-case' ? ` ${t('ev.upperBound')}` : ''}
                   </div>
@@ -325,7 +325,7 @@ export default function EvScenarioCard({
                       ${cm.stayCostPerMonth.toFixed(2)}
                     </span>
                   </div>
-                  <div className="text-[9px] md:text-[11px] font-bold text-slate-500">
+                  <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
                     ${cm.stayCostPerCharge.toFixed(2)} {t('ev.perChargeWord')}
                   </div>
                 </div>
@@ -333,7 +333,7 @@ export default function EvScenarioCard({
                   <div className="text-[10px] md:text-xs font-black uppercase">
                     {t('ev.moveUlo')}
                   </div>
-                  <div className="text-[8px] md:text-[10px] font-bold text-slate-500">
+                  <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
                     23:00–07:00 · {cm.moveRateCents.toFixed(1)}{t('ev.perKwh')}
                   </div>
                   <div
@@ -345,7 +345,7 @@ export default function EvScenarioCard({
                       ${cm.moveCostPerMonth.toFixed(2)}
                     </span>
                   </div>
-                  <div className="text-[9px] md:text-[11px] font-bold text-slate-500">
+                  <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
                     ${cm.moveCostPerCharge.toFixed(2)} {t('ev.perChargeWord')}
                   </div>
                 </div>
@@ -353,18 +353,18 @@ export default function EvScenarioCard({
 
               <div
                 data-testid="ev-move-result"
-                className="border-t-4 border-black px-3 md:px-4 py-3 bg-white"
+                className="border-t-4 border-edge px-3 md:px-4 py-3 bg-card"
               >
                 <div className="text-sm md:text-lg italic font-black leading-snug">
                   {moveSentence(cm, planLabel(plan))}
                 </div>
-                <div className="text-[9px] md:text-[11px] font-bold text-slate-600 mt-1">
+                <div className="text-[9px] md:text-[11px] font-bold text-ink-2 mt-1">
                   {t('ev.ofThat', {
                     shift: signedMoney(cm.shiftSavingPerMonth),
                     plan: signedMoney(cm.planSavingPerMonth),
                   })}
                 </div>
-                <div className="text-[9px] md:text-[11px] font-bold text-slate-500 normal-case mt-1">
+                <div className="text-[9px] md:text-[11px] font-bold text-ink-3 normal-case mt-1">
                   {cm.detail}
                 </div>
               </div>
@@ -372,7 +372,7 @@ export default function EvScenarioCard({
           ) : (
             <div
               data-testid="ev-charge-move-empty"
-              className="border-4 border-black rounded-xl md:rounded-2xl p-4 bg-sky-100 text-[10px] md:text-xs font-bold normal-case text-slate-700"
+              className="border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-100 text-[10px] md:text-xs font-bold normal-case text-accent-ink-2"
             >
               {t('ev.answerLead')} <span className="font-black">{t('ev.hourQuestion')}</span> {t('ev.priceAtHour')} {planLabel(plan)} {t('ev.againstMoving')}
             </div>
@@ -382,11 +382,11 @@ export default function EvScenarioCard({
           {pc && (
             <div
               data-testid="ev-plan-comparison"
-              className="border-4 border-black rounded-xl md:rounded-2xl overflow-hidden"
+              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden"
             >
-              <div className="bg-black text-white px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
+              <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
                 <span>{t('ev.wholeDataset')} {pc.evKwh.toFixed(0)} {t('ev.kwhMoved')}</span>
-                <span className="text-yellow-400">{pc.days} {t('ev.daysOfData', { count: pc.days })}</span>
+                <span className="text-accent-yellow">{pc.days} {t('ev.daysOfData', { count: pc.days })}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3">
                 {PLAN_ORDER.map((plan) => {
@@ -394,7 +394,7 @@ export default function EvScenarioCard({
                   return (
                     <div
                       key={plan}
-                      className="p-3 md:p-4 border-t-4 md:border-t-0 md:border-r-4 last:md:border-r-0 border-black bg-white"
+                      className="p-3 md:p-4 border-t-4 md:border-t-0 md:border-r-4 last:md:border-r-0 border-edge bg-card"
                     >
                       <div className="text-[10px] font-black uppercase">{planLabel(plan)}</div>
                       {/* The baseline is the WHOLE loaded file repriced on
@@ -404,7 +404,7 @@ export default function EvScenarioCard({
                           number never measured. The header above carries the
                           day count; this line names the basis. */}
                       <div
-                        className="text-[8px] md:text-[10px] font-bold text-slate-500"
+                        className="text-[8px] md:text-[10px] font-bold text-ink-3"
                         data-testid={`ev-plan-baseline-${plan}`}
                       >
                         {t('ev.baseline')} ${pc.baseline[plan].toFixed(2)}
@@ -414,7 +414,7 @@ export default function EvScenarioCard({
                       </div>
                       <div
                         className={`text-[9px] md:text-[11px] font-black ${
-                          delta < -0.005 ? 'text-emerald-600' : delta > 0.005 ? 'text-red-600' : 'text-slate-500'
+                          delta < -0.005 ? 'text-good' : delta > 0.005 ? 'text-bad' : 'text-ink-3'
                         }`}
                       >
                         {Math.abs(delta) < 0.005
@@ -432,7 +432,7 @@ export default function EvScenarioCard({
           {exposure && (
             <div
               data-testid="ev-peak-exposure"
-              className="bg-red-400 border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6"
+              className="bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
             >
               <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
                 <TriangleAlert size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
@@ -456,11 +456,11 @@ export default function EvScenarioCard({
           )}
 
           {/* --- Honest assumptions --- */}
-          <div data-testid="ev-assumptions" className="border-2 border-black rounded-xl p-3 md:p-4 bg-slate-50">
+          <div data-testid="ev-assumptions" className="border-2 border-edge rounded-xl p-3 md:p-4 bg-inset">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase mb-2">
               <Info size={12} strokeWidth={4} /> {t('ev.assumptionsTitle')}
             </div>
-            <ul className="space-y-1 text-[9px] md:text-[11px] font-bold text-slate-600 normal-case list-disc ml-4">
+            <ul className="space-y-1 text-[9px] md:text-[11px] font-bold text-ink-2 normal-case list-disc ml-4">
               {scenario.assumptions.map((a, i) => (
                 <li key={i}>{a}</li>
               ))}
@@ -473,7 +473,7 @@ export default function EvScenarioCard({
       {!scenario.ready && exposure && (
         <div
           data-testid="ev-peak-exposure"
-          className="mt-4 bg-red-400 border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6"
+          className="mt-4 bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
         >
           <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
             <Moon size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}

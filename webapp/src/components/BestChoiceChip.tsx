@@ -72,10 +72,10 @@ export default function BestChoiceChip({ comparison, userPlan, days, onJump, act
       onClick={jump}
       title={`${label} ${t('bestChip.clickHint')}`}
       aria-label={label}
-      className={`inline-flex min-h-11 items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black uppercase text-[10px] md:text-xs transition-all ${
+      className={`inline-flex min-h-11 items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs transition-all ${
         verdict.alreadyBest
-          ? 'bg-emerald-400 text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
-          : 'bg-yellow-400 text-black shadow-[3px_3px_0px_0px_rgba(37,99,235,1)]'
+          ? 'bg-emerald-400 text-accent-ink shadow-hard-3'
+          : 'bg-yellow-400 text-accent-ink shadow-hard-blue-3'
       } hover:translate-y-0.5 active:translate-y-1 active:shadow-none`}
     >
       <Award size={14} strokeWidth={4} aria-hidden="true" className="shrink-0" />

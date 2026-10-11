@@ -64,22 +64,22 @@ function Row({ row }: { row: SwitchPeriodRow }) {
       data-testid={`switch-row-${row.summary.startDate}`}
       data-plan={row.plan}
       data-origin={row.origin}
-      className="border-4 border-black rounded-xl md:rounded-2xl bg-white p-4 md:p-5"
+      className="border-4 border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="font-black uppercase text-sm md:text-base">{row.label}</span>
         <span className="flex flex-wrap items-center gap-2">
           <span
             data-testid="switch-plan-badge"
-            className={`px-2 md:px-3 py-0.5 rounded-full border-2 border-black text-[9px] md:text-[11px] font-black ${
-              unknown ? 'bg-slate-200' : 'bg-yellow-400'
+            className={`px-2 md:px-3 py-0.5 rounded-full border-2 border-edge text-[9px] md:text-[11px] font-black ${
+              unknown ? 'bg-track' : 'bg-yellow-400'
             }`}
           >
             {row.plan === 'unknown'
               ? t('track.planUnknown')
               : t('track.onPlan', { plan: planLabel(row.plan).toUpperCase() })}
           </span>
-          <span className="px-2 py-0.5 rounded border-2 border-black text-[8px] md:text-[9px] font-black bg-slate-100">
+          <span className="px-2 py-0.5 rounded border-2 border-edge text-[8px] md:text-[9px] font-black bg-hover">
             {row.origin === 'detected'
               ? t('track.fromBill')
               : row.origin === 'declared'
@@ -89,7 +89,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           {row.conflict && row.detection.plan !== 'unknown' && (
             <span
               data-testid="switch-conflict"
-              className="px-2 py-0.5 rounded border-2 border-red-600 text-[8px] md:text-[9px] font-black text-red-700"
+              className="px-2 py-0.5 rounded border-2 border-bad text-[8px] md:text-[9px] font-black text-bad"
             >
               {t('track.conflict')}
             </span>
@@ -100,7 +100,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
       {row.skipped !== null ? (
         <div
           data-testid="switch-skip"
-          className="mt-2 md:mt-3 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-slate-600 normal-case"
+          className="mt-2 md:mt-3 bg-hover border-2 border-edge rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-ink-2 normal-case"
         >
           {/* No money stated, no payment asserted: "You paid $0.00" on a bill
               that never quoted a charge is the accrual card's unbilled-row bug
@@ -111,8 +111,8 @@ function Row({ row }: { row: SwitchPeriodRow }) {
         </div>
       ) : (
         <div className="mt-2 md:mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-slate-400 text-[8px] uppercase">
+          <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+            <div className="text-ink-4 text-[8px] uppercase">
               {statesMoney ? t('track.youPaid') : t('track.noAmountInFile')}
             </div>
             <div className="italic text-base md:text-lg" data-testid="switch-actual">
@@ -125,12 +125,12 @@ function Row({ row }: { row: SwitchPeriodRow }) {
               <div
                 key={plan}
                 data-testid={`switch-modeled-${plan}`}
-                className={`border-2 border-black rounded-lg p-2 md:p-3 ${
-                  row.bestPlan === plan ? 'bg-emerald-50' : 'bg-white'
+                className={`border-2 border-edge rounded-lg p-2 md:p-3 ${
+                  row.bestPlan === plan ? 'bg-emerald-50' : 'bg-card'
                 }`}
               >
-                <div className="text-slate-400 text-[8px] uppercase">
-                  {planLabel(plan)} · <span className="text-blue-600">{t('track.modeled')}</span>
+                <div className="text-ink-4 text-[8px] uppercase">
+                  {planLabel(plan)} · <span className="text-info">{t('track.modeled')}</span>
                 </div>
                 <div className="italic text-base md:text-lg">{money(modeled[plan])}</div>
               </div>
@@ -138,18 +138,18 @@ function Row({ row }: { row: SwitchPeriodRow }) {
 
           {modeled && (
             <div
-              className={`border-2 border-black rounded-lg p-2 md:p-3 ${
-                (row.saving ?? 0) > 0 ? 'bg-emerald-100' : 'bg-slate-50'
+              className={`border-2 border-edge rounded-lg p-2 md:p-3 ${
+                (row.saving ?? 0) > 0 ? 'bg-emerald-100' : 'bg-inset'
               }`}
             >
-              <div className="text-slate-400 text-[8px] uppercase">
+              <div className="text-ink-4 text-[8px] uppercase">
                 {unknown ? t('track.saving') : t('track.bestSaving')}
               </div>
               <div className="italic text-base md:text-lg" data-testid="switch-saving">
                 {row.saving === null ? '—' : money(row.saving)}
               </div>
               {!unknown && row.bestPlan && (
-                <div className="text-[8px] text-slate-400 font-bold">{t('track.vs', { plan: planLabel(row.bestPlan) })}</div>
+                <div className="text-[8px] text-ink-4 font-bold">{t('track.vs', { plan: planLabel(row.bestPlan) })}</div>
               )}
             </div>
           )}
@@ -157,7 +157,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
       )}
 
       {unknown && modeled && (
-        <div className="mt-2 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
+        <div className="mt-2 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
           {t('track.unknownNote')}
         </div>
       )}
@@ -167,8 +167,8 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           data-testid="switch-model-check"
           className={`mt-2 inline-block px-2 py-1 rounded border-2 text-[9px] md:text-[10px] font-black ${
             Math.abs(row.modelDelta) <= MODEL_TRUST_TOLERANCE
-              ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
-              : 'border-amber-600 bg-amber-50 text-amber-800'
+              ? 'border-good bg-good-soft text-good'
+              : 'border-warn bg-warn-soft text-warn'
           }`}
         >
           {Math.abs(row.modelDelta) <= MODEL_TRUST_TOLERANCE
@@ -196,22 +196,22 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
   return (
     <section
       data-testid="switch-track-record"
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t('track.eyebrow')}
           </div>
           <h2 className="text-2xl md:text-4xl italic font-black">{t('track.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-md">
+        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
           {t('track.blurb')}
         </div>
       </div>
 
       {/* ---- the headline: audited, not predicted ------------------------ */}
-      <div className="mt-4 md:mt-6 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6">
+      <div className="mt-4 md:mt-6 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6">
         {overpaid === null ? (
           <div data-testid="switch-headline-empty" className="text-[11px] md:text-sm font-black">
             {t('track.headlineEmpty', {
@@ -222,7 +222,7 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
           </div>
         ) : (
           <>
-            <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-yellow-400">
+            <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-accent-yellow">
               {overpaid > 0
                 ? byPlan.length === 1 && byPlan[0]
                   ? t('track.overpaidOn', { plan: planLabel(byPlan[0].plan) })
@@ -232,7 +232,7 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
             <div
               data-testid="switch-overpaid-total"
               className={`text-4xl md:text-6xl italic font-black ${
-                overpaid > 0 ? 'text-yellow-400' : 'text-emerald-400'
+                overpaid > 0 ? 'text-accent-yellow' : 'text-accent-emerald'
               }`}
             >
               {/* positive = over-paid (what it cost you); negative = the
@@ -248,7 +248,7 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
               {byPlan.map((g) => (
                 <li key={g.plan} className="text-[10px] md:text-xs font-black">
                   {planLabel(g.plan)}: {t('track.byPlanLine', { count: g.periods, periods: g.periods })}{' '}
-                  <span className={g.overpaid > 0 ? 'text-yellow-400' : 'text-emerald-400'}>
+                  <span className={g.overpaid > 0 ? 'text-accent-yellow' : 'text-accent-emerald'}>
                     {money(g.overpaid > 0 ? g.overpaid : -g.overpaid)}
                   </span>{' '}
                   {g.overpaid > 0 ? t('track.overpaid') : t('track.saved')}
@@ -266,11 +266,11 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
             <div
               key={c.summary.start}
               data-testid={`switch-callout-${c.summary.startDate}`}
-              className="border-2 border-black rounded-lg bg-yellow-50 p-3"
+              className="border-2 border-edge rounded-lg bg-accent-soft p-3"
             >
-              <div className="text-[8px] uppercase text-slate-400">{t('track.biggestMiss', { label: c.label })}</div>
+              <div className="text-[8px] uppercase text-ink-4">{t('track.biggestMiss', { label: c.label })}</div>
               <div className="italic font-black text-base md:text-xl">{money(c.saving ?? 0)}</div>
-              <div className="text-[9px] font-bold normal-case text-slate-600">
+              <div className="text-[9px] font-bold normal-case text-ink-2">
                 {c.bestPlan
                   ? t('track.wouldHaveBeen', {
                       amount: money(c.modeled?.[c.bestPlan] ?? 0),
@@ -291,7 +291,7 @@ export function SwitchTrackRecord({ summaries, allData }: Props) {
       </div>
 
       {/* ---- what the numbers mean -------------------------------------- */}
-      <div className="mt-4 md:mt-6 border-t-4 border-black pt-3 md:pt-4 text-[10px] md:text-xs font-bold text-slate-500 normal-case space-y-1">
+      <div className="mt-4 md:mt-6 border-t-4 border-edge pt-3 md:pt-4 text-[10px] md:text-xs font-bold text-ink-3 normal-case space-y-1">
         <p>
           <strong className="font-black">{t('track.legendModeledWord')}</strong>{' '}
           {t('track.legendModeledB')}

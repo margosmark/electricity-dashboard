@@ -59,16 +59,16 @@ export default function MultiFileMerge({
       aria-modal="true"
       aria-label={t('merge.reviewAria')}
       data-testid="merge-dialog"
-      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
+      className="fixed inset-0 bg-inv/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
     >
       <div
         data-testid="merge-review"
-        className="my-auto bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black max-h-[90vh] overflow-y-auto"
+        className="my-auto bg-card p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-edge shadow-hard-10 md:shadow-hard-20 max-w-2xl w-full text-ink max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-xl md:text-4xl uppercase tracking-tighter mb-1 md:mb-2 flex items-center gap-2 md:gap-3 font-black">
           <Files size={22} className="md:w-10 md:h-10" strokeWidth={4} /> {t('merge.title', { count: files.length })}
         </h2>
-        <p className="text-[10px] md:text-sm font-bold text-slate-600 mb-4 md:mb-6">
+        <p className="text-[10px] md:text-sm font-bold text-ink-2 mb-4 md:mb-6">
           {t('merge.rowsMatched')}
         </p>
 
@@ -77,20 +77,20 @@ export default function MultiFileMerge({
             <div
               key={`${file.name}-${i}`}
               data-testid={`merge-file-${i}`}
-              className="border-2 md:border-4 border-black rounded-xl md:rounded-2xl p-3 md:p-4 bg-slate-50"
+              className="border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 bg-inset"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-black uppercase text-xs md:text-base break-all">
                   {file.name}
                 </span>
-                <span className="text-[9px] md:text-[11px] font-black text-slate-600">
+                <span className="text-[9px] md:text-[11px] font-black text-ink-2">
                   {readingsFor(file).length} {t('merge.readings', { count: readingsFor(file).length })}
                   {file.groups.length > 1 ? t('merge.metersSuffix', { count: file.groups.length }) : ''}
                 </span>
               </div>
 
               {file.groups.length === 0 && (
-                <div className="text-[9px] md:text-[11px] font-black text-red-600 mt-1">
+                <div className="text-[9px] md:text-[11px] font-black text-bad mt-1">
                   {t('merge.noReadings')}
                 </div>
               )}
@@ -104,7 +104,7 @@ export default function MultiFileMerge({
                     <label
                       key={g.id || j}
                       data-testid={`merge-meter-${i}-${j}`}
-                      className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
+                      className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-edge rounded-lg px-2 py-1.5 bg-card cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -117,7 +117,7 @@ export default function MultiFileMerge({
                   ))}
                   <label
                     data-testid={`merge-combine-${i}`}
-                    className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-black rounded-lg px-2 py-1.5 bg-white cursor-pointer"
+                    className="min-h-11 flex items-center gap-2 text-sm md:text-xs font-bold border-2 border-edge rounded-lg px-2 py-1.5 bg-card cursor-pointer"
                   >
                     <input
                       type="radio"
@@ -135,7 +135,7 @@ export default function MultiFileMerge({
 
         <div
           data-testid="merge-summary"
-          className="mt-4 md:mt-6 bg-yellow-400 border-4 border-black rounded-xl md:rounded-2xl p-3 md:p-5"
+          className="mt-4 md:mt-6 bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
         >
           <div className="flex flex-wrap gap-4 md:gap-8">
             <div>
@@ -163,7 +163,7 @@ export default function MultiFileMerge({
               .join(' · ')}
           </div>
           {awaitingMeterChoice && (
-            <div data-testid="merge-awaiting-choice" className="text-[9px] md:text-[11px] font-black text-red-700 mt-1">
+            <div data-testid="merge-awaiting-choice" className="text-[9px] md:text-[11px] font-black text-bad mt-1">
               {t('merge.pickMeter')}
             </div>
           )}
@@ -174,14 +174,14 @@ export default function MultiFileMerge({
             data-testid="merge-confirm"
             onClick={() => onConfirm(merged.readings)}
             disabled={!canConfirm}
-            className="flex-1 py-3 md:py-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+            className="flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
           >
             <CheckCircle2 size={16} strokeWidth={4} /> {t('merge.importBtn')} {merged.mergedRows.toLocaleString()} {t('merge.rows', { count: merged.mergedRows })}
           </button>
           <button
             data-testid="merge-cancel"
             onClick={onCancel}
-            className="py-3 md:py-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-slate-100"
+            className="py-3 md:py-4 bg-card text-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-hover"
           >
             <X size={16} strokeWidth={4} /> {t('common.cancel')}
           </button>

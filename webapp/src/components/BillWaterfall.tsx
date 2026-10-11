@@ -30,7 +30,7 @@ const KIND_COLOR: Record<WaterfallKind, string> = {
   add: '#8B5CF6',
   credit: '#059669',
   subtotal: '#FACC15',
-  total: '#111111',
+  total: 'var(--data-total)',
 };
 
 const KEY_COLOR: Record<string, string> = {
@@ -43,7 +43,7 @@ const KEY_COLOR: Record<string, string> = {
   gap: '#FB923C',
   drift: '#FB923C',
   subtotal: '#FACC15',
-  payable: '#111111',
+  payable: 'var(--data-total)',
 };
 
 const colorOf = (step: WaterfallStep) => KEY_COLOR[step.key] ?? KIND_COLOR[step.kind];
@@ -105,9 +105,9 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
   return (
     <div
       data-testid="money-waterfall"
-      className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-ink font-black uppercase"
     >
-      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
         {t('wf.eyebrow')}
       </div>
       <h3 className="text-lg md:text-2xl italic font-black">{t('wf.title')}</h3>
@@ -121,8 +121,8 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
               aria-pressed={s.startDate === (summary?.startDate ?? '')}
               data-testid={`money-waterfall-pick-${s.startDate}`}
               onClick={() => setSelected(s.startDate)}
-              className={`min-h-[44px] px-3 border-2 border-black rounded-lg text-[10px] uppercase font-black ${
-                s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400' : 'bg-slate-50'
+              className={`min-h-[44px] px-3 border-2 border-edge rounded-lg text-[10px] uppercase font-black ${
+                s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400' : 'bg-inset'
               }`}
             >
               {s.startDate}
@@ -134,18 +134,18 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
       {!waterfall.ready ? (
         <div
           data-testid="money-waterfall-empty"
-          className="mt-4 bg-slate-50 border-2 border-dashed border-black rounded-xl p-4 text-[11px] font-bold normal-case text-slate-600"
+          className="mt-4 bg-inset border-2 border-dashed border-edge rounded-xl p-4 text-[11px] font-bold normal-case text-ink-2"
         >
           {waterfall.reason}
         </div>
       ) : (
         <>
           <div className="mt-3 flex flex-wrap items-baseline gap-x-4 text-[10px] md:text-xs font-black">
-            <span className="text-slate-500 uppercase">{t('wf.amountDue')}</span>
+            <span className="text-ink-3 uppercase">{t('wf.amountDue')}</span>
             <span className="text-2xl md:text-3xl italic" data-testid="money-waterfall-total">
               {money(waterfall.amountDue)}
             </span>
-            <span className="text-slate-500 font-bold normal-case">
+            <span className="text-ink-3 font-bold normal-case">
               {t('wf.daysNote', { days: summary ? summary.days : 0 })}
             </span>
           </div>
@@ -165,19 +165,19 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                     textAnchor="end"
                     height={60}
                     interval={0}
-                    tick={{ fontSize: 9, fontWeight: 900 }}
-                    stroke="#000"
+                    tick={{ fontSize: 9, fontWeight: 900, fill: 'var(--ink-3)' }}
+                    stroke="var(--axis)"
                     strokeWidth={2}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fontWeight: 900 }}
-                    stroke="#000"
+                    tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--ink-3)' }}
+                    stroke="var(--axis)"
                     strokeWidth={2}
                     width={56}
                     tickFormatter={(v: number | string) => `$${Math.round(Number(v))}`}
                   />
                   <Tooltip
-                    cursor={{ fill: '#000', opacity: 0.05 }}
+                    cursor={{ fill: 'var(--ink)', opacity: 0.05 }}
                     content={({ active, payload, label }) => {
                       if (!active || !payload || payload.length === 0) return null;
                       const r = (payload.find((p) => p.dataKey === 'value') ?? payload[0])
@@ -186,14 +186,14 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                       return (
                         <div
                           data-testid="money-waterfall-tooltip"
-                          className="border-4 border-black bg-white p-3 shadow-[8px_8px_0px_0px_#000] text-black max-w-[260px]"
+                          className="border-4 border-edge bg-card p-3 shadow-hard-8 text-ink max-w-[260px]"
                           style={{ pointerEvents: 'none' }}
                         >
-                          <div className="text-xs font-black uppercase border-b-2 border-black pb-1 mb-1">
+                          <div className="text-xs font-black uppercase border-b-2 border-edge pb-1 mb-1">
                             {String(label ?? r.label)}
                           </div>
                           <div className="text-[11px] font-black">{money(r.value)}</div>
-                          <div className="text-[10px] font-bold text-slate-500 normal-case">
+                          <div className="text-[10px] font-bold text-ink-3 normal-case">
                             {r.detail}
                           </div>
                           <div className="text-[10px] font-black mt-1">
@@ -204,6 +204,9 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                     }}
                   />
                   <Bar dataKey="base" stackId="w" fill="transparent" stroke="none" isAnimationActive={false} />
+                  {/* The seam between stacked steps. `var(--card)` keeps the
+                      gap reading as a gap in both themes; the border token would
+                      turn it into a light rule across the data on dark. */}
                   <Bar dataKey="value" stackId="w" stroke="#000" strokeWidth={2}>
                     {rows.map((r) => (
                       <Cell
@@ -220,16 +223,16 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
           {/* The same steps as text: the chart is a picture of this list. */}
           <ol className="mt-3 space-y-1 text-[10px] md:text-[11px] font-bold normal-case" data-testid="money-waterfall-steps">
             {waterfall.steps.map((s) => (
-              <li key={s.key} className="flex flex-wrap items-baseline justify-between gap-x-3 border-b-2 border-black/10 pb-1">
+              <li key={s.key} className="flex flex-wrap items-baseline justify-between gap-x-3 border-b-2 border-edge/10 pb-1">
                 <span className="flex items-center gap-2 uppercase font-black">
                   <span
                     aria-hidden
-                    className="inline-block w-3 h-3 border-2 border-black shrink-0"
+                    className="inline-block w-3 h-3 border-2 border-edge shrink-0"
                     style={{ background: colorOf(s) }}
                   />
                   {s.label}
                 </span>
-                <span className="tabular-nums text-slate-600">{money(s.value)}</span>
+                <span className="tabular-nums text-ink-2">{money(s.value)}</span>
                 <span className="tabular-nums font-black">→ {money(s.running)}</span>
               </li>
             ))}

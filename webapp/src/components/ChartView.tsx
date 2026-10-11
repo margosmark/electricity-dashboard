@@ -64,16 +64,16 @@ function ChartSkeleton({ bars }: { bars?: number }) {
       aria-live="polite"
       aria-busy="true"
       aria-label={t('chart.drawingAria')}
-      className="absolute inset-0 z-20 bg-white px-4 md:px-8 pt-4 pb-6 flex flex-col"
+      className="absolute inset-0 z-20 bg-card px-4 md:px-8 pt-4 pb-6 flex flex-col"
     >
-      <div className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 mb-3">
+      <div className="text-[8px] md:text-[10px] font-black uppercase text-ink-4 mb-3">
         {t('chart.drawing', { count: bars ?? 0, bars: bars ?? 0 })}
       </div>
-      <div className="flex-1 flex items-end gap-[2px] md:gap-2 border-b-4 border-black min-h-0">
+      <div className="flex-1 flex items-end gap-[2px] md:gap-2 border-b-4 border-edge min-h-0">
         {Array.from({ length: columns }).map((_, i) => (
           <div
             key={i}
-            className="skeleton-bar flex-1 border-2 border-black/10 rounded-t-sm"
+            className="skeleton-bar flex-1 border-2 border-edge/10 rounded-t-sm"
             style={{ height: `${28 + ((i * 37) % 62)}%` }}
           />
         ))}
@@ -133,20 +133,20 @@ export default function ChartView({
   return (
     <div className="space-y-6 md:space-y-10" data-testid="chart-view">
       {/* Main Graph */}
-      <div className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden relative z-10 text-black font-black uppercase">
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-black font-black">
+      <div className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-hard-8 md:shadow-hard-16 border-4 border-edge overflow-hidden relative z-10 text-ink font-black uppercase">
+        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-ink font-black">
           <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
-            {zoomLevel !== 'monthly' && <button type="button" aria-label={t('chart.backAria')} onClick={goBack} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-2 md:p-4 bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white active:bg-black active:text-white transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
+            {zoomLevel !== 'monthly' && <button type="button" aria-label={t('chart.backAria')} onClick={goBack} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-2 md:p-4 bg-card border-2 md:border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-2 md:shadow-hard-4 hover:bg-inv hover:text-inv-ink active:bg-inv active:text-inv-ink transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
             <div className="flex items-center gap-2 md:gap-4">
-              <button type="button" aria-label={t('chart.prevAria')} onClick={() => navigatePeriod('prev')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label={t('chart.prevAria')} onClick={() => navigatePeriod('prev')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
               <h2 className="min-w-0 flex-1 text-xl sm:text-3xl md:text-6xl tracking-tighter italic truncate">{zoomTarget || (zoomLevel === 'monthly' ? t('chart.monthlyOverview') : t(`chart.zoom.${zoomLevel}`))}</h2>
-              <button type="button" aria-label={t('chart.nextAria')} onClick={() => navigatePeriod('next')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-black rounded-lg md:rounded-xl hover:bg-yellow-400 active:bg-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
+              <button type="button" aria-label={t('chart.nextAria')} onClick={() => navigatePeriod('next')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
             </div>
           </div>
-          <div className="no-print flex bg-slate-100 p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-black text-black" role="group" aria-label={t('chart.zoomAria')}>
-             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-black text-white' : 'text-slate-500'}`}>{t(`chart.zoom.${l}`)}</button>)}
+          <div className="no-print flex bg-hover p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-edge text-ink" role="group" aria-label={t('chart.zoomAria')}>
+             {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-inv text-inv-ink' : 'text-ink-2'}`}>{t(`chart.zoom.${l}`)}</button>)}
           </div>
-          <div className="text-center lg:text-right text-black font-black">
+          <div className="text-center lg:text-right text-ink font-black">
              <div className="text-[8px] md:text-[10px]">{t('chart.selectionCost', { plan: userPlan })}</div>
               <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">{fmtMoney(selectionCost)}</div>
           </div>
@@ -160,10 +160,10 @@ export default function ChartView({
               data-testid="chart-empty-window"
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6"
             >
-              <div className="text-lg md:text-2xl font-black uppercase text-black">
+              <div className="text-lg md:text-2xl font-black uppercase text-ink">
                 {t('chart.emptyTitle')}
               </div>
-              <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-sm">
+              <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-sm">
                 {t('chart.emptyBody')}
               </div>
             </div>
@@ -190,7 +190,7 @@ export default function ChartView({
               <span
                 key={`chip-${s.season}-${i}`}
                 data-testid="season-chip"
-                className={`px-2 md:px-3 py-1 rounded-full border-2 border-black text-[8px] md:text-[10px] font-black ${s.season === 'winter' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}
+                className={`px-2 md:px-3 py-1 rounded-full border-2 border-edge text-[8px] md:text-[10px] font-black ${s.season === 'winter' ? 'bg-info-soft text-info' : 'bg-warn-soft text-warn'}`}
               >
                 {s.season === 'winter' ? '❄' : '☀'} {t(`season.${s.season}`)} · {t(`season.range.${s.season}`)}
                 {segments.length > 1 ? t('chart.barsSuffix', { bars: s.bars, count: s.bars }) : ''}

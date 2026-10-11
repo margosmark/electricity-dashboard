@@ -102,26 +102,43 @@ export default function UsagePanel({
         spanLabel={spanLabel}
       />
 
-      <div className="bg-yellow-400 p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black">
-        <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-black font-black uppercase">
+      {/* Spec §3.5, with the polarity carried by an explicit data attribute:
+          LIGHT keeps the yellow flood (nothing else on that view is yellow);
+          DARK de-escalates to `bg-inset` + accent border + accent heading,
+          because the banner above owns the yellow-flood monopoly. The ⚠ icon
+          and the title text carry the flag in both themes, so colour is never
+          the only channel (§2 #9) — which is also why the light flood is safe
+          to keep while the dark heading goes accent-on-inset at 9.55:1 (the
+          same heading in light would be 1.46:1 on the flood, hence the split). */}
+      {/* Spec §3.5, expressed as tokens rather than `dark:` variants — the
+          whole point of the token layer is that dark needs ZERO per-site
+          variants. LIGHT keeps the yellow flood (nothing else on this view is
+          yellow); DARK de-escalates to an inset surface with an accent border
+          and accent heading, because the best-choice banner owns the
+          yellow-flood monopoly and two maximum-loudness surfaces would
+          destroy that hierarchy. Measured: ink-on-flood 13.7:1 light,
+          accent-on-inset 9.55:1 dark. The ⚠ icon and the title text carry the
+          flag in both themes, so colour is never the only channel (§2 #9). */}
+      <div className="bg-anomaly-slab border-anomaly-slab-edge text-ink p-6 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 md:border-8 shadow-hard-8 md:shadow-hard-16">
+        <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8 text-anomaly-slab-ink font-black uppercase">
           <AlertTriangle size={24} className="md:w-10 md:h-10" strokeWidth={3} />
           <h3 className="text-2xl md:text-4xl">{t('anomalies.title')}</h3>
         </div>
         {anomalies.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 font-black text-black">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 font-black text-ink">
             {anomalies.map((anom, i) => (
-              <div key={i} className="bg-white p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-black font-black uppercase">
-                <div className="text-red-600 text-[8px] md:text-[10px] mb-1 md:mb-2 font-black">{fmtWeekdayDate(anom.date)}</div>
-                <div className="text-2xl md:text-3xl italic font-black text-black">{fmtKwh(anom.usage)}</div>
-                <div className="text-[8px] md:text-[10px] text-slate-500 mt-1 md:mt-2 font-black">{t('anomalies.vsAverage', { pct: fmtPercent(anom.diffPct) })}</div>
+              <div key={i} className="bg-card p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge text-ink font-black uppercase">
+                <div className="text-bad text-[8px] md:text-[10px] mb-1 md:mb-2 font-black">{fmtWeekdayDate(anom.date)}</div>
+                <div className="text-2xl md:text-3xl italic font-black text-ink">{fmtKwh(anom.usage)}</div>
+                <div className="text-[8px] md:text-[10px] text-ink-3 mt-1 md:mt-2 font-black">{t('anomalies.vsAverage', { pct: fmtPercent(anom.diffPct) })}</div>
                 {/* The SHAPE of the day, not just the size of the bill. */}
                 <div
                   data-testid={`anomaly-signature-${i}`}
                   data-signature={anom.signature.id}
-                  className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-black"
+                  className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-edge"
                 >
                   <div className="text-[8px] md:text-[10px] font-black">{anom.signature.label}</div>
-                  <div className="text-[8px] font-bold text-slate-500 normal-case mt-0.5">
+                  <div className="text-[8px] font-bold text-ink-3 normal-case mt-0.5">
                     {anom.signature.detail}
                   </div>
                 </div>
@@ -133,7 +150,7 @@ export default function UsagePanel({
                     data-testid={`anomaly-context-${i}`}
                     data-kind={anom.context.kind}
                     data-temp={anom.context.tempC === null ? '' : String(Math.round(anom.context.tempC))}
-                    className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-black text-[9px] md:text-[11px] font-black"
+                    className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-edge text-[9px] md:text-[11px] font-black"
                   >
                     {anom.context.kind === 'mild' && anom.context.tempC !== null
                       ? `${Math.round(anom.context.tempC)}${t('anomalies.tempSuffix')}${anom.context.text}`
@@ -144,7 +161,7 @@ export default function UsagePanel({
             ))}
           </div>
         ) : (
-          <div className="bg-white p-6 md:p-8 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-lg md:text-xl text-black">
+          <div className="bg-card p-6 md:p-8 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black text-lg md:text-xl text-ink">
             {t('anomalies.none')}
           </div>
         )}

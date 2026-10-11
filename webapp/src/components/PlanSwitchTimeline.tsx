@@ -25,7 +25,7 @@ import { useMemo } from 'react';
 import { GitBranch } from 'lucide-react';
 import { buildSwitchReport } from '@/lib/planTimeline';
 import { buildSwitchTimeline, type SwitchTimeline } from '@/lib/switchTimeline';
-import { PLAN_BAND_STYLE, UNKNOWN_PLAN_FILL } from '@/lib/planStyles';
+import { PLAN_BAND_STYLE } from '@/lib/planStyles';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import type { ProcessedPoint, UsageSummary } from '@/lib/energy';
 // Wave U — the timeline's captions translate; the segment PLAN labels stay
@@ -69,12 +69,12 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
       <section
         data-testid="plan-switch-timeline"
         aria-labelledby="switch-timeline-heading"
-        className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-black text-black"
+        className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-edge text-ink"
       >
         <h3 id="switch-timeline-heading" className="text-xl md:text-3xl italic font-black uppercase mb-2">
           {t('switchTimeline.title')}
         </h3>
-        <p data-testid="switch-timeline-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case">
+        <p data-testid="switch-timeline-empty" className="text-[11px] md:text-sm font-bold text-ink-2 normal-case">
           {model.note}
         </p>
       </section>
@@ -87,17 +87,17 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
       aria-labelledby="switch-timeline-heading"
       data-switches={model.switches}
       data-periods={model.segments.length}
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink"
     >
       <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6">
-        <span aria-hidden className="bg-black text-yellow-400 p-2 md:p-3 rounded-xl border-2 md:border-4 border-black">
+        <span aria-hidden className="bg-inv text-accent-yellow p-2 md:p-3 rounded-xl border-2 md:border-4 border-edge">
           <GitBranch size={22} strokeWidth={4} />
         </span>
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
+          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-ink-4 font-black uppercase">
             {t('switchTimeline.eyebrow')}
           </div>
-          <h3 id="switch-timeline-heading" className="text-xl md:text-3xl italic font-black uppercase text-black">
+          <h3 id="switch-timeline-heading" className="text-xl md:text-3xl italic font-black uppercase text-ink">
             {t('switchTimeline.title')}
           </h3>
         </div>
@@ -107,7 +107,7 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
         <div className="min-w-[560px]">
           {/* The bar: flex shares, so a 30-day period is genuinely wider than
               a 29-day one and the axis is real time, not equal blocks. */}
-          <div className="flex h-14 md:h-16 border-4 border-black rounded-xl overflow-hidden">
+          <div className="flex h-14 md:h-16 border-4 border-edge rounded-xl overflow-hidden">
             {model.segments.map((segment) => {
               const style = segment.plan === 'unknown' ? null : PLAN_BAND_STYLE[segment.plan];
               const known = style !== null;
@@ -133,9 +133,9 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
                     flexBasis: 0,
                     background: style
                       ? style!.fill
-                      : `repeating-linear-gradient(45deg, ${UNKNOWN_PLAN_FILL} 0 8px, #cbd5e1 8px 16px)`,
+                      : `repeating-linear-gradient(45deg, var(--hatch-a) 0 8px, var(--hatch-b) 8px 16px)`,
                   }}
-                  className="relative min-w-0 border-r-2 border-black last:border-r-0 flex items-center justify-center"
+                  className="relative min-w-0 border-r-2 border-edge last:border-r-0 flex items-center justify-center"
                 >
                   <span className="text-[9px] md:text-[11px] font-black uppercase truncate px-1">
                     {style ? style.label : '?'}
@@ -159,15 +159,15 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
                   {segment.isSwitch && (
                     <span
                       data-testid={`switch-tick-${segment.start}`}
-                      className="absolute left-0 top-0 -translate-x-1/2 block w-0.5 h-4 bg-black"
+                      className="absolute left-0 top-0 -translate-x-1/2 block w-0.5 h-4 bg-inv"
                     />
                   )}
                   {segment.isSwitch && segment.saving !== null && (
                     <span
                       data-testid={`switch-bubble-${segment.start}`}
                       data-counted={String(segment.counted)}
-                      className={`absolute left-0 top-3 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded-lg border-2 border-black text-[8px] md:text-[10px] font-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
-                        segment.counted ? 'bg-yellow-400 text-black' : 'bg-slate-200 text-slate-600'
+                      className={`absolute left-0 top-3 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded-lg border-2 border-edge text-[8px] md:text-[10px] font-black shadow-hard-2 ${
+                        segment.counted ? 'bg-yellow-400 text-accent-ink' : 'bg-track text-ink-2'
                       }`}
                     >
                       {money(segment.saving)}
@@ -186,23 +186,32 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
         {(['TOU', 'Tiered', 'ULO'] as const).map((plan) => (
           <span
             key={plan}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border-2 border-black text-[9px] md:text-[10px] font-black uppercase"
-            style={{ background: PLAN_BAND_STYLE[plan].fill }}
+            /* The legend chip's job is to SHOW the colour, so the swatch is
+               full strength; only the chip's own wash is dimmed, and it gets
+               its own alpha via color-mix so the label keeps full contrast
+               (PLAN_BAND_STYLE's fill is the full tint — see lib/planStyles). */
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border-2 border-edge text-[9px] md:text-[10px] font-black uppercase"
+            style={{
+              background: `color-mix(in srgb, ${PLAN_BAND_STYLE[plan].fill} 50%, transparent)`,
+            }}
           >
-            <span className="w-3 h-3 border-2 border-black" style={{ background: PLAN_BAND_STYLE[plan].fill }} />
+            <span
+              className="w-3 h-3 border-2 border-edge"
+              style={{ background: PLAN_BAND_STYLE[plan].fill }}
+            />
             {PLAN_BAND_STYLE[plan].label}
           </span>
         ))}
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border-2 border-black text-[9px] md:text-[10px] font-black uppercase bg-slate-100">
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border-2 border-edge text-[9px] md:text-[10px] font-black uppercase bg-hover">
           <span
-            className="w-3 h-3 border-2 border-black"
-            style={{ background: `repeating-linear-gradient(45deg, ${UNKNOWN_PLAN_FILL} 0 4px, #cbd5e1 4px 8px)` }}
+            className="w-3 h-3 border-2 border-edge"
+            style={{ background: 'repeating-linear-gradient(45deg, var(--hatch-a) 0 4px, var(--hatch-b) 4px 8px)' }}
           />
           {t('switchTimeline.noBill')}
         </span>
       </div>
 
-      <p data-testid="switch-timeline-note" className="text-[10px] md:text-xs font-bold text-slate-600 normal-case">
+      <p data-testid="switch-timeline-note" className="text-[10px] md:text-xs font-bold text-ink-2 normal-case">
         {model.note} {t('switchTimeline.footnote')}
       </p>
     </section>

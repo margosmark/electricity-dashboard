@@ -30,8 +30,8 @@ type Props = {
 
 const TOGGLE_CLASS =
   'min-h-11 min-w-11 inline-flex items-center justify-center ' +
-  'p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl ' +
-  'shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(124,58,237,1)] transition-all';
+  'p-3 md:p-4 bg-card text-ink border-4 border-edge rounded-xl md:rounded-2xl ' +
+  'shadow-hard-violet-4 hover:translate-y-1 active:translate-y-0 active:shadow-hard-violet-2 transition-all';
 
 export function BackupControls({ onExport, onImport, disabled = false }: Props) {
   const { t } = useTranslation();
@@ -138,7 +138,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
           data-testid="backup-drawer"
           role="dialog"
           aria-label={t("backup.aria")}
-          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[340px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
+          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[340px] max-w-[calc(100vw-2rem)] bg-card border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 p-4 md:p-5 text-ink font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">{t('backup.drawerTitle')}</div>
@@ -146,13 +146,13 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               type="button"
               aria-label={t("backup.closeAria")}
               onClick={() => setOpen(false)}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-hover active:bg-track rounded"
             >
               <X size={16} strokeWidth={4} />
             </button>
           </div>
 
-          <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-500 font-black mb-4">
+          <p className="text-[9px] md:text-[10px] leading-relaxed text-ink-3 font-black mb-4">
             {t('backup.everything')}
           </p>
 
@@ -162,7 +162,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               data-testid="backup-export"
               onClick={handleExport}
               disabled={disabled}
-              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-yellow-400 text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge bg-yellow-400 text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
               <Download size={14} strokeWidth={4} /> {t('backup.exportJson')}
             </button>
@@ -172,7 +172,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               data-testid="backup-import"
               onClick={() => inputRef.current?.click()}
               disabled={disabled || busy}
-              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black bg-white text-[11px] shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge bg-card text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
               <Upload size={14} strokeWidth={4} /> {t('backup.importJson')}
             </button>
@@ -190,12 +190,12 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
           </div>
 
           {status && (
-            <div data-testid="backup-status" className="mt-3 text-[9px] md:text-[10px] text-emerald-700 break-words">
+            <div data-testid="backup-status" className="mt-3 text-[9px] md:text-[10px] text-good break-words">
               {status}
             </div>
           )}
           {error && (
-            <div data-testid="backup-error" role="alert" className="mt-3 text-[9px] md:text-[10px] text-red-600 break-words normal-case font-bold">
+            <div data-testid="backup-error" role="alert" className="mt-3 text-[9px] md:text-[10px] text-bad break-words normal-case font-bold">
               {error}
             </div>
           )}

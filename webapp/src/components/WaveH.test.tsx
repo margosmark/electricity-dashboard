@@ -439,7 +439,35 @@ describe('Wave H 3b — Lighthouse accessibility findings', () => {
     return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
   };
 
-  it('paints the "TO" window separator at ≥4.5:1 on white', async () => {
+  /**
+   * WCAG 2.1 contrast between two hex colours. `1.05 / (L + 0.05)` — the form
+   * the old separator test used — is this with a hardcoded white background
+   * (L=1.0), which is exactly the assumption dark mode breaks.
+   */
+  const contrast = (a: string, b: string): number => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  /**
+   * Resolve a semantic token to its painted hex for a theme, straight from
+   * globals.css — the test reads the SAME declarations the browser does, so
+   * it cannot drift from the token layer the way a hardcoded hex could.
+   * Spec §2 #3: the old test hardcoded `1.05 / (L + 0.05)`, i.e. it assumed a
+   * white background for every theme. The separator is `text-ink-2` on the
+   * toolbar's card, so the background is `--card` and it differs by theme.
+   */
+  const tokenHex = (token: string, theme: 'light' | 'dark'): string => {
+    const css = fs.readFileSync(path.join(WEBAPP, 'src/app/globals.css'), 'utf8');
+    const block =
+      theme === 'dark'
+        ? css.slice(css.indexOf("[data-theme='dark']"))
+        : css.slice(css.indexOf(':root {'), css.indexOf("[data-theme='dark']"));
+    const m = block.match(new RegExp(`--${token}:\\s*(#[0-9a-fA-F]{6})`));
+    return m?.[1] ?? '';
+  };
+
+  it('paints the "TO" window separator at ≥4.5:1 in BOTH themes', async () => {
     stubFetch();
     await renderLoaded();
 
@@ -448,10 +476,18 @@ describe('Wave H 3b — Lighthouse accessibility findings', () => {
     // opacity-40 black on white is #999999 = 2.84:1 — the colour has to carry
     // the ratio itself, not an opacity fraction of black.
     expect(separator.className).not.toMatch(/opacity-/);
-    const hex = separator.className.match(/text-\[(#[0-9a-fA-F]{6})\]/)?.[1];
-    expect(hex, 'the separator names its colour so the ratio is measurable').toBeTruthy();
-    const ratio = 1.05 / (luminance(hex as string) + 0.05);
-    expect(ratio).toBeGreaterThanOrEqual(4.5);
+    // The separator is semantic now, so the gate checks the TOKEN resolves,
+    // not that one arbitrary hex literal happens to be dark enough.
+    expect(separator.className).toMatch(/text-ink-2/);
+
+    for (const theme of ['light', 'dark'] as const) {
+      const ink = tokenHex('ink-2', theme);
+      const bg = tokenHex('card', theme);
+      expect(ink, `--ink-2 must be a hex literal in ${theme}`).toBeTruthy();
+      expect(bg, `--card must be a hex literal in ${theme}`).toBeTruthy();
+      const ratio = contrast(ink, bg);
+      expect(ratio, `separator ${ink} on ${bg} (${theme})`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it('gives the plan-switcher buttons the accessible name they visibly show', async () => {

@@ -93,15 +93,15 @@ function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRa
       ]
     : planId === 'TOU'
       ? [
-          { l: periodLabel('Off-Peak'), v: fmtCentsAuto(rates.tou.offPeak), c: 'text-emerald-600' },
-          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.tou.midPeak), c: 'text-yellow-600' },
-          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.tou.onPeak), c: 'text-red-600' },
+          { l: periodLabel('Off-Peak'), v: fmtCentsAuto(rates.tou.offPeak), c: 'text-good' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.tou.midPeak), c: 'text-warn' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.tou.onPeak), c: 'text-bad' },
         ]
       : [
-          { l: t('rate.overnight'), v: fmtCentsAuto(rates.ulo.overnight), c: 'text-purple-600' },
-          { l: t('rate.weekendOff'), v: fmtCentsAuto(rates.ulo.weekendOffPeak), c: 'text-emerald-600' },
-          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.ulo.midPeak), c: 'text-yellow-600' },
-          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.ulo.onPeak), c: 'text-red-600' },
+          { l: t('rate.overnight'), v: fmtCentsAuto(rates.ulo.overnight), c: 'text-ulo' },
+          { l: t('rate.weekendOff'), v: fmtCentsAuto(rates.ulo.weekendOffPeak), c: 'text-good' },
+          { l: periodLabel('Mid-Peak'), v: fmtCentsAuto(rates.ulo.midPeak), c: 'text-warn' },
+          { l: periodLabel('On-Peak'), v: fmtCentsAuto(rates.ulo.onPeak), c: 'text-bad' },
         ];
 }
 
@@ -138,7 +138,7 @@ export default function PlanCards({
       : activeRateSet.tiered.thresholdWinter);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-black font-black uppercase">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-ink font-black uppercase">
       {PLANS.map((plan, i) => {
         // Single source of truth for the displayed rates: the RateSet in
         // force, the same one that priced the cost above. No RateSet loaded
@@ -160,25 +160,25 @@ export default function PlanCards({
                 setUserPlan(plan.id);
               }
             }}
-            className={`bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
+            className={`bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-edge shadow-hard-6 md:shadow-hard-8 relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
           >
-            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-black font-black text-[8px] md:text-[10px] uppercase text-black shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
+            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-edge font-black text-[8px] md:text-[10px] uppercase text-accent-ink shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
             <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
             {/* The card's headline number used to stand alone: a 6xl dollar
                 figure with nothing saying whether it is a bill, a projection,
                 or commodity alone. It is the cost of the window on screen,
                 commodity only — the same scope the Overview banner declares —
                 so the card declares it too. */}
-            <div className="text-4xl md:text-6xl italic mb-1 md:mb-2 font-black text-black">
+            <div className="text-4xl md:text-6xl italic mb-1 md:mb-2 font-black text-ink">
               {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div
               data-testid="plan-card-scope"
-              className="text-[8px] md:text-[10px] font-bold text-slate-500 normal-case mb-6 md:mb-10"
+              className="text-[8px] md:text-[10px] font-bold text-ink-3 normal-case mb-6 md:mb-10"
             >
               {t('planCard.scope', { range: windowSpan(startDate, endDate) })}
             </div>
-            <div className="space-y-2 md:space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[10px] md:text-xs font-black text-black">
+            <div className="space-y-2 md:space-y-4 bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge text-[10px] md:text-xs font-black text-ink">
               {rates.map((r, j) => (
                 <div key={j} className={`flex justify-between ${r.c || ''}`}>
                   <span>{r.l}</span> <span>{r.v}</span>
@@ -190,13 +190,13 @@ export default function PlanCards({
             {plan.id === 'Tiered' && tierThreshold != null && (
               <div
                 data-testid="tier-threshold"
-                className="mt-3 md:mt-5 bg-yellow-50 p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-black text-[9px] md:text-xs font-black"
+                className="mt-3 md:mt-5 bg-accent-soft p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge text-[9px] md:text-xs font-black"
               >
                 <div className="flex justify-between">
                   <span>{t('tier.cutoff')}</span>
                   <span>{t('tier.kwhPerMonth', { kwh: fmtNumber(tierThreshold) })}</span>
                 </div>
-                <div className="mt-1 text-slate-600 font-bold normal-case">
+                <div className="mt-1 text-ink-2 font-bold normal-case">
                   {t(`season.long.${seasonOfView}`)}
                   {seasonsInView.length > 1 ? ` — ${t('tier.spansBoth')}` : ''}
                   {otherTierThreshold != null

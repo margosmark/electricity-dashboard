@@ -31,8 +31,8 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-2 mb-2 md:mb-3">
-        <h4 className="text-sm md:text-lg font-black uppercase text-black">{group.label}</h4>
-        <span className="text-[8px] md:text-[10px] font-black uppercase text-slate-500">
+        <h4 className="text-sm md:text-lg font-black uppercase text-ink">{group.label}</h4>
+        <span className="text-[8px] md:text-[10px] font-black uppercase text-ink-3">
           {t('heatmap.gridMeta', { total: group.dayLabels.length, inView: group.days })}
         </span>
       </div>
@@ -41,18 +41,18 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
           role="grid"
           aria-label={t('heatmap.gridAria', { group: group.label.toLowerCase() })}
           data-testid={`heatmap-grid-${group.id}`}
-          className="min-w-[520px] text-black"
+          className="min-w-[520px] text-ink"
         >
           <div
             role="row"
-            className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black uppercase"
+            className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-ink font-black uppercase"
           >
             <div role="presentation" className="w-10 md:w-12" />
             {HOURS.map((hour) => (
               <div
                 key={hour}
                 role="columnheader"
-                className="text-center text-[8px] md:text-[10px] text-black font-black"
+                className="text-center text-[8px] md:text-[10px] text-ink font-black"
               >
                 {hour}{t('heatmap.hourSuffix')}
               </div>
@@ -62,7 +62,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
             <div
               key={group.dayLabels[rowIndex]}
               role="row"
-              className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-black font-black uppercase"
+              className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-ink font-black uppercase"
             >
               <div
                 role="rowheader"
@@ -92,7 +92,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
                       maxAvg,
                     )} hover:scale-110 active:scale-110 relative group transition-all font-black`}
                   >
-                    <div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">
+                    <div className="opacity-0 group-hover:opacity-100 group-active:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-inv text-inv-ink text-[8px] md:text-[10px] p-2 rounded pointer-events-none z-50 whitespace-nowrap font-black">
                       {fmtKwh(cell.avg)}
                     </div>
                   </div>
@@ -117,19 +117,19 @@ export default function DualHeatmap({ heatmapData }: DualHeatmapProps) {
   return (
     <div
       data-testid="dual-heatmap"
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black overflow-hidden"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink overflow-hidden"
     >
-      <h3 className="text-2xl md:text-4xl mb-2 italic text-black font-black uppercase">
+      <h3 className="text-2xl md:text-4xl mb-2 italic text-ink font-black uppercase">
         {t('heatmap.title')}
       </h3>
-      <p className="mb-4 md:mb-6 text-[10px] md:text-xs font-bold text-slate-600 normal-case max-w-3xl">
+      <p className="mb-4 md:mb-6 text-[10px] md:text-xs font-bold text-ink-2 normal-case max-w-3xl">
         {t('heatmap.blurb', { max: fmtKwh(split.maxAvg) })}
       </p>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         <HeatGrid group={split.weekday} maxAvg={split.maxAvg} />
         <HeatGrid group={split.weekend} maxAvg={split.maxAvg} />
       </div>
-      <div className="mt-4 text-[8px] md:text-[10px] text-slate-400 font-black text-center xl:hidden">
+      <div className="mt-4 text-[8px] md:text-[10px] text-ink-4 font-black text-center xl:hidden">
         {t('heatmap.scrollHint')}
       </div>
     </div>
