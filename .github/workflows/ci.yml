@@ -1,10 +1,22 @@
+# CI here is LOCAL-GATE-ONLY: trigger-less for push/PR, manual via
+# workflow_dispatch. GitHub Actions minutes are exhausted on this account
+# (private repo, free plan), so every push/PR run dies in 3-4s with all
+# three jobs marked "failed" and ZERO steps executed — the jobs are never
+# even scheduled. Those reds in the run history are billing, not test
+# failures; don't triage them.
+#
+# The real gate is local (see OPERATIONS.md "Deploying changes"):
+#   webapp: npm run lint && npm run typecheck && npm run test && npm run build
+#   root:   pytest tests/ -v          (when the parser layer changed)
+#   smoke:  docker build + tests/e2e  (see README "Development")
+#
+# To re-enable: restore the push/pull_request triggers below and run
+# `gh workflow enable CI` (the workflow is also disabled server-side so
+# the Actions tab doesn't advertise a gate that can't run).
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:  # manual only — push/PR triggers removed 2026-10-10 (billing dead)
 
 jobs:
   frontend:
