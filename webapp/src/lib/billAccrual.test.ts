@@ -34,9 +34,15 @@ const OCTOBER = {
   end: new Date(2026, 10, 1).getTime() / 1000,
 };
 
-// Tiered tier-1 at 12¢: 1 kWh/hour → 24 kWh/day → $2.88/day.
+// Tiered is priced on the WINDOW, not the reading: 1 kWh/hour → 24 kWh/day,
+// October is summer, so the month threshold (600 kWh) prorates to
+// 600 × 1/30.4 = 19.7368 kWh/day at tier 1 (12¢) and the remaining
+// 4.2632 kWh bills at tier 2 (14.2¢) → $2.973789/day, constant across a
+// flat month because both the usage and the prorated allowance grow a day
+// at a time. Tier-1-ONLY pricing said $2.88/day; the accrual used to foot
+// that way while its pace line priced the window — the two now agree.
 const KWH = 1;
-const DAILY = 2.88;
+const DAILY = (600 / 30.4) * 0.12 + (24 - 600 / 30.4) * 0.142;
 
 describe('buildAccrualCurve — no period', () => {
   it('returns the empty model instead of inventing a window', () => {
@@ -108,7 +114,7 @@ describe('buildAccrualCurve — the accrual itself', () => {
     expect(curve.projectedTotal).toBeCloseTo(31 * DAILY, 6);
     expect(curve.points[9].pace).toBeCloseTo(curve.paceToDate, 6);
     expect(curve.note).toContain('Wave F');
-    expect(curve.note).toContain('$2.88/day');
+    expect(curve.note).toContain('$2.97/day');
   });
 
   it('a month spent exactly on pace reports exactly on pace', () => {
@@ -152,7 +158,7 @@ describe('buildAccrualCurve — the runway to the bill date', () => {
   });
 
   it('projects the landing at the bill date, not at the last reading', () => {
-    // 25 days × $2.88/day of run-rate, but the pace slope is Wave F's.
+    // 25 days × $2.97/day of run-rate, but the pace slope is Wave F's.
     expect(curve.projectedTotal).toBeCloseTo(curve.paceDaily * 25, 6);
     expect(curve.projectedTotal).toBeGreaterThan(curve.total);
   });
@@ -234,7 +240,7 @@ describe('the 3-bill benchmark', () => {
     expect(curve.avgPriorBill).toBeCloseTo(42, 6);
     expect(curve.priorBillCount).toBe(3);
     expect(curve.priorBills).toEqual([40, 42, 44]);
-    // 31 days × $2.88 = $89.28 projected — well above the benchmark.
+    // 31 days × $2.97 = $92.19 projected — well above the benchmark.
     expect(curve.paceVsAvg).toBeCloseTo(curve.projectedTotal - 42, 6);
     expect(curve.overAvg).toBe(true);
   });
@@ -289,8 +295,12 @@ describe('buildAccrualCurve — above and below the line', () => {
     expect(curve.paceSource).toBe('projection');
     expect(curve.gap).toBeGreaterThan(0);
     expect(curve.overPace).toBe(true);
-    // 5 × $8.64 + 5 × $2.88
-    expect(curve.total).toBeCloseTo(5 * 8.64 + 5 * DAILY, 6);
+    // The month-scoped rule over all ten days: 480 kWh with 600 × 10/30.4
+    // = 197.37 kWh at tier 1 and 282.63 at tier 2 → $63.82. (Summing the
+    // per-reading tier-1 field said $57.60 — the whole point of routing the
+    // curve through the shared rule.)
+    const allowance = (600 * 10) / 30.4;
+    expect(curve.total).toBeCloseTo(allowance * 0.12 + (480 - allowance) * 0.142, 6);
     // The landing point is the current run-rate across the whole period.
     expect(curve.projectedTotal).toBeCloseTo(curve.paceDaily * 31, 6);
   });

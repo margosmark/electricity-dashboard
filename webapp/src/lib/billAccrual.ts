@@ -39,7 +39,7 @@
  */
 
 import { differenceInCalendarDays, format, parseISO, addDays } from 'date-fns';
-import { billTotals, type ProcessedPoint, type UsageSummary } from './energy';
+import { billTotals, tieredCostFor, type ProcessedPoint, type UsageSummary } from './energy';
 import type { BillProjection } from './billProjection';
 // Wave U — the pace/bill-date note comes from the locale catalog at call
 // time; the EN catalog keeps the Wave F wording the tests pin verbatim.
@@ -164,10 +164,18 @@ const TIER_PERIOD_DAYS = 30.4;
 /** How many prior bills the benchmark averages. */
 export const BENCHMARK_BILL_COUNT = 3;
 
-function costOf(row: ProcessedPoint, plan: AccrualPlan): number {
-  if (plan === 'TOU') return row.costTOU;
-  if (plan === 'ULO') return row.costULO;
-  return row.costTiered;
+/**
+ * Per-reading cost, for the two plans that HAVE a per-reading price.
+ *
+ * Tiered is deliberately not here: its tier-2 threshold is a volume
+ * allowance for a month, so a day's cost depends on the days before it and
+ * cannot be read off one reading. `buildAccrualCurve` prices Tiered through
+ * `tieredCostFor` — the shared month-scoped rule — instead, so the spend
+ * line and Wave F's pace line (already on that rule via `projectMonthBill`)
+ * are the same arithmetic.
+ */
+function costOf(row: ProcessedPoint, plan: 'TOU' | 'ULO'): number {
+  return plan === 'TOU' ? row.costTOU : row.costULO;
 }
 
 /**
@@ -278,11 +286,45 @@ export function buildAccrualCurve({
   const daily = new Map<string, number>();
   const dailyKwh = new Map<string, number>();
   let firstRow: ProcessedPoint | null = null;
+  const inPeriod: ProcessedPoint[] = [];
   for (const row of rows) {
     if (row.timestamp < period.start || row.timestamp >= period.end) continue;
-    daily.set(row.dayStr, (daily.get(row.dayStr) ?? 0) + costOf(row, plan));
+    inPeriod.push(row);
+    if (plan !== 'Tiered') {
+      daily.set(row.dayStr, (daily.get(row.dayStr) ?? 0) + costOf(row, plan));
+    }
     dailyKwh.set(row.dayStr, (dailyKwh.get(row.dayStr) ?? 0) + row.usage_kwh);
     if (!firstRow) firstRow = row;
+  }
+
+  // Tiered is priced on the WINDOW, never per reading (see `costOf`), so the
+  // day's cost is booked as the MARGINAL increase of the shared month-scoped
+  // rule over the days so far. Every point then foots to `tieredCostFor`, the
+  // curve stays monotonic (a day only ever adds usage, and the prorated
+  // allowance only ever grows), and this line can no longer disagree with the
+  // pace slope above it — which is what shipping both on different rules did.
+  if (plan === 'Tiered' && inPeriod.length > 0) {
+    const ordered = [...inPeriod].sort((a, b) => a.timestamp - b.timestamp);
+    // `running` only ever grows: it is the window from the period's first
+    // reading through the row being read, so the rule always sees the days
+    // (and the prorated allowance) that came before this one. Resetting it
+    // per day would price each day alone and the marginals would all be
+    // identical — a flat load would accrue the same cost as a spiky one.
+    const running: ProcessedPoint[] = [];
+    let spent = 0;
+    let day = '';
+    for (const row of ordered) {
+      if (row.dayStr !== day) {
+        if (day !== '') {
+          const cumulative = tieredCostFor(running);
+          daily.set(day, cumulative - spent);
+          spent = cumulative;
+        }
+        day = row.dayStr;
+      }
+      running.push(row);
+    }
+    daily.set(day, tieredCostFor(running) - spent);
   }
 
   // Nothing accrues past today: a clock-skewed export must not book days
