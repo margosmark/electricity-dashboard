@@ -42,7 +42,13 @@ import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
 // Wave U — every label, badge, aria-label and footnote below speaks the
 // active locale; `t` is a hook, so each component calls useTranslation().
 import { fmtPercent, useTranslation } from '@/i18n';
-import { calculateTrueBill, hasExtraCharges, type ExtraCharges } from '@/lib/energy';
+import {
+  calculateTrueBill,
+  hasExtraCharges,
+  summaryStatesMoney,
+  type ExtraCharges,
+  type UsageSummary,
+} from '@/lib/energy';
 
 type Mode = 'dollars' | 'share' | 'usage';
 
@@ -80,6 +86,15 @@ type ChartRow = {
   kind: PeriodStackKind;
   /** True when the money shown is our estimate, never a bill. */
   estimated: boolean;
+  /**
+   * Does the bill behind this row state an amount on ANY of its lines?
+   * False only for a bill that quotes no charge at all — `summaryStatesMoney`
+   * is what separates "the utility said $0.00" from "the utility said
+   * nothing", and a payment cell may only print a number in the first case.
+   * Rows that are not a bill (gap / open) are true: their cells are governed
+   * by their own badge-and-dash rules above and below this one.
+   */
+  statesMoney: boolean;
   /** Modelled all-in total (commodity + ride-alongs) for the unbilled row. */
   estTotal?: number | null;
   /** Metered kWh, so the est total can be priced per-kWh. */
@@ -282,6 +297,22 @@ export default function MoneyStackedChart({
   /** Any bar on the timeline that is NOT a bill (the open tail, or a hole). */
   const hasFlagged = stacks.some((s) => s.kind !== 'billed');
 
+  /**
+   * Every bill on this axis states NO charge at all — the Green Button
+   * Alliance reference sample is exactly this shape (an
+   * ElectricPowerUsageSummary: usage, 216 readings, no money lines). Then
+   * `billTotals` sums the bill to a clean $0.00 that nobody quoted, so the
+   * "you paid" column would assert a payment out of the absence of data.
+   * The column therefore names the reason instead — the same disclosure the
+   * Plans tab's actual-bill panel carries — and each row's payment cell says
+   * it too, so no row can be read as a zero on its own.
+   */
+  const billsOnAxis = stacks
+    .map((s) => s.summary)
+    .filter((s): s is UsageSummary => s !== null);
+  const allBilledSilent =
+    billsOnAxis.length > 0 && billsOnAxis.every((s) => !summaryStatesMoney(s));
+
   const rows = useMemo<ChartRow[]>(() => {
     if (mode === 'usage') {
       return stacks.map((s) => ({
@@ -292,6 +323,7 @@ export default function MoneyStackedChart({
         total: s.totals.payable,
         kind: s.kind,
         estimated: s.estimated,
+        statesMoney: s.summary === null || summaryStatesMoney(s.summary),
         kwh: s.usageTotal ?? 0,
         offPeak: s.usage?.offPeak ?? 0,
         midPeak: s.usage?.midPeak ?? 0,
@@ -311,6 +343,7 @@ export default function MoneyStackedChart({
         rebate: s.cost.credit,
         kind: s.kind,
         estimated: s.estimated,
+        statesMoney: s.summary === null || summaryStatesMoney(s.summary),
         kwh: s.usageTotal ?? 0,
         estTotal: s.kind === 'open' ? openEstTotal : null,
       };
@@ -678,7 +711,7 @@ export default function MoneyStackedChart({
                   {overlay.covered > 1 ? '/period' : ''}
                   {overlay.covered > 1 ? (
                     <span className="text-slate-500 font-bold normal-case">
-                      ({money(line.amount)} total)
+                      {t('money.overlayTotal', { amount: money(line.amount) })}
                     </span>
                   ) : null}
                 </span>
@@ -688,13 +721,27 @@ export default function MoneyStackedChart({
               <svg width="34" height="10" aria-hidden focusable="false">
                 <line x1="0" y1="5" x2="34" y2="5" stroke="#059669" strokeWidth="4" />
               </svg>
-              You paid {money(overlay.actualPerPeriod)}
-              {overlay.covered > 1 ? '/period' : ''}
-              {overlay.covered > 1 ? (
-                <span className="text-slate-500 font-bold normal-case">
-                  ({money(overlay.actual)} total)
+              {allBilledSilent ? (
+                /* `overlay.actual` is billTotals summed over periods that
+                   quoted no charge at all — a derived zero. The key names
+                   the reason rather than the payment it does not represent. */
+                <span
+                  data-testid="money-overlay-no-charge-lines"
+                  className="text-slate-500 font-bold normal-case"
+                >
+                  {t('actualBill.noChargeLines')}
                 </span>
-              ) : null}
+              ) : (
+                <>
+                  {t('money.youPaid')} {money(overlay.actualPerPeriod)}
+                  {overlay.covered > 1 ? '/period' : ''}
+                  {overlay.covered > 1 ? (
+                    <span className="text-slate-500 font-bold normal-case">
+                      {t('money.overlayTotal', { amount: money(overlay.actual) })}
+                    </span>
+                  ) : null}
+                </>
+              )}
             </span>
           </div>
           <div className="text-[10px] md:text-[11px] font-bold normal-case text-slate-600 space-y-1">
@@ -703,7 +750,9 @@ export default function MoneyStackedChart({
               className="font-black uppercase text-black text-[10px]"
             >
               {overlay.lines.map((l) => `${l.label} ${money(l.amount)}`).join(' · ')} ·{' '}
-              {t('money.youPaidLower')} {money(overlay.actual)}
+              {allBilledSilent
+                ? t('actualBill.noChargeLines')
+                : `${t('money.youPaidLower')} ${money(overlay.actual)}`}
             </div>
             <div>
               {t('money.overlayCover', {
@@ -758,8 +807,18 @@ export default function MoneyStackedChart({
                   {t(COST_SLICE_META[k as keyof typeof COST_SLICE_META].shortKey)}
                 </th>
               ))}
-              <th className="py-1 px-2 uppercase text-right">
-                {mode === 'usage' ? t('money.billed') : t('money.youPaid')}
+              <th
+                className="py-1 px-2 uppercase text-right"
+                data-testid="money-paid-head"
+              >
+                {mode === 'usage'
+                  ? t('money.billed')
+                  : allBilledSilent
+                    /* No bill on this axis quoted a charge: naming the column
+                       "You paid" over a column of dashes would still invite
+                       the reader to look for the payment that is not there. */
+                    ? t('actualBill.noChargeLines')
+                    : t('money.youPaid')}
               </th>
               {mode !== 'usage' && (
                 <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
@@ -832,6 +891,20 @@ export default function MoneyStackedChart({
                     kwhFmt(usageKeys.reduce((n, k) => n + Number(r[k] ?? 0), 0))
                   ) : r.kind === 'gap' ? (
                     '—'
+                  ) : !r.statesMoney ? (
+                    /* A bill that quotes no charge at all: `billTotals` sums
+                       its lines to the $0.00 nobody stated, so this cell
+                       prints the dash AND the reason — the same disclosure
+                       "Your actual bill" carries on the Plans tab — instead
+                       of a payment made out of absent data. A bill whose
+                       lines DO state amounts keeps its real figure below,
+                       even when those amounts add up to zero. */
+                    <span data-testid="money-no-charge-lines">
+                      <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                        {t('actualBill.noChargeLines')}
+                      </span>
+                      —
+                    </span>
                   ) : r.estimated ? (
                     /* The unbilled tail: this cell says what it IS, so the
                        "You paid" header above it can never be read as a

@@ -65,14 +65,46 @@ re-labelling live.
 
 ## What this card does NOT close
 
-The Money tab's own per-period table (`MoneyStackedChart`'s `money-table`) still
-prints `YOU PAID … $0.00` / `VOUS AVEZ PAYÉ … $0.00` for the same alliance bill —
-the exact shape this sweep closed on the Plans tab, one surface over. It is out of
-this card's scope (the sweep was scoped to the plan-alternative surface and the EV
-card), and it is now its own board card rather than a silent gap. Every pass above
-records the hit in `moneyTabZeroHits` so a future regression there cannot be
-mistaken for this sweep's, and the zero check is deliberately scoped to the EV
-card and the Plans tab rather than the whole Money tab.
+_(the residual this section described is now closed — see the next section.
+Keeping the original wording here so the sweep's own record stays intact.)_
+
+> The Money tab's own per-period table (`MoneyStackedChart`'s `money-table`) still
+> prints `YOU PAID … $0.00` / `VOUS AVEZ PAYÉ … $0.00` for the same alliance bill —
+> the exact shape this sweep closed on the Plans tab, one surface over. It is out of
+> this card's scope (the sweep was scoped to the plan-alternative surface and the EV
+> card), and it is now its own board card rather than a silent gap. Every pass above
+> records the hit in `moneyTabZeroHits` so a future regression there cannot be
+> mistaken for this sweep's, and the zero check is deliberately scoped to the EV
+> card and the Plans tab rather than the whole Money tab.
+
+## Closed by t_f915a15c — the Money tab's own zeros
+
+`moneyTabZeroHits` is no longer *recorded and ignored*: it is a **check**, and it
+must come back empty.
+
+The single hit the recorder used to keep was hiding two more surfaces. Re-running
+the gate against the pre-fix deployed build, with the recorder changed to keep
+EVERY occurrence, finds **10 hits in EN and 10 in FR**:
+
+| surface | EN | FR |
+| --- | --- | --- |
+| `money-table` payment column | `YOU PAID … $0.00` | `VOUS AVEZ PAYÉ … $0.00` |
+| `money-deltas` baseline column | `TOTAL ELECTRICITY CHARGES $0.00` · `AMOUNT PAID … $0.00` | `TOTAL DES CHARGES D'ÉLECTRICITÉ 0,00 $` · `MONTANT PAYÉ … 0,00 $` |
+| `money-waterfall` | `AMOUNT DUE $0.00 over 28 days · the same figure the bill panel prints` + the `COMMODITY → SUBTOTAL → AMOUNT DUE` steps (7 hits) | same shape (8 hits) |
+
+Three surfaces, one predicate: `summaryStatesMoney(summary)` — a bill whose lines
+state amounts keeps its figure (including a genuine `$0.00`), a bill that states
+nothing gets a dash and the sentence the Plans tab already uses
+(`actualBill.noChargeLines` — "no charge lines in this bill" / "aucune ligne de
+frais dans cette facture"). The waterfall's existing
+`moneyViz.waterfallNoCharges` reason ("This period states no charges.") is now
+what its empty state shows for that bill instead of a derived amount-due.
+
+Against the fixed build the same two checks PASS in both locales, at both
+1440x900 and 390x844: `truth-in-ui-verification-local.json` and
+`truth-in-ui-verification-phone-local.json`, **60/60** each, `moneyTabZeroHits: []`.
+Re-running the gate against the still-unfixed deployed stack (58/60) is how you
+re-prove the check bites.
 
 ## Re-running
 
@@ -89,3 +121,31 @@ annotation): `npm run lint` 0 · `npm run typecheck` 0 ·
 `node scripts/i18n-merge.mjs --check` 0 (958 keys) · `npm run test` **1188 passed
 / 6 skipped**, 68 files · `npm run build` 0 (10 routes + proxy, `sw.js` restored
 after the prebuild bump) · `pytest tests/ -q` 41 passed.
+
+## Gates for t_f915a15c (the money-zero card), run on its branch
+
+Same CI-equivalent set, on `electricity/t_f915a15c-money-zero-paid` off `7cf9c0b`:
+`npm run lint` 0 · `npm run typecheck` 0 ·
+`node scripts/i18n-merge.mjs --check` 0 (**959** keys — `money.overlayTotal`) ·
+`npm run test` **1197 passed / 6 skipped**, 69 files · `npm run build` 0
+(11 routes + proxy, `sw.js` restored) · `pytest -q` **57 passed, 1 skipped**.
+
+Component tests (`TruthInUi.test.tsx`, "Truth in UI — the Money tab") pin both
+locales, the `summaryStatesMoney` distinction, the overlay key and the
+period-over-period table's columns — 11 new tests, 28 in the file. Revert-proven
+in two passes, one per surface pair:
+
+- `git checkout -- webapp/src/components/MoneyStackedChart.tsx` → **6 red**
+  (the EN and FR period-table tests, the overlay key's no-charge-lines test, the
+  French overlay-key translation test, both whole-section tests); the delta-table
+  tests stay green because they pin a different file;
+- `git checkout -- webapp/src/lib/moneyViz.ts webapp/src/components/PeriodDeltaTable.tsx`
+  → **4 red** (both period-over-period tests, both whole-section tests — the
+  waterfall and baseline zeros come back);
+- restored → **28/28 green**.
+
+Green under BOTH reverts: a bill whose stated lines sum to a real `$0.00`, and a
+priced bill's payment — that behaviour never changed, which is the whole point of
+`summaryStatesMoney`. The English overlay key also stays green under its revert
+(raw English and its translation read identically); only the French one can catch
+that key missing.

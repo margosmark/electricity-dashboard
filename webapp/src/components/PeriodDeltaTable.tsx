@@ -115,7 +115,35 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                     const flagged = column && column.kind !== 'billed';
                     return (
                       <td key={i} className="py-1.5 px-3 text-right tabular-nums">
-                        {tierRow && Math.abs(value) < 0.005 ? (
+                        {column && !column.statesMoney ? (
+                          /* The bill behind this column quoted no charge at
+                             all: its baseline figure — and every change
+                             measured out of it — is a derived zero, so the
+                             cell prints the dash and the reason, the same
+                             disclosure the money chart's payment column
+                             carries for this exact bill. */
+                          <span
+                            className="text-slate-400"
+                            data-testid="money-delta-no-charge-lines"
+                            title={t('actualBill.noChargeLines')}
+                          >
+                            <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                              {t('actualBill.noChargeLines')}
+                            </span>
+                            —
+                          </span>
+                        ) : i > 0 && !flagged && delta === null && !table.columns[i - 1]?.statesMoney ? (
+                          /* This period states money but the one it would be
+                             measured against does not: there is no change to
+                             report, and "$0.00" would report one. */
+                          <span
+                            className="text-slate-400"
+                            data-testid="money-delta-no-charge-lines"
+                            title={t('actualBill.noChargeLines')}
+                          >
+                            —
+                          </span>
+                        ) : tierRow && Math.abs(value) < 0.005 ? (
                           <span
                             className="text-slate-400"
                             data-testid="money-delta-no-tier"
