@@ -40,6 +40,7 @@ import {
   calculateTrueBill,
   classifyBillLine,
   planCostFor,
+  summaryStatesMoney,
   type ExtraCharges,
   type ProcessedPoint,
   type UsageSummary,
@@ -455,6 +456,15 @@ export type DeltaColumn = {
   kind: PeriodStackKind;
   /** True when this column's numbers are an estimate, not a bill. */
   estimated: boolean;
+  /**
+   * Did the bill behind this column state an amount on any of its lines?
+   * False only for a bill that quotes no charge at all: its baseline figure
+   * and every delta measured against it are derived zeros, so the table
+   * prints a dash and says why rather than a money figure nobody stated.
+   * Columns that are not a bill (gap / open) are true — their cells already
+   * carry the badge-and-dash rules of their own.
+   */
+  statesMoney: boolean;
 };
 
 export type DeltaTable = {
@@ -517,6 +527,7 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
     label: s.shortLabel,
     kind: s.kind,
     estimated: s.estimated,
+    statesMoney: s.summary === null || summaryStatesMoney(s.summary),
   }));
   const keys: DeltaRowKey[] = [
     ...COST_SLICE_ORDER.filter((k) => stacks.some((s) => Math.abs(s.cost[k]) > 0.005)),
@@ -529,6 +540,11 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
   // that describes nothing, so those boundaries carry null and the table
   // prints "—" there while still showing the estimate itself.
   const billable = stacks.map((s) => s.kind === 'billed');
+  // …and only between two bills that STATE money: a change measured out of a
+  // period the utility quoted no charge for is a change against an absence.
+  const silent = stacks.map(
+    (s) => s.summary !== null && !summaryStatesMoney(s.summary),
+  );
 
   const rows: DeltaRow[] = keys.map((key) => {
     const values = stacks.map((s) =>
@@ -539,7 +555,9 @@ export function periodDeltaRows(stacks: PeriodStack[]): DeltaTable {
           : s.cost[key as CostSliceKey],
     );
     const deltas: (number | null)[] = values.map((v, i) =>
-      i === 0 || !billable[i] || !billable[i - 1] ? null : round2(v - values[i - 1]),
+      i === 0 || !billable[i] || !billable[i - 1] || silent[i] || silent[i - 1]
+        ? null
+        : round2(v - values[i - 1]),
     );
     return { key, label: DELTA_LABELS[key], values: values.map(round2), deltas };
   });
@@ -885,11 +903,19 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
     `${t('wf.payableDetail')}${amountDueNote}`,
   );
 
+  /**
+   * A bill that states NO charge line sums to a clean $0.00 through
+   * `billTotals` — commodity $0.00 → amount due $0.00 drawn as a waterfall
+   * would be a picture of a payment nobody made. `summaryStatesMoney` is
+   * what separates that from a bill whose stated lines really do add to
+   * zero, which still draws.
+   */
+  const ready = summaryStatesMoney(summary) && steps.length > 2;
   return {
     steps,
     amountDue: round2(payable),
-    ready: steps.length > 2,
-    reason: steps.length > 2 ? '' : t('moneyViz.waterfallNoCharges'),
+    ready,
+    reason: ready ? '' : t('moneyViz.waterfallNoCharges'),
   };
 }
 

@@ -1,6 +1,6 @@
 {
-  "base": "http://127.0.0.1:3111/",
-  "serving": "2c822ac",
+  "base": "http://localhost:3107/",
+  "serving": "7cf9c0b",
   "viewport": "1440x900",
   "fixture": "green-button-alliance-sample.xml",
   "fixtureSha256": "18e54b8b1ebdfa2f249a97ee602362ca95ba8dd0d030cba236c39e945259c7fb",
@@ -84,14 +84,9 @@
         ],
         "peakBlocks": 1
       },
-      "moneyTabZeroHits": [
-        {
-          "zero": "$0.00",
-          "context": "BILLING PERIOD PERIOD PLAN YOU PAID EST. TOTAL ESTIMATE DATA COVERAGE JAN 1, 2014 UNKNOWN $0.00 — 32% PERIOD OVER PERIOD WHAT CHAN"
-        }
-      ],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-en-local.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-en-local.png"
+      "moneyTabZeroHits": [],
+      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-en-local.png",
+      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-en-local.png"
     },
     "fr": {
       "locale": "fr",
@@ -172,14 +167,9 @@
         ],
         "peakBlocks": 1
       },
-      "moneyTabZeroHits": [
-        {
-          "zero": "$0.00",
-          "context": " FORFAIT VOUS AVEZ PAYÉ TOTAL EST. ESTIMATION COUVERTURE DES DONNÉES 1 JANV. 2014 UNKNOWN $0.00 — 32% D’UNE PÉRIODE À L’AUTRE CE Q"
-        }
-      ],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-fr-local.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-fr-local.png"
+      "moneyTabZeroHits": [],
+      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-fr-local.png",
+      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-fr-local.png"
     }
   },
   "checks": [
@@ -310,6 +300,11 @@
     },
     {
       "name": "EN: the EV card prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "EN: the Money tab prints no zero the utility never quoted",
       "ok": true,
       "detail": "[]"
     },
@@ -454,6 +449,11 @@
       "detail": "[]"
     },
     {
+      "name": "FR: the Money tab prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
       "name": "FR: no horizontal overflow at 1440px",
       "ok": true,
       "detail": "0px"
@@ -474,6 +474,6 @@
       "detail": ""
     }
   ],
-  "passed": 58,
-  "total": 58
+  "passed": 60,
+  "total": 60
 }

@@ -32,10 +32,14 @@ import { fileURLToPath } from 'node:url';
 
 import { ActualBillPanel } from './ActualBillPanel';
 import EvScenarioCard from './EvScenarioCard';
+import MoneySection from './MoneySection';
+import MoneyStackedChart from './MoneyStackedChart';
+import PeriodDeltaTable from './PeriodDeltaTable';
 import PlanCards from './PlanCards';
 import SwitchTrackRecord from './SwitchTrackRecord';
 import VerdictLine from './VerdictLine';
 import { getLocale, setLocale } from '@/i18n';
+import { buildPeriodStacks, periodDeltaRows, type PlanOverlay } from '@/lib/moneyViz';
 import {
   billTotals,
   parseUsageSummaries,
@@ -332,5 +336,223 @@ describe('Truth in UI — the disclosures survive the French toggle', () => {
     expect(basis).toHaveTextContent('Électricité seulement');
     expect(basis).toHaveTextContent('rythme annualisé, pas un mois mesuré');
     expect(basis).toHaveTextContent('20 jours de vos données');
+  });
+});
+
+
+/* ==========================================================================
+ * Money tab — the period table's "you paid" column (t_f915a15c)
+ *
+ * The residual the truth-in-UI sweep recorded in `moneyTabZeroHits`: the
+ * Plans tab says "— no charge lines in this bill" for a bill that quotes no
+ * charge, and the Money tab's period table next to it printed YOU PAID
+ * $0.00 for that very same bill — the shape PR #53 closed, one surface over.
+ * ========================================================================== */
+
+/**
+ * The two shapes this must never collapse into one:
+ *   • `alliance` — a bill that states NO charge line, so `billTotals` sums
+ *     its amount-less lines to a $0.00 nobody quoted;
+ *   • `zeroed`   — a priced bill whose STATED lines all read 0, so the
+ *     $0.00 on screen is a fact about the bill, not an absence.
+ * `summaryStatesMoney` is the only thing that tells them apart.
+ */
+const allianceStacks = buildPeriodStacks(alliance, []);
+const pricedStacks = buildPeriodStacks(oakville, []);
+const zeroedStacks = buildPeriodStacks(
+  [withAmounts(oakville[0], oakville[0].items.map(() => 0))],
+  [],
+);
+/** The same two shapes as columns of the period-over-period table. */
+const silentSecond = withAmounts(oakville[1], oakville[1].items.map(() => null));
+const silentFirst = withAmounts(oakville[0], oakville[0].items.map(() => null));
+
+/** No rates, no full-coverage readings: the overlay key never renders. */
+const overlayOff: PlanOverlay = {
+  ready: false,
+  reason: 'no rates to model with',
+  lines: [],
+  actual: 0,
+  actualPerPeriod: 0,
+  covered: 0,
+  periods: 1,
+  chargesSource: null,
+  rebateRate: null,
+  assumptions: [],
+};
+
+/**
+ * A READY overlay, injected: the chart takes it as a prop, so the key can be
+ * pinned without a fixture that also clears the coverage AND rate gates.
+ */
+const overlayOn = (actual: number): PlanOverlay => ({
+  ...overlayOff,
+  ready: true,
+  reason: '',
+  lines: [
+    { plan: 'TOU', label: 'Time-of-Use', amount: 210.5, perPeriod: 105.25 },
+    { plan: 'Tiered', label: 'Tiered', amount: 198.25, perPeriod: 99.13 },
+    { plan: 'ULO', label: 'Ultra-Low Overnight', amount: 187.4, perPeriod: 93.7 },
+  ],
+  actual,
+  actualPerPeriod: actual / 2,
+  covered: 2,
+  chargesSource: 'typed',
+});
+
+describe('Truth in UI — the Money tab', () => {
+  afterEach(() => setLocale('en'));
+
+  it('never prints a payment the bill did not state (EN)', () => {
+    const { container } = render(
+      <MoneyStackedChart stacks={allianceStacks} overlay={overlayOff} />,
+    );
+    const table = screen.getByTestId('money-table');
+    // The absence the utility left may not be filled in with a zero …
+    expect(table).not.toHaveTextContent('$0.00');
+    expect(table).not.toHaveTextContent('0,00 $');
+    expect(table).not.toHaveTextContent(/you paid/i);
+    expect(container).not.toHaveTextContent('$0.00');
+    // … the column says why there is no figure …
+    expect(screen.getByTestId('money-paid-head')).toHaveTextContent(
+      'no charge lines in this bill',
+    );
+    // … and the row says it too, so a row read on its own claims nothing.
+    const cell = screen.getByTestId('money-no-charge-lines');
+    expect(cell).toHaveTextContent('no charge lines in this bill');
+    expect(cell).toHaveTextContent('—');
+    expect(table).toHaveTextContent('no charge lines in this bill');
+  });
+
+  it('never prints a payment the bill did not state (FR)', () => {
+    setLocale('fr');
+    const { container } = render(
+      <MoneyStackedChart stacks={allianceStacks} overlay={overlayOff} />,
+    );
+    const table = screen.getByTestId('money-table');
+    expect(table).not.toHaveTextContent('$0.00');
+    expect(table).not.toHaveTextContent('0,00 $');
+    expect(table).not.toHaveTextContent(/vous avez payé/i);
+    expect(container).not.toHaveTextContent('$0.00');
+    expect(screen.getByTestId('money-paid-head')).toHaveTextContent(
+      'aucune ligne de frais dans cette facture',
+    );
+    expect(screen.getByTestId('money-no-charge-lines')).toHaveTextContent(
+      'aucune ligne de frais dans cette facture',
+    );
+    // A key missing from fr.json falls back to its own KEY text on screen.
+    expect(table.textContent).not.toMatch(/\b(?:actualBill|money)\.[a-zA-Z]/);
+  });
+
+  it('still prints a real $0.00 for a bill whose stated lines sum to zero', () => {
+    render(<MoneyStackedChart stacks={zeroedStacks} overlay={overlayOff} />);
+    const table = screen.getByTestId('money-table');
+    const heads = screen.getAllByRole('columnheader').map((h) => h.textContent ?? '');
+    // The column is still a payment column: this zero was QUOTED, not derived.
+    expect(heads.some((h) => /you paid/i.test(h))).toBe(true);
+    expect(heads.some((h) => /no charge lines/i.test(h))).toBe(false);
+    expect(screen.queryByTestId('money-no-charge-lines')).not.toBeInTheDocument();
+    expect(table).toHaveTextContent('$0.00');
+  });
+
+  it('still prints the payment of a bill that states one', () => {
+    render(<MoneyStackedChart stacks={pricedStacks} overlay={overlayOff} />);
+    const heads = screen.getAllByRole('columnheader').map((h) => h.textContent ?? '');
+    expect(heads.some((h) => /you paid/i.test(h))).toBe(true);
+    expect(screen.queryByTestId('money-no-charge-lines')).not.toBeInTheDocument();
+    // Oakville period 1, derived in the same suite by ActualBillPanel.
+    expect(screen.getByTestId('money-table')).toHaveTextContent('$445.22');
+  });
+
+  it('says why in the period-over-period table, beside a bill that does state money', () => {
+    render(
+      <PeriodDeltaTable
+        table={periodDeltaRows(buildPeriodStacks([oakville[0], silentSecond], []))}
+      />,
+    );
+    const table = screen.getByTestId('money-deltas-table');
+    expect(table).not.toHaveTextContent('$0.00');
+    // Every cell of the silent column carries the reason …
+    const silentCells = within(table).getAllByTestId('money-delta-no-charge-lines');
+    expect(silentCells.length).toBeGreaterThan(1);
+    for (const cell of silentCells) {
+      expect(cell).toHaveTextContent('no charge lines in this bill');
+      expect(cell).toHaveTextContent('—');
+    }
+    // … while the priced baseline beside it keeps its real figure.
+    expect(table).toHaveTextContent('$445.22');
+  });
+
+  it('reports no change measured out of a bill that stated nothing', () => {
+    render(
+      <PeriodDeltaTable
+        table={periodDeltaRows(buildPeriodStacks([silentFirst, oakville[1]], []))}
+      />,
+    );
+    const table = screen.getByTestId('money-deltas-table');
+    // Neither the silent baseline NOR the change out of it is a money figure:
+    // a delta against an absence would be "+$445.22" out of nothing.
+    expect(table.textContent).not.toMatch(/\$/);
+    expect(within(table).getAllByTestId('money-delta-no-charge-lines').length).toBeGreaterThan(1);
+  });
+
+  it('says why in the overlay key instead of printing a derived payment', () => {
+    render(<MoneyStackedChart stacks={allianceStacks} overlay={overlayOn(0)} />);
+    const key = screen.getByTestId('money-overlay-key');
+    expect(screen.getByTestId('money-overlay-no-charge-lines')).toHaveTextContent(
+      'no charge lines in this bill',
+    );
+    expect(key).toHaveTextContent('no charge lines in this bill');
+    expect(key).not.toHaveTextContent(/you paid/i);
+    expect(key).not.toHaveTextContent('$0.00');
+    const lines = screen.getByTestId('money-overlay-lines');
+    expect(lines).toHaveTextContent('no charge lines in this bill');
+    expect(lines).not.toHaveTextContent('$0.00');
+  });
+
+  it('keeps the payment, its total and its wording in the overlay key', () => {
+    render(<MoneyStackedChart stacks={pricedStacks} overlay={overlayOn(889.44)} />);
+    const key = screen.getByTestId('money-overlay-key');
+    expect(key).toHaveTextContent('You paid $444.72');
+    expect(key).toHaveTextContent('($889.44 total)');
+    expect(screen.getByTestId('money-overlay-lines')).toHaveTextContent(
+      'you paid $889.44',
+    );
+  });
+
+  it('translates the overlay key’s payment line in French', () => {
+    setLocale('fr');
+    render(<MoneyStackedChart stacks={pricedStacks} overlay={overlayOn(889.44)} />);
+    const key = screen.getByTestId('money-overlay-key');
+    expect(key).toHaveTextContent('Vous avez payé $444.72');
+    expect(key).toHaveTextContent('($889.44 au total)');
+    expect(screen.getByTestId('money-overlay-lines')).toHaveTextContent(
+      'vous avez payé $889.44',
+    );
+  });
+
+  it('the whole Money section prints no zero for that bill (EN)', () => {
+    render(<MoneySection summaries={alliance} allData={[]} plan="TOU" />);
+    const section = screen.getByTestId('money-section');
+    expect(section).not.toHaveTextContent('$0.00');
+    expect(section).not.toHaveTextContent('0,00 $');
+    expect(screen.getByTestId('money-no-charge-lines')).toBeInTheDocument();
+    expect(screen.getByTestId('money-paid-head')).toHaveTextContent(
+      'no charge lines in this bill',
+    );
+  });
+
+  it('the whole Money section prints no zero for that bill (FR)', () => {
+    setLocale('fr');
+    render(<MoneySection summaries={alliance} allData={[]} plan="TOU" />);
+    const section = screen.getByTestId('money-section');
+    expect(section).not.toHaveTextContent('$0.00');
+    expect(section).not.toHaveTextContent('0,00 $');
+    expect(screen.getByTestId('money-no-charge-lines')).toHaveTextContent(
+      'aucune ligne de frais dans cette facture',
+    );
+    expect(screen.getByTestId('money-table').textContent).not.toMatch(
+      /\b(?:actualBill|money)\.[a-zA-Z]/,
+    );
   });
 });

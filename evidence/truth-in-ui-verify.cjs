@@ -22,6 +22,11 @@
  *      "Today"), and BOTH peak-exposure blocks — the priced one and the empty
  *      state a household without a car sees first — carry the run-rate
  *      disclosure: commodity only, scaled to 30.4 days from N days of data.
+ *   5. The whole Money tab (t_f915a15c) — it prints no $0.00 / 0,00 $ at
+ *      all: the period table's payment column, the period-over-period
+ *      baseline and the waterfall all say the bill states no charge lines
+ *      instead of drawing the $0.00 `billTotals` derives from silence.
+ *      The tab used to RECORD those hits; this pass makes them fail.
  *
  * Run:  TUI_XML=… (defaults to the committed fixture) TZ=America/Toronto \
  *         node evidence/truth-in-ui-verify.cjs
@@ -206,13 +211,23 @@ function readPlansTab(page) {
         : null,
       /** A missing fr key falls back to its own key text on screen. */
       leaks: flat(document.body.innerText).match(/\b(?:actualBill|track|planCard|planTimeline|ev)\.[a-zA-Z_]+/g) || [],
-      /** Anything on the tab that reads like a zero the utility never quoted. */
+      /**
+       * EVERY zero the tab prints that the utility never quoted, with enough
+       * context to see which surface it came from. This used to keep only the
+       * first hit, which is how the money table's own "$0.00" hid the two
+       * that followed it (the delta baseline and the waterfall).
+       */
       zeroMoneyHits: (() => {
         const t = flat(document.body.innerText);
-        const hits = ['$0.00', '0,00 $'].filter((z) => t.includes(z));
-        if (hits.length === 0) return [];
-        const at = t.indexOf(hits[0]);
-        return [{ zero: hits[0], context: t.slice(Math.max(0, at - 90), at + 40) }];
+        const out = [];
+        for (const z of ['$0.00', '0,00 $']) {
+          let at = t.indexOf(z);
+          while (at !== -1 && out.length < 20) {
+            out.push({ zero: z, context: t.slice(Math.max(0, at - 90), at + 40) });
+            at = t.indexOf(z, at + z.length);
+          }
+        }
+        return out;
       })(),
     };
   });
@@ -387,20 +402,28 @@ async function runLocale(browser, key, label) {
   /* --- cross-cutting ---------------------------------------------------- */
   check(`${label}: no catalog key leaks to the screen`, data.leaks.length === 0, data.leaks.join(', '));
   /**
-   * Scoped to the EV card, not the whole Money tab: the chart below it has
-   * its own bill-accrual contract (unbilled rows badged ESTIMATE), which is
-   * this sweep's sibling card, not this one. Any zero the tab does print is
-   * recorded so the notes can say where it came from.
+   * The EV card's own zero check, kept even though the whole-tab one below
+   * now covers it: a failure here names the card directly instead of making
+   * the reader work it out of a context string.
    */
   check(
     `${label}: the EV card prints no zero the utility never quoted`,
     !['$0.00', '0,00 $'].some((z) => (data.ev?.text ?? '').includes(z)),
     JSON.stringify((data.ev?.text ?? '').match(/.{0,60}(?:\$0\.00|0,00 \$).{0,40}/) ?? []),
   );
+  /**
+   * The whole Money tab, not just the EV card: a bill that states no charge
+   * may not print a derived $0.00 ANYWHERE on it. This was "recorded but
+   * unchecked" while the money table's own hit was still open (t_f915a15c);
+   * the card closed that surface — and the two it was hiding — so the
+   * recording is now a gate.
+   */
   facts.moneyTabZeroHits = data.zeroMoneyHits;
-  if (data.zeroMoneyHits.length > 0) {
-    console.log(`note  ${label}: $0.00 elsewhere on the Money tab — ${JSON.stringify(data.zeroMoneyHits)}`);
-  }
+  check(
+    `${label}: the Money tab prints no zero the utility never quoted`,
+    data.zeroMoneyHits.length === 0,
+    JSON.stringify(data.zeroMoneyHits),
+  );
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check(`${label}: no horizontal overflow at ${VP_W}px`, overflow <= 0, `${overflow}px`);
 

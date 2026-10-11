@@ -446,6 +446,7 @@
   "money.noRatesTitle": "Aucun tarif de distribution / réglementaire / TVH enregistré — ajoutez-les sur la carte Facture réelle et cela se complétera.",
   "money.overlayCover": "Les lignes couvrent {covered} périodes de facturation sur {periods} (uniquement celles entièrement couvertes), modélisées avec vos tarifs {charges} de distribution / réglementaire / TVH",
   "money.overlayRebate": " plus la remise observée ({pct} du sous-total).",
+  "money.overlayTotal": "({amount} au total)",
   "money.periodsSubtitle_one": "{count} période de facturation · directement depuis votre XML",
   "money.periodsSubtitle_other": "{count} périodes de facturation · directement depuis votre XML",
   "money.readingsCover": "Les relevés couvrent {pct} de cette période",
