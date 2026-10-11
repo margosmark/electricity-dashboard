@@ -62,8 +62,8 @@ const CLASS_STYLE: Record<BillLineClass, string> = {
   regulatory: 'border-l-8 border-violet-400',
   tax: 'border-l-8 border-amber-500',
   credit: 'border-l-8 border-emerald-500',
-  total: 'border-l-8 border-black bg-yellow-50',
-  info: 'border-l-8 border-slate-200',
+  total: 'border-l-8 border-edge bg-accent-soft',
+  info: 'border-l-8 border-track',
   other: 'border-l-8 border-orange-400',
 };
 
@@ -142,7 +142,7 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
       ? 'bg-emerald-50'
       : split.status === 'rejected'
         ? 'bg-amber-50'
-        : 'bg-slate-50';
+        : 'bg-inset';
   return (
     <div
       data-testid={`charge-decomposition-${split.line}`}
@@ -155,9 +155,9 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
       data-variable={split.variable === null ? '' : split.variable.toFixed(2)}
       data-max-residual={split.fit === null ? '' : split.fit.maxResidual.toFixed(2)}
       data-residual-share={split.fit === null ? '' : split.fit.residualShare.toFixed(4)}
-      className={`${tone} border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6`}
+      className={`${tone} border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6`}
     >
-      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400 font-black uppercase">
+      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4 font-black uppercase">
         {split.line === 'delivery'
           ? t('actualBill.deliverySplit')
           : t('actualBill.regulatorySplit')}
@@ -168,7 +168,7 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
       >
         {split.headline}
       </div>
-      <div className="mt-1 md:mt-2 text-[11px] md:text-xs font-bold text-slate-600 normal-case">
+      <div className="mt-1 md:mt-2 text-[11px] md:text-xs font-bold text-ink-2 normal-case">
         {split.detail}
       </div>
     </div>
@@ -203,7 +203,7 @@ function PeriodCard({
     <div
       data-testid="actual-bill-period"
       data-period-start={summary.startDate}
-      className="border-4 border-black rounded-xl md:rounded-2xl bg-white p-4 md:p-6"
+      className="border-4 border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className="font-black uppercase text-base md:text-xl">
@@ -213,7 +213,7 @@ function PeriodCard({
           <div className="font-black italic text-xl md:text-2xl" data-testid="actual-payable">
             {statesMoney ? money(totals.payable) : '—'}
           </div>
-          <div className="text-[10px] md:text-xs text-slate-500 font-bold">
+          <div className="text-[10px] md:text-xs text-ink-3 font-bold">
             {statesMoney ? t('actualBill.youPaid') : t('actualBill.noChargeLines')} ·{' '}
             {t('actualBill.billedKwh', { kwh: kwh(periodKwh) })}
             {currencyLabel(summary.currency) ? ` · ${currencyLabel(summary.currency)}` : ''}
@@ -225,14 +225,14 @@ function PeriodCard({
       {!statesMoney ? (
         <div
           data-testid="commodity-skip"
-          className="mt-3 md:mt-4 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-slate-600"
+          className="mt-3 md:mt-4 bg-hover border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-ink-2"
         >
           {t('actualBill.commoditySkip')}
         </div>
       ) : verdict === 'match' && delta !== null ? (
         <div
           data-testid="commodity-check"
-          className="mt-3 md:mt-4 bg-emerald-50 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
+          className="mt-3 md:mt-4 bg-emerald-50 border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
         >
           {t('actualBill.checkOkA')}{' '}
           <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>,{' '}
@@ -243,7 +243,7 @@ function PeriodCard({
         <div
           data-testid="commodity-mismatch"
           role="alert"
-          className="mt-3 md:mt-4 bg-red-100 border-4 border-red-600 rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-red-900"
+          className="mt-3 md:mt-4 bg-bad-soft border-4 border-bad rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-bad"
         >
           {t('actualBill.checkOffA')}{' '}
           <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>{' '}
@@ -255,7 +255,7 @@ function PeriodCard({
       ) : (
         <div
           data-testid="commodity-skip"
-          className="mt-3 md:mt-4 bg-slate-100 border-2 border-black rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-slate-600"
+          className="mt-3 md:mt-4 bg-hover border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-ink-2"
         >
           {t('actualBill.notCompared')}{' '}
           {rec.rows.length === 0
@@ -272,7 +272,7 @@ function PeriodCard({
       {rec.billedKwh !== null && rec.meteredKwh !== null && rec.coverage >= PERIOD_MIN_COVERAGE && (
         <div
           data-testid="kwh-crosscheck"
-          className="mt-2 text-[10px] md:text-xs text-slate-500 font-bold"
+          className="mt-2 text-[10px] md:text-xs text-ink-3 font-bold"
         >
           {t('actualBill.crosscheck', {
             billed: kwh(rec.billedKwh),
@@ -296,13 +296,13 @@ function PeriodCard({
               className={`flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-1.5 md:py-2 rounded-md ${
                 CLASS_STYLE[cls]
               } ${strong ? 'font-black' : 'font-bold'} ${
-                cls === 'info' ? 'text-slate-500 text-[10px] md:text-[11px]' : 'text-black text-xs md:text-sm'
+                cls === 'info' ? 'text-ink-3 text-[10px] md:text-[11px]' : 'text-ink text-xs md:text-sm'
               }`}
             >
               <span className="min-w-0">
                 <span className="uppercase break-words">{item.note}</span>
                 {note ? (
-                  <span className="block text-[9px] md:text-[10px] text-slate-400 normal-case font-bold">
+                  <span className="block text-[9px] md:text-[10px] text-ink-4 normal-case font-bold">
                     {note}
                   </span>
                 ) : null}
@@ -314,7 +314,7 @@ function PeriodCard({
                     ? measured
                     : '—'}
                 {item.itemKind !== null ? (
-                  <span className="ml-2 text-[9px] text-slate-400">{t('actualBill.kind', { kind: item.itemKind })}</span>
+                  <span className="ml-2 text-[9px] text-ink-4">{t('actualBill.kind', { kind: item.itemKind })}</span>
                 ) : null}
               </span>
             </li>
@@ -323,21 +323,21 @@ function PeriodCard({
       </ul>
 
       <div className="mt-3 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs font-black">
-        <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.electricity')}</div>
+        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.electricity')}</div>
           <div className="italic">{shownMoney(totals.commodity)}</div>
         </div>
-        <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.deliveryReg')}</div>
+        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.deliveryReg')}</div>
           <div className="italic">{shownMoney(totals.delivery + totals.regulatory)}</div>
         </div>
-        <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.hst')}</div>
+        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.hst')}</div>
           <div className="italic">{shownMoney(totals.tax)}</div>
         </div>
-        <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-          <div className="text-slate-400 text-[8px] uppercase">{t('actualBill.rebate')}</div>
-          <div className="italic text-emerald-600">{shownMoney(totals.credit)}</div>
+        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.rebate')}</div>
+          <div className="italic text-good">{shownMoney(totals.credit)}</div>
         </div>
       </div>
     </div>
@@ -373,11 +373,11 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
   return (
     <section
       data-testid="actual-bill"
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t('actualBill.straightFromXml', { count: summaries.length })}
             {summaries[summaries.length - 1].currency !== null
               ? ` · ${currencyLabel(summaries[summaries.length - 1].currency)}`
@@ -385,7 +385,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
           </div>
           <h2 className="text-2xl md:text-4xl italic font-black">{t('actualBill.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-slate-500 normal-case max-w-md">
+        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
           {t('actualBill.blurb')}
         </div>
       </div>
@@ -400,8 +400,8 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
             onClick={() => setSelected('all')}
             aria-pressed={selected === 'all'}
             data-testid="actual-bill-all"
-            className={`min-h-[44px] px-4 border-2 border-black rounded-lg text-[10px] md:text-xs uppercase font-black ${
-              selected === 'all' ? 'bg-yellow-400' : 'bg-slate-50'
+            className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
+              selected === 'all' ? 'bg-yellow-400' : 'bg-inset'
             }`}
           >
             {t('actualBill.allPeriods')}
@@ -413,8 +413,8 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               onClick={() => setSelected(r.summary.startDate)}
               aria-pressed={selected === r.summary.startDate}
               data-testid={`actual-bill-pick-${r.summary.startDate}`}
-              className={`min-h-[44px] px-4 border-2 border-black rounded-lg text-[10px] md:text-xs uppercase font-black ${
-                selected === r.summary.startDate ? 'bg-yellow-400' : 'bg-slate-50'
+              className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
+                selected === r.summary.startDate ? 'bg-yellow-400' : 'bg-inset'
               }`}
             >
               {billPeriodLabel(r.summary.start, r.summary.duration).split(' – ')[0]}
@@ -427,7 +427,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
         <div
           data-testid="rate-assumptions-banner"
           role="alert"
-          className="mt-4 md:mt-6 bg-red-600 text-white border-4 border-black rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
+          className="mt-4 md:mt-6 bg-red-600 text-white border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
         >
           {t('actualBill.rateBanner')}
         </div>

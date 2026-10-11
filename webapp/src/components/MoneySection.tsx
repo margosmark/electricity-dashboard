@@ -112,15 +112,15 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
       <div className="flex flex-wrap items-center gap-3 md:gap-4">
         <span
           aria-hidden
-          className="bg-black text-yellow-400 p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-black"
+          className="bg-inv text-accent-yellow p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge"
         >
           <Banknote size={24} className="md:w-10 md:h-10" strokeWidth={3} />
         </span>
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
+          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-ink-4 font-black uppercase">
             {t('money.eyebrow')}
           </div>
-          <h2 id="money-heading" className="text-2xl md:text-4xl italic font-black uppercase text-black">
+          <h2 id="money-heading" className="text-2xl md:text-4xl italic font-black uppercase text-ink">
             {t('tab.money')}
           </h2>
         </div>
@@ -129,12 +129,12 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
       {!hasBill ? (
         <div
           data-testid="money-empty"
-          className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-dashed border-black text-black font-black uppercase"
+          className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-dashed border-edge text-ink font-black uppercase"
         >
           <p className="text-lg md:text-2xl">
             {t('money.emptyTitle')}
           </p>
-          <p className="mt-3 text-[11px] md:text-sm font-bold normal-case text-slate-600 max-w-2xl">
+          <p className="mt-3 text-[11px] md:text-sm font-bold normal-case text-ink-2 max-w-2xl">
             {t('money.emptyBlurb')}
           </p>
         </div>

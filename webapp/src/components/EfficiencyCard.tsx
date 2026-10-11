@@ -68,14 +68,14 @@ const H = 210;
 const PAD = { top: 22, right: 16, bottom: 30, left: 46 };
 
 const SEASON_FILL: Record<Season, string> = {
-  winter: '#e2e8f0',
-  summer: '#fef3c7',
+  winter: 'var(--season-winter)',
+  summer: 'var(--season-summer)',
 };
 
 const CHIP_CLASS: Record<TrendVerdict, string> = {
   improving: 'bg-emerald-400',
   worsening: 'bg-red-400',
-  stable: 'bg-slate-200',
+  stable: 'bg-track',
 };
 
 const CHIP_WORD_KEY: Record<TrendVerdict, string> = {
@@ -213,7 +213,7 @@ function Chart({
               textAnchor="middle"
               fontSize={10}
               fontWeight={900}
-              fill="#334155"
+              fill="var(--ink-2)"
             >
               {b.season === 'winter' ? t('season.winter') : t('season.summer')}
             </text>
@@ -227,7 +227,7 @@ function Chart({
         y1={PAD.top + innerH}
         x2={W - PAD.right}
         y2={PAD.top + innerH}
-        stroke="#000"
+        stroke="var(--ink)"
         strokeWidth={2}
       />
       <line
@@ -235,10 +235,10 @@ function Chart({
         y1={PAD.top}
         x2={PAD.left}
         y2={PAD.top + innerH}
-        stroke="#000"
+        stroke="var(--ink)"
         strokeWidth={2}
       />
-      <text x={PAD.left - 6} y={PAD.top + 8} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
+      <text x={PAD.left - 6} y={PAD.top + 8} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
         {fmtCents(hi, 0)}
       </text>
       <text
@@ -247,7 +247,7 @@ function Chart({
         textAnchor="end"
         fontSize={10}
         fontWeight={900}
-        fill="#000"
+        fill="var(--ink)"
       >
         {fmtCents(lo, 0)}
       </text>
@@ -296,7 +296,7 @@ function Chart({
       <polyline
         points={polyline}
         fill="none"
-        stroke="#000"
+        stroke="var(--ink)"
         strokeWidth={3}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -308,7 +308,7 @@ function Chart({
           cx={x(i)}
           cy={y(p.cents)}
           r={3}
-          fill="#000"
+          fill="var(--ink)"
           /* The chart is decorative for screen readers, but the numbers it
              draws are the ones the browser check reads back — one circle per
              bill, with the audited ¢/kWh and the kWh it was divided by. */
@@ -326,16 +326,16 @@ function Chart({
           cy={y(last.cents)}
           r={6}
           fill="#facc15"
-          stroke="#000"
+          stroke="var(--ink)"
           strokeWidth={3}
         />
       )}
 
       {/* First and last period only — 24 monthly labels would be noise. */}
-      <text x={PAD.left} y={H - 10} fontSize={10} fontWeight={900} fill="#000">
+      <text x={PAD.left} y={H - 10} fontSize={10} fontWeight={900} fill="var(--ink)">
         {first.label}
       </text>
-      <text x={W - PAD.right} y={H - 10} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
+      <text x={W - PAD.right} y={H - 10} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
         {last.label}
       </text>
     </svg>
@@ -350,15 +350,15 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
     return (
       <section
         data-testid="efficiency-card"
-        className="bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-dashed border-black text-black"
+        className="bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-dashed border-edge text-ink"
       >
         <div className="flex items-center gap-3 mb-2">
-          <span aria-hidden className="bg-slate-100 p-2 rounded-xl border-2 border-black">
+          <span aria-hidden className="bg-hover p-2 rounded-xl border-2 border-edge">
             <Gauge size={20} strokeWidth={4} />
           </span>
           <h3 className="text-lg md:text-2xl italic font-black uppercase">{t('efficiency.title')}</h3>
         </div>
-        <p data-testid="efficiency-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case">
+        <p data-testid="efficiency-empty" className="text-[11px] md:text-sm font-bold text-ink-2 normal-case">
           {trend.emptyMessage ?? t('efficiency.empty')}
         </p>
       </section>
@@ -375,15 +375,15 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
       aria-labelledby="efficiency-heading"
       data-bills={periods.length}
       data-split={String(trend.splitAvailable)}
-      className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black text-black"
+      className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge text-ink"
     >
       <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-4">
-        <span aria-hidden className="bg-black text-yellow-400 p-2 md:p-3 rounded-xl border-2 md:border-4 border-black">
+        <span aria-hidden className="bg-inv text-accent-yellow p-2 md:p-3 rounded-xl border-2 md:border-4 border-edge">
           <Gauge size={22} strokeWidth={4} />
         </span>
         <div>
           <div
-            className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-500 font-black uppercase"
+            className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-3 font-black uppercase"
             data-testid="efficiency-subtitle"
           >
             {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -399,13 +399,13 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             asked for before the rebate. Neither is "the" number, so neither
             gets to stand alone without saying which one it is. */}
         <div
-          className="ml-auto bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black text-right"
+          className="ml-auto bg-inv text-inv-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge text-right"
           data-testid="efficiency-headline"
           data-cents={allTime.cents.toFixed(2)}
           data-cents-incl-tax={allTime.centsInclTax.toFixed(2)}
           data-tax={allTime.tax.toFixed(2)}
         >
-          <div className="text-[8px] md:text-[10px] text-yellow-400 uppercase font-black">
+          <div className="text-[8px] md:text-[10px] text-accent-yellow uppercase font-black">
             {t('efficiency.allTime', { count: allTime.bills })}
           </div>
           <div className="flex items-end justify-end gap-4 md:gap-6">
@@ -418,20 +418,20 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
                 {fmtCents(allTime.cents, 1)}
                 <span className="text-[10px] md:text-xs not-italic font-black ml-1">{t('efficiency.perKwh')}</span>
               </div>
-              <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
+              <div className="text-[8px] md:text-[10px] text-inv-ink-2 uppercase font-black">
                 {t('efficiency.exclTax')}
               </div>
             </div>
             <div>
               <div
-                className="text-xl md:text-3xl italic font-black text-yellow-400"
+                className="text-xl md:text-3xl italic font-black text-accent-yellow"
                 data-testid="efficiency-all-time-incl-tax"
                 data-cents={allTime.centsInclTax.toFixed(2)}
               >
                 {fmtCents(allTime.centsInclTax, 1)}
                 <span className="text-[10px] md:text-xs not-italic font-black ml-1">{t('efficiency.perKwh')}</span>
               </div>
-              <div className="text-[8px] md:text-[10px] text-slate-300 uppercase font-black">
+              <div className="text-[8px] md:text-[10px] text-inv-ink-2 uppercase font-black">
                 {t('efficiency.inclTax')}
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
       <p
         data-testid="efficiency-tax-footnote"
         data-tax-pct={impliedTaxPct(allTime) ?? ''}
-        className="mb-3 text-[10px] md:text-xs font-bold text-slate-500 normal-case"
+        className="mb-3 text-[10px] md:text-xs font-bold text-ink-3 normal-case"
       >
         {taxFootnote(allTime)}
       </p>
@@ -463,7 +463,7 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             data-rate-slope={(trend.rate?.slope ?? 0).toFixed(3)}
             data-net-slope={(trend.net?.slope ?? 0).toFixed(3)}
             data-stable-band={trend.band.toFixed(3)}
-            className={`inline-flex items-center px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-black font-black uppercase text-[11px] md:text-sm ${CHIP_CLASS[trend.verdict!]}`}
+            className={`inline-flex items-center px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-edge font-black uppercase text-[11px] md:text-sm ${CHIP_CLASS[trend.verdict!]}`}
           >
             {t(CHIP_WORD_KEY[trend.verdict!])}{' '}
             <span className="ml-2 normal-case">
@@ -477,12 +477,12 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <span
             data-testid="efficiency-rates-line"
             data-direction={trend.rateDirection ?? 'unknown'}
-            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-[10px] md:text-xs ${
+            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black text-[10px] md:text-xs ${
               trend.rateDirection === 'up'
-                ? 'bg-red-100 text-red-800'
+                ? 'bg-bad-soft text-bad'
                 : trend.rateDirection === 'down'
-                  ? 'bg-emerald-50 text-emerald-800'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-good-soft text-good'
+                  : 'bg-hover text-ink-2'
             }`}
           >
             {trend.rateDirection === 'flat'
@@ -495,12 +495,12 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <span
             data-testid="efficiency-delivery-line"
             data-direction={trend.deliveryDirection ?? 'unknown'}
-            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-[10px] md:text-xs ${
+            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black text-[10px] md:text-xs ${
               trend.deliveryDirection === 'up'
-                ? 'bg-amber-50 text-amber-800'
+                ? 'bg-warn-soft text-warn'
                 : trend.deliveryDirection === 'down'
-                  ? 'bg-emerald-50 text-emerald-800'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-good-soft text-good'
+                  : 'bg-hover text-ink-2'
             }`}
           >
             {trend.deliveryDirection === 'flat'
@@ -515,12 +515,12 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
           <span
             data-testid="efficiency-net-line"
             data-verdict={trend.netVerdict}
-            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-black font-black text-[10px] md:text-xs ${
+            className={`inline-flex items-center px-3 py-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black text-[10px] md:text-xs ${
               trend.netVerdict === 'improving'
-                ? 'bg-emerald-50 text-emerald-800'
+                ? 'bg-good-soft text-good'
                 : trend.netVerdict === 'worsening'
-                  ? 'bg-red-50 text-red-800'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-bad-soft text-bad'
+                  : 'bg-hover text-ink-2'
             }`}
           >
             {trend.netVerdict === 'stable'
@@ -531,14 +531,14 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
       ) : (
         <p
           data-testid="efficiency-trend-empty"
-          className="mb-3 text-[11px] md:text-sm font-bold text-slate-600 normal-case"
+          className="mb-3 text-[11px] md:text-sm font-bold text-ink-2 normal-case"
         >
           {trend.emptyMessage}
         </p>
       )}
 
       {trend.sentence && (
-        <p data-testid="efficiency-sentence" className="mb-3 text-[11px] md:text-sm font-bold text-slate-700 normal-case">
+        <p data-testid="efficiency-sentence" className="mb-3 text-[11px] md:text-sm font-bold text-ink-2 normal-case">
           {trend.sentence}
         </p>
       )}
@@ -548,17 +548,17 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
         type="button"
         onClick={onOpenMoney}
         data-testid="efficiency-open-money"
-        className="block w-full text-left rounded-xl border-2 md:border-4 border-black bg-slate-50 hover:bg-white active:bg-slate-100 transition-colors p-2 md:p-3 min-h-11 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500"
+        className="block w-full text-left rounded-xl border-2 md:border-4 border-edge bg-inset hover:bg-card active:bg-hover transition-colors p-2 md:p-3 min-h-11 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500"
       >
         {periods.length > 1 ? (
           <Chart points={periods} trend={trend} />
         ) : (
-          <p className="text-[11px] font-bold text-slate-600 normal-case">
+          <p className="text-[11px] font-bold text-ink-2 normal-case">
             {t('efficiency.oneBill')}
           </p>
         )}
         <span
-          className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[9px] md:text-[11px] font-black uppercase text-slate-500"
+          className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[9px] md:text-[11px] font-black uppercase text-ink-3"
           data-testid="efficiency-range"
           data-first-cents={first.cents.toFixed(2)}
           data-first-cents-incl-tax={first.centsInclTax.toFixed(2)}
@@ -575,11 +575,11 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
               lastIncl: fmtCents(last.centsInclTax, 1),
             })}
           </span>
-          <span className="text-blue-700">{t('efficiency.openMoney')}</span>
+          <span className="text-info">{t('efficiency.openMoney')}</span>
         </span>
       </button>
 
-      <p className="mt-3 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
+      <p className="mt-3 text-[10px] md:text-xs font-bold text-ink-2 normal-case">
         {trend.splitAvailable
           ? t('efficiency.splitNote')
           : (trend.splitNote ?? t('efficiency.splitUnavailable'))}

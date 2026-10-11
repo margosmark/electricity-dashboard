@@ -43,9 +43,9 @@ export default function HourCostHistogram({
   return (
     <div
       data-testid="money-hour-histogram"
-      className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-ink font-black uppercase"
     >
-      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
         {t('hourCost.caption', { plan: planLabel(plan) })}
       </div>
       <h3 className="text-lg md:text-2xl italic font-black">{t('hourCost.title')}</h3>
@@ -53,7 +53,7 @@ export default function HourCostHistogram({
       {!profile.ready ? (
         <div
           data-testid="money-hour-empty"
-          className="mt-4 bg-slate-50 border-2 border-dashed border-black rounded-xl p-4 text-[11px] font-bold normal-case text-slate-600"
+          className="mt-4 bg-inset border-2 border-dashed border-edge rounded-xl p-4 text-[11px] font-bold normal-case text-ink-2"
         >
           {profile.reason}
         </div>
@@ -66,7 +66,7 @@ export default function HourCostHistogram({
                 {profile.averageCents != null ? fmtCents(profile.averageCents) : '—'}
               </span>
             </span>
-            <span className="text-slate-500 font-bold normal-case">
+            <span className="text-ink-3 font-bold normal-case">
               {t('hourCost.readings', { count: profile.rows, rows: fmtNumber(profile.rows) })}
             </span>
           </div>
@@ -82,19 +82,19 @@ export default function HourCostHistogram({
                 <XAxis
                   dataKey="label"
                   interval={2}
-                  tick={{ fontSize: 9, fontWeight: 900 }}
-                  stroke="#000"
+                  tick={{ fontSize: 9, fontWeight: 900, fill: 'var(--ink-3)' }}
+                  stroke="var(--axis)"
                   strokeWidth={2}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fontWeight: 900 }}
-                  stroke="#000"
+                  tick={{ fontSize: 10, fontWeight: 900, fill: 'var(--ink-3)' }}
+                  stroke="var(--axis)"
                   strokeWidth={2}
                   width={48}
                   unit="¢"
                 />
                 <Tooltip
-                  cursor={{ fill: '#000', opacity: 0.05 }}
+                  cursor={{ fill: 'var(--ink)', opacity: 0.05 }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload || payload.length === 0) return null;
                     const b = payload[0]?.payload as
@@ -104,10 +104,10 @@ export default function HourCostHistogram({
                     return (
                       <div
                         data-testid="money-hour-tooltip"
-                        className="border-4 border-black bg-white p-3 shadow-[8px_8px_0px_0px_#000] text-black"
+                        className="border-4 border-edge bg-card p-3 shadow-hard-8 text-ink"
                         style={{ pointerEvents: 'none' }}
                       >
-                        <div className="text-xs font-black uppercase border-b-2 border-black pb-1 mb-1">
+                        <div className="text-xs font-black uppercase border-b-2 border-edge pb-1 mb-1">
                           {t('hourCost.tooltipHour', { hour: String(label ?? b.label) })}
                         </div>
                         <div className="text-[11px] font-black">
@@ -115,7 +115,7 @@ export default function HourCostHistogram({
                             ? t('hourCost.noEnergy')
                             : `${fmtCents(b.cents, 2)}${t('efficiency.perKwh')}`}
                         </div>
-                        <div className="text-[10px] font-bold text-slate-500">
+                        <div className="text-[10px] font-bold text-ink-3">
                           {t('hourCost.tooltipDetail', {
                             cost: money(b.cost),
                             kwh: b.kwh.toFixed(1),
@@ -128,13 +128,13 @@ export default function HourCostHistogram({
                 />
                 <ReferenceLine
                   y={profile.averageCents ?? 0}
-                  stroke="#000"
+                  stroke="var(--ink)"
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   label={{
                     value: t('hourCost.averageTick'),
                     position: 'insideTopRight',
-                    fill: '#000',
+                    fill: 'var(--ink)',
                     fontSize: 10,
                     fontWeight: 900,
                   }}
@@ -153,14 +153,14 @@ export default function HourCostHistogram({
               <span key={w} className="flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className="inline-block w-3 h-3 border-2 border-black"
+                  className="inline-block w-3 h-3 border-2 border-edge"
                   style={{ background: WINDOW_COLOR[w] }}
                 />
                 {periodLabel(w)} {t('hourCost.hoursWord')}
               </span>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-bold normal-case text-slate-500">
+          <p className="mt-2 text-[10px] font-bold normal-case text-ink-3">
             {t('hourCost.footnote')}
           </p>
         </>

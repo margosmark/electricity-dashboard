@@ -1,0 +1,198 @@
+{
+  "390x844": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "input.sr-only",
+            "w": 1,
+            "h": 1,
+            "text": "Import JSON backup"
+          }
+        ],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-inv/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.flex.items-start.justify-between",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "dataset": "green-button-alliance-sample.xml",
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": true
+  },
+  "360x800": {
+    "cls": {
+      "total": 0,
+      "shifts": []
+    },
+    "states": {
+      "empty": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [
+          {
+            "sel": "input.sr-only",
+            "w": 1,
+            "h": 1,
+            "text": "Import JSON backup"
+          }
+        ],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=upload-modal]",
+            "topAtCentre": "div.fixed.inset-0.bg-inv/80[upload-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "chart": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "insights": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": []
+      },
+      "floorModal": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=floor-help-modal]",
+            "topAtCentre": "div.no-print.fixed.inset-0[floor-help-modal]",
+            "covered": false
+          }
+        ]
+      },
+      "backup": {
+        "doc": {
+          "scrollWidth": 360,
+          "clientWidth": 360,
+          "overflowPx": 0
+        },
+        "overflow": [],
+        "inScrollRegion": [],
+        "smallTargets": [],
+        "smallFonts": [],
+        "occlusion": [
+          {
+            "sel": "[data-testid=backup-drawer]",
+            "topAtCentre": "div.absolute.left-0.right-0[backup-drawer]",
+            "covered": false
+          }
+        ]
+      }
+    },
+    "tapClosedModal": true,
+    "dataset": "green-button-alliance-sample.xml",
+    "tapClosedFloorModal": true,
+    "escClosedBackup": true,
+    "outsideTapClosedBackup": true
+  }
+}

@@ -89,9 +89,9 @@ export default function OverviewPanel({
 
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
-        <div className="relative z-[100] bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black flex flex-wrap gap-4 md:gap-6 items-center text-black" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
-          <div className="bg-black text-white px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
-            <div className="text-[8px] md:text-[10px] text-yellow-400">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+        <div className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap gap-4 md:gap-6 items-center text-ink" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
+          <div className="bg-inv text-inv-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
+            <div className="text-[8px] md:text-[10px] text-accent-yellow">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
             <div className="text-xl md:text-3xl italic font-black">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
@@ -104,7 +104,7 @@ export default function OverviewPanel({
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
-              className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black"
+              className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
             >
               <div className="text-[8px] md:text-[10px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -122,7 +122,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.cents, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-slate-600">
+                      <div className="text-[8px] font-black uppercase text-ink-2">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -134,7 +134,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.centsInclTax, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-slate-600">
+                      <div className="text-[8px] font-black uppercase text-ink-2">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
@@ -152,7 +152,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.cents, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-slate-600">
+                      <div className="text-[8px] font-black uppercase text-ink-2">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -164,7 +164,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.centsInclTax, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-slate-600">
+                      <div className="text-[8px] font-black uppercase text-ink-2">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
@@ -186,7 +186,7 @@ export default function OverviewPanel({
             role="group"
             aria-label={t('overview.costModeAria')}
             /* A printed report states one unit; the switch itself is chrome. */
-            className="no-print bg-slate-100 p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-black flex gap-1"
+            className="no-print bg-hover p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1"
           >
             {(['yr', 'day'] as const).map((mode) => (
               <button
@@ -195,7 +195,7 @@ export default function OverviewPanel({
                 aria-pressed={costMode === mode}
                 onClick={() => setCostMode(mode)}
                 className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:px-5 py-2 rounded-lg md:rounded-xl text-[11px] md:text-[11px] font-black transition-all ${
-                  costMode === mode ? 'bg-black text-white' : 'text-black hover:bg-white'
+                  costMode === mode ? 'bg-inv text-inv-ink' : 'text-ink hover:bg-card'
                 }`}
               >
                 {mode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
@@ -215,7 +215,18 @@ export default function OverviewPanel({
                 key={p.id}
                 data-testid={`plan-cost-${p.id}`}
                 data-unit={costMode}
-                className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-black ${p.id === totals.bestPlan ? 'bg-emerald-400' : p.id === totals.worstPlan ? 'bg-red-400' : 'bg-slate-100'}`}
+                /* The emerald/red chips are FIXED slabs — their colour does not
+                   flip with the theme, so their ink must not either: --ink is
+                   near-white in dark and would sit at 1.85:1 / 2.76:1 on them.
+                   text-accent-ink is #000 in both themes, which is what these
+                   chips have always painted in light. */
+                className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-edge ${
+                  p.id === totals.bestPlan
+                    ? 'bg-emerald-400 text-accent-ink'
+                    : p.id === totals.worstPlan
+                      ? 'bg-red-400 text-accent-ink'
+                      : 'bg-hover'
+                }`}
               >
                 <div className="text-[8px] md:text-[10px]">{planLabel(p.id)}</div>
                 <div className="text-lg md:text-2xl italic font-black">
@@ -228,7 +239,7 @@ export default function OverviewPanel({
             ))}
           </div>
 
-          <div className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black">
+          <div className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
             <div className="text-[8px] md:text-[10px]">{t('overview.bestVsWorst')}</div>
             <div className="text-lg md:text-2xl italic font-black">
               {money(totals.planDelta)}
@@ -247,8 +258,9 @@ export default function OverviewPanel({
             data-last-reading={totals.lastDate}
             data-age-days={freshness?.ageDays}
             data-stale={String(freshness?.stale ?? false)}
-            className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-black flex flex-col ${
-              freshness?.stale ? 'bg-amber-300' : 'bg-slate-100'
+            className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-edge flex flex-col ${
+              /* amber-300 is a fixed slab: same ink rule as the chips above. */
+              freshness?.stale ? 'bg-amber-300 text-accent-ink' : 'bg-hover'
             }`}
             title={
               freshness?.stale
@@ -261,7 +273,7 @@ export default function OverviewPanel({
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
-                freshness?.stale ? 'text-black' : 'text-slate-500'
+                freshness?.stale ? 'text-accent-ink' : 'text-ink-3'
               }`}
             >
               {freshness?.stale
@@ -270,12 +282,12 @@ export default function OverviewPanel({
             </div>
           </div>
 
-          <div className="text-[8px] md:text-[10px] text-slate-500 max-w-[240px] md:max-w-none">
+          <div className="text-[8px] md:text-[10px] text-ink-3 max-w-[240px] md:max-w-none">
             {t('overview.wholeDataset', {
               start: fmtDay(totals.firstDate),
               end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')),
             })}
-            <span data-testid="cost-reframe" className="block mt-1 text-black font-black normal-case">
+            <span data-testid="cost-reframe" className="block mt-1 text-ink font-black normal-case">
               {reframe}
             </span>
           </div>

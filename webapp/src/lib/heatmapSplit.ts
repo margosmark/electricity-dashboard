@@ -86,13 +86,26 @@ export function splitHeatmap(data: HeatmapData): HeatmapSplit {
  * The same colour buckets the old single grid used, keyed on the SHARED
  * max — so a cell looks identical whether it is drawn in one grid or the
  * other.
+ *
+ * Dark mode (t_d5d0a86b): the ramp is NOT inverted. "Hot = red" is a
+ * semantic constant and flipping it would make the hottest hour read as the
+ * coldest — the spec rejects that outright. Only the two PALE steps needed
+ * help: `bg-hover` was a white hole punched in a dark card and blue-300
+ * was a pastel that fought the navy, so those two now come from `--heat-*`
+ * tokens (slate-100 → #1e293b, blue-300 → #1d4ed8). Yellow, orange and red
+ * are saturated enough to read on both themes and stay literal Tailwind —
+ * which keeps `heatmapSplit.test.ts`'s bucket assertions intact.
+ *
+ * The border classes stay literal too: they are the cell's own tone (the
+ * darker sibling of its fill) and every one of them clears 3:1 against both
+ * a white and a navy card.
  */
 export function heatColor(avg: number, maxAvg: number): string {
-  if (maxAvg <= 0 || avg <= 0) return 'bg-slate-100';
+  if (maxAvg <= 0 || avg <= 0) return 'bg-[var(--heat-0)]';
   const intensity = avg / maxAvg;
   if (intensity > 0.8) return 'bg-red-600 border-red-800';
   if (intensity > 0.6) return 'bg-orange-500 border-orange-700';
   if (intensity > 0.4) return 'bg-yellow-400 border-yellow-600';
-  if (intensity > 0.2) return 'bg-blue-300 border-blue-500';
-  return 'bg-slate-100';
+  if (intensity > 0.2) return 'bg-[var(--heat-1)] border-blue-500';
+  return 'bg-[var(--heat-0)]';
 }

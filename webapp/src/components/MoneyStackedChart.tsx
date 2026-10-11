@@ -108,9 +108,9 @@ type ChartRow = {
  */
 const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string; key: string } | null> = {
   billed: null,
-  open: { text: 'Estimate', cls: 'bg-yellow-400 border-black', key: 'money.badge.estimate' },
-  gap: { text: 'No bill', cls: 'bg-slate-200 border-black', key: 'money.badge.noBill' },
-  derived: { text: 'Billing day', cls: 'bg-slate-200 border-black', key: 'money.badge.billingDay' },
+  open: { text: 'Estimate', cls: 'bg-yellow-400 text-accent-ink border-edge', key: 'money.badge.estimate' },
+  gap: { text: 'No bill', cls: 'bg-track border-edge', key: 'money.badge.noBill' },
+  derived: { text: 'Billing day', cls: 'bg-track border-edge', key: 'money.badge.billingDay' },
 };
 
 /** Slices that actually occur in this file — the rest get no bar, no chip. */
@@ -150,10 +150,10 @@ function CompositionTooltip({
   return (
     <div
       data-testid="money-tooltip"
-      className="rounded-none border-4 border-black bg-white p-4 shadow-[8px_8px_0px_0px_#000] text-black"
+      className="rounded-none border-4 border-edge bg-card p-4 shadow-hard-8 text-ink"
       style={{ pointerEvents: 'none' }}
     >
-      <div className="text-xs font-black uppercase mb-2 border-b-2 border-black pb-1">
+      <div className="text-xs font-black uppercase mb-2 border-b-2 border-edge pb-1">
         {row.fullLabel}
       </div>
       <ul className="space-y-1 text-[11px] font-black">
@@ -167,7 +167,7 @@ function CompositionTooltip({
           ))}
       </ul>
       {mode !== 'usage' && (
-        <div className="mt-2 pt-2 border-t-2 border-black flex justify-between gap-4 text-[11px] font-black">
+        <div className="mt-2 pt-2 border-t-2 border-edge flex justify-between gap-4 text-[11px] font-black">
           <span>
             {row.kind === 'billed'
               ? t('money.youPaid')
@@ -185,12 +185,12 @@ function CompositionTooltip({
       {row.kind !== 'billed' && (
         <div
           data-testid="money-tooltip-flag"
-          className="mt-2 text-[9px] font-black uppercase bg-yellow-100 border-2 border-black px-2 py-1"
+          className="mt-2 text-[9px] font-black uppercase bg-accent-soft border-2 border-edge px-2 py-1"
         >
           {row.kind === 'open' ? t('money.flagOpen') : t('money.flagNoBill')}
         </div>
       )}
-      <div className="mt-1 text-[9px] font-bold text-slate-500">
+      <div className="mt-1 text-[9px] font-bold text-ink-3">
         {t('money.readingsCover', { pct: fmtPercent(Math.round((row.coverage ?? 0) * 100)) })}
       </div>
     </div>
@@ -379,8 +379,8 @@ export default function MoneyStackedChart({
       data-testid={testid}
       aria-pressed={mode === id}
       onClick={() => setMode(id)}
-      className={`min-h-[44px] px-3 md:px-4 border-2 border-black text-[10px] md:text-xs font-black uppercase ${
-        mode === id ? 'bg-black text-white' : 'bg-white text-black hover:bg-yellow-400'
+      className={`min-h-[44px] px-3 md:px-4 border-2 border-edge text-[10px] md:text-xs font-black uppercase ${
+        mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-yellow-400 hover:text-accent-ink'
       }`}
     >
       {label}
@@ -390,11 +390,11 @@ export default function MoneyStackedChart({
   return (
     <div
       data-testid="money-stacked"
-      className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3 md:gap-4">
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t('money.periodsSubtitle', { count: stacks.length })}
           </div>
           <h3 className="text-xl md:text-4xl italic font-black">
@@ -424,7 +424,7 @@ export default function MoneyStackedChart({
             >
               <span
                 aria-hidden
-                className="inline-block w-4 h-4 border-2 border-black"
+                className="inline-block w-4 h-4 border-2 border-edge"
                 style={{ background: meta.color }}
               />
               {mode === 'usage' ? `${meta.short}${t('money.kwhUnit')}` : meta.label}
@@ -435,7 +435,7 @@ export default function MoneyStackedChart({
           <span className="flex items-center gap-2 text-[9px] md:text-[10px] uppercase font-black">
             <span
               aria-hidden
-              className="inline-block w-4 h-4 border-2 border-black"
+              className="inline-block w-4 h-4 border-2 border-edge"
               style={{ background: COST_SLICE_META.credit.color }}
             />
             {COST_SLICE_META.credit.label} {t('money.belowLine')}
@@ -446,7 +446,7 @@ export default function MoneyStackedChart({
       {mode === 'dollars' && (
         <p
           data-testid="money-chart-caption"
-          className="mt-2 text-[10px] font-bold normal-case text-slate-500"
+          className="mt-2 text-[10px] font-bold normal-case text-ink-3"
         >
           {t('money.chartCaptionA')} <em>{t('money.shareExplainerB')}</em> {t('money.chartCaptionC')}
         </p>
@@ -455,7 +455,7 @@ export default function MoneyStackedChart({
       {mode === 'dollars' && hasFlagged && (
         <p
           data-testid="money-chart-flagged"
-          className="mt-2 text-[10px] font-bold normal-case text-slate-500"
+          className="mt-2 text-[10px] font-bold normal-case text-ink-3"
         >
           {t('money.flaggedExplainerA')}
           <strong>{t('money.badge.estimate')}</strong>
@@ -468,7 +468,7 @@ export default function MoneyStackedChart({
       {mode === 'usage' && usageMissing && (
         <div
           data-testid="money-usage-empty"
-          className="mt-4 bg-slate-100 border-2 border-dashed border-black rounded-lg px-3 py-2 text-[11px] font-bold normal-case text-slate-600"
+          className="mt-4 bg-hover border-2 border-dashed border-edge rounded-lg px-3 py-2 text-[11px] font-bold normal-case text-ink-2"
         >
           {t('money.usageMissing')}
         </div>
@@ -480,30 +480,30 @@ export default function MoneyStackedChart({
           data-testid="money-share-stats"
           className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs"
         >
-          <div className="bg-yellow-400 border-2 border-black rounded-lg p-2 md:p-3">
+          <div className="bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.shareDeliveryReg')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="non-commodity-pct">
               {share.nonCommodityPct.toFixed(1)}%
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
-          <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
+          <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.electricityItself')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="commodity-pct">
               {share.commodityPct.toFixed(1)}%
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.commoditySplit')}</div>
           </div>
-          <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
+          <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('slice.tax')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="tax-pct">
               {share.taxPct.toFixed(1)}%
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
-          <div className="bg-emerald-100 border-2 border-black rounded-lg p-2 md:p-3">
+          <div className="bg-good-soft border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.rebateGivesBack')}</div>
-            <div className="text-lg md:text-2xl italic text-emerald-700" data-testid="rebate-pct">
+            <div className="text-lg md:text-2xl italic text-good" data-testid="rebate-pct">
               {share.rebatePct.toFixed(1)}%
             </div>
             <div className="text-[8px] font-bold normal-case">
@@ -546,7 +546,13 @@ export default function MoneyStackedChart({
                     height="8"
                     patternTransform="rotate(45)"
                   >
-                    <rect width="8" height="8" fill="#FFFFFF" />
+                    {/* The stripe's BACKGROUND must be the card, not white:
+                        on a dark chart a literal #FFFFFF here paints solid
+                        white bars and the "this is an estimate" signal reads
+                        as the most expensive colour on screen. var(--card)
+                        resolves per theme; SVG presentation attributes accept
+                        var() so no getFoo(theme) plumbing is needed. */}
+                    <rect width="8" height="8" fill="var(--card)" />
                     <rect width="4" height="8" fill={COST_SLICE_META[k].color} />
                   </pattern>
                 ))}
@@ -560,16 +566,16 @@ export default function MoneyStackedChart({
                    itself into mush; show every Nth and let the table below
                    carry the exact dates. */
                 interval={rows.length > 8 ? Math.ceil(rows.length / 8) : 0}
-                tick={{ fontSize: 11, fontWeight: 900 }}
-                stroke="#000"
+                tick={{ fontSize: 11, fontWeight: 900, fill: 'var(--ink-3)' }}
+                stroke="var(--axis)"
                 strokeWidth={2}
               />
               <YAxis
                 type={isShare ? 'category' : 'number'}
                 dataKey={isShare ? 'label' : undefined}
                 width={isShare ? 96 : 62}
-                tick={{ fontSize: 11, fontWeight: 900 }}
-                stroke="#000"
+                tick={{ fontSize: 11, fontWeight: 900, fill: 'var(--ink-3)' }}
+                stroke="var(--axis)"
                 strokeWidth={2}
                 unit={!isShare && mode === 'usage' ? ' kWh' : undefined}
                 tickFormatter={
@@ -579,7 +585,7 @@ export default function MoneyStackedChart({
                 }
               />
               <Tooltip
-                cursor={{ fill: '#000', opacity: 0.05 }}
+                cursor={{ fill: 'var(--ink)', opacity: 0.05 }}
                 content={<CompositionTooltip mode={mode} />}
               />
               {/* Wave P — plan-type background bands (before the bars, so
@@ -637,7 +643,7 @@ export default function MoneyStackedChart({
                       <ReferenceLine
                         key={plan}
                         y={line.perPeriod}
-                        stroke="#000"
+                        stroke="var(--ink)"
                         strokeWidth={2}
                         strokeDasharray={dash}
                         /* A plan that costs more than any single period would
@@ -673,7 +679,7 @@ export default function MoneyStackedChart({
           />
           {t('money.overlayTitle')}
           {mode !== 'dollars' && (
-            <span className="text-[10px] font-bold normal-case text-slate-400">
+            <span className="text-[10px] font-bold normal-case text-ink-4">
               {t('money.overlayLinesOnly')}
             </span>
           )}
@@ -681,7 +687,7 @@ export default function MoneyStackedChart({
         {mode === 'dollars' && !overlay.ready && (
           <span
             data-testid="money-overlay-off"
-            className="text-[10px] font-bold normal-case text-slate-500 max-w-md"
+            className="text-[10px] font-bold normal-case text-ink-3 max-w-md"
           >
             {overlay.reason}
           </span>
@@ -707,7 +713,7 @@ export default function MoneyStackedChart({
                   {line.label} {money(line.perPeriod)}
                   {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
                   {overlay.covered > 1 ? (
-                    <span className="text-slate-500 font-bold normal-case">
+                    <span className="text-ink-3 font-bold normal-case">
                       {t('money.overlayTotal', { amount: money(line.amount) })}
                     </span>
                   ) : null}
@@ -724,7 +730,7 @@ export default function MoneyStackedChart({
                    the reason rather than the payment it does not represent. */
                 <span
                   data-testid="money-overlay-no-charge-lines"
-                  className="text-slate-500 font-bold normal-case"
+                  className="text-ink-3 font-bold normal-case"
                 >
                   {t('actualBill.noChargeLines')}
                 </span>
@@ -733,7 +739,7 @@ export default function MoneyStackedChart({
                   {t('money.youPaid')} {money(overlay.actualPerPeriod)}
                   {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
                   {overlay.covered > 1 ? (
-                    <span className="text-slate-500 font-bold normal-case">
+                    <span className="text-ink-3 font-bold normal-case">
                       {t('money.overlayTotal', { amount: money(overlay.actual) })}
                     </span>
                   ) : null}
@@ -741,10 +747,10 @@ export default function MoneyStackedChart({
               )}
             </span>
           </div>
-          <div className="text-[10px] md:text-[11px] font-bold normal-case text-slate-600 space-y-1">
+          <div className="text-[10px] md:text-[11px] font-bold normal-case text-ink-2 space-y-1">
             <div
               data-testid="money-overlay-lines"
-              className="font-black uppercase text-black text-[10px]"
+              className="font-black uppercase text-ink text-[10px]"
             >
               {overlay.lines.map((l) => `${l.label} ${money(l.amount)}`).join(' · ')} ·{' '}
               {allBilledSilent
@@ -774,7 +780,7 @@ export default function MoneyStackedChart({
       )}
 
       {isShare && share !== null && (
-        <div className="mt-3 text-[10px] md:text-[11px] font-bold normal-case text-slate-600">
+        <div className="mt-3 text-[10px] md:text-[11px] font-bold normal-case text-ink-2">
           {t('money.shareExplainerA')} <em>{t('money.shareExplainerB')}</em>{' '}
           {t('money.shareExplainerC')}{' '}
           <strong>
@@ -792,7 +798,7 @@ export default function MoneyStackedChart({
         <table className="w-full min-w-[680px] text-[10px] md:text-xs font-black">
           <caption className="sr-only">{t('money.tableCaption')}</caption>
           <thead>
-            <tr className="border-b-4 border-black text-left">
+            <tr className="border-b-4 border-edge text-left">
               <th className="py-1 pr-2 uppercase">{t('money.colPeriod')}</th>
               {hasPlanColumn && (
                 <th className="py-1 pr-2 uppercase" data-testid="money-plan-head">
@@ -821,7 +827,7 @@ export default function MoneyStackedChart({
                 <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
                   <span className="inline-flex items-center gap-1 justify-end">
                     {t('money.estTotal')}
-                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 border-black">
+                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 text-accent-ink border-edge">
                       {t('money.badge.estimate')}
                     </span>
                   </span>
@@ -839,7 +845,7 @@ export default function MoneyStackedChart({
             {rows.map((r) => {
               const badge = r.kind !== 'billed' ? KIND_BADGE[r.kind] : null;
               return (
-              <tr key={r.key} className="border-b-2 border-black/20" data-testid="money-row">
+              <tr key={r.key} className="border-b-2 border-edge/20" data-testid="money-row">
                 <td className="py-1 pr-2 whitespace-nowrap">
                   <span className="inline-flex items-center gap-2">
                     <span>{r.label}</span>
@@ -897,7 +903,7 @@ export default function MoneyStackedChart({
                        lines DO state amounts keeps its real figure below,
                        even when those amounts add up to zero. */
                     <span data-testid="money-no-charge-lines">
-                      <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                      <span className="block text-[8px] text-ink-3 normal-case font-bold">
                         {t('actualBill.noChargeLines')}
                       </span>
                       —
@@ -907,7 +913,7 @@ export default function MoneyStackedChart({
                        "You paid" header above it can never be read as a
                        claim that the utility has billed these days. */
                     <span data-testid="money-open-total">
-                      <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                      <span className="block text-[8px] text-ink-3 normal-case font-bold">
                         {t('money.estCommodity')}
                       </span>
                       ~{money(Number(r.total ?? 0))}
@@ -920,21 +926,21 @@ export default function MoneyStackedChart({
                   <td className="py-1 px-2 text-right tabular-nums" data-testid="money-est-total-cell">
                     {r.kind === 'open' && r.estTotal != null ? (
                       <span data-testid="money-open-est-total">
-                        <span className="block text-[8px] text-slate-500 normal-case font-bold">
+                        <span className="block text-[8px] text-ink-3 normal-case font-bold">
                           {t('money.estTotal')}
                         </span>
                         ~{money(Number(r.estTotal))}
                       </span>
                     ) : r.kind === 'open' ? (
                       <span
-                        className="text-slate-400"
+                        className="text-ink-4"
                         title={t('money.noRatesTitle')}
                       >
                         —
                       </span>
                     ) : (
                       <span
-                        className="text-slate-400"
+                        className="text-ink-4"
                         title={t('money.billedKnownTitle')}
                       >
                         —

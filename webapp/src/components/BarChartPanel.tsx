@@ -40,8 +40,13 @@ export default function BarChartPanel({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
-        <CartesianGrid vertical={false} stroke="#000" strokeWidth={1} opacity={0.1} />
-        {/* Subtle season bands: blue = winter window, amber = summer. */}
+        {/* Grid first: it must never out-shout the bars. A hard #000 line at
+            10% was a near-black rule on light; on dark it disappears entirely,
+            so both themes read `--grid` (black@10% / slate@9%). */}
+        <CartesianGrid vertical={false} stroke="var(--grid)" strokeWidth={1} />
+        {/* Subtle season bands: blue = winter window, amber = summer. The
+            7% wash is a BACKGROUND, so it is deliberately quiet in both
+            themes — it is context for the bars, not data of its own. */}
         {labelsUnique &&
           segments.map((s, i) => (
             <ReferenceArea
@@ -51,16 +56,18 @@ export default function BarChartPanel({
               fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
               fillOpacity={0.07}
               stroke="none"
-              label={{ value: s.season === 'winter' ? t('season.bandWinter') : t('season.bandSummer'), position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
+              label={{ value: s.season === 'winter' ? t('season.bandWinter') : t('season.bandSummer'), position: 'insideTop', fill: 'var(--ink-2)', fontSize: 10, fontWeight: 900 }}
             />
           ))}
-        <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#000', fontWeight: 900 }} stroke="#000" strokeWidth={4} />
-        <YAxis tick={{ fontSize: 12, fill: '#000', fontWeight: 900 }} stroke="#000" strokeWidth={4} />
+        {/* The fat 4px axis IS the neobrutalist axis — keep the weight, take
+            the colour from the token so it survives a dark card. */}
+        <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--ink-3)', fontWeight: 900 }} stroke="var(--axis)" strokeWidth={4} />
+        <YAxis tick={{ fontSize: 12, fill: 'var(--ink-3)', fontWeight: 900 }} stroke="var(--axis)" strokeWidth={4} />
         <Tooltip
-          cursor={{ fill: '#000', opacity: 0.05 }}
-          contentStyle={{ borderRadius: '0px', border: '4px solid #000', boxShadow: '12px 12px 0px 0px #000', padding: '24px', background: '#FFF', pointerEvents: 'none' }}
-          itemStyle={{ color: '#000', fontWeight: 900, fontSize: '18px' }}
-          labelStyle={{ fontWeight: 900, color: '#000', marginBottom: '8px', textTransform: 'uppercase' }}
+          cursor={{ fill: 'var(--ink)', opacity: 0.05 }}
+          contentStyle={{ borderRadius: '0px', border: '4px solid var(--edge)', boxShadow: '12px 12px 0px 0px var(--shadow)', padding: '24px', background: 'var(--card)', pointerEvents: 'none' }}
+          itemStyle={{ color: 'var(--ink)', fontWeight: 900, fontSize: '18px' }}
+          labelStyle={{ fontWeight: 900, color: 'var(--ink)', marginBottom: '8px', textTransform: 'uppercase' }}
           formatter={(v, name) => {
             if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
             return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
@@ -69,10 +76,14 @@ export default function BarChartPanel({
         <Bar
           dataKey="usage"
           fill="#2563EB"
+          /* The seam between stacked segments. Deliberately NOT the border
+             token: on dark that would be a #cbd5e1 line between every pair of
+             bars — a light grid drawn over the data. The bar's own stroke
+             reads as a card-tone gap on dark and a black one on light. */
           stroke="#000"
           strokeWidth={3}
           radius={0}
-          activeBar={{ fill: '#FFD600' }}
+          activeBar={{ fill: 'var(--data-active)' }}
           onClick={(d) => onBarClick(d as { key?: string } | null)}
           className="cursor-pointer"
         >

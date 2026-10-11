@@ -95,14 +95,14 @@ function Chart({ report }: { report: TempBandReport }) {
       {/* Y grid: two labelled ticks, enough to read a bar height by eye. */}
       {[top / 2, top].map((v) => (
         <g key={v}>
-          <line x1={PAD.left} y1={y(v)} x2={W - PAD.right} y2={y(v)} stroke="#e2e8f0" strokeWidth={1} />
-          <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={10} fontWeight={900} fill="#64748b">
+          <line x1={PAD.left} y1={y(v)} x2={W - PAD.right} y2={y(v)} stroke="var(--grid)" strokeWidth={1} />
+          <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink-3)">
             {v.toFixed(1)}
           </text>
         </g>
       ))}
-      <line x1={PAD.left} y1={BASELINE} x2={W - PAD.right} y2={BASELINE} stroke="#000" strokeWidth={2} />
-      <text x={PAD.left - 6} y={BASELINE + 4} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
+      <line x1={PAD.left} y1={BASELINE} x2={W - PAD.right} y2={BASELINE} stroke="var(--ink)" strokeWidth={2} />
+      <text x={PAD.left - 6} y={BASELINE + 4} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
         0
       </text>
 
@@ -117,7 +117,7 @@ function Chart({ report }: { report: TempBandReport }) {
               width={barW}
               height={h}
               fill={BAR_FILL[i]}
-              stroke="#000"
+              stroke="var(--ink)"
               strokeWidth={2}
               data-testid="temp-band-bar"
               data-band={row.band.id}
@@ -135,7 +135,7 @@ function Chart({ report }: { report: TempBandReport }) {
                 textAnchor="middle"
                 fontSize={11}
                 fontWeight={900}
-                fill="#000"
+                fill="var(--ink)"
               >
                 {row.meanKwhPerHour.toFixed(1)}
               </text>
@@ -150,7 +150,7 @@ function Chart({ report }: { report: TempBandReport }) {
               textAnchor="middle"
               fontSize={10}
               fontWeight={900}
-              fill={row.hours > 0 ? '#fff' : '#94a3b8'}
+              fill={row.hours > 0 ? 'var(--card)' : 'var(--ink-4)'}
             >
               {row.hours > 0 ? `${row.centsPerKwh.toFixed(1)}¢` : '—'}
             </text>
@@ -162,15 +162,15 @@ function Chart({ report }: { report: TempBandReport }) {
               width={barW}
               height={Math.max(1.5, (row.shareOfKwh / maxShare) * SHARE_MAX_H)}
               fill="#facc15"
-              stroke="#000"
+              stroke="var(--ink)"
               strokeWidth={1.5}
               data-testid="temp-band-share"
               data-band={row.band.id}
             />
-            <text x={x(i)} y={SHARE_TOP + SHARE_MAX_H + 13} textAnchor="middle" fontSize={10} fontWeight={900} fill="#000">
+            <text x={x(i)} y={SHARE_TOP + SHARE_MAX_H + 13} textAnchor="middle" fontSize={10} fontWeight={900} fill="var(--ink)">
               {row.hours > 0 ? `${Math.round(row.shareOfKwh * 100)}%` : ''}
             </text>
-            <text x={x(i)} y={SHARE_TOP + SHARE_MAX_H + 27} textAnchor="middle" fontSize={10} fontWeight={900} fill="#64748b">
+            <text x={x(i)} y={SHARE_TOP + SHARE_MAX_H + 27} textAnchor="middle" fontSize={10} fontWeight={900} fill="var(--ink-3)">
               {t(BAND_LABEL_KEY[row.band.id] ?? '') || row.band.label}
             </text>
           </g>
@@ -178,10 +178,10 @@ function Chart({ report }: { report: TempBandReport }) {
       })}
 
       {/* Axis titles, because a bar height without a unit is a rumour. */}
-      <text x={PAD.left} y={14} fontSize={10} fontWeight={900} fill="#000">
+      <text x={PAD.left} y={14} fontSize={10} fontWeight={900} fill="var(--ink)">
         {t('tempBand.axisKwh')}
       </text>
-      <text x={W - PAD.right} y={SHARE_TOP - 4} textAnchor="end" fontSize={10} fontWeight={900} fill="#000">
+      <text x={W - PAD.right} y={SHARE_TOP - 4} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
         {t('tempBand.axisShare')}
       </text>
     </svg>
@@ -201,14 +201,14 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
       data-matched={report.matchedHours}
       data-total={report.totalHours}
       aria-labelledby="temp-band-heading"
-      className="bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-black text-black"
+      className="bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge text-ink"
     >
       <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-3">
-        <span aria-hidden className="bg-black text-sky-400 p-2 md:p-3 rounded-xl border-2 md:border-4 border-black">
+        <span aria-hidden className="bg-inv text-accent-sky p-2 md:p-3 rounded-xl border-2 md:border-4 border-edge">
           <Thermometer size={22} strokeWidth={4} />
         </span>
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-500 font-black uppercase">
+          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-ink-3 font-black uppercase">
             {t('tempBand.subtitle')}
           </div>
           <h3 id="temp-band-heading" className="text-xl md:text-3xl italic font-black uppercase">
@@ -220,16 +220,16 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
       {fetching ? (
         <p
           data-testid="temp-band-loading"
-          className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[120px] flex items-center"
+          className="text-[11px] md:text-sm font-bold text-ink-2 normal-case min-h-[120px] flex items-center"
         >
           {t('tempBand.loading', { span: spanLabel ?? t('tempBand.loadingSpan') })}
         </p>
       ) : status === 'error' ? (
-        <p data-testid="temp-band-error" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[80px]">
+        <p data-testid="temp-band-error" className="text-[11px] md:text-sm font-bold text-ink-2 normal-case min-h-[80px]">
           {t('tempBand.error')}
         </p>
       ) : empty ? (
-        <p data-testid="temp-band-empty" className="text-[11px] md:text-sm font-bold text-slate-600 normal-case min-h-[80px]">
+        <p data-testid="temp-band-empty" className="text-[11px] md:text-sm font-bold text-ink-2 normal-case min-h-[80px]">
           {t('tempBand.empty')}
         </p>
       ) : (
@@ -238,7 +238,7 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
           {/* The verdict in words, so the picture is never the only source. */}
           <p
             data-testid="temp-band-sentence"
-            className="mt-2 text-[11px] md:text-sm font-bold text-slate-700 normal-case"
+            className="mt-2 text-[11px] md:text-sm font-bold text-ink-2 normal-case"
           >
             {(() => {
               const cold = report.rows[1];
@@ -260,7 +260,7 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
         </>
       )}
 
-      <p className="mt-3 text-[10px] md:text-xs font-bold text-slate-500 normal-case">
+      <p className="mt-3 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
         {report.matchedHours > 0 || status === 'ready' ? (
           <>
             {t('tempBand.footTemp')}{' '}

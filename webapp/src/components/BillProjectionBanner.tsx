@@ -20,12 +20,12 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
       <div
         data-testid="bill-projection"
         data-state="gated"
-        className="bg-slate-100 border-2 md:border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 text-black font-black uppercase"
+        className="bg-hover border-2 md:border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 text-ink font-black uppercase"
       >
         <Hourglass size={16} strokeWidth={4} className="shrink-0" />
         <div className="text-[10px] md:text-xs">
           <span className="mr-2">{t('projection.thisMonthBill')}</span>
-          <span className="font-bold text-slate-600 normal-case">{projection.gateNote}</span>
+          <span className="font-bold text-ink-2 normal-case">{projection.gateNote}</span>
         </div>
       </div>
     );
@@ -35,7 +35,7 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
     <div
       data-testid="bill-projection"
       data-state="ready"
-      className="bg-emerald-400 border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] px-4 md:px-8 py-4 md:py-6 flex flex-wrap items-center gap-4 md:gap-8 text-black font-black uppercase"
+      className="bg-emerald-400 border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-8 py-4 md:py-6 flex flex-wrap items-center gap-4 md:gap-8 text-accent-ink font-black uppercase"
     >
       <div className="flex items-center gap-2 md:gap-3">
         <CalendarDays size={20} strokeWidth={4} />
@@ -47,7 +47,7 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
         </div>
       </div>
 
-      <div className="bg-white border-2 md:border-4 border-black rounded-lg md:rounded-xl px-3 md:px-4 py-2">
+      <div className="bg-card border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
         <div className="text-[8px] md:text-[10px]">{t('projection.monthToDate')}</div>
         <div className="text-lg md:text-2xl italic">
           {fmtMoney(projection.monthToDateCost)}
@@ -57,14 +57,14 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
         </div>
       </div>
 
-      <div className="bg-white border-2 md:border-4 border-black rounded-lg md:rounded-xl px-3 md:px-4 py-2">
+      <div className="bg-card border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
         <div className="text-[8px] md:text-[10px]">{t('projection.daysMeasured')}</div>
         <div className="text-lg md:text-2xl italic">
           {projection.monthDaysCovered}/{projection.daysInMonth}
         </div>
       </div>
 
-      <p className="text-[8px] md:text-[11px] font-bold text-slate-700 normal-case basis-full md:basis-auto max-w-2xl">
+      <p className="text-[8px] md:text-[11px] font-bold text-ink-2 normal-case basis-full md:basis-auto max-w-2xl">
         {projection.caption}
       </p>
     </div>
