@@ -446,6 +446,7 @@
   "money.noRatesTitle": "No delivery / regulatory / HST rates saved yet — add them on the True Bill card and this fills in.",
   "money.overlayCover": "Lines cover {covered} of {periods} billing periods (fully-covered ones only), modelled with {charges} delivery / regulatory / HST rates",
   "money.overlayRebate": " plus the observed rebate ({pct} of the subtotal).",
+  "money.overlayTotal": "({amount} total)",
   "money.periodsSubtitle_one": "{count} billing period · straight from your XML",
   "money.periodsSubtitle_other": "{count} billing periods · straight from your XML",
   "money.readingsCover": "Readings cover {pct} of this period",
