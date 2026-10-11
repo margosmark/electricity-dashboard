@@ -40,3 +40,13 @@ ops/dmd/.env
 
 # Evidence files that contain REAL meter data (backup exports) — never commit.
 evidence/*.local.json
+
+# Evidence screenshots never live on main: the pixels moved to the
+# `evidence-assets` branch and the `evidence-screenshots-2026-10-11`
+# release asset (t_1f93f985). The verification JSON and the notes stay
+# tracked — the records are the evidence, the pictures are illustration.
+# See evidence/ASSETS.md.
+evidence/**/*.png
+evidence/**/*.jpg
+evidence/**/*.jpeg
+evidence/**/*.webp
