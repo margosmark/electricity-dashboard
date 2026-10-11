@@ -39,7 +39,11 @@ root `parser.py` tests (`tests/`) are its only reason to remain.
 
 There is deliberately **no backend storage**: an upload is parsed entirely in
 the browser and cached in `localStorage` (`energy_data`) — it never leaves the
-user's machine. The one server route, `/api/rates`, is a static JSON snapshot
+user's machine. Accounts are the one thing that would change this, and they
+exist on neither this branch nor this deployment: the account server is built
+but unmerged and parked — see
+[ACCOUNT-SERVER-AUDIT.md](ACCOUNT-SERVER-AUDIT.md). The one server route,
+`/api/rates`, is a static JSON snapshot
 of Ontario rate history from the OEB (effective 2023-11-01 / 2024-11-01 /
 2025-11-01), so rate math is versioned and reproducible rather than hardcoded
 into components.
