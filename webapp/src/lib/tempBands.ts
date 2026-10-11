@@ -30,7 +30,7 @@
 
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
-import type { ProcessedPoint } from './energy';
+import { tieredRateCentsFor, type ProcessedPoint } from './energy';
 
 /** A temperature bin. Edges are °C; `minInclusive`/`maxExclusive` are half-open. */
 export type TempBandDef = {
@@ -105,8 +105,19 @@ export type TempBandReport = {
 /** The plan on screen, which decides how a reading's cost is read. */
 export type TempBandPlan = 'TOU' | 'Tiered' | 'ULO';
 
-const costOf = (row: ProcessedPoint, plan: TempBandPlan): number =>
-  plan === 'TOU' ? row.costTOU : plan === 'ULO' ? row.costULO : row.costTiered;
+/**
+ * Per-reading cost, for the two plans that HAVE a per-reading price.
+ *
+ * Tiered is not one of them: its tier-2 threshold is a volume allowance for a
+ * month, so `costTiered` is tier 1 only and summing it prices this window too
+ * cheaply. Tiered is priced at the WINDOW's own blended rate instead (see
+ * `tieredRateCentsFor` in `energy.ts`, the same answer `hourCostProfile`
+ * gives the ¢/kWh histogram) — Tiered has no time dimension, so every hour
+ * genuinely costs that one number and the bands add back to the plan card.
+ */
+function costOf(row: ProcessedPoint, plan: 'TOU' | 'ULO'): number {
+  return plan === 'TOU' ? row.costTOU : row.costULO;
+}
 
 /**
  * Bin every hour of `rows` by that hour's outdoor temperature.
@@ -120,15 +131,24 @@ export function buildTempBandReport(
   temps: HourlyTemps | null | undefined,
   plan: TempBandPlan,
 ): TempBandReport {
+  // null only when the window carries no energy — in which case every
+  // reading is 0 kWh and the per-reading price would answer 0 too.
+  const tieredRateCents = plan === 'Tiered' ? tieredRateCentsFor(rows) : null;
   const hours = new Map<number, { kwh: number; cost: number }>();
   for (const row of rows) {
+    const cost =
+      plan === 'Tiered'
+        ? tieredRateCents === null
+          ? 0
+          : (row.usage_kwh * tieredRateCents) / 100
+        : costOf(row, plan);
     const key = Math.floor(row.timestamp / 3600);
     const bucket = hours.get(key);
     if (bucket) {
       bucket.kwh += row.usage_kwh;
-      bucket.cost += costOf(row, plan);
+      bucket.cost += cost;
     } else {
-      hours.set(key, { kwh: row.usage_kwh, cost: costOf(row, plan) });
+      hours.set(key, { kwh: row.usage_kwh, cost });
     }
   }
 

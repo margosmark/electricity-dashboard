@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import { TEMP_BANDS, bandIndexOf, buildTempBandReport, tempBandEmpty } from './tempBands';
 import type { HourlyTemps } from './openMeteo';
+import { tieredCostFor, tieredRateCentsFor } from './energy';
 import type { ProcessedPoint, RateSet } from './energy';
 
 const rateSet: RateSet = {
@@ -121,7 +122,30 @@ describe('buildTempBandReport', () => {
     const rows = [point(HOUR_0, 2, 0.5)];
     const temps = series(HOUR_0, [26]);
     expect(buildTempBandReport(rows, temps, 'TOU').rows[5].centsPerKwh).toBeCloseTo(25, 6);
-    expect(buildTempBandReport(rows, temps, 'Tiered').rows[5].centsPerKwh).toBeCloseTo(25, 6);
+    // Tiered is NOT the per-reading `costTiered` column (25¢ here): a 2 kWh
+    // summer hour sits under its prorated month allowance, so the window
+    // prices at tier 1 — 12¢. Corrected, not worked around: the old 25 was
+    // the tier-1 COLUMN being read as if it were the window's rate.
+    expect(buildTempBandReport(rows, temps, 'Tiered').rows[5].centsPerKwh).toBeCloseTo(12, 6);
+  });
+
+  it('prices Tiered at the WINDOW rate, so the bands add back to the plan card', () => {
+    // 10 July days × 100 kWh — the same threshold-crossing window
+    // energy.test.ts pins. Summing the per-reading tier-1 field would book
+    // $120.00 across these bins; the window rule books $137.66, and the
+    // blended 13.7657¢/kWh is what every band must report.
+    const rows = Array.from({ length: 240 }, (_, h) => point(HOUR_0 + h, 100 / 24, 0.12));
+    const temps = series(HOUR_0, Array.from({ length: 240 }, (_, h) => (h % 2 ? 27 : -2)));
+    const report = buildTempBandReport(rows, temps, 'Tiered');
+
+    const kwh = report.rows.reduce((s, b) => s + b.kwh, 0);
+    const cost = report.rows.reduce((s, b) => s + b.cost, 0);
+    expect(kwh).toBeCloseTo(1000, 6); // 240 h × 100/24 kWh = 10 days × 100
+    expect(cost).toBeCloseTo(tieredCostFor(rows), 6);
+    // No bin may disagree with the window: Tiered has no time dimension.
+    for (const band of report.rows.filter((b) => b.hours > 0)) {
+      expect(band.centsPerKwh).toBeCloseTo(tieredRateCentsFor(rows)!, 6);
+    }
   });
 
   it('leaves unmatched hours OUT of the averages and says how many there were', () => {

@@ -525,9 +525,11 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(card).toHaveAttribute('data-days-in-period', '31');
     expect(card).toHaveAttribute('data-pace-source', 'projection');
 
-    // 10 days × 24 kWh × 12¢ = $28.80 accrued, on the line to $89.28.
-    expect(screen.getByTestId('accrual-total')).toHaveTextContent('$28.80');
-    expect(screen.getByTestId('accrual-projected')).toHaveTextContent('$89.28');
+    // 10 days × 24 kWh priced by the month-scoped tier rule = $29.74
+    // accrued, on the line to $92.19. (Tier-1-only said $28.80 / $89.28 —
+    // the accrual footed that way while its pace line priced the window.)
+    expect(screen.getByTestId('accrual-total')).toHaveTextContent('$29.74');
+    expect(screen.getByTestId('accrual-projected')).toHaveTextContent('$92.19');
     expect(screen.getByTestId('accrual-verdict')).toHaveTextContent(/on the line/i);
     expect(screen.getByTestId('accrual-note')).toHaveTextContent(/Wave F/i);
 
@@ -656,11 +658,11 @@ describe('Wave R 4d — the card answers its own question', () => {
       />,
     );
 
-    // 25 days to the bill date at $2.88/day of Wave F pace: the headline IS
+    // 25 days to the bill date at $2.97/day of Wave F pace: the headline IS
     // the answer, and it names the date it lands on.
     const headline = screen.getByTestId('accrual-headline');
-    expect(headline).toHaveTextContent(/\$72\.00 by Oct 25/);
-    expect(headline).toHaveAttribute('data-projected-total', '72.00');
+    expect(headline).toHaveTextContent(/\$74\.34 by Oct 25/);
+    expect(headline).toHaveAttribute('data-projected-total', '74.34');
     expect(screen.getByTestId('bill-accrual')).toHaveAttribute('data-bill-date', '2026-10-25');
   });
 
@@ -685,7 +687,7 @@ describe('Wave R 4d — the card answers its own question', () => {
   });
 
   it('judges the landing against the last 3 bills as a colour, not arithmetic', () => {
-    const rows = hourly(oct(1), 10); // $2.88/day → $69.12 landing
+    const rows = hourly(oct(1), 10); // $2.97/day → $74.34 landing
     render(
       <BillAccrualCurve
         rows={rows}
@@ -693,14 +695,14 @@ describe('Wave R 4d — the card answers its own question', () => {
         period={tail}
         projection={projectMonthBill(rows, 'Tiered', oct(10))}
         billDate={billThrough}
-        // Three bills whose commodity averaged $42 — the $72 landing is $30 over.
+        // Three bills whose commodity averaged $42 — the $74 landing is $32 over.
         summaries={billSummaries([30, 42, 54])}
         today={oct(10)}
       />,
     );
     const chip = screen.getByTestId('accrual-pace-chip');
     expect(chip).toHaveAttribute('data-direction', 'above');
-    expect(chip).toHaveTextContent(/pacing \$30\.00 ABOVE/);
+    expect(chip).toHaveTextContent(/pacing \$32\.34 ABOVE/);
     expect(chip.className).toContain('bg-red-400');
     // The dotted line is drawn at that same average.
     expect(screen.getByTestId('accrual-benchmark-line')).toBeInTheDocument();
