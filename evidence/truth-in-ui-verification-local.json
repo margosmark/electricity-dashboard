@@ -1,0 +1,479 @@
+{
+  "base": "http://127.0.0.1:3111/",
+  "serving": "2c822ac",
+  "viewport": "1440x900",
+  "fixture": "green-button-alliance-sample.xml",
+  "fixtureSha256": "18e54b8b1ebdfa2f249a97ee602362ca95ba8dd0d030cba236c39e945259c7fb",
+  "locales": {
+    "en": {
+      "locale": "en",
+      "viewport": "1440x900",
+      "bill": {
+        "period": {
+          "data-period-start": "2014-01-01"
+        },
+        "payable": "—",
+        "payableLabel": "no charge lines in this bill · 199,563.00 kWh billed · USD",
+        "text": "Jan 1, 2014 – Jan 29—no charge lines in this bill · 199,563.00 kWh billed · USDNot compared — this bill states no charge lines, so there is no commodity figure for our rates to land on.Electricity—Delivery + reg—HST—Rebate—",
+        "commoditySkip": [
+          "Not compared — this bill states no charge lines, so there is no commodity figure for our rates to land on."
+        ],
+        "mismatch": 0,
+        "lines": []
+      },
+      "track": {
+        "text": "Audited history · not a forecastSwitch track recordPeriod by period: what you actually paid, what the same readings would have cost on each other plan, and what staying put has cost over the whole file.Not enough trustworthy periods to audit yet — 0 of 1 periods have a known plan type, 90% readings coverage, and a model that re-prices their own bill within $1.Jan 1, 2014 – Jan 29PLAN UNKNOWNNOT IN FILENot modeled — this bill states no charge lines, so there is nothing to compare.Modeled = your own interval readings repriced with the OEB rate set in force during that period; delivery, regulatory, HST and the Ontario Electricity Rebate are held and scaled exactly as your bill states them — only the commodity moves with the plan.0 of 1 periods have a known plan type · 0 counted into the total (1 excluded — declare them above) · 1 skipped for low readings coverage.",
+        "rows": [
+          {
+            "testid": "switch-row-2014-01-01",
+            "plan": "unknown",
+            "skip": "Not modeled — this bill states no charge lines, so there is nothing to compare.",
+            "actualLabel": null,
+            "actual": null
+          }
+        ]
+      },
+      "cards": [
+        "commodity only · Jan 1 – Jan 9 on screen",
+        "commodity only · Jan 1 – Jan 9 on screen",
+        "commodity only · Jan 1 – Jan 9 on screen"
+      ],
+      "evEmptyBefore": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00We could not find an overnight charging block in your data — type yours and we will price it. Pick the hour your car draws the most power and we will price staying there against moving to midnight.Tag a nightly kWh above to price the charge under all three plans. ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo → $12.02/mo at 28.6¢Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data.",
+        "empty": true,
+        "comparison": false,
+        "baselines": [],
+        "deltas": null,
+        "exposures": [
+          "Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data."
+        ],
+        "peakBlocks": 1
+      },
+      "ev": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00Using the number you typed. Pick the hour your car draws the most power and we will price staying there against moving to midnight.Time-of-Use8.7¢/kWh overnight/charge$1.09/month$32.63Tiered10.3¢/kWh overnight/charge$1.29/month$38.63Ultra-Low Overnight2.8¢/kWh overnight/charge$0.35/month$10.50A night's charge on ULO costs $0.35 vs $1.09 on TOU — $22.13/month cheaper on the charge alone.Answer When do you usually charge? above — we will price staying at that hour on Time-of-Use against moving the same kWh to 23:00–07:00 on Ultra-Low Overnight.Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseBaseline $22.60$11.91−$10.69 vs baselineTieredBaseline $20.55$20.55no change from shiftingUltra-Low OvernightBaseline $24.81$-4.22−$29.03 vs baseline ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo$12.02/mo at 28.6¢$10.85/mo more than the same energy overnight5 weekday afternoon hours sit in ULO's 16:00–21:00 peak window. Keep using them and a ULO switch makes them the most expensive hours you buy.Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data. What these numbers assumeNo overnight charging block turned up in your data, so the plan comparison prices this energy as if it charges during your most expensive hours today. Treat the swing as an upper bound, not a measurement.$ per charge assumes the whole charge lands in 23:00–07:00, the ULO overnight window.$ per month assumes 30 charging nights.Rates are OEB commodity only — delivery, regulatory charges and HST are not in these numbers.Weekdays 16:00–21:00 is ULO On-Peak at 28.6¢/kWh — the exposure flagged below.",
+        "empty": false,
+        "comparison": true,
+        "baselines": [
+          {
+            "testid": "ev-plan-baseline-TOU",
+            "text": "Baseline $22.60"
+          },
+          {
+            "testid": "ev-plan-baseline-Tiered",
+            "text": "Baseline $20.55"
+          },
+          {
+            "testid": "ev-plan-baseline-ULO",
+            "text": "Baseline $24.81"
+          }
+        ],
+        "deltas": "Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseBaseline $22.60$11.91−$10.69 vs baselineTieredBaseline $20.55$20.55no change from shiftingUltra-Low OvernightBaseline $24.81$-4.22−$29.03 vs baseline",
+        "exposures": [
+          "Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data."
+        ],
+        "peakBlocks": 1
+      },
+      "evEmpty": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00We could not find an overnight charging block in your data — type yours and we will price it. Pick the hour your car draws the most power and we will price staying there against moving to midnight.Tag a nightly kWh above to price the charge under all three plans. ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo → $12.02/mo at 28.6¢Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data.",
+        "empty": true,
+        "comparison": false,
+        "baselines": [],
+        "deltas": null,
+        "exposures": [
+          "Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered month: every /month here is this window scaled to 30.4 days from 9 days of your data."
+        ],
+        "peakBlocks": 1
+      },
+      "moneyTabZeroHits": [
+        {
+          "zero": "$0.00",
+          "context": "BILLING PERIOD PERIOD PLAN YOU PAID EST. TOTAL ESTIMATE DATA COVERAGE JAN 1, 2014 UNKNOWN $0.00 — 32% PERIOD OVER PERIOD WHAT CHAN"
+        }
+      ],
+      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-en-local.png",
+      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-en-local.png"
+    },
+    "fr": {
+      "locale": "fr",
+      "viewport": "1440x900",
+      "bill": {
+        "period": {
+          "data-period-start": "2014-01-01"
+        },
+        "payable": "—",
+        "payableLabel": "aucune ligne de frais dans cette facture · 199 563,00 kWh facturés · USD",
+        "text": "1 janv. 2014 – 29 janv.—aucune ligne de frais dans cette facture · 199 563,00 kWh facturés · USDNon comparé — cette facture n’indique aucune ligne de frais : nos tarifs n’ont aucun montant de marchandise sur lequel se caler.Électricité—Distribution + régl.—TVH—Remise—",
+        "commoditySkip": [
+          "Non comparé — cette facture n’indique aucune ligne de frais : nos tarifs n’ont aucun montant de marchandise sur lequel se caler."
+        ],
+        "mismatch": 0,
+        "lines": []
+      },
+      "track": {
+        "text": "Historique vérifié · pas une prévisionHistorique des changements de grillePériode par période : ce que vous avez réellement payé, ce que les mêmes relevés auraient coûté sur chaque autre grille, et ce que le statu quo a coûté sur l’ensemble du fichier.Pas encore assez de périodes fiables à auditer — 0 périodes sur 1 ont un type de grille connu, une couverture de relevés de 90 %, et un modèle qui revalorise leur propre facture dans un écart de 1 $.1 janv. 2014 – 29 janv.GRILLE INCONNUEABSENT DU FICHIERNon modélisé — cette facture n’indique aucune ligne de frais, donc rien à comparer.Modélisé = vos propres relevés intervalles revalorisés avec la grille tarifaire CEO en vigueur durant cette période ; distribution, réglementaire, TVH et remise de l’Ontario sont repris et mis à l’échelle exactement comme l’énonce votre facture — seul l’électricité bouge avec la grille.0 périodes sur 1 ont un type de grille connu · 0 comptées dans le total (1 exclue(s) — déclarez-les ci-dessus) · 1 ignorée(s) faute de couverture de relevés.",
+        "rows": [
+          {
+            "testid": "switch-row-2014-01-01",
+            "plan": "unknown",
+            "skip": "Non modélisé — cette facture n’indique aucune ligne de frais, donc rien à comparer.",
+            "actualLabel": null,
+            "actual": null
+          }
+        ]
+      },
+      "cards": [
+        "électricité seulement · 1 janv – 9 janv à l’écran",
+        "électricité seulement · 1 janv – 9 janv à l’écran",
+        "électricité seulement · 1 janv – 9 janv à l’écran"
+      ],
+      "evEmptyBefore": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00Nous n’avons trouvé aucun bloc de recharge nocturne dans vos données — saisissez le vôtre et nous le chiffrerons. Choisissez l’heure où votre voiture tire le plus de puissance et nous chiffrerons le fait d’y rester par rapport à minuit.Tag a nightly kWh above to price the charge under all three plans. ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo → $12.02/mo at 28.6¢Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données.",
+        "empty": true,
+        "comparison": false,
+        "baselines": [],
+        "deltas": null,
+        "exposures": [
+          "Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données."
+        ],
+        "peakBlocks": 1
+      },
+      "ev": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00En utilisant le chiffre que vous avez saisi. Choisissez l’heure où votre voiture tire le plus de puissance et nous chiffrerons le fait d’y rester par rapport à minuit.Time-of-Use8.7¢/kWh overnight/charge$1.09/month$32.63Tiered10.3¢/kWh overnight/charge$1.29/month$38.63Ultra-Low Overnight2.8¢/kWh overnight/charge$0.35/month$10.50A night's charge on ULO costs $0.35 vs $1.09 on TOU — $22.13/month cheaper on the charge alone.Answer When do you usually charge? above — we will price staying at that hour on Time-of-Use against moving the same kWh to 23:00–07:00 on Ultra-Low Overnight.Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseRéférence $22.60$11.91−$10.69 vs référenceTieredRéférence $20.55$20.55no change from shiftingUltra-Low OvernightRéférence $24.81$-4.22−$29.03 vs référence ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo$12.02/mo at 28.6¢$10.85/mo more than the same energy overnight5 weekday afternoon hours sit in ULO's 16:00–21:00 peak window. Keep using them and a ULO switch makes them the most expensive hours you buy.Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données. What these numbers assumeAucun bloc de recharge nocturne n’est apparu dans vos données ; la comparaison de forfaits chiffre donc cette énergie comme si elle se rechargeait pendant vos heures les plus chères du moment. Considérez l’écart comme une borne supérieure, pas comme une mesure.Le $ par recharge suppose que la recharge entière tombe dans la fenêtre 23:00–07:00, la fenêtre nocturne de l’ULO.Le $ par mois suppose 30 nuits de recharge.Les tarifs ne couvrent que la commodité CEO — distribution, charges réglementaires et TVH ne figurent pas dans ces chiffres.Weekdays 16:00–21:00 est en période de pointe ULO à 28,6 ¢/kWh — l’exposition signalée ci-dessous.",
+        "empty": false,
+        "comparison": true,
+        "baselines": [
+          {
+            "testid": "ev-plan-baseline-TOU",
+            "text": "Référence $22.60"
+          },
+          {
+            "testid": "ev-plan-baseline-Tiered",
+            "text": "Référence $20.55"
+          },
+          {
+            "testid": "ev-plan-baseline-ULO",
+            "text": "Référence $24.81"
+          }
+        ],
+        "deltas": "Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseRéférence $22.60$11.91−$10.69 vs référenceTieredRéférence $20.55$20.55no change from shiftingUltra-Low OvernightRéférence $24.81$-4.22−$29.03 vs référence",
+        "exposures": [
+          "Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données."
+        ],
+        "peakBlocks": 1
+      },
+      "evEmpty": {
+        "text": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —00:0001:0002:0003:0004:0005:0006:0007:0008:0009:0010:0011:0012:0013:0014:0015:0016:0017:0018:0019:0020:0021:0022:0023:00Nous n’avons trouvé aucun bloc de recharge nocturne dans vos données — saisissez le vôtre et nous le chiffrerons. Choisissez l’heure où votre voiture tire le plus de puissance et nous chiffrerons le fait d’y rester par rapport à minuit.Tag a nightly kWh above to price the charge under all three plans. ULO peak exposure · Weekdays 16:00–21:0042.0 kWh/mo → $12.02/mo at 28.6¢Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données.",
+        "empty": true,
+        "comparison": false,
+        "baselines": [],
+        "deltas": null,
+        "exposures": [
+          "Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme annualisé, pas un mois mesuré : chaque /mois ici est cette fenêtre mise à l’échelle sur 30,4 jours à partir de 9 jours de vos données."
+        ],
+        "peakBlocks": 1
+      },
+      "moneyTabZeroHits": [
+        {
+          "zero": "$0.00",
+          "context": " FORFAIT VOUS AVEZ PAYÉ TOTAL EST. ESTIMATION COUVERTURE DES DONNÉES 1 JANV. 2014 UNKNOWN $0.00 — 32% D’UNE PÉRIODE À L’AUTRE CE Q"
+        }
+      ],
+      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-fr-local.png",
+      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-fr-local.png"
+    }
+  },
+  "checks": [
+    {
+      "name": "EN: import produced a totals strip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EN: Plans tab opens the plan surface",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EN: payable cell is a dash, not a number",
+      "ok": true,
+      "detail": "\"—\""
+    },
+    {
+      "name": "EN: the label under it says the bill states no charge lines",
+      "ok": true,
+      "detail": "no charge lines in this bill · 199,563.00 kWh billed · USD"
+    },
+    {
+      "name": "EN: commodity check refuses instead of comparing against the zero",
+      "ok": true,
+      "detail": "Not compared — this bill states no charge lines, so there is no commodity figure for our rates to land on."
+    },
+    {
+      "name": "EN: no commodity mismatch is raised against a zero",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "EN: \"Your actual bill\" prints no zero money in either currency style",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "EN: \"Your actual bill\" never says you paid",
+      "ok": true,
+      "detail": "Jan 1, 2014 – Jan 29—no charge lines in this bill · 199,563.00 kWh billed · USDNot compared — this bill states no charge lines, so there is no commodity figure "
+    },
+    {
+      "name": "EN: track record has the no-charge-lines row",
+      "ok": true,
+      "detail": "1 skipped row(s)"
+    },
+    {
+      "name": "EN: the skip states the reason with no payment in it",
+      "ok": true,
+      "detail": "Not modeled — this bill states no charge lines, so there is nothing to compare."
+    },
+    {
+      "name": "EN: track record carries no \"You paid\" and no $0.00",
+      "ok": true,
+      "detail": "Audited history · not a forecastSwitch track recordPeriod by period: what you actually paid, what the same readings would have cost on each other plan, and what staying put has cost over the whole fil"
+    },
+    {
+      "name": "EN: every plan card declares its scope",
+      "ok": true,
+      "detail": "3 cards"
+    },
+    {
+      "name": "EN: each scope reads \"<commodity only> · <window> on screen\"",
+      "ok": true,
+      "detail": "commodity only · Jan 1 – Jan 9 on screen | commodity only · Jan 1 – Jan 9 on screen | commodity only · Jan 1 – Jan 9 on screen"
+    },
+    {
+      "name": "EN: the scope's window is a real date range",
+      "ok": true,
+      "detail": "commodity only · Jan 1 – Jan 9 on screen"
+    },
+    {
+      "name": "EN: no catalog key leaks to the screen on the plans tab",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EN: the plans tab prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "EN: Money tab holds the EV card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EN: EV card prices a comparison once kWh is typed",
+      "ok": true,
+      "detail": "{\"empty\":false,\"comparison\":true}"
+    },
+    {
+      "name": "EN: the three-plan baseline reads \"Baseline\", never \"Today\"",
+      "ok": true,
+      "detail": "[\"Baseline $22.60\",\"Baseline $20.55\",\"Baseline $24.81\"]"
+    },
+    {
+      "name": "EN: the comparison never says \"vs today\"",
+      "ok": true,
+      "detail": "Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseBaseline $22.60$11.91−$10.69 vs baselineTieredBaseline $20.55$20.55no"
+    },
+    {
+      "name": "EN: priced peak exposure declares the run-rate basis",
+      "ok": true,
+      "detail": "[\"Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered mon\"]"
+    },
+    {
+      "name": "EN: EV card drops to its empty state",
+      "ok": true,
+      "detail": "{\"empty\":true,\"comparison\":false}"
+    },
+    {
+      "name": "EN: the EMPTY state's peak exposure carries the same disclosure",
+      "ok": true,
+      "detail": "{\"blocks\":1,\"exposures\":[\"Commodity only — no delivery, regulatory charges or HST. And a run-rate, not a metered mon\"]}"
+    },
+    {
+      "name": "EN: no \"vs today\" survives in the empty state either",
+      "ok": true,
+      "detail": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —0"
+    },
+    {
+      "name": "EN: no catalog key leaks to the screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "EN: the EV card prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "EN: no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "EN: the app booted in EN (oeo_locale honoured)",
+      "ok": true,
+      "detail": "en"
+    },
+    {
+      "name": "FR: import produced a totals strip",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "FR: Grilles tab opens the plan surface",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "FR: payable cell is a dash, not a number",
+      "ok": true,
+      "detail": "\"—\""
+    },
+    {
+      "name": "FR: the label under it says the bill states no charge lines",
+      "ok": true,
+      "detail": "aucune ligne de frais dans cette facture · 199 563,00 kWh facturés · USD"
+    },
+    {
+      "name": "FR: commodity check refuses instead of comparing against the zero",
+      "ok": true,
+      "detail": "Non comparé — cette facture n’indique aucune ligne de frais : nos tarifs n’ont aucun montant de marchandise sur lequel s"
+    },
+    {
+      "name": "FR: no commodity mismatch is raised against a zero",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "FR: \"Your actual bill\" prints no zero money in either currency style",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "FR: \"Your actual bill\" never says you paid",
+      "ok": true,
+      "detail": "1 janv. 2014 – 29 janv.—aucune ligne de frais dans cette facture · 199 563,00 kWh facturés · USDNon comparé — cette facture n’indique aucune ligne de frais : no"
+    },
+    {
+      "name": "FR: track record has the no-charge-lines row",
+      "ok": true,
+      "detail": "1 skipped row(s)"
+    },
+    {
+      "name": "FR: the skip states the reason with no payment in it",
+      "ok": true,
+      "detail": "Non modélisé — cette facture n’indique aucune ligne de frais, donc rien à comparer."
+    },
+    {
+      "name": "FR: track record carries no \"You paid\" and no $0.00",
+      "ok": true,
+      "detail": "Historique vérifié · pas une prévisionHistorique des changements de grillePériode par période : ce que vous avez réellement payé, ce que les mêmes relevés auraient coûté sur chaque autre grille, et ce"
+    },
+    {
+      "name": "FR: every plan card declares its scope",
+      "ok": true,
+      "detail": "3 cards"
+    },
+    {
+      "name": "FR: each scope reads \"<commodity only> · <window> on screen\"",
+      "ok": true,
+      "detail": "électricité seulement · 1 janv – 9 janv à l’écran | électricité seulement · 1 janv – 9 janv à l’écran | électricité seulement · 1 janv – 9 janv à l’écran"
+    },
+    {
+      "name": "FR: the scope's window is a real date range",
+      "ok": true,
+      "detail": "électricité seulement · 1 janv – 9 janv à l’écran"
+    },
+    {
+      "name": "FR: no catalog key leaks to the screen on the plans tab",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "FR: the plans tab prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "FR: Money tab holds the EV card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "FR: EV card prices a comparison once kWh is typed",
+      "ok": true,
+      "detail": "{\"empty\":false,\"comparison\":true}"
+    },
+    {
+      "name": "FR: the three-plan baseline reads \"Référence\", never \"Today\"",
+      "ok": true,
+      "detail": "[\"Référence $22.60\",\"Référence $20.55\",\"Référence $24.81\"]"
+    },
+    {
+      "name": "FR: the comparison never says \"vs today\"",
+      "ok": true,
+      "detail": "Whole loaded dataset with 113 kWh of charging moved to 23:00–07:009 days of dataTime-of-UseRéférence $22.60$11.91−$10.69 vs référenceTieredRéférence $20.55$20.5"
+    },
+    {
+      "name": "FR: priced peak exposure declares the run-rate basis",
+      "ok": true,
+      "detail": "[\"Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme\"]"
+    },
+    {
+      "name": "FR: EV card drops to its empty state",
+      "ok": true,
+      "detail": "{\"empty\":true,\"comparison\":false}"
+    },
+    {
+      "name": "FR: the EMPTY state's peak exposure carries the same disclosure",
+      "ok": true,
+      "detail": "{\"blocks\":1,\"exposures\":[\"Électricité seulement — sans distribution, ni charges réglementaires, ni TVH. Et un rythme\"]}"
+    },
+    {
+      "name": "FR: no \"vs today\" survives in the empty state either",
+      "ok": true,
+      "detail": "EV charging scenarioWhat a night's charge costs, and what your weekday 4–9pm window is worth at risk.Nightly EV charge (kWh)When do you usually charge?— pick —0"
+    },
+    {
+      "name": "FR: no catalog key leaks to the screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "FR: the EV card prints no zero the utility never quoted",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "FR: no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "FR: the app booted in FR (oeo_locale honoured)",
+      "ok": true,
+      "detail": "fr"
+    },
+    {
+      "name": "toggle flips the live tab strip to English",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "toggle flips the live tab strip back to French",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "passed": 58,
+  "total": 58
+}
