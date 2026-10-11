@@ -41,7 +41,6 @@
     "husky": "^9.1.7",
     "jsdom": "^30.1.1",
     "lint-staged": "^17.6.0",
-    "msw": "^3.0.1",
     "tailwindcss": "^4",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^5.0.3",
@@ -49,6 +48,7 @@
   },
   "overrides": {
     "basic-ftp": "6.2.2",
+    "source-map-js": "^1.2.2",
     "tmp": "0.2.7",
     "uuid": "11.1.1"
   },
