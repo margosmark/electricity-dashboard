@@ -107,6 +107,7 @@ function dayIndexFrom(start: string, day: string): number {
 }
 
 function Chart({ curve }: { curve: AccrualCurve }) {
+  const { t } = useTranslation();
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
   const maxY =
@@ -178,7 +179,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             fill="#7C3AED"
             opacity={curve.tierCrossingProjected ? 0.6 : 1}
           >
-            tier 2 →
+            {t('accrual.tierTwoArrow')}
           </text>
         </>
       )}
@@ -205,7 +206,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             fontWeight={900}
             fill="#000"
           >
-            3-bill avg {money(curve.avgPriorBill)}
+            {t('accrual.threeBillAvg')} {money(curve.avgPriorBill)}
           </text>
         </>
       )}
@@ -243,7 +244,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         fontWeight={900}
         fill="#000"
       >
-        {money(curve.projectedTotal)} by {curve.billDate}
+        {money(curve.projectedTotal)} {t('accrual.by')} {curve.billDate}
       </text>
 
       {/* Today: how far into the period the grey line is allowed to reach. */}
@@ -268,10 +269,10 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         {curve.periodStart}
       </text>
       <text x={todayX} y={H - 10} fontSize={11} fontWeight={900} fill="#000" textAnchor="middle">
-        today
+        {t('accrual.todayAxis')}
       </text>
       <text x={W - PAD.right} y={H - 10} fontSize={11} fontWeight={900} fill="#000" textAnchor="end">
-        bill {curve.billDate}
+        {t('accrual.billAxis')} {curve.billDate}
       </text>
     </svg>
   );
@@ -365,7 +366,7 @@ export default function BillAccrualCurve({
         className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-black text-black font-black uppercase"
       >
         <h3 id="accrual-heading" className="text-xl md:text-3xl italic mb-2">
-          Is my bill on pace?
+          {t('accrual.isMyBillOnPace')}
         </h3>
         <p data-testid="accrual-empty" className="text-[11px] md:text-sm font-bold normal-case text-slate-600">
           {curve.note}
@@ -418,7 +419,7 @@ export default function BillAccrualCurve({
             {fmtDate(new Date(`${curve.periodStart}T12:00:00`), billDatePattern)} – {billDateLabel} · {t('accrual.openPeriod')}
           </div>
           <h3 id="accrual-heading" className="text-xl md:text-3xl italic font-black uppercase text-black">
-            Is my bill on pace?
+            {t('accrual.isMyBillOnPace')}
           </h3>
         </div>
       </div>
@@ -429,7 +430,7 @@ export default function BillAccrualCurve({
           data-testid="accrual-headline"
           data-projected-total={curve.projectedTotal.toFixed(2)}
         >
-          {money(curve.projectedTotal)} by {billDateLabel}
+          {money(curve.projectedTotal)} {t('accrual.by')} {billDateLabel}
         </div>
         {chip ? (
           <span
@@ -445,7 +446,7 @@ export default function BillAccrualCurve({
             data-direction="none"
             className="bg-slate-100 border-4 border-black px-3 py-1 rounded-xl text-[10px] md:text-xs font-black uppercase text-slate-500"
           >
-            no bills to compare against yet
+            {t('accrual.noBillsYet')}
           </span>
         )}
       </div>
@@ -483,28 +484,28 @@ export default function BillAccrualCurve({
       {/* The chart is decorative; every number it draws is here as text. */}
       <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-black text-white p-3 md:p-4 rounded-xl border-4 border-black">
-          <div className="text-[8px] md:text-[10px] uppercase text-yellow-400 font-black">Accrued so far</div>
+          <div className="text-[8px] md:text-[10px] uppercase text-yellow-400 font-black">{t('accrual.accruedSoFar')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-total">
             {money(curve.total)}
           </div>
           <div className="text-[8px] font-black text-slate-400 normal-case">
-            {curve.coveredDays} of {curve.daysElapsed} days measured
+            {t('accrual.measuredLine', { covered: curve.coveredDays, elapsed: curve.daysElapsed })}
           </div>
         </div>
         <div className="bg-blue-50 p-3 md:p-4 rounded-xl border-4 border-black">
-          <div className="text-[8px] md:text-[10px] uppercase text-slate-500 font-black">Pace to date</div>
+          <div className="text-[8px] md:text-[10px] uppercase text-slate-500 font-black">{t('accrual.paceToDate')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-pace">
             {money(curve.paceToDate)}
           </div>
-          <div className="text-[8px] font-black text-slate-500 normal-case">{money(curve.paceDaily)}/day</div>
+          <div className="text-[8px] font-black text-slate-500 normal-case">{money(curve.paceDaily)}{t('accrual.perDayUnit')}</div>
         </div>
         <div className="bg-yellow-400 p-3 md:p-4 rounded-xl border-4 border-black">
-          <div className="text-[8px] md:text-[10px] uppercase font-black">Landing at</div>
+          <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.landingAt')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-projected">
             {money(curve.projectedTotal)}
           </div>
           <div className="text-[8px] font-black normal-case">
-            on {billDateLabel}, at your current run-rate
+            {t('accrual.onDate')} {billDateLabel}{t('accrual.atRunRate')}
           </div>
         </div>
         <div
@@ -512,18 +513,18 @@ export default function BillAccrualCurve({
             overPace === null ? 'bg-slate-100' : overPace ? 'bg-red-400' : 'bg-emerald-300'
           }`}
         >
-          <div className="text-[8px] md:text-[10px] uppercase font-black">vs the pace line</div>
+          <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.vsPaceLine')}</div>
           <div className="text-sm md:text-xl italic font-black" data-testid="accrual-verdict">
             {verdict}
           </div>
           <div className="text-[8px] font-black normal-case">
-            {curve.daysElapsed} of {curve.daysInPeriod} days in
+            {t('accrual.daysInLine', { elapsed: curve.daysElapsed, total: curve.daysInPeriod })}
           </div>
         </div>
       </div>
 
       <p data-testid="accrual-note" className="mt-4 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
-        {curve.note} Commodity (variable) charges only — no delivery, regulatory charges or HST.
+        {curve.note} {t('accrual.commodityOnlyNote')}
       </p>
     </section>
   );

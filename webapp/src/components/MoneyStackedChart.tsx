@@ -427,7 +427,7 @@ export default function MoneyStackedChart({
                 className="inline-block w-4 h-4 border-2 border-black"
                 style={{ background: meta.color }}
               />
-              {mode === 'usage' ? `${meta.short} kWh` : meta.label}
+              {mode === 'usage' ? `${meta.short}${t('money.kwhUnit')}` : meta.label}
             </span>
           );
         })}
@@ -438,7 +438,7 @@ export default function MoneyStackedChart({
               className="inline-block w-4 h-4 border-2 border-black"
               style={{ background: COST_SLICE_META.credit.color }}
             />
-            {COST_SLICE_META.credit.label} — below the line
+            {COST_SLICE_META.credit.label} {t('money.belowLine')}
           </span>
         )}
       </div>
@@ -448,9 +448,7 @@ export default function MoneyStackedChart({
           data-testid="money-chart-caption"
           className="mt-2 text-[10px] font-bold normal-case text-slate-500"
         >
-          Each bar is that period&apos;s charges <em>before</em> the rebate; the rebate hangs below
-          the axis, so what is left of the pile is what you paid — the exact figure is in the
-          tooltip and the table below.
+          {t('money.chartCaptionA')} <em>{t('money.shareExplainerB')}</em> {t('money.chartCaptionC')}
         </p>
       )}
 
@@ -472,8 +470,7 @@ export default function MoneyStackedChart({
           data-testid="money-usage-empty"
           className="mt-4 bg-slate-100 border-2 border-dashed border-black rounded-lg px-3 py-2 text-[11px] font-bold normal-case text-slate-600"
         >
-          This file states no per-window usage lines, so there is no honest kWh stack to draw. The
-          dollar view still works — it is read straight off the bill.
+          {t('money.usageMissing')}
         </div>
       )}
 
@@ -484,33 +481,33 @@ export default function MoneyStackedChart({
           className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs"
         >
           <div className="bg-yellow-400 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-[8px] uppercase">Delivery + regulatory</div>
+            <div className="text-[8px] uppercase">{t('money.shareDeliveryReg')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="non-commodity-pct">
               {share.nonCommodityPct.toFixed(1)}%
             </div>
-            <div className="text-[8px] font-bold normal-case">of charges before the rebate</div>
+            <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-[8px] uppercase">Electricity itself</div>
+            <div className="text-[8px] uppercase">{t('money.electricityItself')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="commodity-pct">
               {share.commodityPct.toFixed(1)}%
             </div>
-            <div className="text-[8px] font-bold normal-case">off/mid/on-peak commodity</div>
+            <div className="text-[8px] font-bold normal-case">{t('money.commoditySplit')}</div>
           </div>
           <div className="bg-slate-50 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-[8px] uppercase">HST</div>
+            <div className="text-[8px] uppercase">{t('slice.tax')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="tax-pct">
               {share.taxPct.toFixed(1)}%
             </div>
-            <div className="text-[8px] font-bold normal-case">of charges before the rebate</div>
+            <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-emerald-100 border-2 border-black rounded-lg p-2 md:p-3">
-            <div className="text-[8px] uppercase">Rebate gives back</div>
+            <div className="text-[8px] uppercase">{t('money.rebateGivesBack')}</div>
             <div className="text-lg md:text-2xl italic text-emerald-700" data-testid="rebate-pct">
               {share.rebatePct.toFixed(1)}%
             </div>
             <div className="text-[8px] font-bold normal-case">
-              you net {money(share.payable)} across these periods
+              {t('money.youNet')} {money(share.payable)} {t('money.acrossPeriods')}
             </div>
           </div>
         </div>
@@ -674,10 +671,10 @@ export default function MoneyStackedChart({
             onChange={(e) => setShowOverlay(e.target.checked)}
             className="w-5 h-5 accent-black"
           />
-          Plan overlay — the alternatives, same periods
+          {t('money.overlayTitle')}
           {mode !== 'dollars' && (
             <span className="text-[10px] font-bold normal-case text-slate-400">
-              (lines only draw over dollars)
+              {t('money.overlayLinesOnly')}
             </span>
           )}
         </label>
@@ -708,7 +705,7 @@ export default function MoneyStackedChart({
                     <line x1="0" y1="5" x2="34" y2="5" stroke="#000" strokeWidth="3" strokeDasharray={dash} />
                   </svg>
                   {line.label} {money(line.perPeriod)}
-                  {overlay.covered > 1 ? '/period' : ''}
+                  {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
                   {overlay.covered > 1 ? (
                     <span className="text-slate-500 font-bold normal-case">
                       {t('money.overlayTotal', { amount: money(line.amount) })}
@@ -734,7 +731,7 @@ export default function MoneyStackedChart({
               ) : (
                 <>
                   {t('money.youPaid')} {money(overlay.actualPerPeriod)}
-                  {overlay.covered > 1 ? '/period' : ''}
+                  {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
                   {overlay.covered > 1 ? (
                     <span className="text-slate-500 font-bold normal-case">
                       {t('money.overlayTotal', { amount: money(overlay.actual) })}

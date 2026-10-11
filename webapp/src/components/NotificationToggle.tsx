@@ -157,7 +157,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
           className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[250] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="text-xs md:text-sm">Alerts</div>
+            <div className="text-xs md:text-sm">{t('alerts.title')}</div>
             <button
               type="button"
               aria-label={t("alerts.closeAria")}
@@ -169,9 +169,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
           </div>
 
           <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-600 font-black mb-3 normal-case">
-            Live sync watches two things after every refresh: the best of your three plans, and
-            whether new Ontario rates are in effect. When either changes you get the banner at the
-            top of the dashboard.
+            {t('alerts.watchesTwo')}
           </p>
 
           <button
@@ -209,8 +207,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
 
           {/* The tradeoff, stated where the user decides — not buried in a doc. */}
           <p className="mt-3 text-[9px] leading-relaxed text-slate-500 font-black normal-case">
-            There is no account, so nothing here can email or text you: alerts are on-device only,
-            and stop entirely if this browser clears its site data.
+            {t('alerts.onDeviceOnly')}
           </p>
 
           {status && (

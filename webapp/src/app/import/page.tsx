@@ -238,14 +238,12 @@ function ImportFlow() {
       return (
         <section data-testid="import-review" className={CARD}>
           <h1 className="text-xl md:text-3xl uppercase tracking-tighter font-black mb-2 flex items-center gap-2">
-            <GitMerge strokeWidth={4} size={22} /> Review before importing
+            <GitMerge strokeWidth={4} size={22} /> {t('import.reviewTitle')}
           </h1>
           <p className="text-xs md:text-sm font-bold text-slate-600 mb-5">
-            This browser already holds <strong>{p.existingRows}</strong> readings
-            {p.existingFirst ? ` (${p.existingFirst} → ${p.existingLast})` : ''}. The new export
-            carries <strong>{p.incomingRows}</strong>
-            {p.incomingFirst ? ` (${p.incomingFirst} → ${p.incomingLast})` : ''}. Nothing is written
-            until you choose.
+            {t('import.thisBrowserHolds')} <strong>{p.existingRows}</strong> {t('import.readings', { count: p.existingRows })}
+            {p.existingFirst ? ` (${p.existingFirst} → ${p.existingLast})` : ''}{t('import.newExportCarries')} <strong>{p.incomingRows}</strong>
+            {p.incomingFirst ? ` (${p.incomingFirst} → ${p.incomingLast})` : ''}{t('import.nothingWritten')}
           </p>
 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" data-testid="import-review-stats">
@@ -266,7 +264,7 @@ function ImportFlow() {
 
           {p.identical && (
             <p className="text-[11px] font-black uppercase text-amber-700 mb-4" data-testid="import-identical">
-              This export matches what is already stored — merging will change nothing.
+              {t('import.identical')}
             </p>
           )}
 
@@ -277,7 +275,7 @@ function ImportFlow() {
               className={BTN + ' bg-emerald-400'}
               onClick={() => commit(mergeForWrite(existing, incoming))}
             >
-              <GitMerge size={14} strokeWidth={4} /> Merge ({p.mergeRows} rows)
+              <GitMerge size={14} strokeWidth={4} /> {t('import.mergeBtn')} ({p.mergeRows} {t('import.rows', { count: p.mergeRows })})
             </button>
             <button
               type="button"
@@ -285,15 +283,14 @@ function ImportFlow() {
               className={BTN + ' bg-yellow-400'}
               onClick={() => commit(incoming)}
             >
-              <Replace size={14} strokeWidth={4} /> Replace ({p.replaceRows} rows)
+              <Replace size={14} strokeWidth={4} /> {t('import.replaceBtn')} ({p.replaceRows} {t('import.rows', { count: p.replaceRows })})
             </button>
             <button type="button" data-testid="import-cancel" className={BTN + ' bg-white'} onClick={reset}>
-              <X size={14} strokeWidth={4} /> Cancel
+              <X size={14} strokeWidth={4} /> {t('common.cancel')}
             </button>
           </div>
           <p className="text-[10px] font-bold text-slate-500 mt-4">
-            Merge keeps every timestamp you already have and takes the file&rsquo;s value where they
-            overlap. Replace discards anything the file does not cover.
+            {t('import.mergeNote')}
           </p>
         </section>
       );
@@ -302,12 +299,10 @@ function ImportFlow() {
     return (
       <section className={CARD}>
         <h1 className="text-xl md:text-3xl uppercase tracking-tighter font-black mb-2 flex items-center gap-2">
-          <FileDown strokeWidth={4} size={22} /> Import Green Button XML
+          <FileDown strokeWidth={4} size={22} /> {t('import.title')}
         </h1>
         <p className="text-xs md:text-sm font-bold text-slate-600 mb-5">
-          Client-only: the file is parsed here, in your browser, and stored in this browser. Nothing
-          is uploaded. Paste the base64 from <code>dmd_export_b64.py --b64</code> or drop the XML
-          file itself.
+          {t('import.clientOnlyLead')} <code>dmd_export_b64.py --b64</code> {t('import.orDropFile')}
         </p>
 
         <div
@@ -328,7 +323,7 @@ function ImportFlow() {
             (dragging ? 'border-purple-600 bg-purple-50' : 'border-black bg-slate-50')
           }
         >
-          <p className="font-black uppercase text-sm md:text-base mb-3">Drop XML Here</p>
+          <p className="font-black uppercase text-sm md:text-base mb-3">{t('upload.dropzone')}</p>
           <input
             ref={fileRef}
             data-testid="import-file"
@@ -342,12 +337,12 @@ function ImportFlow() {
             }}
           />
           <button type="button" className={BTN + ' bg-white'} onClick={() => fileRef.current?.click()}>
-            Choose a file
+            {t('import.chooseFile')}
           </button>
         </div>
 
         <label className="block text-[11px] font-black uppercase mb-2" htmlFor="import-paste">
-          …or paste the XML / base64
+          {t('import.pasteLabel')}
         </label>
         <textarea
           ref={pasteRef}
@@ -356,7 +351,7 @@ function ImportFlow() {
           rows={6}
           spellCheck={false}
           className="w-full border-4 border-black rounded-xl p-3 font-mono text-xs mb-3"
-          placeholder="<?xml … or a base64 blob"
+          placeholder={t('import.pastePlaceholder')}
         />
         <button
           type="button"
@@ -387,8 +382,7 @@ function ImportFlow() {
         )}
 
         <p className="text-[10px] font-bold text-slate-500 mt-5">
-          Already have a dashboard? <Link className="underline" href="/">Open it</Link> — this page
-          never replaces your readings without asking.
+          {t('import.alreadyHave')} <Link className="underline" href="/">{t('import.openIt')}</Link> {t('import.neverReplaces')}
         </p>
       </section>
     );
@@ -398,10 +392,11 @@ function ImportFlow() {
 }
 
 export default function ImportPage() {
+  const { t } = useTranslation();
   return (
     <main className="min-h-screen bg-slate-50">
       <Suspense
-        fallback={<div className="p-8 font-black uppercase">Loading import…</div>}
+        fallback={<div className="p-8 font-black uppercase">{t('import.loading')}</div>}
       >
         <ImportFlow />
       </Suspense>

@@ -159,8 +159,8 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
     >
       <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400 font-black uppercase">
         {split.line === 'delivery'
-          ? 'Delivery · fixed vs volume-driven'
-          : 'Regulatory charges · fixed vs volume-driven'}
+          ? t('actualBill.deliverySplit')
+          : t('actualBill.regulatorySplit')}
       </div>
       <div
         data-testid={`decomposition-headline-${split.line}`}

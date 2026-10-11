@@ -193,7 +193,7 @@ export default function ChartView({
                 className={`px-2 md:px-3 py-1 rounded-full border-2 border-black text-[8px] md:text-[10px] font-black ${s.season === 'winter' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}
               >
                 {s.season === 'winter' ? '❄' : '☀'} {t(`season.${s.season}`)} · {t(`season.range.${s.season}`)}
-                {segments.length > 1 ? ` · ${s.bars} bars` : ''}
+                {segments.length > 1 ? t('chart.barsSuffix', { bars: s.bars, count: s.bars }) : ''}
               </span>
             ))}
           </div>

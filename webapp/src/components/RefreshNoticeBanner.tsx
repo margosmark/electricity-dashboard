@@ -19,6 +19,7 @@
 
 import { RefreshCw, Bell, X } from "lucide-react";
 import type { RefreshNotice } from "@/lib/backgroundRefresh";
+import { useTranslation } from "@/i18n";
 
 type Props = {
   notices: RefreshNotice[];
@@ -32,6 +33,7 @@ function PlanNotice({
   notice: Extract<RefreshNotice, { kind: "plan-change" }>;
   onDismiss: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       key={notice.id}
@@ -48,25 +50,25 @@ function PlanNotice({
           {notice.headline}
         </div>
         <p className="text-[10px] md:text-xs font-bold normal-case text-emerald-950">
-          {notice.detail} · Recomputed across your whole dataset after the latest refresh.
+          {notice.detail} {t('bgRefresh.recomputed')}
         </p>
         <p className="text-[9px] md:text-[10px] font-black uppercase text-emerald-950/70">
-          Alerts stay in this browser — no account, so no email or SMS.
+          {t('bgRefresh.alertsOnDevice')}
         </p>
       </div>
       <div className="flex flex-wrap gap-2 ml-auto">
         <div className="hidden sm:flex flex-col items-end bg-white border-2 border-black rounded-lg px-3 py-2">
-          <span className="text-[8px] md:text-[10px] font-black uppercase">Best vs what you are on</span>
+          <span className="text-[8px] md:text-[10px] font-black uppercase">{t('bgRefresh.bestVsCurrent')}</span>
           <span data-testid="refresh-notice-saving" className="text-base md:text-xl italic font-black">
             ${notice.monthlySavingVsCurrent.toFixed(2)}
-            <span className="text-[9px] md:text-[11px] not-italic ml-1">/mo</span>
+            <span className="text-[9px] md:text-[11px] not-italic ml-1">{t('common.perMonth')}</span>
           </span>
         </div>
         <button
           type="button"
           data-testid="refresh-notice-dismiss"
           onClick={() => onDismiss(notice.id)}
-          aria-label="Dismiss plan change notice"
+          aria-label={t('bgRefresh.dismissPlanAria')}
           className="min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-black text-emerald-400 border-4 border-black rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
         >
           <X size={16} strokeWidth={4} />
@@ -83,6 +85,7 @@ function RateNotice({
   notice: Extract<RefreshNotice, { kind: "rate-change" }>;
   onDismiss: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       key={notice.id}
@@ -103,7 +106,7 @@ function RateNotice({
         type="button"
         data-testid="refresh-notice-dismiss"
         onClick={() => onDismiss(notice.id)}
-        aria-label="Dismiss rate change notice"
+        aria-label={t('bgRefresh.dismissRateAria')}
         className="ml-auto min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-white text-black border-4 border-black rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
       >
         <X size={16} strokeWidth={4} />

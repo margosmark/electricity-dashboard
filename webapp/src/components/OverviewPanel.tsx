@@ -107,7 +107,7 @@ export default function OverviewPanel({
               className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-black"
             >
               <div className="text-[8px] md:text-[10px] font-black">
-¢/kWh · {t(EFFICIENCY_SUBTITLE_KEY)}
+{t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
               </div>
               <div className="flex gap-4 md:gap-6 mt-1">
                 <div>

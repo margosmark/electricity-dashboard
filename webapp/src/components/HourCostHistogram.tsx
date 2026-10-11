@@ -113,7 +113,7 @@ export default function HourCostHistogram({
                         <div className="text-[11px] font-black">
                           {b.cents === null
                             ? t('hourCost.noEnergy')
-                            : `${fmtCents(b.cents, 2)}/kWh`}
+                            : `${fmtCents(b.cents, 2)}${t('efficiency.perKwh')}`}
                         </div>
                         <div className="text-[10px] font-bold text-slate-500">
                           {t('hourCost.tooltipDetail', {

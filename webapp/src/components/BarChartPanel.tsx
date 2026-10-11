@@ -21,6 +21,7 @@ import {
 import { type ChartDataItem, getBarColor } from '@/lib/energy';
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { type ChartSegment } from '@/lib/season';
+import { useTranslation } from '@/i18n';
 
 export type BarChartPanelProps = {
   data: ChartDataItem[];
@@ -35,6 +36,7 @@ export type BarChartPanelProps = {
 export default function BarChartPanel({
   data, zoomLevel, segments, labelsUnique, onBarClick,
 }: BarChartPanelProps) {
+  const { t } = useTranslation();
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
@@ -49,7 +51,7 @@ export default function BarChartPanel({
               fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
               fillOpacity={0.07}
               stroke="none"
-              label={{ value: s.season === 'winter' ? 'WINTER' : 'SUMMER', position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
+              label={{ value: s.season === 'winter' ? t('season.bandWinter') : t('season.bandSummer'), position: 'insideTop', fill: '#000', fontSize: 10, fontWeight: 900 }}
             />
           ))}
         <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#000', fontWeight: 900 }} stroke="#000" strokeWidth={4} />
