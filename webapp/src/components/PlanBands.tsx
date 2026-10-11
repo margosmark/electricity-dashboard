@@ -57,8 +57,7 @@ export function PlanBands({ bands, layout }: Props) {
             /* Behind the bars (SVG paints in document order) and never
                stealing the axis domain: a band is an annotation, not data. */
             fill={style.fill}
-            fillOpacity={0.35}
-            stroke="#000"
+            stroke="var(--edge)"
             strokeDasharray="4 3"
             strokeWidth={1}
             /* Annotation, not data: a band whose key somehow leaves the
@@ -67,7 +66,11 @@ export function PlanBands({ bands, layout }: Props) {
             label={{
               value: style.label,
               position: layout === 'horizontal' ? 'insideTop' : 'insideRight',
-              fill: '#000',
+              /* The band's own text: ink in BOTH themes. Light bands are
+                 pale tints so black reads (13.7:1 on TOU's yellow); dark bands
+                 are the same hue washed over the card, where black would be
+                 ~1.5:1 and --ink (slate-50) is 9.6:1. One token, both themes. */
+              fill: 'var(--ink)',
               fontSize: 9,
               fontWeight: 900,
             }}

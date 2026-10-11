@@ -56,12 +56,12 @@ export default function OpenPeriodPanel({
   return (
     <section
       data-testid="open-period"
-      className="bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase"
+      className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
       aria-labelledby="open-period-heading"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-slate-400">
+          <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t(ESTIMATE_KEY_LABEL_KEY)}
           </div>
           <h3 id="open-period-heading" className="text-xl md:text-4xl italic font-black">
@@ -71,7 +71,7 @@ export default function OpenPeriodPanel({
         {open && (
           <span
             data-testid="open-period-badge"
-            className="border-4 border-black bg-yellow-400 px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
+            className="border-4 border-edge bg-yellow-400 px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
           >
             {t('openPeriod.badge')}
           </span>
@@ -82,9 +82,9 @@ export default function OpenPeriodPanel({
         {billedThrough && (
           <div
             data-testid="billed-through"
-            className="border-4 border-black rounded-xl md:rounded-2xl bg-slate-50 p-3 md:p-5"
+            className="border-4 border-edge rounded-xl md:rounded-2xl bg-inset p-3 md:p-5"
           >
-            <div className="text-[9px] md:text-[10px] uppercase text-slate-500">
+            <div className="text-[9px] md:text-[10px] uppercase text-ink-3">
               {t('openPeriod.billedThrough')}
             </div>
             <div className="text-2xl md:text-4xl italic" data-testid="billed-through-date">
@@ -93,7 +93,7 @@ export default function OpenPeriodPanel({
             <div className="text-base md:text-xl" data-testid="billed-through-amount">
               {t('openPeriod.actual', { amount: money(billedThrough.amount) })}
             </div>
-            <div className="mt-1 text-[9px] md:text-[11px] font-bold normal-case text-slate-500">
+            <div className="mt-1 text-[9px] md:text-[11px] font-bold normal-case text-ink-3">
               {t('openPeriod.lineForLine', { label: billedThrough.label })}
             </div>
           </div>
@@ -102,9 +102,9 @@ export default function OpenPeriodPanel({
         {open && (
           <div
             data-testid="unbilled-since"
-            className="border-4 border-black rounded-xl md:rounded-2xl bg-yellow-50 p-3 md:p-5"
+            className="border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft p-3 md:p-5"
           >
-            <div className="text-[9px] md:text-[10px] uppercase text-slate-500">
+            <div className="text-[9px] md:text-[10px] uppercase text-ink-3">
               {t('openPeriod.unbilledSince')}
             </div>
             <div className="text-2xl md:text-4xl italic" data-testid="unbilled-since-date">
@@ -113,7 +113,7 @@ export default function OpenPeriodPanel({
             <div className="text-base md:text-xl" data-testid="unbilled-since-amount">
               {t('openPeriod.estimatedCommodity', { amount: money(estimate) })}
             </div>
-            <div className="mt-1 text-[9px] md:text-[11px] font-bold normal-case text-slate-600">
+            <div className="mt-1 text-[9px] md:text-[11px] font-bold normal-case text-ink-2">
               {t('openPeriod.tailDetail', {
                 count: open.days,
                 days: open.days,
@@ -129,7 +129,7 @@ export default function OpenPeriodPanel({
       {open && (
         <p
           data-testid="open-period-caveat"
-          className="mt-3 text-[10px] md:text-xs font-bold normal-case text-slate-600 border-2 border-black rounded-lg px-3 py-2 bg-slate-50"
+          className="mt-3 text-[10px] md:text-xs font-bold normal-case text-ink-2 border-2 border-edge rounded-lg px-3 py-2 bg-inset"
         >
           {t('openPeriod.caveatA')}{' '}
           <strong className="uppercase">{t('openPeriod.caveatStrong')}</strong>{' '}
@@ -150,7 +150,7 @@ export default function OpenPeriodPanel({
                   ? t('openPeriod.accurate', { pct: fmtPercent(summary.meanAccuracy) })
                   : '—'}
               </div>
-              <div className="text-[10px] md:text-xs font-bold normal-case text-slate-500">
+              <div className="text-[10px] md:text-xs font-bold normal-case text-ink-3">
                 {t('openPeriod.settled', { count: summary.settled })}
                 {summary.allWithinDollar ? ` · ${t('openPeriod.withinDollar')}` : ''}
               </div>
@@ -160,7 +160,7 @@ export default function OpenPeriodPanel({
                 <li
                   key={check.windowStart}
                   data-testid="estimate-check"
-                  className="text-[10px] md:text-xs font-bold normal-case text-slate-700 border-2 border-black/20 rounded px-2 py-1.5"
+                  className="text-[10px] md:text-xs font-bold normal-case text-ink-2 border-2 border-edge/20 rounded px-2 py-1.5"
                 >
                   <span className="font-black uppercase">{check.label}</span>{' '}
                   {t('openPeriod.checkWeSaid')}{' '}
@@ -182,7 +182,7 @@ export default function OpenPeriodPanel({
         ) : (
           <div
             data-testid="estimate-accuracy-empty"
-            className="text-[10px] md:text-xs font-bold normal-case text-slate-500 border-2 border-dashed border-black/40 rounded-lg px-3 py-2"
+            className="text-[10px] md:text-xs font-bold normal-case text-ink-3 border-2 border-dashed border-edge/40 rounded-lg px-3 py-2"
           >
             {t('openPeriod.emptyLedger')}
           </div>
@@ -190,7 +190,7 @@ export default function OpenPeriodPanel({
       </div>
 
       <div
-        className="mt-3 text-[9px] md:text-[10px] font-bold normal-case text-slate-400"
+        className="mt-3 text-[9px] md:text-[10px] font-bold normal-case text-ink-4"
         data-testid="axis-note"
       >
         {axisNote}

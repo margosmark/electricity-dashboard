@@ -35,9 +35,9 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
       data-testid="verdict-line"
       data-best-plan={verdict.best}
       data-already-best={String(verdict.alreadyBest)}
-      className="bg-yellow-400 border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-black font-black uppercase text-[11px] md:text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      className="bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4"
     >
-      <span className="text-[8px] md:text-[10px] tracking-[0.2em] block text-slate-700 mb-1">
+      <span className="text-[8px] md:text-[10px] tracking-[0.2em] block text-accent-ink mb-1">
         {t('verdict.eyebrow')}
       </span>
       {verdict.alreadyBest ? (

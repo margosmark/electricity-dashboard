@@ -42,7 +42,7 @@ function PlanNotice({
       data-plan={notice.plan}
       data-previous-plan={notice.previousBest}
       data-saving-vs-previous={notice.monthlySavingVsPrevious}
-      className="relative z-[100] bg-emerald-400 border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-start gap-3 md:gap-4 text-black"
+      className="relative z-[100] bg-emerald-400 border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-start gap-3 md:gap-4 text-accent-ink"
     >
       <Bell size={20} strokeWidth={4} className="shrink-0 mt-0.5" />
       <div className="flex-1 min-w-[16rem] space-y-1">
@@ -57,7 +57,7 @@ function PlanNotice({
         </p>
       </div>
       <div className="flex flex-wrap gap-2 ml-auto">
-        <div className="hidden sm:flex flex-col items-end bg-white border-2 border-black rounded-lg px-3 py-2">
+        <div className="hidden sm:flex flex-col items-end bg-card border-2 border-edge rounded-lg px-3 py-2">
           <span className="text-[8px] md:text-[10px] font-black uppercase">{t('bgRefresh.bestVsCurrent')}</span>
           <span data-testid="refresh-notice-saving" className="text-base md:text-xl italic font-black">
             ${notice.monthlySavingVsCurrent.toFixed(2)}
@@ -69,7 +69,7 @@ function PlanNotice({
           data-testid="refresh-notice-dismiss"
           onClick={() => onDismiss(notice.id)}
           aria-label={t('bgRefresh.dismissPlanAria')}
-          className="min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-black text-emerald-400 border-4 border-black rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
+          className="min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-inv text-accent-emerald border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
         >
           <X size={16} strokeWidth={4} />
         </button>
@@ -93,21 +93,21 @@ function RateNotice({
       data-testid="refresh-notice-rate"
       data-effective-date={notice.effectiveDate}
       data-previous-effective-date={notice.previousEffectiveDate}
-      className="relative z-[100] bg-sky-300 border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-black"
+      className="relative z-[100] bg-sky-300 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-accent-ink"
     >
       <RefreshCw size={18} strokeWidth={4} className="shrink-0" />
       <div className="flex-1 min-w-[14rem] space-y-1">
         <div data-testid="refresh-notice-headline" className="text-[11px] md:text-sm font-black uppercase">
           {notice.headline}
         </div>
-        <p className="text-[10px] md:text-xs font-bold normal-case text-slate-800">{notice.detail}</p>
+        <p className="text-[10px] md:text-xs font-bold normal-case text-ink-2">{notice.detail}</p>
       </div>
       <button
         type="button"
         data-testid="refresh-notice-dismiss"
         onClick={() => onDismiss(notice.id)}
         aria-label={t('bgRefresh.dismissRateAria')}
-        className="ml-auto min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-white text-black border-4 border-black rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
+        className="ml-auto min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-card text-ink border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors"
       >
         <X size={16} strokeWidth={4} />
       </button>

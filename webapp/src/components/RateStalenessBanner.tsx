@@ -29,7 +29,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
     <div
       role="alert"
       data-testid="rate-staleness-banner"
-      className="relative z-[100] bg-orange-400 p-4 md:p-6 rounded-xl md:rounded-[2rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black font-black uppercase space-y-3"
+      className="relative z-[100] bg-orange-400 p-4 md:p-6 rounded-xl md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-accent-ink font-black uppercase space-y-3"
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-4">
         <AlertTriangle size={22} strokeWidth={4} className="shrink-0" />
@@ -41,10 +41,10 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
       <div className="text-[10px] md:text-sm font-black space-y-1 normal-case">
         <p data-testid="banner-dates">
           {t('staleness.datesA')}{' '}
-          <span className="bg-black text-orange-400 px-2 py-0.5 rounded">{oebEffectiveDate}</span>
+          <span className="bg-inv text-accent-orange px-2 py-0.5 rounded">{oebEffectiveDate}</span>
           {' — '}
           {t('staleness.datesB')}{' '}
-          <span className="bg-white px-2 py-0.5 rounded border-2 border-black">{shippedEffectiveDate}</span>
+          <span className="bg-card px-2 py-0.5 rounded border-2 border-edge">{shippedEffectiveDate}</span>
         </p>
 
         {deltas.length > 0 && (
@@ -59,7 +59,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
         {impact && impact.delta !== 0 && (
           <p data-testid="banner-impact">
             {t('staleness.impactIntro', { days: impact.windowDays, kwh: fmtKwh(impact.kwh, 0) })}{' '}
-            <span className="bg-white px-1.5 py-0.5 rounded border-2 border-black">
+            <span className="bg-card px-1.5 py-0.5 rounded border-2 border-edge">
               {money(impact.costCurrent)} → {money(impact.costNew)} ({fmtSignedMoney(impact.delta)})
             </span>
             {' · '}
@@ -83,7 +83,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
         target="_blank"
         rel="noopener noreferrer"
         data-testid="banner-edit-link"
-        className="inline-flex items-center gap-2 bg-black text-orange-400 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-black text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors"
       >
         {t('staleness.editLink')}
         <ExternalLink size={14} strokeWidth={4} />

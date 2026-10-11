@@ -15,6 +15,6 @@ import { useTranslation } from '@/i18n';
 export default function HeaderTagline() {
   const { t } = useTranslation();
   return (
-    <p className="text-xs sm:text-sm md:text-slate-600 font-bold mt-2">{t('app.tagline')}</p>
+    <p className="text-xs sm:text-sm md:text-ink-2 font-bold mt-2">{t('app.tagline')}</p>
   );
 }

@@ -42,15 +42,15 @@ const TARGET_ICON: Record<ShiftOption['target'], React.ReactNode> = {
 };
 
 const CONFIDENCE_STYLE: Record<ConfidenceLevel, string> = {
-  'very-consistent': 'bg-emerald-400 text-black',
+  'very-consistent': 'bg-emerald-400 text-accent-ink',
   // slate, not yellow: the badge has to stay legible ON the yellow headline card
-  somewhat: 'bg-slate-200 text-black',
-  irregular: 'bg-red-400 text-black',
+  somewhat: 'bg-track text-ink',
+  irregular: 'bg-red-400 text-accent-ink',
 };
 
 const EFFORT_STYLE: Record<Effort, string> = {
-  'no-plan-switch': 'bg-white text-black',
-  'plan-switch-required': 'bg-orange-400 text-black',
+  'no-plan-switch': 'bg-card text-ink',
+  'plan-switch-required': 'bg-orange-400 text-accent-ink',
 };
 
 function EmptyState({ analysis }: { analysis: TouShiftAnalysis }) {
@@ -72,14 +72,14 @@ function EmptyState({ analysis }: { analysis: TouShiftAnalysis }) {
   return (
     <div
       data-testid="shift-optimizer-empty"
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink"
     >
       <h3 className="text-2xl md:text-4xl italic mb-3 md:mb-5 font-black uppercase">
         {t('shift.title')}
       </h3>
-      <div className="bg-slate-100 border-2 md:border-4 border-black rounded-xl md:rounded-2xl p-4 md:p-6">
+      <div className="bg-hover border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6">
         <div className="font-black uppercase text-sm md:text-xl mb-2">{title}</div>
-        <p className="font-bold text-slate-600 text-xs md:text-sm">{detail}</p>
+        <p className="font-bold text-ink-2 text-xs md:text-sm">{detail}</p>
       </div>
     </div>
   );
@@ -91,7 +91,7 @@ function ConfidenceChip({ badge }: { badge: ConfidenceBadge }) {
       data-testid="confidence-badge"
       data-level={badge.level}
       title={badge.detail}
-      className={`inline-flex items-center border-2 border-black rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${CONFIDENCE_STYLE[badge.level]}`}
+      className={`inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${CONFIDENCE_STYLE[badge.level]}`}
     >
       {badge.label}
     </span>
@@ -104,7 +104,7 @@ function EffortChip({ effort }: { effort: Effort }) {
     <span
       data-testid="effort-chip"
       data-effort={effort}
-      className={`inline-flex items-center border-2 border-black rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${EFFORT_STYLE[effort]}`}
+      className={`inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${EFFORT_STYLE[effort]}`}
     >
       {effort === 'no-plan-switch' ? t('shift.effortNone') : t('shift.effortSwitch')}
     </span>
@@ -117,7 +117,7 @@ function TierChip({ tier }: { tier: ShiftBlock['tier'] }) {
   return (
     <span
       data-testid="shift-tier-chip"
-      className="inline-flex items-center border-2 border-black rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-blue-300 text-black"
+      className="inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-blue-300 text-accent-ink"
     >
       {t('shift.tierChip')}
     </span>
@@ -128,10 +128,10 @@ function TierChip({ tier }: { tier: ShiftBlock['tier'] }) {
 function ClassificationRow({ block }: { block: ShiftBlock }) {
   return (
     <div data-testid="block-classification" className="mt-2 md:mt-3">
-      <div className="text-[10px] md:text-xs font-black uppercase text-black">
+      <div className="text-[10px] md:text-xs font-black uppercase text-ink">
         {block.classification.label}
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-slate-500">
+      <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
         {block.classification.detail}
       </div>
     </div>
@@ -142,8 +142,8 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
   const { t } = useTranslation();
   return (
     <div
-      className={`border-2 md:border-4 border-black rounded-lg md:rounded-xl p-3 md:p-4 ${
-        rank === 0 ? 'bg-yellow-400' : 'bg-white'
+      className={`border-2 md:border-4 border-edge rounded-lg md:rounded-xl p-3 md:p-4 ${
+        rank === 0 ? 'bg-yellow-400' : 'bg-card'
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 font-black uppercase">
@@ -153,7 +153,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           <EffortChip effort={option.effort} />
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          <span className="text-[10px] md:text-xs text-slate-600">
+          <span className="text-[10px] md:text-xs text-ink-2">
             {fmtCents(option.destRateCents)}{t('efficiency.perKwh')}
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
@@ -163,7 +163,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           </span>
         </div>
       </div>
-      <p className="text-[9px] md:text-[11px] font-bold text-slate-600 mt-1.5 md:mt-2">
+      <p className="text-[9px] md:text-[11px] font-bold text-ink-2 mt-1.5 md:mt-2">
         {option.assumption}
       </p>
     </div>
@@ -176,11 +176,11 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
     <div
       data-testid={`shift-block-${block.id}`}
       data-tier={block.tier}
-      className="bg-white border-4 border-black rounded-[1.25rem] md:rounded-[2rem] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-7"
+      className="bg-card border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3 md:mb-5">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="bg-black text-yellow-400 w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center font-black text-sm md:text-base shrink-0">
+          <div className="bg-inv text-accent-yellow w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center font-black text-sm md:text-base shrink-0">
             {rank + 1}
           </div>
           <div>
@@ -191,7 +191,7 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
               <ConfidenceChip badge={block.confidence} />
               <TierChip tier={block.tier} />
             </div>
-            <div className="text-[10px] md:text-xs font-bold text-slate-500 mt-1 md:mt-2">
+            <div className="text-[10px] md:text-xs font-bold text-ink-3 mt-1 md:mt-2">
               {t('shift.blockMeta', {
                 kwh: block.avgWeeklyKwh.toFixed(1),
                 seen: block.weeksSeen,
@@ -201,10 +201,10 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[8px] md:text-[10px] font-black uppercase text-slate-400">
+          <div className="text-[8px] md:text-[10px] font-black uppercase text-ink-4">
             {t('shift.bestCase')}
           </div>
-          <div className="text-xl md:text-3xl italic font-black text-emerald-600">
+          <div className="text-xl md:text-3xl italic font-black text-good">
             {fmtMoney(block.bestMonthlySavings)}
             <span className="text-[10px] md:text-sm not-italic">{t('common.perMonth')}</span>
           </div>
@@ -227,30 +227,30 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
     <div
       data-testid={`shift-block-${block.id}`}
       data-tier={block.tier}
-      className="bg-white border-2 md:border-4 border-black rounded-xl md:rounded-2xl p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-1.5 md:space-y-2"
+      className="bg-card border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 shadow-hard-4 space-y-1.5 md:space-y-2"
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-3">
-        <div className="bg-black text-yellow-400 w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center font-black text-[10px] md:text-xs shrink-0">
+        <div className="bg-inv text-accent-yellow w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center font-black text-[10px] md:text-xs shrink-0">
           {rank + 1}
         </div>
         <div className="font-black uppercase text-sm md:text-base">{block.label}</div>
         <ConfidenceChip badge={block.confidence} />
         <TierChip tier={block.tier} />
         <div className="ml-auto flex items-center gap-2 md:gap-3">
-          <span className="text-[9px] md:text-[11px] font-black uppercase text-slate-500">
+          <span className="text-[9px] md:text-[11px] font-black uppercase text-ink-3">
             {t('shift.bestCase')}
           </span>
-          <span className="text-sm md:text-lg italic font-black text-emerald-600">
+          <span className="text-sm md:text-lg italic font-black text-good">
             {fmtMoney(block.bestMonthlySavings)}
             <span className="text-[8px] md:text-[10px] not-italic">{t('common.perMonth')}</span>
           </span>
         </div>
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-black">
+      <div className="text-[9px] md:text-[11px] font-bold text-ink">
         {block.classification.label} ·{' '}
-        <span className="text-slate-500">{block.classification.detail}</span>
+        <span className="text-ink-3">{block.classification.detail}</span>
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-slate-500">
+      <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
         {t('shift.blockMeta', {
           kwh: block.avgWeeklyKwh.toFixed(1),
           seen: block.weeksSeen,
@@ -261,13 +261,13 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
         {block.options.map((o, i) => (
           <span
             key={o.target}
-            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border-2 border-black rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-black uppercase ${
-              i === 0 ? 'bg-yellow-400' : 'bg-white'
+            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border-2 border-edge rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-black uppercase ${
+              i === 0 ? 'bg-yellow-400' : 'bg-card'
             }`}
           >
             {TARGET_ICON[o.target]}
             <span>{o.label}</span>
-            <span className="text-slate-600">{fmtCents(o.destRateCents)}</span>
+            <span className="text-ink-2">{fmtCents(o.destRateCents)}</span>
             <ArrowRight size={9} strokeWidth={4} className="hidden sm:block" />
             <span className="italic">{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
             <EffortChip effort={o.effort} />
@@ -284,7 +284,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
   return (
     <div
       data-testid="shift-headline"
-      className="bg-yellow-400 border-4 border-black rounded-[1.25rem] md:rounded-[2rem] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-7 text-black"
+      className="bg-yellow-400 border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7 text-accent-ink"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-[10px] tracking-[0.25em] font-black uppercase">
@@ -298,7 +298,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
       <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-3 md:mt-4">
         <span
           data-testid="shift-headline-share"
-          className="bg-black text-white border-2 border-black rounded-full px-2.5 md:px-3 py-1 text-[9px] md:text-[11px] font-black uppercase"
+          className="bg-inv text-inv-ink border-2 border-edge rounded-full px-2.5 md:px-3 py-1 text-[9px] md:text-[11px] font-black uppercase"
         >
           {t('shift.shareLine', {
             pct: fmtPercent(Math.round(headline.share * 100)),
@@ -312,7 +312,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
         </span>
       </div>
       <p className="text-[10px] md:text-[12px] font-bold mt-2 md:mt-3">{headline.assumption}</p>
-      <div className="text-[9px] md:text-[11px] font-bold text-slate-700 mt-1 md:mt-2">
+      <div className="text-[9px] md:text-[11px] font-bold text-ink-2 mt-1 md:mt-2">
         {t('shift.supportingNote')}
       </div>
     </div>
@@ -324,7 +324,7 @@ function TierHeading({ count }: { count: number }) {
   return (
     <div
       data-testid="shift-tier-midpeak"
-      className="bg-blue-300 border-4 border-black rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-black"
+      className="bg-blue-300 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink"
     >
       <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">
         {t('shift.tierHeading')}
@@ -332,7 +332,7 @@ function TierHeading({ count }: { count: number }) {
       <div className="text-sm md:text-lg font-black uppercase mt-1">
         {t('shift.tierCount', { count, blocks: count })}
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-slate-700">
+      <div className="text-[9px] md:text-[11px] font-bold text-ink-2">
         {t('shift.tierNote')}
       </div>
     </div>
@@ -343,7 +343,7 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
   const { t } = useTranslation();
   if (analysis.blocks.length === 0) {
     return (
-      <div className="font-black uppercase text-black">
+      <div className="font-black uppercase text-ink">
         <EmptyState analysis={analysis} />
       </div>
     );
@@ -362,19 +362,19 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
   return (
     <div
       data-testid="shift-optimizer"
-      className="space-y-4 md:space-y-6 font-black uppercase text-black"
+      className="space-y-4 md:space-y-6 font-black uppercase text-ink"
     >
-      <div className="bg-black text-white p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-yellow-400 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-inv text-inv-ink p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-yellow-400 shadow-hard-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] tracking-[0.25em] text-yellow-400 font-black">
+          <div className="text-[10px] tracking-[0.25em] text-accent-yellow font-black">
             {t('shift.eyebrow')}
           </div>
           <div className="text-xl md:text-3xl italic leading-tight mt-1">{countLine}</div>
-          <div className="text-[10px] md:text-xs font-bold text-slate-400 mt-1">
+          <div className="text-[10px] md:text-xs font-bold text-inv-ink-2 mt-1">
             {t('shift.patternCheck')}
           </div>
         </div>
-        <div className="bg-yellow-400 text-black px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center">
+        <div className="bg-yellow-400 text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center">
           <div className="text-[8px] md:text-[10px] font-black uppercase">
             {t('shift.ifEveryMoved')}
           </div>

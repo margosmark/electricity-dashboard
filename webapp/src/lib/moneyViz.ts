@@ -102,6 +102,16 @@ import { fmtMoney, fmtNumber, t } from '@/i18n';
 /** Wave U — the catalog key the display layer translates instead. */
 export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
 
+/**
+ * The eleven charge types, one colour each, drawn in COST_SLICE_ORDER.
+ *
+ * Dark mode (t_d5d0a86b): these are DATA hues, so they are kept — a stack
+ * whose colours changed meaning between themes would be unreadable across a
+ * screenshot. Three are tokens because they could not survive the navy card:
+ * `tier1` (#1D4ED8, 2.66:1 — under the 3:1 non-text floor), the two
+ * near-blacks on `total`/`payable` (#111111, literally invisible), and the
+ * active-bar highlight. Everything else is saturated enough for both themes.
+ */
 export const COST_SLICE_META: Record<
   CostSliceKey,
   { label: string; short: string; color: string; labelKey: string; shortKey: string }
@@ -109,7 +119,7 @@ export const COST_SLICE_META: Record<
   offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
   midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
   onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
-  tier1: { label: 'Tier 1', short: 'Tier 1', color: '#1D4ED8', labelKey: 'rate.tier1', shortKey: 'rate.tier1' },
+  tier1: { label: 'Tier 1', short: 'Tier 1', color: 'var(--data-tier1)', labelKey: 'rate.tier1', shortKey: 'rate.tier1' },
   tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
   commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
   delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },

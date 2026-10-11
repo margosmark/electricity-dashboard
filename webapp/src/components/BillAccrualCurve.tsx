@@ -143,14 +143,14 @@ function Chart({ curve }: { curve: AccrualCurve }) {
       data-testid="accrual-chart"
     >
       {/* Frame */}
-      <line x1={PAD.left} y1={PAD.top + innerH} x2={W - PAD.right} y2={PAD.top + innerH} stroke="#000" strokeWidth={2} />
-      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + innerH} stroke="#000" strokeWidth={2} />
+      <line x1={PAD.left} y1={PAD.top + innerH} x2={W - PAD.right} y2={PAD.top + innerH} stroke="var(--ink)" strokeWidth={2} />
+      <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + innerH} stroke="var(--ink)" strokeWidth={2} />
 
       {/* $0 + the top of the scale, labelled */}
-      <text x={PAD.left - 8} y={PAD.top + innerH + 4} textAnchor="end" fontSize={11} fontWeight={900} fill="#000">
+      <text x={PAD.left - 8} y={PAD.top + innerH + 4} textAnchor="end" fontSize={11} fontWeight={900} fill="var(--ink)">
         $0
       </text>
-      <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" fontSize={11} fontWeight={900} fill="#000">
+      <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" fontSize={11} fontWeight={900} fill="var(--ink)">
         {money(maxY)}
       </text>
 
@@ -192,7 +192,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             y1={y(curve.avgPriorBill)}
             x2={W - PAD.right}
             y2={y(curve.avgPriorBill)}
-            stroke="#000"
+            stroke="var(--ink)"
             strokeWidth={3}
             strokeDasharray="1 6"
             strokeLinecap="round"
@@ -204,7 +204,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             textAnchor="end"
             fontSize={11}
             fontWeight={900}
-            fill="#000"
+            fill="var(--ink)"
           >
             {t('accrual.threeBillAvg')} {money(curve.avgPriorBill)}
           </text>
@@ -221,7 +221,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         y1={y(0)}
         x2={x(curve.daysInPeriod)}
         y2={y(curve.projectedTotal)}
-        stroke="#000"
+        stroke="var(--ink)"
         strokeWidth={7}
         strokeDasharray="10 6"
         strokeLinecap="butt"
@@ -242,36 +242,36 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         textAnchor="end"
         fontSize={11}
         fontWeight={900}
-        fill="#000"
+        fill="var(--ink)"
       >
         {money(curve.projectedTotal)} {t('accrual.by')} {curve.billDate}
       </text>
 
       {/* Today: how far into the period the grey line is allowed to reach. */}
-      <line x1={todayX} y1={PAD.top} x2={todayX} y2={PAD.top + innerH} stroke="#94A3B8" strokeWidth={1} strokeDasharray="3 3" />
+      <line x1={todayX} y1={PAD.top} x2={todayX} y2={PAD.top + innerH} stroke="var(--ink-4)" strokeWidth={1} strokeDasharray="3 3" />
 
       {/* The accrual itself — the money already spent. */}
       <polyline
         points={actual}
         fill="none"
-        stroke="#64748B"
+        stroke="var(--ink-3)"
         strokeWidth={4}
         strokeLinejoin="round"
         strokeLinecap="round"
         data-testid="accrual-actual-line"
       />
       {last && (
-        <circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill="#FACC15" stroke="#000" strokeWidth={3} />
+        <circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill="#FACC15" stroke="var(--ink)" strokeWidth={3} />
       )}
 
       {/* x labels: period start, today, bill date */}
-      <text x={PAD.left} y={H - 10} fontSize={11} fontWeight={900} fill="#000">
+      <text x={PAD.left} y={H - 10} fontSize={11} fontWeight={900} fill="var(--ink)">
         {curve.periodStart}
       </text>
-      <text x={todayX} y={H - 10} fontSize={11} fontWeight={900} fill="#000" textAnchor="middle">
+      <text x={todayX} y={H - 10} fontSize={11} fontWeight={900} fill="var(--ink)" textAnchor="middle">
         {t('accrual.todayAxis')}
       </text>
-      <text x={W - PAD.right} y={H - 10} fontSize={11} fontWeight={900} fill="#000" textAnchor="end">
+      <text x={W - PAD.right} y={H - 10} fontSize={11} fontWeight={900} fill="var(--ink)" textAnchor="end">
         {t('accrual.billAxis')} {curve.billDate}
       </text>
     </svg>
@@ -302,7 +302,7 @@ function Sparkline({ curve }: { curve: AccrualCurve }) {
         y1={y(0)}
         x2={x(curve.daysInPeriod)}
         y2={y(curve.projectedTotal)}
-        stroke="#000"
+        stroke="var(--ink)"
         strokeWidth={5}
         strokeDasharray="8 5"
       />
@@ -318,7 +318,7 @@ function Sparkline({ curve }: { curve: AccrualCurve }) {
       <polyline
         points={actual}
         fill="none"
-        stroke="#64748B"
+        stroke="var(--ink-3)"
         strokeWidth={3}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -363,12 +363,12 @@ export default function BillAccrualCurve({
       <section
         data-testid="bill-accrual"
         aria-labelledby="accrual-heading"
-        className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-black text-black font-black uppercase"
+        className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-2 md:border-4 border-dashed border-edge text-ink font-black uppercase"
       >
         <h3 id="accrual-heading" className="text-xl md:text-3xl italic mb-2">
           {t('accrual.isMyBillOnPace')}
         </h3>
-        <p data-testid="accrual-empty" className="text-[11px] md:text-sm font-bold normal-case text-slate-600">
+        <p data-testid="accrual-empty" className="text-[11px] md:text-sm font-bold normal-case text-ink-2">
           {curve.note}
         </p>
       </section>
@@ -390,10 +390,10 @@ export default function BillAccrualCurve({
     curve.paceVsAvg === null || curve.avgPriorBill === null
       ? null
       : Math.abs(curve.paceVsAvg) < 0.01
-        ? { tone: 'bg-slate-200', direction: 'even' as const, text: 'right on your 3-bill average' }
+        ? { tone: 'bg-track text-ink', direction: 'even' as const, text: 'right on your 3-bill average' }
         : curve.overAvg
-          ? { tone: 'bg-red-400', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }
-          : { tone: 'bg-emerald-300', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };
+          ? { tone: 'bg-red-400 text-accent-ink', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }
+          : { tone: 'bg-emerald-300 text-accent-ink', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };
 
   const billDateLabel = fmtDate(new Date(`${curve.billDate}T12:00:00`), billDatePattern);
 
@@ -407,18 +407,18 @@ export default function BillAccrualCurve({
       data-days-in-period={curve.daysInPeriod}
       data-bill-date={curve.billDate}
       data-avg-prior-bills={curve.avgPriorBill?.toFixed(2) ?? ''}
-      className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-black"
+      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink"
     >
       {/* ---- the answer, before any picture ------------------------------ */}
       <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-1 md:mb-2">
-        <span aria-hidden className="bg-black text-yellow-400 p-2 md:p-3 rounded-xl border-2 md:border-4 border-black">
+        <span aria-hidden className="bg-inv text-accent-yellow p-2 md:p-3 rounded-xl border-2 md:border-4 border-edge">
           <TrendingUp size={22} strokeWidth={4} />
         </span>
         <div>
-          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-slate-400 font-black uppercase">
+          <div className="text-[8px] md:text-[10px] tracking-[0.3em] text-ink-4 font-black uppercase">
             {fmtDate(new Date(`${curve.periodStart}T12:00:00`), billDatePattern)} – {billDateLabel} · {t('accrual.openPeriod')}
           </div>
-          <h3 id="accrual-heading" className="text-xl md:text-3xl italic font-black uppercase text-black">
+          <h3 id="accrual-heading" className="text-xl md:text-3xl italic font-black uppercase text-ink">
             {t('accrual.isMyBillOnPace')}
           </h3>
         </div>
@@ -436,7 +436,7 @@ export default function BillAccrualCurve({
           <span
             data-testid="accrual-pace-chip"
             data-direction={chip.direction}
-            className={`${chip.tone} border-4 border-black px-3 py-1 rounded-xl text-[11px] md:text-sm font-black uppercase`}
+            className={`${chip.tone} border-4 border-edge px-3 py-1 rounded-xl text-[11px] md:text-sm font-black uppercase`}
           >
             {chip.text}
           </span>
@@ -444,7 +444,7 @@ export default function BillAccrualCurve({
           <span
             data-testid="accrual-pace-chip"
             data-direction="none"
-            className="bg-slate-100 border-4 border-black px-3 py-1 rounded-xl text-[10px] md:text-xs font-black uppercase text-slate-500"
+            className="bg-hover border-4 border-edge px-3 py-1 rounded-xl text-[10px] md:text-xs font-black uppercase text-ink-3"
           >
             {t('accrual.noBillsYet')}
           </span>
@@ -455,7 +455,7 @@ export default function BillAccrualCurve({
       <p
         id={explainerId}
         data-testid="accrual-explainer"
-        className="mb-4 text-[10px] md:text-xs font-bold normal-case text-slate-600 leading-relaxed"
+        className="mb-4 text-[10px] md:text-xs font-bold normal-case text-ink-2 leading-relaxed"
       >
         {t(ACCRUAL_EXPLAINER_KEY)}
       </p>
@@ -476,30 +476,30 @@ export default function BillAccrualCurve({
         data-testid="accrual-chart-toggle"
         aria-expanded={showFull}
         onClick={() => setShowFull((v) => !v)}
-        className="md:hidden mt-2 w-full min-h-[44px] border-2 border-black rounded-xl bg-slate-100 text-[10px] font-black uppercase hover:bg-yellow-400 active:bg-yellow-500"
+        className="md:hidden mt-2 w-full min-h-[44px] border-2 border-edge rounded-xl bg-hover text-[10px] font-black uppercase hover:bg-yellow-400 hover:text-accent-ink active:bg-accent-soft0"
       >
         {showFull ? t('accrual.hideFull') : t('accrual.showFull')}
       </button>
 
       {/* The chart is decorative; every number it draws is here as text. */}
       <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-black text-white p-3 md:p-4 rounded-xl border-4 border-black">
-          <div className="text-[8px] md:text-[10px] uppercase text-yellow-400 font-black">{t('accrual.accruedSoFar')}</div>
+        <div className="bg-inv text-inv-ink p-3 md:p-4 rounded-xl border-4 border-edge">
+          <div className="text-[8px] md:text-[10px] uppercase text-accent-yellow font-black">{t('accrual.accruedSoFar')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-total">
             {money(curve.total)}
           </div>
-          <div className="text-[8px] font-black text-slate-400 normal-case">
+          <div className="text-[8px] font-black text-inv-ink-2 normal-case">
             {t('accrual.measuredLine', { covered: curve.coveredDays, elapsed: curve.daysElapsed })}
           </div>
         </div>
-        <div className="bg-blue-50 p-3 md:p-4 rounded-xl border-4 border-black">
-          <div className="text-[8px] md:text-[10px] uppercase text-slate-500 font-black">{t('accrual.paceToDate')}</div>
+        <div className="bg-blue-50 p-3 md:p-4 rounded-xl border-4 border-edge">
+          <div className="text-[8px] md:text-[10px] uppercase text-ink-3 font-black">{t('accrual.paceToDate')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-pace">
             {money(curve.paceToDate)}
           </div>
-          <div className="text-[8px] font-black text-slate-500 normal-case">{money(curve.paceDaily)}{t('accrual.perDayUnit')}</div>
+          <div className="text-[8px] font-black text-ink-3 normal-case">{money(curve.paceDaily)}{t('accrual.perDayUnit')}</div>
         </div>
-        <div className="bg-yellow-400 p-3 md:p-4 rounded-xl border-4 border-black">
+        <div className="bg-yellow-400 text-accent-ink p-3 md:p-4 rounded-xl border-4 border-edge">
           <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.landingAt')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-projected">
             {money(curve.projectedTotal)}
@@ -509,8 +509,8 @@ export default function BillAccrualCurve({
           </div>
         </div>
         <div
-          className={`p-3 md:p-4 rounded-xl border-4 border-black ${
-            overPace === null ? 'bg-slate-100' : overPace ? 'bg-red-400' : 'bg-emerald-300'
+          className={`p-3 md:p-4 rounded-xl border-4 border-edge ${
+            overPace === null ? 'bg-hover' : overPace ? 'bg-red-400 text-accent-ink' : 'bg-emerald-300 text-accent-ink'
           }`}
         >
           <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.vsPaceLine')}</div>
@@ -523,7 +523,7 @@ export default function BillAccrualCurve({
         </div>
       </div>
 
-      <p data-testid="accrual-note" className="mt-4 text-[10px] md:text-xs font-bold text-slate-600 normal-case">
+      <p data-testid="accrual-note" className="mt-4 text-[10px] md:text-xs font-bold text-ink-2 normal-case">
         {curve.note} {t('accrual.commodityOnlyNote')}
       </p>
     </section>
