@@ -31,12 +31,22 @@ import base64
 import hashlib
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 INBOX = Path.home() / "electricity-data" / "inbox"
 DEFAULT_APP = "https://electricity.markarslan.ca"
-# Browsers and proxies stop trusting very long URLs somewhere around 2 MB and
-# many cap far lower; pasting is the reliable path for a full-range export.
-URL_SAFE_B64_CHARS = 100_000
+# The ?d= payload rides in the request LINE, so the binding limit is the edge
+# router's nginx `large_client_header_buffers` (default 4 8k => 8192 bytes for
+# "GET /import?d=… HTTP/1.1" as a whole). MEASURED 2026-10-10 against the
+# deployed router on .110 AND against the public domain (the same nginx, one
+# hop further): both accept 8167 chars of query and return 414 one byte later.
+# 8000 leaves the path and the "GET … HTTP/1.1" wrapper room to grow.
+#
+# This used to be 100_000 — twelve times what any hop accepts, so --url would
+# cheerfully print a link that production answers with "414 Request-URI Too
+# Large". A full-range export is ~235 KB of XML and can never ride a URL at
+# all: --b64 / --out / dropping the file on /import are the real hand-offs.
+URL_SAFE_B64_CHARS = 8_000
 
 
 def newest_xml(inbox: Path) -> Path | None:
@@ -69,14 +79,22 @@ def main(argv: list[str] | None = None) -> int:
     encoded = base64.b64encode(data).decode("ascii")
 
     if args.url:
-        if len(encoded) > URL_SAFE_B64_CHARS:
+        # The payload is URL-ENCODED, not pasted raw. Standard base64 uses '+',
+        # and a literal '+' in a query string decodes as a SPACE — so a raw
+        # link arrived at /import with its base64 silently corrupted (every
+        # fixture hits this: synthetic.xml alone has 230 '+' chars). Measured
+        # in a real browser against the production build: raw link => 0 rows
+        # imported, error box shown; encoded link => all 68 rows.
+        quoted = quote(encoded, safe="")
+        if len(quoted) > URL_SAFE_B64_CHARS:
             print(
-                f"refusing --url: {len(encoded)} base64 chars is too long for a "
-                "URL. Drop the XML file onto /import instead, or use --b64.",
+                f"refusing --url: {len(quoted)} encoded chars exceeds the "
+                f"{URL_SAFE_B64_CHARS}-char URL budget of the deployed edge. "
+                "Drop the XML file onto /import instead, or use --b64.",
                 file=sys.stderr,
             )
             return 2
-        print(f"{args.app.rstrip('/')}/import?d={encoded}")
+        print(f"{args.app.rstrip('/')}/import?d={quoted}")
         return 0
 
     if args.b64:
