@@ -397,6 +397,63 @@ describe('Dashboard', () => {
     expect(touRates[0]).toBe(9.75); // display value came from the RateSet, not '9.8¢'
   });
 
+  // --- The same contract, one layer down: the shift insight rows ------------
+  // The optimizer prices its baseline and its move destinations off the SAME
+  // RateSet the cards read, so a two-decimal set may not be rounded on the row
+  // and printed exactly on the card above it. Three readings only ever yield
+  // "insufficient history", so this fixture carries five weeks of a recurring
+  // Wednesday midday block — enough for the rows to exist at all.
+  const recurringBlockRawData = (() => {
+    const ts = (y: number, m: number, d: number, h: number): number =>
+      Math.floor(new Date(y, m, d, h, 0, 0).getTime() / 1000);
+    const anchor = new Date(2024, 0, 31); // Wednesday of the newest week
+    const monday = new Date(anchor);
+    monday.setDate(monday.getDate() - ((anchor.getDay() + 6) % 7));
+    const out: { timestamp: number; usage_kwh: number }[] = [];
+    for (let w = 0; w < 5; w++) {
+      const weekMonday = new Date(monday);
+      weekMonday.setDate(weekMonday.getDate() - (4 - w) * 7);
+      const wed = new Date(weekMonday);
+      wed.setDate(wed.getDate() + 2); // Wednesday
+      for (const hour of [12, 13]) {
+        out.push({ timestamp: ts(wed.getFullYear(), wed.getMonth(), wed.getDate(), hour), usage_kwh: 2 });
+      }
+    }
+    return out;
+  })();
+
+  const stubSsotWithRecurringBlock = () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve(ssotRates) }));
+    Storage.prototype.getItem = vi.fn((key: string) => {
+      if (key === 'energy_data') return JSON.stringify(recurringBlockRawData);
+      if (key === 'billing_day') return '1';
+      return null;
+    });
+  };
+
+  it('shift insight rows print RateSet values at source precision, like the cards', async () => {
+    stubSsotWithRecurringBlock();
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
+
+    const shift = screen.getByTestId('shift-optimizer');
+    // destinations off ssotRates: 9.75 / 3.21 — never the 1-digit 9.8 / 3.2
+    expect(within(shift).getAllByText('9.75¢').length).toBeGreaterThan(0);
+    expect(within(shift).getAllByText('3.21¢').length).toBeGreaterThan(0);
+    expect(within(shift).queryByText('9.8¢')).not.toBeInTheDocument();
+    expect(within(shift).queryByText('3.2¢')).not.toBeInTheDocument();
+    // …and the baseline the block is priced at (15.25 mid / 20.5 on-peak)
+    expect(shift).toHaveTextContent(/pays (15\.25|20\.5)¢ now/);
+    expect(shift).not.toHaveTextContent('15.3¢');
+    expect(shift).not.toHaveTextContent('20.6¢');
+    // the cards on the SAME tab agree with the row underneath them
+    expect(screen.getByTestId('tab-panel-plans').textContent).toContain('9.75¢');
+  });
+
   it('no RateSet in view: the cards show no rate rows at all, never a stale copy', async () => {
     // Readings loaded but the rate schedule did not — the one state where the
     // old card copy printed November-2025 numbers as if they were current.

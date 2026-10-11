@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import ShiftOptimizer from './ShiftOptimizer';
-import { classifyBlock, confidenceBadge } from '@/lib/touShift';
+import { analyzeTouShifts, classifyBlock, confidenceBadge } from '@/lib/touShift';
+import { processRawData, type DataPoint, type RateSet } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 import type { TouShiftAnalysis, ShiftBlock, ShiftOption } from '@/lib/touShift';
 
 const overnight: ShiftOption = {
@@ -283,5 +285,122 @@ describe('ShiftOptimizer', () => {
     expect(screen.getByTestId('shift-headline')).toBeInTheDocument();
     expect(within(screen.getByTestId('shift-block-wed-07-11')).getByTestId('shift-tier-chip')).toBeInTheDocument();
     expect(screen.getByText(/1 On-Peak \+ 1 Mid-Peak recurring blocks found/i)).toBeInTheDocument();
+  });
+});
+
+// --- Rate precision: RateSet values print at SOURCE precision ---------------
+// PR #39's display contract: a forced single digit would print 9.75 as 9.8¢
+// while the plan card on the same tab still used 9.75. These drive the whole
+// pipeline (a /api/rates-shaped set → processRawData → analyzeTouShifts →
+// render), so they fail on the old `fmtCents(...)` insight rows.
+describe('ShiftOptimizer rate precision', () => {
+  afterEach(() => setLocale('en'));
+
+  /** Today's shipped OEB sets are all x.x, so the defect is invisible until a
+   *  set carries more precision — which is what the deployed precision probe
+   *  intercepted /api/rates with. */
+  const probeRates: RateSet = {
+    effectiveDate: '2023-01-01',
+    tou: { offPeak: 9.75, midPeak: 15.25, onPeak: 20.55 },
+    tiered: { tier1: 12.34, tier2: 14.56, thresholdWinter: 1000, thresholdSummer: 600 },
+    ulo: { overnight: 3.21, weekendOffPeak: 9.75, midPeak: 15.25, onPeak: 39.99 },
+  };
+
+  /** Unix seconds for a LOCAL date — DataPoint timestamps are local. */
+  const ts = (y: number, m: number, d: number, h: number): number =>
+    Math.floor(new Date(y, m, d, h, 0, 0).getTime() / 1000);
+
+  /** Five consecutive Wednesdays 12:00–14:00 at a steady 2 kWh: a recurring
+   *  block priced at TOU Mid-Peak (tou.midPeak), whose move destinations
+   *  (ulo.overnight, tou.offPeak) also come out of `probeRates`. */
+  function recurringMiddayData(): DataPoint[] {
+    const anchor = new Date(2024, 0, 31); // Wednesday of the newest week
+    const monday = new Date(anchor);
+    monday.setDate(monday.getDate() - ((anchor.getDay() + 6) % 7));
+    const out: DataPoint[] = [];
+    for (let w = 0; w < 5; w++) {
+      const weekMonday = new Date(monday);
+      weekMonday.setDate(weekMonday.getDate() - (4 - w) * 7);
+      const wed = new Date(weekMonday);
+      wed.setDate(wed.getDate() + 2); // Wednesday
+      for (const hour of [12, 13]) {
+        out.push({ timestamp: ts(wed.getFullYear(), wed.getMonth(), wed.getDate(), hour), usage_kwh: 2 });
+      }
+    }
+    return out;
+  }
+
+  const probeAnalysis = (): TouShiftAnalysis =>
+    analyzeTouShifts(processRawData(recurringMiddayData(), [probeRates]), 'TOU', probeRates);
+
+  it('reads the two-decimal rates off the RateSet (grounding for the rows below)', () => {
+    const analysis = probeAnalysis();
+    expect(analysis.emptyReason).toBeNull();
+    expect(analysis.blocks).toHaveLength(1);
+    // Jan 12:00–14:00 lands on TOU Mid-Peak, so the baseline is midPeak.
+    expect(analysis.blocks[0].baselineRateCents).toBe(15.25);
+    expect(analysis.blocks[0].options.map((o) => o.destRateCents)).toContain(9.75);
+    expect(analysis.blocks[0].options.map((o) => o.destRateCents)).toContain(3.21);
+  });
+
+  it('insight rows print RateSet values at source precision, EN', () => {
+    render(<ShiftOptimizer analysis={probeAnalysis()} />);
+    const panel = screen.getByTestId('shift-optimizer');
+
+    // collapsed supporting row: the baseline (was fmtCents → 15.3¢)
+    expect(panel).toHaveTextContent('pays 15.25¢ now');
+    expect(panel).not.toHaveTextContent('15.3¢');
+    // …and the destination chips under it (were 9.8¢ / 3.2¢)
+    expect(within(panel).getAllByText('9.75¢').length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText('3.21¢').length).toBeGreaterThan(0);
+    expect(within(panel).queryByText('9.8¢')).not.toBeInTheDocument();
+    expect(within(panel).queryByText('3.2¢')).not.toBeInTheDocument();
+  });
+
+  it('insight rows print RateSet values at source precision, FR', () => {
+    setLocale('fr');
+    render(<ShiftOptimizer analysis={probeAnalysis()} />);
+    const panel = screen.getByTestId('shift-optimizer');
+
+    expect(panel).toHaveTextContent('payé à 15,25 ¢ actuellement');
+    expect(panel).not.toHaveTextContent('15,3 ¢');
+    expect(within(panel).getAllByText('9,75 ¢').length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText('3,21 ¢').length).toBeGreaterThan(0);
+    expect(within(panel).queryByText('9,8 ¢')).not.toBeInTheDocument();
+    expect(within(panel).queryByText('3,2 ¢')).not.toBeInTheDocument();
+  });
+
+  it('full option cards print source precision too (not only the collapsed rows)', () => {
+    const overnightDp: ShiftOption = { ...overnight, destRateCents: 3.21, savingsCentsPerKwh: 17.34 };
+    const weekendDp: ShiftOption = { ...weekend, destRateCents: 9.75, savingsCentsPerKwh: 10.8 };
+    const a = makeBlock({
+      id: 'wed-12-14',
+      baselineRateCents: 20.55,
+      options: [overnightDp],
+      bestMonthlySavings: 4,
+    });
+    const b = makeBlock({
+      id: 'fri-12-14',
+      label: 'Fri 12:00–14:00',
+      weekday: 5,
+      baselineRateCents: 20.55,
+      options: [weekendDp],
+      bestMonthlySavings: 4,
+    });
+    render(
+      <ShiftOptimizer analysis={makeAnalysis({ blocks: [a, b], totalMonthlySavings: 8 })} />,
+    );
+    // no target owns >50% → full BlockCard path (the other two call sites)
+    expect(screen.queryByTestId('shift-headline')).not.toBeInTheDocument();
+
+    const card = screen.getByTestId('shift-block-wed-12-14');
+    expect(card).toHaveTextContent('pays 20.55¢ now');
+    expect(card).not.toHaveTextContent('20.6¢');
+    expect(within(card).getByText('3.21¢/kWh')).toBeInTheDocument();
+    expect(within(card).queryByText('3.2¢/kWh')).not.toBeInTheDocument();
+
+    const other = screen.getByTestId('shift-block-fri-12-14');
+    expect(within(other).getByText('9.75¢/kWh')).toBeInTheDocument();
+    expect(within(other).queryByText('9.8¢/kWh')).not.toBeInTheDocument();
   });
 });

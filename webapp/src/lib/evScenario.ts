@@ -22,7 +22,7 @@
  */
 
 /* Wave U — the EV assumptions are shown to the user, so they translate. */
-import { fmtCents, periodLabel, t } from '@/i18n';
+import { fmtCents, fmtCentsAuto, periodLabel, t } from '@/i18n';
 import {
   aggregateChartData,
   calculateComparison,
@@ -487,7 +487,13 @@ function priceStayHours(input: {
  * it: `categories` holds the canonical names ("Off-Peak") because they are
  * data the classifier produced, but this is prose shown to a person, so each
  * one goes through `periodLabel()` ("Période creuse"). The hour and the rate
- * are numbers, so they take the locale's decimal comma. */
+ * are numbers, so they take the locale's decimal comma.
+ *
+ * The rate here is a MEASURED ¢/kWh — cost ÷ kWh across the readings that
+ * fell in that hour — so it keeps the fixed-digit `fmtCents` under the
+ * display contract in `i18n`. Only an hour we could not price at all quotes
+ * the schedule's worst case instead (and a breakdown made ONLY of those
+ * takes `ev.stayDetailUpper`, which prints no rate at all). */
 function stayDetail(stayLabel: string, breakdown: EvHourPrice[]): string {
   if (breakdown.length === 0) return '';
   if (breakdown.every((b) => b.upperBound)) {
@@ -807,7 +813,7 @@ export function buildEvScenario(input: {
   );
   if (peakExposure) {
     assumptions.push(
-      t('ev.assumePeakExposure', { label: peakExposure.windowLabel, rate: fmtCents(peakExposure.rateCents, 1) }),
+      t('ev.assumePeakExposure', { label: peakExposure.windowLabel, rate: fmtCentsAuto(peakExposure.rateCents) }),
     );
   }
 

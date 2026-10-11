@@ -223,16 +223,40 @@ export function fmtSignedMoney(value: number, digits = 2): string {
   return abs;
 }
 
-/** Cents per kWh — "0.4¢/kWh" / "0,4 ¢/kWh" (fr puts a space before ¢). */
+/**
+ * DISPLAY CONTRACT for ¢/kWh figures (the rate-display SSOT, PR #39).
+ *
+ * Two formatters, split by WHERE THE NUMBER CAME FROM — never by which
+ * component is printing it, so the card and the row underneath it can never
+ * disagree about one rate:
+ *
+ *  - `fmtCentsAuto` — anything that QUOTES THE TARIFF: every RateSet field
+ *    and every value that is a RateSet field under another name (plan-card
+ *    rate chips, the shift optimizer's baseline and destination rates, the
+ *    rate-staleness deltas, the EV peak-exposure rate). The tariff chose the
+ *    precision, so the number prints exactly as the source reads it: 9.75
+ *    stays "9.75¢" and 12.0 becomes "12¢". A forced single digit here would
+ *    print 9.75 as 9.8¢ while the bill on the same card still used 9.75.
+ *
+ *  - `fmtCents` — MEASURED or DERIVED ¢/kWh where the digit count is a
+ *    deliberate presentation choice: the efficiency card's bill ÷ kWh, the
+ *    per-kWh splits of a real bill, an unbilled-period estimate, the
+ *    kWh-weighted hourly average. Fixed digits keep a derived figure's float
+ *    noise out of the UI ("16.9¢", never "16.900000000001¢").
+ *
+ * Rule of thumb: came off a rate schedule → `fmtCentsAuto`; computed from
+ * readings or bills → `fmtCents(x, n)`.
+ */
 export function fmtCents(value: number, digits = 1): string {
   const n = num(value, digits);
   return currentLocale === 'fr' ? `${n} ¢` : `${n}¢`;
 }
 
 /**
- * Cents with the number's OWN precision (no forced digits) — for rate
- * tables that print "9.8¢→22¢" exactly as the source data reads.
- * fr-CA puts a space before the symbol: "9,8 ¢".
+ * Cents with the number's OWN precision (no forced digits) — for anything
+ * that quotes a RateSet value: the rate table reads "9.75¢→22¢" exactly as
+ * the source data reads. See the display contract on `fmtCents` above.
+ * fr-CA puts a space before the symbol: "9,75 ¢".
  */
 export function fmtCentsAuto(value: number): string {
   const n = new Intl.NumberFormat(bcp47(), { maximumFractionDigits: 2 }).format(value);

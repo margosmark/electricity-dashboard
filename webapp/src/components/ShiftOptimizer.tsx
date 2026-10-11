@@ -13,7 +13,11 @@
  *    Somewhat / Irregular) derived from recurrence + week-to-week spread;
  *  - every option carries an effort chip ("no plan switch" vs "plan switch
  *    required"), so the cost of acting is visible before the fine print;
- *  - TOU Mid-Peak hours ship as a LOWER tier behind the On-Peak blocks.
+ *  - TOU Mid-Peak hours ship as a LOWER tier behind the On-Peak blocks;
+ *  - every ¢/kWh these rows quote from the RateSet (baseline and move
+ *    destination) prints at SOURCE precision via `fmtCentsAuto`, so a row
+ *    never rounds a rate the plan card on the same tab printed exactly
+ *    (the display contract lives on `fmtCents` in `i18n`).
  *
  * Empty states are explicit: no data / not enough history / no recurring
  * blocks — never a fake number.
@@ -23,7 +27,7 @@
 
 import React from 'react';
 import { Clock, ArrowRight, CalendarClock, Sunrise } from 'lucide-react';
-import { fmtCents, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
+import { fmtCentsAuto, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
 import { collapseHeadline } from '@/lib/touShift';
 import type {
   TouShiftAnalysis,
@@ -154,7 +158,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <span className="text-[10px] md:text-xs text-slate-600">
-            {fmtCents(option.destRateCents)}/kWh
+            {fmtCentsAuto(option.destRateCents)}/kWh
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
           <span className="text-sm md:text-lg italic">
@@ -195,7 +199,7 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
               {t('shift.blockMeta', {
                 kwh: block.avgWeeklyKwh.toFixed(1),
                 seen: block.weeksSeen,
-                rate: fmtCents(block.baselineRateCents),
+                rate: fmtCentsAuto(block.baselineRateCents),
               })}
             </div>
           </div>
@@ -254,7 +258,7 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
         {t('shift.blockMeta', {
           kwh: block.avgWeeklyKwh.toFixed(1),
           seen: block.weeksSeen,
-          rate: fmtCents(block.baselineRateCents),
+          rate: fmtCentsAuto(block.baselineRateCents),
         })}
       </div>
       <div className="flex flex-wrap gap-1.5 md:gap-2">
@@ -267,7 +271,7 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
           >
             {TARGET_ICON[o.target]}
             <span>{o.label}</span>
-            <span className="text-slate-600">{fmtCents(o.destRateCents)}</span>
+            <span className="text-slate-600">{fmtCentsAuto(o.destRateCents)}</span>
             <ArrowRight size={9} strokeWidth={4} className="hidden sm:block" />
             <span className="italic">{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
             <EffortChip effort={o.effort} />
