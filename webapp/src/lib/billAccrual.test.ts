@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { processRawData, type DataPoint, type ProcessedPoint, type RateSet } from './energy';
+import {
+  processRawData,
+  tieredCostFor,
+  type DataPoint,
+  type ProcessedPoint,
+  type RateSet,
+} from './energy';
 import { projectMonthBill, type BillProjection } from './billProjection';
 import {
   buildAccrualCurve,
@@ -34,9 +40,15 @@ const OCTOBER = {
   end: new Date(2026, 10, 1).getTime() / 1000,
 };
 
-// Tiered tier-1 at 12¢: 1 kWh/hour → 24 kWh/day → $2.88/day.
+// Tiered is priced on the WINDOW, not the reading: 1 kWh/hour → 24 kWh/day,
+// October is summer, so the month threshold (600 kWh) prorates to
+// 600 × 1/30.4 = 19.7368 kWh/day at tier 1 (12¢) and the remaining
+// 4.2632 kWh bills at tier 2 (14.2¢) → $2.973789/day, constant across a
+// flat month because both the usage and the prorated allowance grow a day
+// at a time. Tier-1-ONLY pricing said $2.88/day; the accrual used to foot
+// that way while its pace line priced the window — the two now agree.
 const KWH = 1;
-const DAILY = 2.88;
+const DAILY = (600 / 30.4) * 0.12 + (24 - 600 / 30.4) * 0.142;
 
 describe('buildAccrualCurve — no period', () => {
   it('returns the empty model instead of inventing a window', () => {
@@ -94,7 +106,11 @@ describe('buildAccrualCurve — the accrual itself', () => {
     expect(curve.total).toBeCloseTo(10 * DAILY, 6);
     expect(curve.points[0].cumulative).toBeCloseTo(DAILY, 6);
     expect(curve.points[9].cumulative).toBeCloseTo(10 * DAILY, 6);
-    // Monotonic: energy costs money, so the curve never dips.
+    // This fixture is a flat load, so the marginals never dip. That is a
+    // property of FLAT, not of the rule — a sparse day after an over-threshold
+    // month can book negative (see the dip test below). The invariant that
+    // always holds is footing: every cumulative is `tieredCostFor` of the
+    // days through it.
     for (let i = 1; i < curve.points.length; i++) {
       expect(curve.points[i].cumulative).toBeGreaterThanOrEqual(curve.points[i - 1].cumulative);
     }
@@ -108,7 +124,7 @@ describe('buildAccrualCurve — the accrual itself', () => {
     expect(curve.projectedTotal).toBeCloseTo(31 * DAILY, 6);
     expect(curve.points[9].pace).toBeCloseTo(curve.paceToDate, 6);
     expect(curve.note).toContain('Wave F');
-    expect(curve.note).toContain('$2.88/day');
+    expect(curve.note).toContain('$2.97/day');
   });
 
   it('a month spent exactly on pace reports exactly on pace', () => {
@@ -120,6 +136,35 @@ describe('buildAccrualCurve — the accrual itself', () => {
     const tou = buildAccrualCurve({ rows, plan: 'TOU', period: OCTOBER, today: oct(10), projection });
     expect(tou.total).not.toBe(curve.total);
     expect(tou.points).toHaveLength(curve.points.length);
+  });
+
+  it('a sparse day after an over-threshold month books negative and the total dips', () => {
+    // The window rule is prorated, so its marginals are NOT monotonic: adding
+    // a day also grows the allowance (600/30.4 = 19.7368 kWh), shifting kWh
+    // from tier 2 (14.2¢) back to tier 1 (12¢). On a near-empty day that
+    // reclassification outweighs the day's own cost. This pins the known
+    // property so the comment in billAccrual.ts stays honest.
+    const sparse = [...hourly(oct(1), 10, KWH), ...hourly(oct(11), 1, 2 / 24)];
+    const sparseCurve = buildAccrualCurve({
+      rows: sparse,
+      plan: 'Tiered',
+      period: OCTOBER,
+      today: oct(11),
+      projection: projectMonthBill(sparse, 'Tiered', oct(11)),
+    });
+
+    const last = sparseCurve.points[sparseCurve.points.length - 1];
+    const prev = sparseCurve.points[sparseCurve.points.length - 2];
+    expect(last.day).toBe('2026-10-11');
+    expect(last.dayCost).toBeCloseTo(-0.1502, 4);
+    expect(last.cumulative).toBeLessThan(prev.cumulative);
+
+    // The invariant that DOES hold is footing, not monotonicity.
+    const ordered = [...sparse].sort((a, b) => a.timestamp - b.timestamp);
+    for (const p of sparseCurve.points) {
+      const prefix = ordered.filter((r) => r.dayStr <= p.day);
+      expect(p.cumulative).toBeCloseTo(tieredCostFor(prefix), 9);
+    }
   });
 });
 
@@ -152,7 +197,7 @@ describe('buildAccrualCurve — the runway to the bill date', () => {
   });
 
   it('projects the landing at the bill date, not at the last reading', () => {
-    // 25 days × $2.88/day of run-rate, but the pace slope is Wave F's.
+    // 25 days × $2.97/day of run-rate, but the pace slope is Wave F's.
     expect(curve.projectedTotal).toBeCloseTo(curve.paceDaily * 25, 6);
     expect(curve.projectedTotal).toBeGreaterThan(curve.total);
   });
@@ -234,7 +279,7 @@ describe('the 3-bill benchmark', () => {
     expect(curve.avgPriorBill).toBeCloseTo(42, 6);
     expect(curve.priorBillCount).toBe(3);
     expect(curve.priorBills).toEqual([40, 42, 44]);
-    // 31 days × $2.88 = $89.28 projected — well above the benchmark.
+    // 31 days × $2.97 = $92.19 projected — well above the benchmark.
     expect(curve.paceVsAvg).toBeCloseTo(curve.projectedTotal - 42, 6);
     expect(curve.overAvg).toBe(true);
   });
@@ -289,8 +334,12 @@ describe('buildAccrualCurve — above and below the line', () => {
     expect(curve.paceSource).toBe('projection');
     expect(curve.gap).toBeGreaterThan(0);
     expect(curve.overPace).toBe(true);
-    // 5 × $8.64 + 5 × $2.88
-    expect(curve.total).toBeCloseTo(5 * 8.64 + 5 * DAILY, 6);
+    // The month-scoped rule over all ten days: 480 kWh with 600 × 10/30.4
+    // = 197.37 kWh at tier 1 and 282.63 at tier 2 → $63.82. (Summing the
+    // per-reading tier-1 field said $57.60 — the whole point of routing the
+    // curve through the shared rule.)
+    const allowance = (600 * 10) / 30.4;
+    expect(curve.total).toBeCloseTo(allowance * 0.12 + (480 - allowance) * 0.142, 6);
     // The landing point is the current run-rate across the whole period.
     expect(curve.projectedTotal).toBeCloseTo(curve.paceDaily * 31, 6);
   });

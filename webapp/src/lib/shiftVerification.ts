@@ -13,9 +13,9 @@
  */
 
 import { addDays, format } from 'date-fns';
-import type { ProcessedPoint } from './energy';
 // Wave U — the weekly before/after verdict speaks the active language.
 import { fmtKwh, fmtMoney, fmtPercent, fmtDay, t } from '@/i18n';
+import { planCostFor, type ProcessedPoint } from './energy';
 
 export type PlanId = 'TOU' | 'Tiered' | 'ULO';
 
@@ -87,18 +87,13 @@ function isOffPeak(r: ProcessedPoint, plan: PlanId): boolean {
   return false;
 }
 
-function costOf(r: ProcessedPoint, plan: PlanId): number {
-  if (plan === 'TOU') return r.costTOU;
-  if (plan === 'ULO') return r.costULO;
-  return r.costTiered;
-}
-
 type DayStat = {
   day: string;
   kwh: number;
-  cost: number;
   offPeakKwh: number;
   readings: number;
+  /** The day's own readings, so a window can be priced AS A WINDOW. */
+  rows: ProcessedPoint[];
 };
 
 function buildDays(rows: ProcessedPoint[], plan: PlanId): Map<string, DayStat> {
@@ -106,12 +101,12 @@ function buildDays(rows: ProcessedPoint[], plan: PlanId): Map<string, DayStat> {
   for (const r of rows) {
     let d = days.get(r.dayStr);
     if (!d) {
-      d = { day: r.dayStr, kwh: 0, cost: 0, offPeakKwh: 0, readings: 0 };
+      d = { day: r.dayStr, kwh: 0, offPeakKwh: 0, readings: 0, rows: [] };
       days.set(r.dayStr, d);
     }
     d.kwh += r.usage_kwh;
-    d.cost += costOf(r, plan);
     if (isOffPeak(r, plan)) d.offPeakKwh += r.usage_kwh;
+    d.rows.push(r);
     d.readings += 1;
   }
   return days;
@@ -147,15 +142,18 @@ function windowStats(
 ): VerificationWindow {
   let n = 0;
   let kwh = 0;
-  let cost = 0;
   let offPeakKwh = 0;
+  const inWindow: ProcessedPoint[] = [];
   for (const d of days.values()) {
     if (d.day < start || d.day > end) continue;
     n += 1;
     kwh += d.kwh;
-    cost += d.cost;
     offPeakKwh += d.offPeakKwh;
+    inWindow.push(...d.rows);
   }
+  // Priced as a window: on Tiered the per-reading cost is tier 1 only, and a
+  // week over the (day-prorated) threshold is not a tier-1 week.
+  const cost = planCostFor(inWindow, plan);
   const hasOffPeak = plan !== 'Tiered';
   return {
     start,

@@ -59,19 +59,29 @@ describe('projectMonthBill', () => {
     expect(p.daysInMonth).toBe(31);
     expect(p.monthDaysCovered).toBe(10);
     expect(p.monthToDateKwh).toBeCloseTo(240, 6);
-    // Tiered tier-1 at 12c: 24 kWh/day -> $2.88/day.
-    expect(p.monthToDateCost).toBeCloseTo(28.8, 6);
+    // 10 days covered of an October (summer) month: the threshold is prorated
+    // to the days covered — 600 × 10/30.4 = 197.37 kWh at tier 1 (12¢), the
+    // remaining 42.63 kWh at tier 2 (14.2¢). Flat tier 1 would say $28.80.
+    const th = 600 * (10 / 30.4);
+    expect(p.monthToDateCost).toBeCloseTo(th * 0.12 + (240 - th) * 0.142, 6);
     expect(p.recentDays).toBe(PROJECTION_RECENT_DAYS);
     expect(p.avgDailyKwh).toBeCloseTo(24, 6);
-    expect(p.avgDailyCost).toBeCloseTo(2.88, 6);
+    // The recent 7 days are priced the same way: 600 × 7/30.4 = 138.16 kWh
+    // at tier 1, 29.84 kWh at tier 2, over 7 days.
+    const th7 = 600 * (7 / 30.4);
+    const recent = th7 * 0.12 + (168 - th7) * 0.142;
+    expect(p.avgDailyCost).toBeCloseTo(recent / 7, 6);
     expect(p.remainingDays).toBe(21);
     expect(p.projectedKwh).toBeCloseTo(240 + 21 * 24, 6);
-    expect(p.projectedCost).toBeCloseTo(28.8 + 21 * 2.88, 6);
+    expect(p.projectedCost).toBeCloseTo(
+      th * 0.12 + (240 - th) * 0.142 + 21 * (recent / 7),
+      6,
+    );
     expect(p.dataThrough).toBe('2026-10-10');
     expect(p.caption).toContain('Commodity cost only');
     expect(p.caption).toContain('no delivery, regulatory charges or HST');
     expect(p.caption).toContain('10 of 31 days measured');
-    expect(p.caption).toContain('$2.88/day');
+    expect(p.caption).toContain('$2.97/day');
     expect(p.gateNote).toBe('');
   });
 

@@ -275,7 +275,9 @@ describe('buildEvScenario', () => {
     const s = buildEvScenario({ rows, rates: RATES, dailyKwh: 10 });
     expect(s.prices.TOU.rateCents).toBe(9.8);
     expect(s.prices.ULO.rateCents).toBe(3.9);
-    expect(s.prices.Tiered.rateCents).toBe(12.0);
+    // Tiered is the window's own blended tiered rate (totaled ÷ kWh), which
+    // round-trips through a division here: assert the value, not the bits.
+    expect(s.prices.Tiered.rateCents).toBeCloseTo(12.0, 6);
     expect(s.prices.TOU.perCharge).toBeCloseTo(0.98, 6);
     expect(s.prices.ULO.perCharge).toBeCloseTo(0.39, 6);
     expect(s.prices.ULO.perMonth).toBeCloseTo(0.39 * CHARGING_NIGHTS_PER_MONTH, 6);

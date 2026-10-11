@@ -1,0 +1,111 @@
+{
+  "wave": "tiered",
+  "base": "http://127.0.0.1:3100/",
+  "xml": "doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml",
+  "at": "2026-10-08T05:32:01.370Z",
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "real Oakville readings loaded",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the file’s billing periods were parsed in the browser",
+      "ok": true,
+      "detail": "24 periods (expected 24)"
+    },
+    {
+      "name": "no request carried the XML (parse stayed in the browser)",
+      "ok": true,
+      "detail": "21 requests"
+    },
+    {
+      "name": "CSV export of the window carries every reading (independent tier-1 baseline)",
+      "ok": true,
+      "detail": "17539 rows · 38739 kWh · 731 days · 2024-10-06→2026-10-06"
+    },
+    {
+      "name": "the three plan cards price the window",
+      "ok": true,
+      "detail": "Tiered $4521.58 · TOU $4282.01"
+    },
+    {
+      "name": "Tiered charges MORE than the CSV’s own tier-1 column (tier 2 is applied)",
+      "ok": true,
+      "detail": "card $4521.58 vs tier-1 sum $4127.61 (+$393.97)"
+    },
+    {
+      "name": "Tiered models ABOVE TOU on this window (tier-1-only pricing inverted this)",
+      "ok": true,
+      "detail": "Tiered $4521.58 vs TOU $4282.01"
+    },
+    {
+      "name": "the True Bill card’s variable figure IS the plan card’s Tiered figure",
+      "ok": true,
+      "detail": "True Bill $4521.58 vs plan card $4521.58"
+    },
+    {
+      "name": "the Tiered card states the threshold in force",
+      "ok": true,
+      "detail": "Tier 1 cut-off600 kWh/moSummer rate window (May 1 – Oct 31) — window spans both seasons · "
+    },
+    {
+      "name": "the ¢/kWh histogram’s window average is the Tiered total ÷ the window’s kWh",
+      "ok": true,
+      "detail": "11.7¢ vs 11.7¢"
+    },
+    {
+      "name": "the window now holds exactly the newest billing period",
+      "ok": true,
+      "detail": "720 rows · 30 days · 2026-07-22→2026-08-20 (2026-07-22..2026-08-20 inclusive, 29 days apart)"
+    },
+    {
+      "name": "the estimate-vs-actual row renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "it is the newest period we set the window to",
+      "ok": true,
+      "detail": "Estimated vs actual · Jul 22, 2026 – Aug 20Your estimate$541.38Oakville billed$499.57Difference$41.81Compared before the"
+    },
+    {
+      "name": "the four add-ons are pre-filled from the file",
+      "ok": true,
+      "detail": "{\"deliveryPerKwh\":0.0387,\"deliveryFlat\":0,\"regulatoryPerKwh\":0.0056,\"hstPct\":13}"
+    },
+    {
+      "name": "every bill-window reading prices off the rate table /api/rates serves",
+      "ok": true,
+      "detail": "696 readings · tier-1 column matches the table: true · one rate set per month: true"
+    },
+    {
+      "name": "THE FIX: \"Your estimate\" = tiered(bill-window rows) + the add-ons, to the cent",
+      "ok": true,
+      "detail": "shown $541.38 vs recomputed $541.38 (tiered variable $362.08, 1 mo, 2641.59 kWh over 696 readings)"
+    },
+    {
+      "name": "…and it is materially above the tier-1-only figure (tier 2 reaches the household)",
+      "ok": true,
+      "detail": "tiered $541.38 vs tier-1 $490.43 (+$50.95)"
+    },
+    {
+      "name": "the card’s variable cost itself is above that window’s tier-1 sum",
+      "ok": true,
+      "detail": "variable $375.11 vs tier-1 $328 for 720 rows"
+    },
+    {
+      "name": "the row still reports what Oakville actually billed",
+      "ok": true,
+      "detail": "billed $499.57 · estimate $541.38"
+    },
+    {
+      "name": "no horizontal page overflow on a phone",
+      "ok": true,
+      "detail": "0px"
+    }
+  ]
+}
