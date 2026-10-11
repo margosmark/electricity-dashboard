@@ -51,6 +51,12 @@ grep -qi "cache-control: no-cache" /tmp/smoke_sw.headers \
   || fail "sw.js missing Cache-Control: no-cache (stale-escape hazard)"
 grep -qE "oeo-v1-[a-z0-9]+" /tmp/smoke_sw.js \
   || fail "sw.js body missing a per-build cache version marker (oeo-v1-<build>)"
+# The committed placeholder is NOT a per-build stamp: serving it means
+# `prebuild` never ran, so CACHE_NAME is identical to the previous deploy and
+# installed PWAs keep their stale shell — the stale-chunk failure mode.
+if grep -q "const VERSION = 'oeo-v1-local'" /tmp/smoke_sw.js; then
+  fail "sw.js is the committed placeholder (oeo-v1-local): the prebuild stamp did not run, so CACHE_NAME did not change for this deploy"
+fi
 
 code=$(curl -s -o /dev/null -w '%{http_code}' "${BASE}/icons/icon-192.png")
 [ "$code" = "200" ] || fail "GET /icons/icon-192.png returned ${code}, expected 200"

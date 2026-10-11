@@ -39,8 +39,10 @@
  * `prebuild` npm lifecycle, so every `npm run build` (CI, Docker, deploy)
  * serves a byte-different /sw.js — the browser installs the new worker, and
  * the activate handler below then drops every cache whose name does not start
- * with the new VERSION. An unchanged rebuild keeps the same VERSION on purpose:
- * identical sources are an identical artifact and need no re-install.
+ * with the new VERSION. The stamp is the build's own millisecond clock, so an
+ * identical rebuild still serves new bytes: one precache is cheaper than a
+ * shell that might outlive the chunks it names. `src/pwa/swCacheVersionGate.test.ts`
+ * runs the whole cycle (two stamps, one storage) on every `npm run test`.
  *
  * IMPORTANT: self.* is used for ALL serviceworker globals so eslint's plain
  * browser env (no `serviceworker` globals declared) stays green.
@@ -78,7 +80,12 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => !key.startsWith(VERSION))
+            // Every cache from an earlier BUILD dies here: that is what makes
+            // a shell cached by a deploy heal instead of pointing at chunks
+            // the server no longer ships. The `oeo-gb-` pair (declared below)
+            // is STATE, not a build artifact — the refresh cursor and a staged
+            // feed waiting for a window to merge it — so a deploy keeps it.
+            .filter((key) => !key.startsWith(VERSION) && !key.startsWith('oeo-gb-'))
             .map((key) => self.caches.delete(key))
         )
       )
