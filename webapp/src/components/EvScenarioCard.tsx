@@ -32,6 +32,7 @@ import {
   detectEvCandidate,
   type ChargeHourSource,
   type EvChargeMove,
+  type EvPeakExposure,
   type EvPlan,
 } from '@/lib/evScenario';
 
@@ -77,6 +78,25 @@ function moveSentence(cm: EvChargeMove, planLabel: string): string {
   return cm.totalSavingPerMonth >= 0
     ? t('ev.betterOff', { label: cm.stayLabel, plan: planLabel, stay, move, delta })
     : t('ev.worseOff', { label: cm.stayLabel, plan: planLabel, stay, move, delta });
+}
+
+/**
+ * The two things a "/mo" figure has to declare: what is inside the price, and
+ * that the month is a run-rate scaled from the window on screen rather than a
+ * month of metering. Both peak-exposure blocks render it — the empty state
+ * used to declare neither, which is how a scaled guess gets read as a
+ * measured month.
+ */
+function ExposureBasis({ exposure }: { exposure: EvPeakExposure }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      data-testid="ev-exposure-basis"
+      className="text-[9px] md:text-[11px] font-bold mt-2 normal-case"
+    >
+      {t('ev.exposureBasis', { count: exposure.days, days: exposure.days })}
+    </div>
+  );
 }
 
 export default function EvScenarioCard({
@@ -384,8 +404,17 @@ export default function EvScenarioCard({
                       className="p-3 md:p-4 border-t-4 md:border-t-0 md:border-r-4 last:md:border-r-0 border-black bg-white"
                     >
                       <div className="text-[10px] font-black uppercase">{PLAN_LABEL[plan]}</div>
-                      <div className="text-[8px] md:text-[10px] font-bold text-slate-500">
-                        Today ${pc.baseline[plan].toFixed(2)}
+                      {/* The baseline is the WHOLE loaded file repriced on
+                          this plan — never "today". Calling it today (as the
+                          first draft did) is the same lie as a "You paid" row
+                          over days nobody has billed: the word claims a day the
+                          number never measured. The header above carries the
+                          day count; this line names the basis. */}
+                      <div
+                        className="text-[8px] md:text-[10px] font-bold text-slate-500"
+                        data-testid={`ev-plan-baseline-${plan}`}
+                      >
+                        {t('ev.baseline')} ${pc.baseline[plan].toFixed(2)}
                       </div>
                       <div className="text-lg md:text-xl italic font-black">
                         ${pc.withChargeOnOvernight[plan].toFixed(2)}
@@ -397,7 +426,7 @@ export default function EvScenarioCard({
                       >
                         {Math.abs(delta) < 0.005
                           ? 'no change from shifting'
-                          : `${delta < 0 ? '−' : '+'}$${Math.abs(delta).toFixed(2)} vs today`}
+                          : `${delta < 0 ? '−' : '+'}$${Math.abs(delta).toFixed(2)} ${t('ev.vsBaseline')}`}
                       </div>
                     </div>
                   );
@@ -430,6 +459,7 @@ export default function EvScenarioCard({
                 {exposure.hoursPerWeekday} weekday afternoon hours sit in ULO&apos;s 16:00–21:00 peak
                 window. Keep using them and a ULO switch makes them the most expensive hours you buy.
               </div>
+              <ExposureBasis exposure={exposure} />
             </div>
           )}
 
@@ -460,6 +490,7 @@ export default function EvScenarioCard({
             {exposure.kwhPerMonth.toFixed(1)} kWh/mo → ${exposure.costPerMonth.toFixed(2)}/mo at{' '}
             {exposure.rateCents.toFixed(1)}¢
           </div>
+          <ExposureBasis exposure={exposure} />
         </div>
       )}
     </div>
