@@ -19,6 +19,7 @@ import {
   type DataPoint,
 } from '@/lib/energy';
 import type { MergeFileChoice } from '@/hooks/useDashboard';
+import { useTranslation } from '@/i18n';
 
 export type { MergeFileChoice };
 
@@ -39,6 +40,7 @@ export default function MultiFileMerge({
   onConfirm: (readings: DataPoint[]) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const merged = useMemo(
     () => mergeReadings(files.map((f) => ({ name: f.name, readings: readingsFor(f) }))),
     [files],
@@ -55,7 +57,7 @@ export default function MultiFileMerge({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Review merged exports"
+      aria-label={t('merge.reviewAria')}
       data-testid="merge-dialog"
       className="fixed inset-0 bg-black/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
     >
@@ -64,12 +66,10 @@ export default function MultiFileMerge({
         className="my-auto bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] md:shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full text-black max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-xl md:text-4xl uppercase tracking-tighter mb-1 md:mb-2 flex items-center gap-2 md:gap-3 font-black">
-          <Files size={22} className="md:w-10 md:h-10" strokeWidth={4} /> Merge {files.length}{' '}
-          exports
+          <Files size={22} className="md:w-10 md:h-10" strokeWidth={4} /> {t('merge.title', { count: files.length })}
         </h2>
         <p className="text-[10px] md:text-sm font-bold text-slate-600 mb-4 md:mb-6">
-          Rows are matched on their timestamp. Where two files overlap, the first file wins and the
-          duplicate is dropped — nothing is overwritten behind your back.
+          {t('merge.rowsMatched')}
         </p>
 
         <div className="space-y-3 md:space-y-4">
@@ -84,22 +84,21 @@ export default function MultiFileMerge({
                   {file.name}
                 </span>
                 <span className="text-[9px] md:text-[11px] font-black text-slate-600">
-                  {readingsFor(file).length} reading{readingsFor(file).length === 1 ? '' : 's'}
-                  {file.groups.length > 1 ? ` · ${file.groups.length} meters` : ''}
+                  {readingsFor(file).length} {t('merge.readings', { count: readingsFor(file).length })}
+                  {file.groups.length > 1 ? t('merge.metersSuffix', { count: file.groups.length }) : ''}
                 </span>
               </div>
 
               {file.groups.length === 0 && (
                 <div className="text-[9px] md:text-[11px] font-black text-red-600 mt-1">
-                  No readable Green Button readings in this file — it will be skipped.
+                  {t('merge.noReadings')}
                 </div>
               )}
 
               {file.groups.length > 1 && (
                 <div className="mt-2 space-y-1">
                   <div className="text-[9px] md:text-[11px] font-black uppercase flex items-center gap-1">
-                    <Combine size={11} strokeWidth={4} /> This file holds more than one meter —
-                    choose what to import
+                    <Combine size={11} strokeWidth={4} /> {t('merge.multiMeter')}
                   </div>
                   {file.groups.map((g, j) => (
                     <label
@@ -113,7 +112,7 @@ export default function MultiFileMerge({
                         checked={file.chosen === j}
                         onChange={() => setChoice(i, j)}
                       />
-                      {g.label} · {g.readings.length} readings
+                      {g.label} · {g.readings.length} {t('merge.readings', { count: g.readings.length })}
                     </label>
                   ))}
                   <label
@@ -126,7 +125,7 @@ export default function MultiFileMerge({
                       checked={file.chosen === 'combine'}
                       onChange={() => setChoice(i, 'combine')}
                     />
-                    Combine all meters in this file
+                    {t('merge.combineAll')}
                   </label>
                 </div>
               )}
@@ -140,21 +139,21 @@ export default function MultiFileMerge({
         >
           <div className="flex flex-wrap gap-4 md:gap-8">
             <div>
-              <div className="text-[8px] md:text-[10px] font-black uppercase">Merged range</div>
+              <div className="text-[8px] md:text-[10px] font-black uppercase">{t('merge.mergedRange')}</div>
               <div data-testid="merge-range" className="text-base md:text-xl italic font-black">
                 {merged.firstDate || '—'} → {merged.lastDate || '—'}
               </div>
             </div>
             <div>
-              <div className="text-[8px] md:text-[10px] font-black uppercase">Rows to import</div>
+              <div className="text-[8px] md:text-[10px] font-black uppercase">{t('merge.rowsToImport')}</div>
               <div data-testid="merge-rows" className="text-base md:text-xl italic font-black">
                 {merged.mergedRows.toLocaleString()}
               </div>
             </div>
             <div>
-              <div className="text-[8px] md:text-[10px] font-black uppercase">Duplicates dropped</div>
+              <div className="text-[8px] md:text-[10px] font-black uppercase">{t('merge.duplicatesDropped')}</div>
               <div data-testid="merge-duplicates" className="text-base md:text-xl italic font-black">
-                {merged.duplicateRows.toLocaleString()} of {merged.totalRows.toLocaleString()}
+                {merged.duplicateRows.toLocaleString()} {t('merge.of')} {merged.totalRows.toLocaleString()}
               </div>
             </div>
           </div>
@@ -165,7 +164,7 @@ export default function MultiFileMerge({
           </div>
           {awaitingMeterChoice && (
             <div data-testid="merge-awaiting-choice" className="text-[9px] md:text-[11px] font-black text-red-700 mt-1">
-              Pick a meter for every multi-meter file above before importing.
+              {t('merge.pickMeter')}
             </div>
           )}
         </div>
@@ -177,14 +176,14 @@ export default function MultiFileMerge({
             disabled={!canConfirm}
             className="flex-1 py-3 md:py-4 bg-black text-white border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
           >
-            <CheckCircle2 size={16} strokeWidth={4} /> Import {merged.mergedRows.toLocaleString()} rows
+            <CheckCircle2 size={16} strokeWidth={4} /> {t('merge.importBtn')} {merged.mergedRows.toLocaleString()} {t('merge.rows', { count: merged.mergedRows })}
           </button>
           <button
             data-testid="merge-cancel"
             onClick={onCancel}
             className="py-3 md:py-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 hover:bg-slate-100"
           >
-            <X size={16} strokeWidth={4} /> Cancel
+            <X size={16} strokeWidth={4} /> {t('common.cancel')}
           </button>
         </div>
       </div>

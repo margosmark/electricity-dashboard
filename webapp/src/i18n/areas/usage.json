@@ -205,7 +205,11 @@
     "verify.chipDays_one": "{days} day",
     "verify.chipDays_other": "{days} days",
     "verify.chipOffPeak": "off-peak · {cost} · {kwh}",
-    "verify.chipFlat": "{kwh} · flat rate"
+    "verify.chipFlat": "{kwh} · flat rate",
+    "chart.barsSuffix_one": " · {bars} bar",
+    "chart.barsSuffix_other": " · {bars} bars",
+    "heatmap.hourSuffix": "h",
+    "anomalies.tempSuffix": "°C · "
   },
   "fr": {
     "sig.sustained.label": "Ressemble à un chauffe-eau / VÉ / chauffe-espace",
@@ -413,6 +417,10 @@
     "verify.chipDays_one": "{days} jour",
     "verify.chipDays_other": "{days} jours",
     "verify.chipOffPeak": "heures creuses · {cost} · {kwh}",
-    "verify.chipFlat": "{kwh} · tarif fixe"
+    "verify.chipFlat": "{kwh} · tarif fixe",
+    "chart.barsSuffix_one": " · {bars} barre",
+    "chart.barsSuffix_other": " · {bars} barres",
+    "heatmap.hourSuffix": "h",
+    "anomalies.tempSuffix": "°C · "
   }
 }

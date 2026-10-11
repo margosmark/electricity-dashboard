@@ -64,7 +64,7 @@ export function ExportCsvButton({ rows, className = '', printHidden = false }: P
       }
     >
       <Download size={14} strokeWidth={4} />
-      Export CSV
+      {t('csv.exportAria')}
     </button>
   );
 }

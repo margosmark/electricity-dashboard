@@ -28,6 +28,11 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'locale.toggle.label', // "FR"/"EN" — the code names the OTHER language
   'actualBill.delta', // "Δ {delta}" — the delta glyph is the same in both
   'efficiency.perKwh', // "/kWh" — the unit is the same in both
+  'overview.centsPerKwh', // "¢/kWh ·" — unit + separator, identical in fr
+  'ev.perKwh', // "¢/kWh" — the unit is the same in both
+  'money.kwhUnit', // "kWh" — the unit is the same in both
+  'anomalies.tempSuffix', // "°C · " — unit + separator, identical in fr
+  'heatmap.hourSuffix', // "h" — the 24-hour grid's hour suffix, same in fr
   'efficiency.verdict.stable', // "STABLE" — French writes it the same way
   'trueBill.variable', // "Variable" — identical word in fr-CA
   'yoy.deltaHeader', // "Δ vs …" — the Δ glyph and "vs" are the same in fr

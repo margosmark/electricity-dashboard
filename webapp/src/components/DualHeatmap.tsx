@@ -54,7 +54,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
                 role="columnheader"
                 className="text-center text-[8px] md:text-[10px] text-black font-black"
               >
-                {hour}h
+                {hour}{t('heatmap.hourSuffix')}
               </div>
             ))}
           </div>

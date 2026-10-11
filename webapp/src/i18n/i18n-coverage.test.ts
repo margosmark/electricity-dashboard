@@ -19,8 +19,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   scanSource,
+  scanFile,
+  listSourceFiles,
   findMissingCatalogKeys,
   loadBaseline,
   diffAgainstBaseline,
@@ -51,12 +56,29 @@ describe('i18n coverage gate (hardcoded user-facing strings)', () => {
   const baseline = loadBaseline();
   const { newViolations, staleEntries } = diffAgainstBaseline(violations, baseline);
 
-  it('reports a non-trivial scan (the sweep actually walked src/)', () => {
-    // Sanity pin: if the scanner silently stops finding anything — a broken
-    // import, a walk that misses directories — the gate below would pass on
-    // nothing. The app has ~100 source files and Wave U left real debt.
-    expect(violations.length).toBeGreaterThan(0);
-    expect(new Set(violations.map((v) => v.file)).size).toBeGreaterThan(1);
+  it('walks the real source tree and still flags a string when there is one', () => {
+    // The baseline is now EMPTY (the Wave U debt is paid), so a clean scan
+    // legitimately reports zero violations — which would also be what a
+    // scanner that silently stopped working reports. Two pins instead of a
+    // "violations > 0" count: the walk covers the source tree, and a planted
+    // string in a scratch file is still caught by the same code path.
+    expect(listSourceFiles().length).toBeGreaterThan(50);
+
+    const dir = mkdtempSync(join(tmpdir(), 'i18n-coverage-probe-'));
+    const scratch = join(dir, 'Probe.tsx');
+    writeFileSync(
+      scratch,
+      'export const Probe = () => (\n' +
+        '  <p title="Untranslated probe">Untranslated probe</p>\n' +
+        ');\n',
+    );
+    try {
+      const hits = scanFile(scratch);
+      expect(hits.map((h) => h.text)).toContain('Untranslated probe');
+      expect(hits.map((h) => h.kind)).toContain('attr:title');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('introduces no NEW hardcoded user-facing string outside the baseline', () => {

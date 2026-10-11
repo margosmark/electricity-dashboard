@@ -72,6 +72,16 @@ const USER_FACING_ATTRS = new Set([
 /** Object keys inside a recharts `label={{…}}` that render as chart text. */
 const LABEL_TEXT_PROPS = new Set(['value']);
 
+/**
+ * Proper nouns that read the same in every language — I18N.md's
+ * "deliberately NOT translated" list. The product name is the only one that
+ * reaches the sweep as a literal; `app.title` carries the same text for the
+ * places that do translate (the manifest, the tab title). Flagging it would
+ * put a baseline entry on a string that must never be translated, so the
+ * sweep skips it the same way it skips canonical English data.
+ */
+const PROPER_NOUNS = new Set(['Ontario Energy Optimizer']);
+
 /** Files the sweep skips: its own machinery, tests, and the catalog layer. */
 function shouldScan(absPath) {
   if (!/\.(ts|tsx)$/.test(absPath)) return false;
@@ -81,7 +91,7 @@ function shouldScan(absPath) {
   return true;
 }
 
-function listSourceFiles(dir = SRC_DIR, out = []) {
+export function listSourceFiles(dir = SRC_DIR, out = []) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) listSourceFiles(p, out);
@@ -167,12 +177,22 @@ export function scanFile(absPath) {
   };
   const report = (node, kind, raw) => {
     if (!looksLikeProse(raw)) return;
-    hits.push({ kind, text: normalize(raw), ...at(node) });
+    const text = normalize(raw);
+    if (PROPER_NOUNS.has(text)) return;
+    hits.push({ kind, text, ...at(node) });
   };
 
   const visit = (node) => {
     if (ts.isJsxText(node)) {
-      report(node, 'jsx-text', node.text);
+      // <code>/<pre> children are literal commands, paths or payloads
+      // (`dmd_export_b64.py --b64`) — there is no French spelling of an
+      // invocation, so they are canonical data like the plan ids.
+      const parent = node.parent;
+      const inCode =
+        ts.isJsxElement(parent) &&
+        (parent.openingElement.tagName.getText(sf) === 'code' ||
+          parent.openingElement.tagName.getText(sf) === 'pre');
+      if (!inCode) report(node, 'jsx-text', node.text);
     } else if (ts.isJsxAttribute(node) && node.initializer) {
       const name = node.name.getText(sf);
       const init = node.initializer;
@@ -194,7 +214,12 @@ export function scanFile(absPath) {
     } else if (ts.isJsxElement(node) || ts.isJsxFragment(node)) {
       // Expression CHILDREN render; the same expression as an attribute value
       // is usually chart/config plumbing (recharts layout=, unit=, …).
+      const tag = ts.isJsxElement(node) ? node.openingElement.tagName.getText(sf) : '';
       for (const child of node.children) {
+        // <code>/<pre> children are literal commands, paths or payloads
+        // (`dmd_export_b64.py --b64`) — there is no French spelling of an
+        // invocation, so they are canonical data like the plan ids.
+        if ((tag === 'code' || tag === 'pre') && ts.isJsxText(child)) continue;
         if (!ts.isJsxExpression(child)) continue;
         for (const t of collectRenderedTexts(child.expression)) report(child, 'jsx-child-expr', t);
       }

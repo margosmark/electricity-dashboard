@@ -504,12 +504,12 @@ export default function EfficiencyCard({ report, onOpenMoney }: EfficiencyCardPr
             }`}
           >
             {trend.deliveryDirection === 'flat'
-              ? `delivery & fixed ±${fmtBand(trend.delivery?.stderr ?? 0)}¢`
+              ? `${t('efficiency.deliveryFixed')} ±${fmtBand(trend.delivery?.stderr ?? 0)}¢`
               : trend.deliveryDirection === 'up'
-                ? `delivery & fixed ${fmtSigned(trend.delivery?.slope ?? 0)}¢/period`
+                ? `${t('efficiency.deliveryFixed')} ${fmtSigned(trend.delivery?.slope ?? 0)}${t('efficiency.perPeriod')}`
                 : trend.deliveryDirection === 'down'
-                  ? `delivery & fixed ${fmtSigned(trend.delivery?.slope ?? 0)}¢/period`
-                  : 'delivery & fixed: not split'}
+                  ? `${t('efficiency.deliveryFixed')} ${fmtSigned(trend.delivery?.slope ?? 0)}${t('efficiency.perPeriod')}`
+                  : t('efficiency.deliveryNotSplit')}
           </span>
 
           <span

@@ -136,7 +136,7 @@ export default function UsagePanel({
                     className="mt-2 md:mt-3 pt-2 md:pt-3 border-t-2 border-black text-[9px] md:text-[11px] font-black"
                   >
                     {anom.context.kind === 'mild' && anom.context.tempC !== null
-                      ? `${Math.round(anom.context.tempC)}°C · ${anom.context.text}`
+                      ? `${Math.round(anom.context.tempC)}${t('anomalies.tempSuffix')}${anom.context.text}`
                       : anom.context.text}
                   </div>
                 )}

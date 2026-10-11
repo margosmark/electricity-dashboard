@@ -154,7 +154,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <span className="text-[10px] md:text-xs text-slate-600">
-            {fmtCents(option.destRateCents)}/kWh
+            {fmtCents(option.destRateCents)}{t('efficiency.perKwh')}
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
           <span className="text-sm md:text-lg italic">
