@@ -32,11 +32,13 @@ describe('BillProjectionBanner', () => {
     render(<BillProjectionBanner projection={projection} />);
 
     expect(screen.getByTestId('bill-projection')).toHaveAttribute('data-state', 'ready');
-    // 240 kWh measured → $28.80 MTD, 21 days left at $2.88/day → $89.28.
-    expect(screen.getByTestId('bill-projection-amount')).toHaveTextContent('$89.28');
+    // 240 kWh measured over 10 covered days: 197.37 kWh at tier 1 (12¢) + 42.63
+    // at tier 2 (14.2¢) = $29.74 MTD; the 7-day average is $2.97/day, so 21
+    // days left → $92.19. Flat tier 1 would have said $28.80 / $89.28.
+    expect(screen.getByTestId('bill-projection-amount')).toHaveTextContent('$92.19');
     expect(screen.getByText('Projected October 2026 bill')).toBeInTheDocument();
     expect(screen.getByText('Month to date')).toBeInTheDocument();
-    expect(screen.getByText(/\$28\.80/)).toBeInTheDocument();
+    expect(screen.getByText(/\$29\.74/)).toBeInTheDocument();
     expect(screen.getByText('10/31')).toBeInTheDocument();
     expect(screen.getByText(/Commodity cost only/)).toBeInTheDocument();
   });

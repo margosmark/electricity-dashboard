@@ -11,6 +11,9 @@ import {
   aggregateChartData,
   buildActiveChartData,
   calculateComparison,
+  planCostFor,
+  tieredCostFor,
+  tieredRateCentsFor,
   calculateVampire,
   detectAnomalies,
   buildHeatmapData,
@@ -1424,5 +1427,76 @@ describe('detectAnomalies with temperatures', () => {
     expect(anomalies[0].context).toEqual({ kind: 'unknown', tempC: null, text: 'no data' });
     // ...and the third argument is optional, so every existing caller holds.
     expect(detectAnomalies(points, points, null)[0].context!.text).toBe('no data');
+  });
+});
+
+/* ==========================================================================
+ * Tiered pricing — the WINDOW rule (Wave O finding 6)
+ *
+ * `processRawData` fills the per-reading `costTiered` with tier 1 only, which
+ * is the honest per-reading rate but not a bill: the tier-2 threshold is a
+ * volume allowance for a month. Every window total therefore asks
+ * `planCostFor` / `tieredCostFor` instead of summing that field.
+ * ========================================================================== */
+
+describe('planCostFor — Tiered is priced per window, not per reading', () => {
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+
+  /** 10 July days × 100 kWh = 1,000 kWh. Summer threshold, prorated to the
+   *  days covered: 600 × 10/30.4 = 197.37 kWh at tier 1 (12¢), the remaining
+   *  802.63 kWh at tier 2 (14.2¢) → $137.66. Tier 1 only would say $120. */
+  const rows = Array.from({ length: 10 }, (_, i) =>
+    makeProcessedPoint({
+      timestamp: Math.floor(new Date(2026, 6, i + 1, 12).getTime() / 1000),
+      usage_kwh: 100,
+      costTOU: 11.8,
+      costULO: 5.2,
+      // exactly what processRawData fills in — tier 1 only, never summed
+      costTiered: 12,
+    }),
+  );
+  const th = 600 * (10 / 30.4);
+  const expected = th * 0.12 + (1000 - th) * 0.142;
+
+  it('puts tier 2 on the excess over the month threshold, to the cent', () => {
+    expect(planCostFor(rows, 'Tiered')).toBeCloseTo(expected, 6);
+    expect(round2(planCostFor(rows, 'Tiered'))).toBe(137.66);
+    expect(planCostFor(rows, 'Tiered')).toBeGreaterThan(1000 * 0.12); // tier-1 total
+    expect(planCostFor(rows, 'Tiered')).not.toBeCloseTo(1000 * 0.12, 1);
+  });
+
+  it('is exactly what the plan cards charge for the same window', () => {
+    const card = calculateComparison(aggregateChartData(rows, 'monthly'))!;
+    expect(planCostFor(rows, 'Tiered')).toBeCloseTo(card.Tiered, 9);
+    expect(tieredCostFor(rows)).toBeCloseTo(card.Tiered, 9);
+    // …and what the hourly view of that window charges, so zooming never
+    // changes the Tiered total (the hourly branch used to pass tier 1 through).
+    const hourly = calculateComparison(aggregateChartData(rows, 'hourly'))!;
+    expect(hourly.Tiered).toBeCloseTo(card.Tiered, 6);
+    expect(hourly.Tiered).toBeCloseTo(137.66, 2);
+  });
+
+  it('stays at tier 1 while the window is under its prorated threshold', () => {
+    const under = [
+      makeProcessedPoint({
+        timestamp: Math.floor(new Date(2026, 6, 1, 12).getTime() / 1000),
+        usage_kwh: 10,
+        costTiered: 1.2,
+      }),
+    ];
+    expect(planCostFor(under, 'Tiered')).toBeCloseTo(10 * 0.12, 9);
+  });
+
+  it('leaves TOU and ULO on their per-reading sums', () => {
+    expect(planCostFor(rows, 'TOU')).toBeCloseTo(10 * 11.8, 9);
+    expect(planCostFor(rows, 'ULO')).toBeCloseTo(10 * 5.2, 9);
+  });
+
+  it('hands hour-level consumers a rate that sums back to the total', () => {
+    const rate = tieredRateCentsFor(rows)!;
+    expect(rate).toBeCloseTo((expected / 1000) * 100, 6); // 13.7657… ¢/kWh
+    const repriced = rows.reduce((sum, r) => sum + (r.usage_kwh * rate) / 100, 0);
+    expect(repriced).toBeCloseTo(expected, 6);
+    expect(tieredRateCentsFor([])).toBeNull();
   });
 });
