@@ -189,12 +189,13 @@ cd .. && pytest tests/ -v        # only if root parser changed
 Then commit/push and rebuild the container. CI's workflow is
 **disabled server-side** (2026-10-10, Actions minutes exhausted — push/PR
 runs died in 3–4s with zero steps scheduled, so the run-history reds were
-billing, not failures; see the header proposed for
+billing, not failures; see the header in
 `.github/workflows/ci.yml` and the note in README). The gate order above
-is the gate, and merges land on local-green. Don't re-enable CI before
-cutting its triggers to `workflow_dispatch` (needs a token with the
-`workflow` scope) — otherwise the same instant reds come back. The
-`husky` pre-commit hook runs on every local commit.
+is the gate, and merges land on local-green. The triggers on main are
+`workflow_dispatch`-only as of 2026-10-11, so `gh workflow enable CI`
+alone cannot resurrect the push/PR reds — but there is still no CI
+budget, so leave the workflow disabled until Actions minutes are topped
+up. The `husky` pre-commit hook runs on every local commit.
 
 ## Known sharp edges
 
