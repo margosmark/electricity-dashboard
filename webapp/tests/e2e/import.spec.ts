@@ -18,10 +18,31 @@ async function storedReadings(page: Page): Promise<Array<{ timestamp: number; us
   return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || 'null')?.points || []);
 }
 
+/**
+ * Seed an EXISTING profile with the versioned payload — the key `storedReadings`
+ * reads and the shape `saveEnergyData` writes.
+ *
+ * This used to seed the legacy v1 `energy_data` array instead, which made every
+ * assertion below depend on the v1 -> v2 migration having run *on this page*.
+ * On `/import` that migration is reached only via `loadStored()`, which is
+ * called only from `reviewOrImport()` — i.e. only after a parse SUCCEEDS. The
+ * garbage-payload test dies earlier in `decodeImportPayload()`, so nothing ever
+ * wrote `energy_data_v2` and the assertion read an absent key while reporting it
+ * as data loss. (The v1 rows were intact the whole time; see the legacy test
+ * below, which pins the migration path these seeds used to cover by accident.)
+ */
 async function seedStorage(page: Page, rows: Array<{ timestamp: number; usage_kwh: number }>) {
   await page.goto('/');
   await page.evaluate((value) => {
-    localStorage.setItem('energy_data', JSON.stringify(value));
+    localStorage.setItem(
+      'energy_data_v2',
+      JSON.stringify({
+        version: 2,
+        uploadedAt: new Date(0).toISOString(),
+        source: 'e2e-seed',
+        points: value,
+      }),
+    );
     localStorage.setItem('energy_data_is_example', '1');
   }, rows);
 }
@@ -117,13 +138,41 @@ test.describe('/import', () => {
   });
 
   test('?d=<base64> deep link imports without any click', async ({ page }) => {
-    const xml = fs.readFileSync(FIXTURE, 'utf8');
+    // `?d=` is documented as the SMALL-payload hand-off (import/page.tsx,
+    // OPERATIONS.md, dmd_export_b64.py --url): the whole document travels in
+    // the URL, so a full export can never fit one. The deployed edge is
+    // nginx, whose default `large_client_header_buffers 4 8k` caps the request
+    // line at 8192 bytes total — measured 2026-10-10 against the deployed
+    // router AND the public domain, both accepting 8167 chars of query and
+    // returning 414 one char later. This used to deep-link the whole
+    // synthetic.xml (14 844 base64 chars), which passed against the bare Node
+    // server (its own ceiling is 16 289) and 414'd on every deployed hop.
+    //
+    // So the deep link carries a genuinely small document, and the size is
+    // asserted: the budget is part of the contract, not an accident.
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://schemas.opengroup.org/espi/1.0">',
+      '  <entry><IntervalBlock>',
+      '    <IntervalReading><timePeriod><start>1788523200</start><duration>3600</duration></timePeriod><value>500</value></IntervalReading>',
+      '    <IntervalReading><timePeriod><start>1788537600</start><duration>3600</duration></timePeriod><value>2400</value></IntervalReading>',
+      '  </IntervalBlock></entry>',
+      '</feed>',
+    ].join('\n');
     const b64 = Buffer.from(xml, 'utf8').toString('base64');
+    // What nginx sees is the ENCODED query, not the raw base64: '+' -> '%2B'
+    // inflates it (612 raw -> 628 encoded here), and the whole request line
+    // must fit 8192. Assert the real bytes on the wire, with headroom.
+    const query = encodeURIComponent(b64);
+    expect(
+      query.length,
+      'a ?d= payload must fit the deployed edge’s 8 KB request line',
+    ).toBeLessThan(8_000);
 
-    await page.goto(`/import?d=${encodeURIComponent(b64)}`);
+    await page.goto(`/import?d=${query}`);
 
     await page.waitForURL(/\/$/, { timeout: 15_000 });
-    expect(await storedReadings(page)).toHaveLength(FIXTURE_READINGS);
+    expect(await storedReadings(page)).toHaveLength(2);
   });
 
   test('garbage payload fails loudly and writes nothing', async ({ page }) => {
@@ -148,5 +197,38 @@ test.describe('/import', () => {
     await expect(page.getByTestId('import-error')).toBeVisible();
     await expect(page.getByTestId('import-error')).toContainText(/web page, not an export/i);
     expect(await storedReadings(page)).toEqual([]);
+  });
+
+  test('a legacy (v1) profile survives a failed import — the migration path the seeds used to cover by accident', async ({ page }) => {
+    // seedStorage() writes the v2 payload because that is what the assertions
+    // here read. That left the v1 -> v2 migration exercised only by accident:
+    // the sibling tests fed a valid file, so `reviewOrImport` -> `loadStored`
+    // ran the migration for them. Pin it deliberately, on the path that
+    // actually matters — a legacy user whose import FAILS.
+    await page.goto('/');
+    await page.evaluate((value) => {
+      localStorage.setItem('energy_data', JSON.stringify(value));
+      localStorage.setItem('energy_data_is_example', '1');
+    }, SEED);
+
+    // Loading the dashboard migrates v1 -> v2 and drops the legacy key.
+    await page.reload();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('energy_data_v2')))
+      .not.toBeNull();
+    expect(await storedReadings(page)).toEqual(SEED);
+    expect(
+      await page.evaluate(() => localStorage.getItem('energy_data')),
+      'the legacy key is dropped once the v2 write succeeded',
+    ).toBeNull();
+
+    // Now the failure path that used to report this as data loss.
+    await page.goto('/import');
+    await page.getByTestId('import-paste').fill('this is not base64 or xml at all!!');
+    await page.getByTestId('import-load').click();
+    await expect(page.getByTestId('import-error')).toBeVisible();
+
+    expect(new URL(page.url()).pathname).toBe('/import');
+    expect(await storedReadings(page), 'a failed import leaves the migrated profile intact').toEqual(SEED);
   });
 });
