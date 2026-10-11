@@ -96,7 +96,8 @@ defines the three jobs (`frontend`: lint/typecheck/test/build, `smoke`:
 container boot + HTTP + Playwright — carrying the toolbar
 layout-regression gate `webapp/tests/e2e/toolbar-layout.spec.ts`, 15 vw/vh
 viewports, 90 checks, see `DECISIONS.md` — plus both Lighthouse budgets,
-`python`: pytest) for when billing returns. Do NOT `gh workflow enable CI`
-before cutting its triggers to `workflow_dispatch` — the file still has
-push/PR triggers and would resurrect the same instant reds (that file
-edit needs a GitHub token with the `workflow` scope).
+`python`: pytest) for when billing returns. The file's triggers are
+`workflow_dispatch`-only as of 2026-10-11, so re-enabling the workflow
+cannot fire on push/PR — leave it disabled until Actions minutes are
+topped up; the three jobs above stay runnable by hand the moment billing
+returns.
