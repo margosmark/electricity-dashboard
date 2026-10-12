@@ -72,7 +72,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           <span
             data-testid="switch-plan-badge"
             className={`px-2 md:px-3 py-0.5 rounded-full border-2 border-edge text-[9px] md:text-[11px] font-black ${
-              unknown ? 'bg-track' : 'bg-yellow-400'
+              unknown ? 'bg-track' : 'bg-yellow-400 text-accent-ink'
             }`}
           >
             {row.plan === 'unknown'
@@ -126,7 +126,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
                 key={plan}
                 data-testid={`switch-modeled-${plan}`}
                 className={`border-2 border-edge rounded-lg p-2 md:p-3 ${
-                  row.bestPlan === plan ? 'bg-emerald-50' : 'bg-card'
+                  row.bestPlan === plan ? 'bg-good-soft' : 'bg-card'
                 }`}
               >
                 <div className="text-ink-4 text-[8px] uppercase">
@@ -139,7 +139,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           {modeled && (
             <div
               className={`border-2 border-edge rounded-lg p-2 md:p-3 ${
-                (row.saving ?? 0) > 0 ? 'bg-emerald-100' : 'bg-inset'
+                (row.saving ?? 0) > 0 ? 'bg-good-soft-2' : 'bg-inset'
               }`}
             >
               <div className="text-ink-4 text-[8px] uppercase">

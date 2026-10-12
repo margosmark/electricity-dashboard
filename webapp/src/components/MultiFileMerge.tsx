@@ -135,7 +135,7 @@ export default function MultiFileMerge({
 
         <div
           data-testid="merge-summary"
-          className="mt-4 md:mt-6 bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
+          className="mt-4 md:mt-6 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
         >
           <div className="flex flex-wrap gap-4 md:gap-8">
             <div>

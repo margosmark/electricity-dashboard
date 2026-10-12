@@ -22,7 +22,20 @@ import type { ProcessedPoint } from '@/lib/energy';
 import { buildYearOverYear, monthLabelsFor } from '@/lib/trend';
 import { fmtKwh, useTranslation } from '@/i18n';
 
-const YEAR_COLORS = ['#2563EB', '#F97316', '#16A34A', '#A855F7'];
+/**
+ * One token per year (globals.css `--data-year-1..4`). LIGHT is byte-identical
+ * to the `#2563EB / #F97316 / #16A34A / #A855F7` literals this list used to
+ * hold; DARK lifts year-1 to blue-500, because a blue-600 bar measured 3.45:1
+ * on the dark card (and the legend paints its own label in the series colour,
+ * so the lift fixes the label and the bar at once). The bars and the legend
+ * both read the token, so the swatch can never drift from the bar it names.
+ */
+const YEAR_COLORS = [
+  'var(--data-year-1)',
+  'var(--data-year-2)',
+  'var(--data-year-3)',
+  'var(--data-year-4)',
+];
 
 const fmtDelta = (pct: number | null): string =>
   pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`;

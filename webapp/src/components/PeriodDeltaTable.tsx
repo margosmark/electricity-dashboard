@@ -70,7 +70,7 @@ export default function PeriodDeltaTable({ table }: { table: DeltaTableModel }) 
                     <span
                       data-testid="money-column-flag"
                       className={`ml-1 inline-block border-2 border-edge px-1 rounded text-[8px] ${
-                        c.estimated ? 'bg-yellow-400' : 'bg-track'
+                        c.estimated ? 'bg-yellow-400 text-accent-ink' : 'bg-track'
                       }`}
                     >
                       {c.estimated ? t('delta.estimate') : t('delta.noBill')}

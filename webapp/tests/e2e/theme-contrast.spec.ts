@@ -210,36 +210,30 @@ const keyOf = (r: { color: string; bg: string }) => `${r.color}|${r.bg}`;
  * The ledger may only SHRINK: when a pair is fixed, delete its row. A row that
  * stops matching is not an error (the seed's numbers move month to month), so
  * the check is one-sided on purpose.
+ *
+ * THE DARK LEDGER IS NOW EMPTY (t_3e571ddb). @designer's colour call on
+ * t_3ccf52af answered all 13 dark pairs at once, and this diff applied it:
+ *   - the fixed accent slab (`bg-yellow-400`) and the verdict chips
+ *     (`bg-emerald-400` / `bg-red-400`) pin their own ink (`text-accent-ink`,
+ *     #000 both themes) instead of inheriting a themed one;
+ *   - the pastel slabs moved onto tokens with a dark de-escalation
+ *     (`--warn-strip`, `--good-soft`, `--good-soft-2`, `--info-soft`), their
+ *     LIGHT values byte-identical to the literals they replaced;
+ *   - the year-over-year hues became `--data-year-1..4`, where only year-1
+ *     lifts in dark (3.45 → 4.85:1).
+ * The DARK walk below therefore asserts ZERO painted pairings under AA — no
+ * ledger, no carve-out. LIGHT is not there yet: its seven pairs are the light
+ * leg of the same call (L1–L4), which changes LIGHT rendering and is gated on
+ * Mark's sign-off, so LIGHT_PINNED_DEBT still stands (and still may only
+ * shrink).
  */
-const DARK_PINNED_DEBT = [
-  // --ink / --ink-2 / --ink-3 / --ink-4 on the FIXED yellow-400 slab. Per the
-  // rule the addendum encodes, ink inside a fixed slab must itself be fixed:
-  // this family wants `text-accent-ink` (#000 both themes, 12.6:1 on #fdc700).
-  { color: 'rgb(248, 250, 252)', bg: 'rgb(253, 199, 0)' }, // --ink on yellow-400 (29 sites)
-  { color: 'rgb(203, 213, 225)', bg: 'rgb(253, 199, 0)' }, // --ink-2 on yellow-400
-  { color: 'rgb(148, 163, 184)', bg: 'rgb(253, 199, 0)' }, // --ink-4 on yellow-400
-  // The sample-data note strip: --ink-2 on its own amber-200 wash.
-  { color: 'rgb(203, 213, 225)', bg: 'rgb(254, 230, 133)' },
-  // emerald-50 / emerald-100 soft slabs (money + plans): themed ink on a slab
-  // that does not flip. These want a dark de-escalation like --good-soft.
-  { color: 'rgb(248, 250, 252)', bg: 'rgb(236, 253, 245)' },
-  { color: 'rgb(203, 213, 225)', bg: 'rgb(236, 253, 245)' },
-  { color: 'rgb(132, 148, 170)', bg: 'rgb(236, 253, 245)' },
-  { color: 'rgb(248, 250, 252)', bg: 'rgb(208, 250, 229)' },
-  { color: 'rgb(148, 163, 184)', bg: 'rgb(208, 250, 229)' },
-  // blue-50 (the "pace to date" panel) — same story.
-  { color: 'rgb(248, 250, 252)', bg: 'rgb(239, 246, 255)' },
-  { color: 'rgb(148, 163, 184)', bg: 'rgb(239, 246, 255)' },
-  // A literal emerald in an accent block, and recharts' OWN legend colour
-  // (blue-600) which is neither themed nor tokenised — 3.45:1 on the dark card.
-  { color: 'rgb(248, 250, 252)', bg: 'rgb(0, 212, 146)' },
-  { color: 'rgb(37, 99, 235)', bg: 'rgb(15, 23, 42)' },
-];
-
 const LIGHT_PINNED_DEBT = [
-  // The LIGHT leg of the same slabs: --ink-3 is 3.0–4.4:1 on them and --ink-4
-  // 2.4:1 — below AA on a white card, before dark mode existed.
-  { color: 'rgb(100, 116, 139)', bg: 'rgb(253, 199, 0)' }, // --ink-3 on yellow-400
+  // The LIGHT leg of the same call. Six pairs left: L1 (--ink-3/--ink-4 darken)
+  // and L3 (legend text to --ink-2) release them, and both change LIGHT
+  // rendering, so they wait on Mark's sign-off.
+  // (The seventh row — `--ink-3` on the fixed `#fdc700` accent slab at
+  // 3.02:1 — was released by family A/L2 in Phase 1: every ink step on that
+  // slab is now text-accent-ink, #000 in both themes, 13.35:1.)
   { color: 'rgb(100, 116, 139)', bg: 'rgb(208, 250, 229)' }, // --ink-3 on emerald-100
   { color: 'rgb(100, 116, 139)', bg: 'rgb(239, 246, 255)' }, // --ink-3 on blue-50
   { color: 'rgb(100, 116, 139)', bg: 'rgb(241, 245, 249)' }, // --ink-3 on slate-100
@@ -262,19 +256,16 @@ const logPinned = (rows: Finding[], keys: Set<string>) => {
 };
 
 test.describe('dark mode contrast walk (spec §2 #10)', () => {
-  test('DARK: no painting under AA beyond the pinned slab debt, on all four tabs', async ({
+  test('DARK: nothing paints under AA on any of the four tabs — no pinned debt left', async ({
     page,
   }) => {
     test.setTimeout(180_000);
     await loadFixture(page, 'dark');
     const rows = await walkAllTabs(page);
-    const keys = pinnedKeys(DARK_PINNED_DEBT);
-    logPinned(rows, keys);
 
-    const unpinned = rows.filter((r) => !keys.has(keyOf(r)));
     expect(
-      unpinned,
-      `dark mode painted ${unpinned.length} UNPINNED pairing(s) under AA (the pinned ledger is in theme-contrast.spec.ts):\n${fmt(unpinned)}`,
+      rows,
+      `dark mode painted ${rows.length} pairing(s) under AA — the ledger is empty (t_3e571ddb released all 13 rows):\n${fmt(rows)}`,
     ).toEqual([]);
   });
 

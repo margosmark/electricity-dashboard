@@ -124,7 +124,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
               data-testid={`money-waterfall-pick-${s.startDate}`}
               onClick={() => setSelected(s.startDate)}
               className={`min-h-[44px] px-3 border-2 border-edge rounded-lg text-[10px] uppercase font-black ${
-                s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400' : 'bg-inset'
+                s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
               }`}
             >
               {s.startDate}

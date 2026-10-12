@@ -492,7 +492,7 @@ export default function BillAccrualCurve({
             {t('accrual.measuredLine', { covered: curve.coveredDays, elapsed: curve.daysElapsed })}
           </div>
         </div>
-        <div className="bg-blue-50 p-3 md:p-4 rounded-xl border-4 border-edge">
+        <div className="bg-info-soft p-3 md:p-4 rounded-xl border-4 border-edge">
           <div className="text-[8px] md:text-[10px] uppercase text-ink-3 font-black">{t('accrual.paceToDate')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-pace">
             {money(curve.paceToDate)}

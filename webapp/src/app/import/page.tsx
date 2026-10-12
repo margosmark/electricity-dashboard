@@ -272,7 +272,7 @@ function ImportFlow() {
             <button
               type="button"
               data-testid="import-merge"
-              className={BTN + ' bg-emerald-400'}
+              className={BTN + ' bg-emerald-400 text-accent-ink'}
               onClick={() => commit(mergeForWrite(existing, incoming))}
             >
               <GitMerge size={14} strokeWidth={4} /> {t('import.mergeBtn')} ({p.mergeRows} {t('import.rows', { count: p.mergeRows })})
@@ -280,7 +280,7 @@ function ImportFlow() {
             <button
               type="button"
               data-testid="import-replace"
-              className={BTN + ' bg-yellow-400'}
+              className={BTN + ' bg-yellow-400 text-accent-ink'}
               onClick={() => commit(incoming)}
             >
               <Replace size={14} strokeWidth={4} /> {t('import.replaceBtn')} ({p.replaceRows} {t('import.rows', { count: p.replaceRows })})

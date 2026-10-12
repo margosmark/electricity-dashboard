@@ -115,8 +115,8 @@ const SEASON_FILL: Record<Season, string> = {
 };
 
 const CHIP_CLASS: Record<TrendVerdict, string> = {
-  improving: 'bg-emerald-400',
-  worsening: 'bg-red-400',
+  improving: 'bg-emerald-400 text-accent-ink',
+  worsening: 'bg-red-400 text-accent-ink',
   stable: 'bg-track',
 };
 

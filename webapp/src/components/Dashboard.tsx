@@ -493,7 +493,7 @@ export default function Dashboard() {
         <div
           data-testid="example-data-banner"
           role="status"
-          className="relative z-[100] bg-amber-200 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-accent-ink"
+          className="relative z-[100] bg-warn-strip border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-ink"
         >
           <div className="text-[11px] md:text-sm font-black uppercase">
             {t('example.banner.title')}
@@ -535,7 +535,7 @@ export default function Dashboard() {
                  exported before (full profile or readings only). */}
              <label className="mt-4 block cursor-pointer">
                <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label={t('upload.importJson.aria')} className="sr-only" />
-               <span className="block min-h-11 w-full py-3 bg-emerald-50 border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs text-accent-ink text-center">{t('upload.importJson.label')}</span>
+               <span className="block min-h-11 w-full py-3 bg-good-soft border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs text-ink text-center">{t('upload.importJson.label')}</span>
              </label>
              {/* Wave K — the other way to get data in: authorise once and
                  let the shim pipe ESPI straight through to localStorage. */}
@@ -571,7 +571,7 @@ export default function Dashboard() {
                  data-testid="try-example-data"
                  onClick={() => { setParseIssue(null); void loadExampleData(); }}
                  disabled={parsing}
-                 className="flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
+                 className="flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
                >
                  {parsing ? t('upload.tryExample.loading') : t('upload.tryExample.idle')}
                </button>
@@ -683,11 +683,11 @@ export default function Dashboard() {
               ending in white space (it is alone on its line below ~940px, where
               it stretches across the whole row). */}
           <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-ink shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400 text-accent-ink' : 'bg-card hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
+            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-ink shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400 text-accent-ink' : 'bg-card hover:bg-inset'}`}>{t('scope.month')}</button>
+            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] text-ink shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400 text-accent-ink' : 'bg-card hover:bg-inset'}`}>{t('scope.ytd')}</button>
+            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>
           </div>
         </div>
 

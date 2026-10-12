@@ -329,7 +329,7 @@ export default function EvScenarioCard({
                     {fmtMoney(cm.stayCostPerCharge)} {t('ev.perChargeWord')}
                   </div>
                 </div>
-                <div data-testid="ev-move-side" className="p-3 md:p-4 bg-emerald-100">
+                <div data-testid="ev-move-side" className="p-3 md:p-4 bg-good-soft-2">
                   <div className="text-[10px] md:text-xs font-black uppercase">
                     {t('ev.moveUlo')}
                   </div>

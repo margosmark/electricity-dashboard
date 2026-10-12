@@ -97,7 +97,7 @@ export default function OverviewPanel({
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
-              className="bg-yellow-400 px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
+              className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
             >
               <div className="text-[8px] md:text-[10px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -115,7 +115,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.cents, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-ink-2">
+                      <div className="text-[8px] font-black uppercase text-accent-ink">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -127,7 +127,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.centsInclTax, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-ink-2">
+                      <div className="text-[8px] font-black uppercase text-accent-ink">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
@@ -145,7 +145,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.cents, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-ink-2">
+                      <div className="text-[8px] font-black uppercase text-accent-ink">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -157,7 +157,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.centsInclTax, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-ink-2">
+                      <div className="text-[8px] font-black uppercase text-accent-ink">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>

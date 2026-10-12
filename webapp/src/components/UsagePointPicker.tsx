@@ -79,13 +79,13 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                 type="button"
                 data-testid={`usage-point-${group.id || 'unidentified'}`}
                 onClick={() => onChoose(group.readings)}
-                className="w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-yellow-400 hover:translate-y-0.5 active:shadow-none transition-all"
+                className="group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-yellow-400 hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-base md:text-2xl">{group.label}</span>
                   <span className="text-xl md:text-3xl italic">{fmtKwh(stats.kwh)}</span>
                 </div>
-                <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-ink-3 flex flex-wrap gap-x-4 gap-y-1 normal-case">
+                <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-ink-3 group-hover:text-accent-ink flex flex-wrap gap-x-4 gap-y-1 normal-case">
                   <span>{group.id || t('picker.noId')}</span>
                   <span>{t('picker.readings', { count: stats.count })}</span>
                   <span>
