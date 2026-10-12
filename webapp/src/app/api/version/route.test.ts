@@ -95,10 +95,14 @@ describe('GET /api/version', () => {
   });
 
   it("the shipped constant is 'unknown' or a full commit — never a partial or invented SHA", () => {
-    expect(BUILD_SHA).toMatch(/^(unknown|[0-9a-f]{40})$/);
+    // Widened to `string` on purpose: the generated constant is a LITERAL type,
+    // so `BUILD_SHA !== 'unknown'` is TS2367 ("no overlap") in a build that HAS
+    // a SHA — i.e. in the Docker build — and `next build` type-checks this file.
+    const sha: string = BUILD_SHA;
+    expect(sha).toMatch(/^(unknown|[0-9a-f]{40})$/);
     // A 7-40 char hex string that is not a full commit is what a truncated or
     // hand-edited stamp looks like.
-    if (BUILD_SHA !== 'unknown') expect(BUILD_SHA).not.toMatch(/^[0-9a-f]{7,39}$/);
+    if (sha !== 'unknown') expect(sha).not.toMatch(/^[0-9a-f]{7,39}$/);
   });
 
   it("names the build's own BUILD_ID, read from _next/BUILD_ID", async () => {

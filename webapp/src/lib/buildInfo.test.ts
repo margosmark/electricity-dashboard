@@ -102,11 +102,16 @@ describe('bump-build-info.mjs', () => {
     expect(run(stable, { GIT_SHA: REAL_SHA })).toBe(first);
   });
 
-  it("leaves the committed placeholder alone — 'unknown' in, 'unknown' out", () => {
+  it("the tree's stamp is a generator output — and rebuilding over it changes nothing", () => {
     const committed = fs.readFileSync(COMMITTED, 'utf8');
-    expect(declarationOf(committed)).toBe('unknown');
+    const current = declarationOf(committed);
+    expect(current, 'the tracked file must declare BUILD_SHA').toMatch(/^(unknown|[0-9a-f]{7,40})$/);
 
-    // The fresh-clone case: build with no GIT_SHA over the committed bytes.
-    expect(run(freshTarget(committed))).toBe(committed);
+    // Feed it back the value it already holds: nothing for the placeholder (a
+    // fresh clone / a local build), the SHA itself for a tree that has run a
+    // stamped build like the Docker builder does. Either way the bytes must be
+    // unchanged, so a build dirties this file only when the stamp changes.
+    const env: Record<string, string> = current === 'unknown' ? {} : { GIT_SHA: String(current) };
+    expect(run(freshTarget(committed), env)).toBe(committed);
   });
 });
