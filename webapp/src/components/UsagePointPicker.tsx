@@ -11,6 +11,7 @@ import { format, isValid } from 'date-fns';
 import { Combine, Gauge, X } from 'lucide-react';
 import { type UsagePointGroup, type DataPoint, combineUsagePointGroups } from '@/lib/energy';
 import { fmtKwh, useTranslation } from '@/i18n';
+import { seriesNoteText } from '@/i18n/seriesNote';
 
 /**
  * The `yyyy-MM-dd` day of a reading's start, which may not be a time at all.
@@ -132,7 +133,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                     <ul className="space-y-1">
                       <li className="font-black uppercase">{t('gbseries.reasons')}</li>
                       {group.notes.map((note, i) => (
-                        <li key={`${note.code}-${i}`}>{note.detail}</li>
+                        <li key={`${note.code}-${i}`}>{seriesNoteText(note, t)}</li>
                       ))}
                     </ul>
                   ) : null}

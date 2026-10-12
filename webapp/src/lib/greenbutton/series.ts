@@ -162,6 +162,9 @@ export type ReadingSeries = {
   unlinked: boolean;
 };
 
+/** Structured values a catalogued sentence interpolates (see `@/i18n/seriesNote`). */
+export type SeriesNoteParams = Record<string, string | number>;
+
 /** A refusal, a drop or an assumption — never a silent behaviour. */
 export type SeriesNote = {
   code:
@@ -177,6 +180,39 @@ export type SeriesNote = {
   detail: string;
   /** Series key when the note is about one series. */
   seriesKey?: string;
+  /**
+   * The values `detail` interpolates, kept as DATA so the sentence can be
+   * composed in the reader's own language: `@/i18n/seriesNote` maps {@link code}
+   * (+ `params.variant` when one code carries two sentences) to the catalog key
+   * that sentence belongs to, and fills it in.
+   *
+   * Absent ⇒ nothing here composed this note with structured values, so
+   * `detail` — the canonical English sentence — is what gets printed. `detail`
+   * stays the English source of truth either way: a test pins that the catalog's
+   * English rendering is exactly this string, so the two cannot drift.
+   */
+  params?: SeriesNoteParams;
+};
+
+/**
+ * The catalog key of each refusal clause, next to the clause itself so the two
+ * cannot drift: `REFUSAL_REASON[status]` is what the English (and `detail`)
+ * sentence says, and `REFUSAL_REASON_KEY[status]` is the key the display layer
+ * translates it with. `status` — not the sentence — is what travels in
+ * `SeriesNote.params`.
+ */
+export const REFUSAL_REASON_KEY: Record<
+  Exclude<SeriesStatus, 'supported' | 'power-converted'>,
+  string
+> = {
+  register: 'gbseries.refusal.register',
+  spot: 'gbseries.refusal.spot',
+  'other-commodity': 'gbseries.refusal.otherCommodity',
+  'other-quantity': 'gbseries.refusal.otherQuantity',
+  'reverse-flow': 'gbseries.refusal.reverseFlow',
+  'combined-flow': 'gbseries.refusal.combinedFlow',
+  unconvertible: 'gbseries.refusal.unconvertible',
+  'unresolved-reading-type': 'gbseries.refusal.unresolvedReadingType',
 };
 
 export type ReadingSeriesResult = {
@@ -924,6 +960,7 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       }
       notes.push({
         code: 'ambiguous-inline-reading-types',
+        params: { count: resolved.split.length },
         detail: `An entry carried ${resolved.split.length} inline ReadingTypes with no per-block link. Their readings were kept apart by ReadingType instead of merged, and none was converted, because which block belongs to which type is not stated.`,
       });
       continue;
@@ -971,12 +1008,16 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'converted-to-energy',
         seriesKey: s.key,
+        params: { label: s.label, uom: uomName(s.meta.uom) },
         detail: `Series ${s.label} is interval-average real power (${uomName(s.meta.uom)}); each reading was converted to energy with its own interval duration.`,
       });
     } else if (s.status !== 'supported') {
       notes.push({
         code: 'unsupported-series',
         seriesKey: s.key,
+        // The refusal CLAUSE itself travels as its status code — the display
+        // layer translates `REFUSAL_REASON_KEY[status]`.
+        params: { label: s.label, status: s.status },
         detail: `Series ${s.label} was NOT loaded as consumption: it ${s.reason} Its readings are preserved here and none of them was priced.`,
       });
     }
@@ -984,6 +1025,13 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'refused-readings',
         seriesKey: s.key,
+        params: {
+          label: s.label,
+          negative: s.dropped.negative,
+          unparsable: s.dropped.unparsable,
+          magnitude: s.dropped.magnitude,
+          max: MAX_INTERVAL_KWH,
+        },
         detail: `In series ${s.label}, ${s.dropped.negative} reading(s) failed value or direction validation, ${s.dropped.unparsable} carried no usable start or value, and ${s.dropped.magnitude} carried a magnitude no interval can hold (more than ${MAX_INTERVAL_KWH} kWh in one reading). None of them was priced; every count is recorded on the series.`,
       });
     }
@@ -991,6 +1039,7 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'legacy-assumption',
         seriesKey: s.key,
+        params: { variant: 'document-wide', count: s.readings.length },
         detail: `No ReadingType described ${s.readings.length} reading(s), so they were read as watt-hours scaled by the document-wide multiplier — the legacy compatibility path. The timestamps are exact; the unit is an assumption, not a declaration.`,
       });
     }
@@ -998,6 +1047,11 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'legacy-assumption',
         seriesKey: s.key,
+        params: {
+          variant: 'no-uom',
+          label: s.label,
+          multiplier: multiplierName(s.meta.powerOfTenMultiplier),
+        },
         detail: `Series ${s.label} declares no uom, so its values were read as watt-hours scaled by ${multiplierName(s.meta.powerOfTenMultiplier)} — the default for an interval energy feed, but an assumption rather than a declaration.`,
       });
     }
@@ -1005,6 +1059,11 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'unlinked-reading-type',
         seriesKey: s.key,
+        params: {
+          label: s.label,
+          uom: uomName(s.meta.uom),
+          multiplier: multiplierName(s.meta.powerOfTenMultiplier),
+        },
         detail: `Series ${s.label} carried no ReadingType link, so the document's only ReadingType (${uomName(s.meta.uom)}, ${multiplierName(s.meta.powerOfTenMultiplier)}) was applied. With one declared type in the document there is no other candidate to confuse it with, but this is a resolution, not a stated link.`,
       });
     }
@@ -1018,6 +1077,7 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       notes.push({
         code: 'assumed-direction',
         seriesKey: s.key,
+        params: { label: s.label },
         detail: `Series ${s.label} declares no usable flowDirection, so its readings were treated as delivered (forward) — the ESPI default for an interval feed.`,
       });
     }

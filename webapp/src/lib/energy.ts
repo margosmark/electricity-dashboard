@@ -488,6 +488,12 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     if (energy.length > 0 && power.length > 0) {
       g.notes.push({
         code: 'combined-series',
+        params: {
+          variant: 'energy-and-power',
+          point: g.id,
+          energy: energy.map((s) => s.label).join(', '),
+          power: power.map((s) => s.label).join(', '),
+        },
         detail: `UsagePoint ${g.id || '(unidentified)'} publishes both per-interval energy (${energy
           .map((s) => s.label)
           .join(', ')}) and interval-average power (${power.map((s) => s.label).join(', ')}). They describe the same consumption, so only the energy series was priced; the power series is preserved unconverted-to-total on the point.`,
@@ -520,6 +526,12 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     if (billable.length > 1) {
       g.notes.push({
         code: 'combined-series',
+        params: {
+          variant: 'several-series',
+          point: g.id,
+          count: billable.length,
+          labels: billable.map((s) => s.label).join(', '),
+        },
         detail: `UsagePoint ${g.id || '(unidentified)'} carries ${billable.length} separate consumption series (${billable
           .map((s) => s.label)
           .join(', ')}). Their readings are combined in this group; every series is listed separately on the point so a picker or diagnostics panel can tell them apart.`,
