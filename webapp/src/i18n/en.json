@@ -539,6 +539,8 @@
   "gb.unreachableHint": "Check the connection and try again; your existing data is untouched.",
   "gbseries.count": "{count} reading series",
   "gbseries.none": "no billable readings — this point's data could not be priced",
+  "gbseries.notice.dismiss": "Dismiss",
+  "gbseries.notice.heading": "Some readings weren’t included in priced consumption",
   "gbseries.reasons": "Why some of this point was left out:",
   "heatmap.blurb": "Weekdays and weekends split apart — a charger that only runs Monday to Friday at 19:00 disappears when Saturday and Sunday share its colour scale. Both grids use the SAME scale (peaking at {max} in an hour), so the colours stay comparable.",
   "heatmap.cellLabel": "{day} {hour} — {kwh} average over {count} day",
