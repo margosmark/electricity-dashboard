@@ -43,6 +43,8 @@
 import {
   DEMAND_MEASUREMENT_KIND,
   ENERGY_MEASUREMENT_KIND,
+  MAX_INTERVAL_KWH,
+  MAX_INTERVAL_SECONDS,
   POWER_MEASUREMENT_KIND,
   accumulationClassOf,
   accumulationName,
@@ -140,8 +142,17 @@ export type ReadingSeries = {
   readings: SeriesReading[];
   /** Number of IntervalBlock elements this series' readings came from. */
   blocks: number;
-  /** Readings refused by value validation, counted rather than hidden. */
-  dropped: { negative: number; unparsable: number };
+  /**
+   * Readings refused by value validation, counted rather than hidden.
+   *  - `negative`   the conversion produced nothing usable (non-finite, or a
+   *                 unit/multiplier this series cannot price) or the value ran
+   *                 against the declared direction.
+   *  - `unparsable` no usable interval start, or no value at all.
+   *  - `magnitude`  the value exceeded what one interval can physically hold —
+   *                 a huge-but-finite number that would pass every
+   *                 `Number.isFinite` check downstream and still destroy totals.
+   */
+  dropped: { negative: number; unparsable: number; magnitude: number };
   /** True when this series is a metadata-free legacy assumption. */
   legacy: boolean;
   /**
@@ -590,18 +601,47 @@ function seriesDetail(meta: SeriesMetadata): string {
  * The resolver
  * ========================================================================== */
 
-/** Interval length for one reading, in the order ESPI states it. */
+/**
+ * The newest instant an interval start may be: 2100-01-01T00:00:00Z.
+ *
+ * `<start>` is unbounded in the ESPI schema, and `num()` reads it faithfully,
+ * so `<start>1e308</start>` is a FINITE number that passes every
+ * `Number.isFinite` check this codebase has — and then makes `date-fns`
+ * `format()` throw `RangeError: Invalid time value` inside the UsagePoint
+ * picker's render. `999999999999999` (the year 33 658) and
+ * `8640000000000001` (past the Date range) do the same. Only the upper end is a
+ * defect vector, so only the upper end is bounded: a start below the window is
+ * still a real instant any consumer can format, and the hand-made fixtures and
+ * bare fragments this parser must keep accepting legitimately use tiny epochs
+ * (`start: 1`), which a plausible-era floor would have silently dropped.
+ *
+ * The bound is applied where the reading is accepted, so nothing downstream
+ * has to defend itself against a timestamp that is not a date.
+ */
+const MAX_INTERVAL_START_S = 4_102_444_800; // 2100-01-01T00:00:00Z
+
+/**
+ * Interval length for one reading, in the order ESPI states it.
+ *
+ * A duration that is not a positive number, or is longer than
+ * {@link MAX_INTERVAL_SECONDS}, is not an interval: it is refused (null) here
+ * so neither `duration_s` nor a power conversion can be built on it.
+ */
 function durationOf(
   r: RawReading,
   blockDuration: number | null,
   blockSize: number,
   meta: SeriesMetadata,
 ): number | null {
-  if (r.duration !== null && r.duration > 0) return r.duration;
+  let stated: number | null = null;
+  if (r.duration !== null && r.duration > 0) stated = r.duration;
   // A block-level duration only describes a single reading; with several
   // readings in the block it is the block's span, not each reading's.
-  if (blockDuration !== null && blockDuration > 0 && blockSize === 1) return blockDuration;
-  return seriesDuration(meta);
+  else if (blockDuration !== null && blockDuration > 0 && blockSize === 1) stated = blockDuration;
+  else stated = seriesDuration(meta);
+
+  if (stated === null || !Number.isFinite(stated) || stated <= 0) return null;
+  return stated > MAX_INTERVAL_SECONDS ? null : stated;
 }
 
 function blankMeta(assumed: boolean, unresolved: boolean): SeriesMetadata {
@@ -708,7 +748,7 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
         meta,
         readings: [],
         blocks: 0,
-        dropped: { negative: 0, unparsable: 0 },
+        dropped: { negative: 0, unparsable: 0, magnitude: 0 },
         legacy,
         unlinked,
       };
@@ -723,8 +763,17 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
       series.blocks += 1;
       for (const r of block.readings) {
         // A start of 0 (or a missing one) is not "midnight 1970", it is a
-        // reading with no stated time, and pricing it would invent one.
-        if (r.timestamp === null || r.timestamp <= 0 || r.value === null) {
+        // reading with no stated time, and pricing it would invent one. A start
+        // beyond MAX_INTERVAL_START_S is not a time at all — it is a finite
+        // number that renders as `Invalid Date` (see the constant's note), so
+        // it is refused alongside the missing ones.
+        if (
+          r.timestamp === null ||
+          !Number.isFinite(r.timestamp) ||
+          r.timestamp <= 0 ||
+          r.timestamp >= MAX_INTERVAL_START_S ||
+          r.value === null
+        ) {
           series.dropped.unparsable += 1;
           continue;
         }
@@ -751,6 +800,16 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
                 : energyKwhFromRaw(r.value, meta.uom, meta.powerOfTenMultiplier);
           if (kwh === null || !Number.isFinite(kwh) || kwh < 0) {
             series.dropped.negative += 1;
+            continue;
+          }
+          // The magnitude bound: a huge but FINITE value would pass every
+          // `Number.isFinite` check downstream (storage.ts, backup.ts), sum
+          // the page's totals to `Infinity` and be persisted as a legitimate
+          // reading. One interval cannot hold this much energy, so it is
+          // refused here — counted separately from a malformed value, so the
+          // diagnostics can tell a hostile document from a negative one.
+          if (kwh > MAX_INTERVAL_KWH) {
+            series.dropped.magnitude += 1;
             continue;
           }
         }
@@ -893,7 +952,12 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
   }
 
   const series = [...byKey.values()].filter(
-    (s) => s.readings.length > 0 || s.blocks > 0 || s.dropped.negative > 0 || s.dropped.unparsable > 0,
+    (s) =>
+      s.readings.length > 0 ||
+      s.blocks > 0 ||
+      s.dropped.negative > 0 ||
+      s.dropped.unparsable > 0 ||
+      s.dropped.magnitude > 0,
   );
 
   /* --- diagnostics ------------------------------------------------------------- */
@@ -912,11 +976,11 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
         detail: `Series ${s.label} was NOT loaded as consumption: it ${s.reason} Its readings are preserved here and none of them was priced.`,
       });
     }
-    if (s.dropped.negative > 0 || s.dropped.unparsable > 0) {
+    if (s.dropped.negative > 0 || s.dropped.unparsable > 0 || s.dropped.magnitude > 0) {
       notes.push({
         code: 'refused-readings',
         seriesKey: s.key,
-        detail: `In series ${s.label}, ${s.dropped.negative} reading(s) failed value or direction validation and ${s.dropped.unparsable} carried no usable start or value. Neither set was priced; both counts are recorded on the series.`,
+        detail: `In series ${s.label}, ${s.dropped.negative} reading(s) failed value or direction validation, ${s.dropped.unparsable} carried no usable start or value, and ${s.dropped.magnitude} carried a magnitude no interval can hold (more than ${MAX_INTERVAL_KWH} kWh in one reading). None of them was priced; every count is recorded on the series.`,
       });
     }
     if (s.legacy) {

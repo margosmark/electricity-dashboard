@@ -18,6 +18,7 @@ import { parseReadingSeries, classifySeries, type SeriesMetadata } from './serie
 import { accumulationClassOf } from './espiUnits';
 import { parseGreenButtonFeed } from '@/lib/energy';
 import { XMLParser } from 'fast-xml-parser';
+import { format } from 'date-fns';
 
 /* ==========================================================================
  * Tiny ESPI document builder
@@ -775,5 +776,149 @@ describe('classifySeries — the decision table', () => {
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: null })).status).toBe('supported');
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: 0 })).status).toBe('supported');
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: 3 })).status).toBe('other-commodity');
+  });
+});
+
+/* ==========================================================================
+ * Magnitude bounds — a hostile document cannot poison a total
+ * ==========================================================================
+ *
+ * Found by the security gate on PR #78 (checklist item 5, FAIL-2). The guard
+ * was `Number.isFinite(kwh)` alone, which a huge FINITE value passes: 2000 ×
+ * `<value>1e308</value>` — a 210 099-byte document — summed every total to
+ * `Infinity`, and each individual 1e305 reading also passed `Number.isFinite`
+ * in storage.ts / backup.ts, so the poison was persisted as legitimate data.
+ * The same document totalled 2.0 kWh before the parser rewrite, because the old
+ * `parseInt` mangled scientific notation into 1: notation is not a defence, a
+ * magnitude bound is.
+ */
+
+describe('magnitude bounds — a hostile document cannot poison a total', () => {
+  const NINES = '9'.repeat(27);
+  const energyRt: RtSpec = { uom: 72, mult: 0, kind: 12, ab: 4, commodity: 1, fd: 1 };
+  const powerRt: RtSpec = { uom: 38, mult: 0, kind: 37, ab: 4, commodity: 1, fd: 1, intervalLength: 3600 };
+
+  /** The exact document from the security report: 2000 × `<value>1e308</value>`. */
+  function poisonDoc(readingCount = 2000): string {
+    let body = '';
+    for (let i = 0; i < readingCount; i++) {
+      body += `<IntervalReading><timePeriod><start>${1704067200 + i * 3600}</start></timePeriod><value>1e308</value></IntervalReading>`;
+    }
+    return `<?xml version="1.0"?><feed><entry><content><IntervalBlock>${body}</IntervalBlock></content></entry></feed>`;
+  }
+
+  /** Every priced point, through the app's own entry point. */
+  function points(xml: string) {
+    return parseGreenButtonFeed(xml).groups.flatMap((g) => g.readings);
+  }
+
+  it('refuses the 210 KB reproducer: nothing is priced, so no total can be Infinity', () => {
+    const xml = poisonDoc();
+    // The document the security report names, to the byte.
+    expect(Buffer.byteLength(xml)).toBe(210_099);
+
+    const { series, notes } = parse(xml);
+    expect(series[0].readings).toHaveLength(0);
+    expect(series[0].dropped.magnitude).toBe(2000);
+    expect(series[0].dropped.negative).toBe(0);
+    expect(priced(xml)).toEqual([]);
+
+    const total = points(xml).reduce((a, r) => a + r.usage_kwh, 0);
+    expect(total).toBe(0);
+    expect(Number.isFinite(total)).toBe(true);
+    expect(notes.find((n) => n.code === 'refused-readings')?.detail).toMatch(/magnitude no interval can hold/);
+  });
+
+  it('refuses a huge finite value exactly like Infinity/NaN — the notation is not a defence', () => {
+    for (const value of ['1e308', NINES, '1e100', '17976931348623157'.padEnd(40, '0')]) {
+      const xml = simpleDoc(energyRt, [{ start: 1_700_000_000, value }]);
+      const { series } = parse(xml);
+      expect(series[0].readings, `value=${value}`).toHaveLength(0);
+      expect(series[0].dropped.magnitude, `value=${value}`).toBe(1);
+      expect(priced(xml), `value=${value}`).toEqual([]);
+      expect(points(xml).every((p) => Number.isFinite(p.usage_kwh)), `value=${value}`).toBe(true);
+    }
+  });
+
+  it('keeps the plausible reading beside hostile ones — the total is the plausible one', () => {
+    const xml = simpleDoc(energyRt, [
+      { start: 1_700_000_000, value: 1500 },
+      { start: 1_700_003_600, value: '1e308' },
+      { start: 1_700_007_200, value: NINES },
+      { start: 1_700_010_800, value: 2000 },
+    ]);
+    expect(priced(xml)).toEqual([1.5, 2]);
+    expect(parse(xml).series[0].dropped.magnitude).toBe(2);
+  });
+
+  it('pins the bound itself: 10^6 kWh in one interval lands, 2×10^6 does not', () => {
+    // 1e9 Wh = 1e6 kWh — the documented ceiling, deliberately ~5 orders of
+    // magnitude above any real reading, still a number a total can hold.
+    expect(priced(simpleDoc(energyRt, [{ start: 1_700_000_000, value: 1_000_000_000 }]))).toEqual([1_000_000]);
+    expect(priced(simpleDoc(energyRt, [{ start: 1_700_000_000, value: 2_000_000_000 }]))).toEqual([]);
+    expect(priced(simpleDoc(energyRt, [{ start: 1_700_000_000, value: 3_000_000 }]))).toEqual([3000]);
+  });
+
+  it('bounds the interval start at ingest: an instant date-fns cannot format is refused', () => {
+    // 999999999999999 (year 33 658) and 1e308 crash `format()` in the UsagePoint
+    // picker with `RangeError: Invalid time value`; 8640000000000001 is past the
+    // Date range entirely. All three are finite, so only a bound catches them.
+    for (const start of [1e308, 999_999_999_999_999, 8_640_000_000_000_001]) {
+      const xml = simpleDoc(energyRt, [{ start, value: 1500 }]);
+      expect(priced(xml), `start=${start}`).toEqual([]);
+      expect(parse(xml).series[0].dropped.unparsable, `start=${start}`).toBe(1);
+    }
+  });
+
+  it('leaves every priced timestamp one that date-fns can actually format', () => {
+    const xml = simpleDoc(energyRt, [
+      { start: 1_700_000_000, value: 1500 },
+      { start: 999_999_999_999_999, value: 1500 },
+    ]);
+    const stamped = points(xml);
+    expect(stamped).toHaveLength(1);
+    for (const p of stamped) expect(() => format(new Date(p.timestamp * 1000), 'yyyy-MM-dd')).not.toThrow();
+  });
+
+  it('never stores a duration no interval can have', () => {
+    // An energy reading does not need the duration, so the reading survives —
+    // but `duration_s` is null, not 1e308 (the pre-fix value).
+    const { series } = parse(simpleDoc(energyRt, [{ start: 1_700_000_000, value: 1500, duration: 1e308 }]));
+    expect(series[0].readings).toHaveLength(1);
+    expect(series[0].readings[0].duration_s).toBeNull();
+    expect(series[0].readings[0].kwh).toBe(1.5);
+  });
+
+  it('refuses a power reading whose stated interval is nonsense', () => {
+    for (const [value, duration] of [
+      [1500, 1e308],
+      [1500, 1e307],
+      ['1e308', 3600],
+      ['1e150', 1e150],
+    ] as [number | string, number][]) {
+      const xml = simpleDoc(powerRt, [{ start: 1_700_000_000, value, duration }]);
+      const { series } = parse(xml);
+      expect(series[0].status).toBe('power-converted');
+      expect(series[0].readings, `value=${value} duration=${duration}`).toHaveLength(0);
+      expect(priced(xml), `value=${value} duration=${duration}`).toEqual([]);
+    }
+    // ...while the same series with a real interval still converts.
+    expect(priced(simpleDoc(powerRt, [{ start: 1_700_000_000, value: 2000, duration: 3600 }]))).toEqual([2]);
+  });
+
+  it('refuses a multiplier that is not a scale rather than advertising the series as billable', () => {
+    for (const mult of [309, 400, -400, 1e308]) {
+      const xml = simpleDoc({ ...energyRt, mult }, [{ start: 1_700_000_000, value: 1500 }]);
+      const { series } = parse(xml);
+      // Refused as a series, exactly like a register or another commodity: the
+      // raw readings are kept unconverted (kwh null) and nothing is priced —
+      // rather than the series claiming to be billable while dropping every
+      // reading, which is what a `10^309` factor used to cause.
+      expect(series[0].status, `mult=${mult}`).toBe('unconvertible');
+      expect(series[0].readings.every((r) => r.kwh === null), `mult=${mult}`).toBe(true);
+      expect(priced(xml), `mult=${mult}`).toEqual([]);
+    }
+    // 10^3 is a scale: the same 1500 Wh reads as 1.5 MWh = 1500 kWh.
+    expect(priced(simpleDoc({ ...energyRt, mult: 3 }, [{ start: 1_700_000_000, value: 1500 }]))).toEqual([1500]);
   });
 });
