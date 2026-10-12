@@ -35,7 +35,7 @@
 
 'use client';
 
-import { fmtDate, fmtMoney, useTranslation } from '@/i18n';
+import { fmtDate, fmtMoney, fmtMoney0, useTranslation } from '@/i18n';
 import { useId, useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
@@ -148,7 +148,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
 
       {/* $0 + the top of the scale, labelled */}
       <text x={PAD.left - 8} y={PAD.top + innerH + 4} textAnchor="end" fontSize={11} fontWeight={900} fill="var(--ink)">
-        $0
+        {fmtMoney0(0)}
       </text>
       <text x={PAD.left - 8} y={PAD.top + 8} textAnchor="end" fontSize={11} fontWeight={900} fill="var(--ink)">
         {money(maxY)}

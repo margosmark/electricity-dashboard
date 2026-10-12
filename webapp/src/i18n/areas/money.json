@@ -606,7 +606,7 @@
     "charge.unknown": "inconnue",
     "charge.headline": "Sur vos {amount} de {noun} cette période, {fixed} sont fixes (vous les paieriez à 0 kWh) et {variable} dépendent du volume.",
     "charge.headlineNoFixed": "Sur vos {amount} de {noun} cette période, rien n’est fixe — vous paieriez 0,00 $ à 0 kWh, et les {variable} entiers dépendent du volume.",
-    "charge.detail": "Ajusté : {prefix}${perKwh}/kWh sur {periods} périodes de facturation{origin} ; pire écart {miss} ({share} % de la ligne de cette période{worst}).",
+    "charge.detail": "Ajusté : {prefix}{perKwh} $/kWh sur {periods} périodes de facturation{origin} ; pire écart {miss} ({share} % de la ligne de cette période{worst}).",
     "charge.throughOrigin": " (la ligne n’a pas de partie fixe, l’ajustement passe donc par zéro)",
     "charge.fitUnstable": "Ajusté : {flat} fixes + {perKwh} $/kWh sur {periods} périodes de facturation, mais le pire écart est de {miss} — {share} % des {amount} de {noun} de cette période, au-delà du seuil de {bar} % au-delà duquel nous refusons de ventiler (la facture la plus mal ajustée est {worst}). La ligne est réelle et importante — elle n’est simplement pas une droite de consommation, si bien que {blended} ¢/kWh est le seul tarif qui la décrit honnêtement.",
     "charge.cannotSplitDelivery": "La distribution ne peut pas être ventilée entre partie fixe et partie volumétrique à partir de ces données.",

@@ -95,7 +95,7 @@ export const COST_SLICE_ORDER: CostSliceKey[] = [
 /* Wave U — every user-visible reason/note in this file comes from the
  * locale catalog at call time; the bucket keys and classifier regexes stay
  * canonical English (they are data). */
-import { fmtMoney, fmtNumber, planLabel, t } from '@/i18n';
+import { fmtMoney, fmtNumber, fmtPercent, planLabel, t } from '@/i18n';
 /** Wave U — the catalog key the display layer translates instead. */
 export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
 
@@ -848,7 +848,7 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
     kwh > 0
       ? t('wf.perKwhSuffix', {
           cents: fmtNumber((amount / kwh) * 100, 2),
-          kwh: kwh.toFixed(0),
+          kwh: fmtNumber(kwh),
         })
       : '';
 
@@ -1115,9 +1115,9 @@ export function planOverlay(
     chargesSource: charges.xmlSource ? 'bill' : 'typed',
     rebateRate,
     assumptions: [
-      `Modelled over ${coveredPeriods.length} fully-covered billing period${coveredPeriods.length === 1 ? '' : 's'} (${days.toFixed(0)} days, ${totalKwh.toFixed(0)} kWh of your own readings).`,
+      `Modelled over ${coveredPeriods.length} fully-covered billing period${coveredPeriods.length === 1 ? '' : 's'} (${fmtNumber(days)} days, ${fmtNumber(totalKwh)} kWh of your own readings).`,
       `The lines plot the PER-PERIOD average of those totals (total ÷ ${coveredPeriods.length}), because the bars are per period; the totals are in the key underneath.`,
-      `Delivery, regulatory and HST priced at your bill's own rates${charges.xmlSource ? ` (${charges.xmlSource.label})` : ' (the ones in Settings)'}; the observed rebate (${((rebateRate ?? 0) * 100).toFixed(1)}% of the subtotal) is applied the same way the bill applies it.`,
+      `Delivery, regulatory and HST priced at your bill's own rates${charges.xmlSource ? ` (${charges.xmlSource.label})` : ' (the ones in Settings)'}; the observed rebate (${fmtPercent((rebateRate ?? 0) * 100, 1)} of the subtotal) is applied the same way the bill applies it.`,
       'Delivery and regulatory are assumed to follow the same $/kWh + fixed model under every plan — that is a modelling assumption, not the utility’s tariff.',
     ],
   };

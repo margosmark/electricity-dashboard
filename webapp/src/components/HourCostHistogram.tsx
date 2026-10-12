@@ -118,7 +118,7 @@ export default function HourCostHistogram({
                         <div className="text-[10px] font-bold text-ink-3">
                           {t('hourCost.tooltipDetail', {
                             cost: money(b.cost),
-                            kwh: b.kwh.toFixed(1),
+                            kwh: fmtNumber(b.kwh, 1),
                             window: periodLabel(b.dominant),
                           })}
                         </div>

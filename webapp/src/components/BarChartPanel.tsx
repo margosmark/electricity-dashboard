@@ -21,7 +21,7 @@ import {
 import { type ChartDataItem, getBarColor } from '@/lib/energy';
 import { type ZoomLevel } from '@/hooks/useDashboard';
 import { type ChartSegment } from '@/lib/season';
-import { useTranslation } from '@/i18n';
+import { fmtKwh, fmtMoney, useTranslation } from '@/i18n';
 
 export type BarChartPanelProps = {
   data: ChartDataItem[];
@@ -69,8 +69,8 @@ export default function BarChartPanel({
           itemStyle={{ color: 'var(--ink)', fontWeight: 900, fontSize: '18px' }}
           labelStyle={{ fontWeight: 900, color: 'var(--ink)', marginBottom: '8px', textTransform: 'uppercase' }}
           formatter={(v, name) => {
-            if (name === 'usage') return [`${Number(v).toFixed(2)} kWh`, 'Power'];
-            return [`$${Number(v).toFixed(2)}`, String(name).replace('cost', '') + ' Cost'];
+            if (name === 'usage') return [fmtKwh(Number(v), 2), 'Power'];
+            return [fmtMoney(Number(v)), String(name).replace('cost', '') + ' Cost'];
           }}
         />
         <Bar

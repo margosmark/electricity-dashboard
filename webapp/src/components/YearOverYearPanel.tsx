@@ -20,7 +20,7 @@ import {
 import { TrendingUp } from 'lucide-react';
 import type { ProcessedPoint } from '@/lib/energy';
 import { buildYearOverYear, monthLabelsFor } from '@/lib/trend';
-import { fmtKwh, useTranslation } from '@/i18n';
+import { fmtKwh, fmtPercent, useTranslation } from '@/i18n';
 
 /**
  * One token per year (globals.css `--data-year-1..4`). LIGHT is byte-identical
@@ -38,7 +38,7 @@ const YEAR_COLORS = [
 ];
 
 const fmtDelta = (pct: number | null): string =>
-  pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`;
+  pct === null ? '—' : `${pct > 0 ? '+' : ''}${fmtPercent(pct, 0)}`;
 
 export default function YearOverYearPanel({
   processedData,

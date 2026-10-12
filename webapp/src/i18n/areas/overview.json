@@ -153,7 +153,9 @@
     "overview.centsPerKwh": "¢/kWh ·",
     "efficiency.deliveryFixed": "delivery & fixed",
     "efficiency.perPeriod": "¢/period",
-    "efficiency.deliveryNotSplit": "delivery & fixed: not split"
+    "efficiency.deliveryNotSplit": "delivery & fixed: not split",
+    "overview.perYearUnit": "/yr",
+    "overview.perDayUnit": "/day"
   },
   "fr": {
     "legal.commodityShort": "charges d’électricité (variables) seulement — ni distribution, ni charges réglementaires, ni TVH",
@@ -268,7 +270,7 @@
     "trueBill.ph.example4": "p. ex. 0,0125",
     "trueBill.ph.example2": "p. ex. 15,00",
     "trueBill.xmlPrefilled": "Prérempli d’après la facture {label} de votre XML ({delivery} de distribution · {regulatory} réglementaire · {hst} de TVH). Saisissez n’importe quel champ pour le modifier — votre version persiste, même après la prochaine synchronisation.",
-    "trueBill.xmlFit": " La distribution correspond à {flat} fixes + {perKwh}/kWh sur {periods} périodes (±{residual}).",
+    "trueBill.xmlFit": " La distribution correspond à {flat} fixes + {perKwh} $/kWh sur {periods} périodes (±{residual}).",
     "trueBill.xmlEdited": "Provenant de la facture {label} de votre XML — vous les avez modifiés. Effacez un champ pour retirer cette charge de l’estimation.",
     "trueBill.localInputs": "Saisies locales — non dérivées des tarifs CEO d’/api/rates.",
     "trueBill.title": "Estimation de la vraie facture",
@@ -309,6 +311,8 @@
     "overview.centsPerKwh": "¢/kWh ·",
     "efficiency.deliveryFixed": "livraison et charges fixes",
     "efficiency.perPeriod": "¢/période",
-    "efficiency.deliveryNotSplit": "livraison et charges fixes : non ventilées"
+    "efficiency.deliveryNotSplit": "livraison et charges fixes : non ventilées",
+    "overview.perYearUnit": "/an",
+    "overview.perDayUnit": "/jour"
   }
 }

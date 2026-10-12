@@ -36,7 +36,7 @@ import {
 import { useExtraCharges } from '@/hooks/useDashboard';
 // Wave U — labels, captions and the vs-actual receipt translate with the
 // toggle; every money figure goes through the locale-aware formatters.
-import { fmtKwh, fmtMoney, fmtPercent, planLabel, useTranslation } from '@/i18n';
+import { fmtKwh, fmtMoney, fmtNumber, fmtPercent, planLabel, useTranslation } from '@/i18n';
 
 const FIELD_CLASS =
   'w-full p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl ' +
@@ -238,7 +238,7 @@ export function TrueBillEstimate({
                   {derived?.fit.mode === 'split' && derived.fit.flat !== null
                     ? t('trueBill.xmlFit', {
                         flat: fmtMoney(derived.fit.flat),
-                        perKwh: fmtMoney(derived.fit.perKwh, 4),
+                        perKwh: fmtNumber(derived.fit.perKwh, 4),
                         periods: derived.fit.periods,
                         residual: fmtMoney(derived.fit.maxResidual ?? 0),
                       })

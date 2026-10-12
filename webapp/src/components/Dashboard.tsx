@@ -58,7 +58,7 @@ import { useSelectedPlan } from '@/hooks/useSelectedPlan';
 // Wave U — locale, translation and locale-aware formatters. Every text-
 // producing memo below lists `t` in its deps so a language switch recomputes.
 import {
-  planLabel, FR_PLAN_SHORT, fmtMoney, fmtMoney0, useTranslation,
+  planLabel, FR_PLAN_SHORT, fmtMoney, fmtMoney0, fmtNumber, useTranslation,
 } from '@/i18n';
 import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
@@ -741,7 +741,7 @@ export default function Dashboard() {
           <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
             <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
-            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: floor.kwhPerDay.toFixed(1) })}</div>
+            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</div>
           </button>
           )}
         </div>
@@ -849,8 +849,8 @@ export default function Dashboard() {
                   <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">{t('floor.measureTitle')}</h4>
                   <ul className="list-disc ml-4 md:ml-5 space-y-1 md:space-y-2 text-[10px] md:text-sm">
                     <li>{t('floor.measureStep1a')}<strong>{t('floor.measureStep1b')}</strong>{t('floor.measureStep1c')}</li>
-                    <li>{t('floor.measureStep2a')}<span className="font-black text-info">{t('unit.watts', { watts: floor.watts.toFixed(0) })}</span>{t('floor.measureStep2b')}<span className="font-black text-info">{t('unit.kwhPerDay', { kwh: floor.kwhPerDay.toFixed(1) })}</span>.</li>
-                    <li>{t('floor.measureStep3a')}<span className="font-black text-info">{t('unit.centsPerKwh', { cents: floor.blendedRateCents.toFixed(1) })}</span>{t('floor.measureStep3b')}<span className="font-black text-info">{t('floor.yearlyCost', { cost: fmtMoney0(floor.annualCost) })}</span>{t('floor.measureStep3c')}</li>
+                    <li>{t('floor.measureStep2a')}<span className="font-black text-info">{t('unit.watts', { watts: fmtNumber(floor.watts) })}</span>{t('floor.measureStep2b')}<span className="font-black text-info">{t('unit.kwhPerDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</span>.</li>
+                    <li>{t('floor.measureStep3a')}<span className="font-black text-info">{t('unit.centsPerKwh', { cents: fmtNumber(floor.blendedRateCents, 1) })}</span>{t('floor.measureStep3b')}<span className="font-black text-info">{t('floor.yearlyCost', { cost: fmtMoney0(floor.annualCost) })}</span>{t('floor.measureStep3c')}</li>
                     <li>{floor.detail}</li>
                   </ul>
                 </div>

@@ -22,7 +22,7 @@ import { useMemo } from 'react';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import { buildHindsight, type HindsightMove, type HindsightPeriod } from '@/lib/hindsight';
 import type { ProcessedPoint, UsageSummary } from '@/lib/energy';
-import { fmtKwh, fmtMoney, planLabel, useTranslation } from '@/i18n';
+import { fmtKwh, fmtMoney, fmtNumber, planLabel, useTranslation } from '@/i18n';
 
 type Props = {
   /** Bill periods parsed out of the imported file (Wave L parser). */
@@ -60,8 +60,8 @@ function MoveList({ period }: { period: HindsightPeriod }) {
             </div>
             <div className="mt-0.5 grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-0.5 font-bold text-ink-3">
               <span>{fmtKwh(move.kwh)}</span>
-              <span>{t('hindsight.movePaid', { cents: move.actualRateCents.toFixed(1) })}</span>
-              <span>{t('hindsight.moveWouldPay', { cents: move.destRateCents.toFixed(1) })}</span>
+              <span>{t('hindsight.movePaid', { cents: fmtNumber(move.actualRateCents, 1) })}</span>
+              <span>{t('hindsight.moveWouldPay', { cents: fmtNumber(move.destRateCents, 1) })}</span>
               <span className="font-black text-good">{t('hindsight.moveSaved', { amount: money(move.saving) })}</span>
             </div>
             <div className="text-[9px] md:text-[10px] font-bold text-ink-4">
@@ -402,7 +402,7 @@ export function HindsightPanel({ summaries, allData }: Props) {
             periods: periods.length,
             plan: report.planPeriods,
             behaviour: report.behaviourPeriods,
-            kwh: fmtKwh(report.shiftableKwh),
+            kwh: fmtNumber(report.shiftableKwh, 1),
           })}
         </p>
       </div>
