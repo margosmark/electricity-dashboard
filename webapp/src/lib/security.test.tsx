@@ -300,6 +300,10 @@ describe('service worker cache-poisoning surface', () => {
       'https://app.example/api/session',
       'https://app.example/api/rates/extra',
       'https://app.example/api/rates/../../user',
+      // The build stamp is the one endpoint whose whole point is naming the
+      // build SERVING the request: a cached answer names a build that is not
+      // running (t_613fc78b). It must stay out of the runtime cache.
+      'https://app.example/api/version',
     ]) {
       const event = dispatch(req(url));
       expect(event.respondWith, `${url} must pass through untouched`).not.toHaveBeenCalled();
