@@ -12,26 +12,25 @@
  *
  * HOW THE VALUE IS SET, exactly (measured on Next 16.3.8, 2026-10-12):
  *   docker-compose.yml `build.args.GIT_SHA` ← `${GIT_SHA}` ← the deploy
- *   runbook's `git rev-parse HEAD` → the Dockerfile's `ARG GIT_SHA` +
- *   `ENV NEXT_PUBLIC_BUILD_SHA` in BOTH stages → this constant.
+ *   runbook's `git rev-parse HEAD` → the Dockerfile's `ARG GIT_SHA` →
+ *   `scripts/bump-build-info.mjs` (the `prebuild` npm lifecycle, i.e. the same
+ *   mechanism as the service-worker version) COMPILES it into
+ *   src/lib/buildInfo.generated.ts → this re-export.
  *
- * Two readers, two mechanisms, one value:
- *   - CLIENT code: Next inlines `NEXT_PUBLIC_*` into the browser chunks at
- *     build time, so a bundle served to a browser cannot be relabelled by the
- *     container it came from.
- *   - SERVER code (this route): the emitted chunk keeps
- *     `process.env.NEXT_PUBLIC_BUILD_SHA||"unknown"` and reads it per request,
- *     so the runner stage sets it too (without that ENV the container answers
- *     'unknown' — the builder's ENV does not cross stages).
+ * It is deliberately NOT `process.env.NEXT_PUBLIC_BUILD_SHA` any more, and that
+ * distinction is the whole point of the generated file. MEASURED (Next
+ * 16.3.8/Turbopack): the emitted SERVER route chunk kept
+ * `process.env.NEXT_PUBLIC_BUILD_SHA||"unknown"` verbatim — a `NEXT_PUBLIC_*`
+ * value is inlined into CLIENT chunks but READ FROM THE ENVIRONMENT in server
+ * code — so `GET /api/version` answered whatever the container's environment
+ * said at request time, and `docker run -e NEXT_PUBLIC_BUILD_SHA=deadbeef…`
+ * renamed the process without touching a byte of code. A compiled constant
+ * cannot be relabelled by anything at runtime: the answer is a literal in the
+ * bundle.
  *
- * The fallback is the literal string `'unknown'`, deliberately not a version
- * number and not a checked-in SHA: a local `npm run build` (and `npm run test`)
- * carries no commit, and a stamp that guesses is worse than one that admits it
- * does not know.
- *
- * This module is deliberately client-safe — a bare constant, no node builtins —
- * so a future "built from <sha>" line in the UI can import it without dragging
+ * This module stays client-safe — a bare constant, no node builtins — so a
+ * future "built from <sha>" line in the UI can import it without dragging
  * `node:fs` into the browser bundle. The server-only half (Next's build id,
  * read off disk) lives in the route.
  */
-export const BUILD_SHA: string = process.env.NEXT_PUBLIC_BUILD_SHA || 'unknown';
+export { BUILD_SHA } from './buildInfo.generated';

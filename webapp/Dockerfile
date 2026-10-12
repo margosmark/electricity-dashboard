@@ -12,14 +12,15 @@ COPY . .
 # The commit this image is built from. `GIT_SHA` arrives from
 # docker-compose.yml, which reads `${GIT_SHA}` out of the environment of the
 # shell running the deploy runbook (`~/bin/deploy-energy-dashboard.sh` exports
-# `git rev-parse HEAD`). Empty when nothing supplies it: a local build reports
-# 'unknown', never a stale or invented SHA.
+# `git rev-parse HEAD`). Empty/unset when nothing supplies it: `npm run build`
+# then stamps 'unknown', never a stale or invented SHA.
 #
-# IN THE BUILDER this is what a `NEXT_PUBLIC_*` reference in CLIENT code is
-# inlined from (Next substitutes it into the browser chunks at build time).
-# It does NOT reach the route handler — see the note in stage 2.
+# It must be in the ENVIRONMENT (not only as an ARG) because the stamp is
+# COMPILED by `scripts/bump-build-info.mjs`, which `npm run build` runs from the
+# `prebuild` lifecycle and which reads `process.env.GIT_SHA` — the same
+# mechanism as the service-worker version in scripts/bump-sw-version.mjs.
 ARG GIT_SHA=""
-ENV NEXT_PUBLIC_BUILD_SHA=$GIT_SHA
+ENV GIT_SHA=$GIT_SHA
 RUN npm run build
 
 # Stage 2: Run the application
@@ -32,18 +33,20 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# The SAME stamp, at runtime — and it is this one that `GET /api/version`
-# answers.
+# NOTHING IS DECLARED HERE FOR THE BUILD STAMP, on purpose.
 #
-# MEASURED, not assumed (Next 16.3.8 / Turbopack, 2026-10-12): the emitted
-# route-handler chunk keeps `process.env.NEXT_PUBLIC_BUILD_SHA||"unknown"`
-# verbatim, i.e. a NEXT_PUBLIC_* value is inlined into CLIENT bundles but read
-# from the environment in SERVER code. A builder-stage ENV alone therefore
-# leaves the container answering 'unknown'. This ENV is what makes the answer
-# the build arg, and because it is part of the image config it moves only when
-# the image is rebuilt — an unchanged container keeps naming its own commit.
-ARG GIT_SHA=""
-ENV NEXT_PUBLIC_BUILD_SHA=$GIT_SHA
+# `GET /api/version` answers a constant COMPILED into the bundle by the builder
+# above (src/lib/buildInfo.generated.ts, which buildInfo.ts re-exports), not a
+# value read from this container's environment. That is the property being
+# bought: `docker run -e NEXT_PUBLIC_BUILD_SHA=deadbeef… <image>` — or any other
+# runtime environment — cannot rename the process, because the answer is a
+# literal in the emitted chunk.
+#
+# The previous mechanism did need an ARG/ENV here: on Next 16.3.8/Turbopack a
+# `NEXT_PUBLIC_*` value is inlined into CLIENT chunks but is read from the
+# environment in SERVER code, so the route handler answered whatever the
+# runtime environment said. Both stages' `ENV NEXT_PUBLIC_BUILD_SHA` are gone
+# with it.
 
 # Automatically leverage output: 'standalone' feature
 COPY --from=builder /app/public ./public

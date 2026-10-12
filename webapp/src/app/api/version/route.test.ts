@@ -1,15 +1,22 @@
 // @vitest-environment node
 /**
  * `GET /api/version` — the build stamp a deploy verification reads instead of
- * hashing built bytes (t_5b968b78, t_94b28843).
+ * hashing built bytes (t_5b968b78, t_94b28843, t_613fc78b).
  *
  * WHAT IS PINNED HERE, and why each one is a real failure mode:
  *
- *  - the INLINED build arg is what comes back (`NEXT_PUBLIC_BUILD_SHA` →
- *    `sha`), so the value is the build's own input and not a runtime env read;
- *  - with NO stamp the answer is `'unknown'` — never a plausible-looking commit.
- *    That is the local-build default and the one state where a wrong value
- *    would be most believable;
+ *  - the answer is the COMPILED constant (`BUILD_SHA`, baked into the bundle by
+ *    scripts/bump-build-info.mjs), so it is the build's own input and NOT a
+ *    runtime read;
+ *  - **and the environment cannot change it.** With `NEXT_PUBLIC_BUILD_SHA`
+ *    (the previous mechanism's variable) and `GIT_SHA` stubbed to a tempting
+ *    fake SHA, the response is byte-identical. This is the property the
+ *    compiled stamp exists for; the live half — a real container started with
+ *    `-e NEXT_PUBLIC_BUILD_SHA=deadbeef…` still answering its built SHA — is an
+ *    HTTP probe against a running image, not a jsdom assertion;
+ *  - the committed constant is either `'unknown'` or a FULL 40-hex commit:
+ *    never a truncated, mixed-case or invented value. `'unknown'` is the
+ *    fresh-clone/local-build state and is deliberately not a plausible SHA;
  *  - `buildId` comes off the build's own `_next/BUILD_ID` (real file, real
  *    read, in a temp cwd) and degrades to `'unknown'` when it is missing;
  *  - the response is EXACTLY `{sha, buildId}` and is not cacheable.
@@ -22,14 +29,15 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { BUILD_SHA } from '@/lib/buildInfo';
 
-const FAKE_SHA = 'test-only-sha-not-a-commit';
+const FAKE_SHA = 'deadbeefcafe0123456789deadbeefcafe012345';
 const FAKE_BUILD_ID = 'TESTBUILDID0000000000';
 
 /** Temp dirs created per test, removed afterwards. */
 const temps: string[] = [];
 
-/** A fresh module graph, so `BUILD_SHA` re-reads the environment it was stubbed with. */
+/** A fresh module graph for the route under test. */
 async function loadRoute() {
   vi.resetModules();
   return import('./route');
@@ -54,34 +62,43 @@ afterEach(() => {
 });
 
 describe('GET /api/version', () => {
-  it("answers the stamp the build was given — and nothing else", async () => {
-    vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', FAKE_SHA);
+  it('answers the stamp compiled into the bundle — and nothing else', async () => {
     const { GET } = await loadRoute();
 
     const res = await GET();
     const body = await res.json();
 
-    expect(body.sha).toBe(FAKE_SHA);
+    expect(body.sha).toBe(BUILD_SHA);
     expect(Object.keys(body).sort()).toEqual(['buildId', 'sha']);
     expect(res.headers.get('cache-control')).toBe('no-store');
     expect(String(res.headers.get('cache-control'))).not.toMatch(/immutable/);
   });
 
-  it("answers 'unknown' — never a stale or invented SHA — with no stamp", async () => {
-    // Both shapes of "no stamp": the variable absent (a bare `npm run test` /
-    // `npm run build`) and the variable set to empty (what compose passes when
-    // GIT_SHA is unset, `${GIT_SHA:-}`).
-    for (const unset of [undefined, '']) {
-      if (unset === undefined) delete process.env.NEXT_PUBLIC_BUILD_SHA;
-      else vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', unset);
+  it('cannot be relabelled by the environment it runs in', async () => {
+    // Both the variable the previous mechanism read and the one the build
+    // actually uses are stubbed to a fake SHA. The modules are re-imported
+    // AFTER the stub, so a module that still read `process.env` at import time
+    // would answer FAKE_SHA here — this is the assertion that discriminates
+    // the compiled constant from the environment read it replaced.
+    vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', FAKE_SHA);
+    vi.stubEnv('GIT_SHA', FAKE_SHA);
+    vi.stubEnv('BUILD_SHA', FAKE_SHA);
 
-      const { GET } = await loadRoute();
-      const body = await (await GET()).json();
+    vi.resetModules();
+    const fresh = (await import('@/lib/buildInfo')).BUILD_SHA;
+    const { GET } = await loadRoute();
+    const body = await (await GET()).json();
 
-      expect(body.sha, `NEXT_PUBLIC_BUILD_SHA=${String(unset)}`).toBe('unknown');
-      // A 7-40 char hex string is what a leaked/checked-in SHA would look like.
-      expect(body.sha).not.toMatch(/^[0-9a-f]{7,40}$/);
-    }
+    expect(fresh).not.toBe(FAKE_SHA);
+    expect(body.sha).toBe(fresh);
+    expect(body.sha).not.toBe(FAKE_SHA);
+  });
+
+  it("the shipped constant is 'unknown' or a full commit — never a partial or invented SHA", () => {
+    expect(BUILD_SHA).toMatch(/^(unknown|[0-9a-f]{40})$/);
+    // A 7-40 char hex string that is not a full commit is what a truncated or
+    // hand-edited stamp looks like.
+    if (BUILD_SHA !== 'unknown') expect(BUILD_SHA).not.toMatch(/^[0-9a-f]{7,39}$/);
   });
 
   it("names the build's own BUILD_ID, read from _next/BUILD_ID", async () => {
@@ -103,12 +120,11 @@ describe('GET /api/version', () => {
   });
 
   it('reports the two fields independently: sha from the build, buildId from disk', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', FAKE_SHA);
     vi.spyOn(process, 'cwd').mockReturnValue(tempCwd(true));
     const { GET } = await loadRoute();
 
     const body = await (await GET()).json();
 
-    expect(body).toEqual({ sha: FAKE_SHA, buildId: FAKE_BUILD_ID });
+    expect(body).toEqual({ sha: BUILD_SHA, buildId: FAKE_BUILD_ID });
   });
 });

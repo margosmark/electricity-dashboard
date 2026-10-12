@@ -41,7 +41,9 @@ describe('sw.js version declaration', () => {
 
   it('is wired into the npm build (prebuild lifecycle)', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(WEBAPP_ROOT, 'package.json'), 'utf8'));
-    expect(pkg.scripts.prebuild).toBe('node scripts/bump-sw-version.mjs');
+    // The lifecycle also chains the build-stamp generator (t_9ce26184) — what
+    // matters here is that a build still bumps the worker version first.
+    expect(pkg.scripts.prebuild).toContain('node scripts/bump-sw-version.mjs');
   });
 
   it('keeps the sw.js HTTP smoke check satisfiable', () => {
