@@ -284,7 +284,11 @@ describe('Wave S 1 — the EFFICIENCY card', () => {
       'winter',
     ]);
     // …labelled, because "summer bills are cheaper per kWh" has to be said.
-    expect(screen.getByText('Winter')).toBeInTheDocument();
+    // D3c (t_fcbba376) swapped the old `bars >= 3` gate for a FIT test —
+    // `band width >= 4.3 × labelFs` — so the 2-bar Nov–Dec winter segment
+    // earns its label too (110 units wide at 12 bills, the word is ~41).
+    // Every band that passed before still passes.
+    expect(screen.getAllByText('Winter')).toHaveLength(2);
     expect(screen.getByText('Summer')).toBeInTheDocument();
   });
 

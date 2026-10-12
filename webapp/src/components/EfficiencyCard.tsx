@@ -40,7 +40,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Gauge } from 'lucide-react';
 import { fmtCents, fmtDateLong, useTranslation } from '@/i18n';
 
@@ -65,7 +65,49 @@ export type EfficiencyCardProps = {
 
 const W = 720;
 const H = 210;
-const PAD = { top: 22, right: 16, bottom: 30, left: 46 };
+
+/**
+ * D3a (t_fcbba376) — one width-compensated label size for the whole chart.
+ *
+ * The SVG is a fixed 720-unit viewBox scaled to its container, so a literal
+ * `fontSize={10}` renders at `10 × (boxW / 720)` CSS px: 4.1px in the 298px
+ * chart at a 390px viewport, 4.65px on the 334.7px chart of Mark's 427px
+ * device. The type, not the drawing, is what fails — every label is sub-5px.
+ *
+ * Measuring the container and scaling the USER units keeps the rendered size
+ * at ~9 CSS px whatever the width. The floor is 10: at ≥768px boxW ≥ 648 so
+ * `9 × 720 / boxW ≤ 10`, i.e. the desktop resolves to exactly today's
+ * literals (10) and nothing about the ≥768px render changes.
+ *
+ * A container that has not been measured yet — jsdom, a `display: none`
+ * panel, the first paint before the ResizeObserver fires — reports 0, so a
+ * non-positive width falls back to the viewBox width (i.e. scale 1.0, the
+ * old literal) rather than dividing by zero.
+ */
+export function chartLabelFs(boxW: number): number {
+  const width = boxW > 0 ? boxW : W;
+  return Math.max(10, Math.round((9 * W) / width));
+}
+
+/**
+ * D3 correction (soft-dev's verification on t_fcbba376) — PAD rides with
+ * `labelFs`, otherwise the compensated type outgrows the frame it is drawn
+ * in: at fs22 the band label's cap clears the top of its own band rect, the
+ * y-axis max label clips off the SVG's left edge, and the rate tick's
+ * descender lands on the axis line.
+ *
+ * At `labelFs === 10` this is byte-identical to the old hard-coded
+ * `{ top: 22, right: 16, bottom: 30, left: 46 }` — the acceptance bar 3c
+ * already set for "desktop does not change".
+ */
+export function chartPad(labelFs: number): { top: number; right: number; bottom: number; left: number } {
+  return {
+    top: Math.max(22, labelFs + 2),
+    right: 16,
+    bottom: 30,
+    left: Math.max(46, 2 * labelFs + 6),
+  };
+}
 
 const SEASON_FILL: Record<Season, string> = {
   winter: 'var(--season-winter)',
@@ -104,6 +146,28 @@ function Chart({
 }) {
   // Wave U — season words and ¢ axis labels render in the active language.
   const { t } = useTranslation();
+
+  // D3a — measure the rendered chart so `labelFs` can pay back the viewBox
+  // scale. The initial state is the viewBox width itself (scale 1.0 →
+  // labelFs 10), so the very first paint is the old literal render and a
+  // later observation only ever tightens it toward ~9 CSS px.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [boxW, setBoxW] = useState(W);
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    // jsdom has no ResizeObserver (and no layout to observe): boxW stays at
+    // W, which is the pre-D3 desktop render, so unit tests keep pinning it.
+    if (!svg || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => setBoxW(entry.contentRect.width));
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+
+  const labelFs = chartLabelFs(boxW);
+  // D3 correction 2 — PAD rides with the label size (see chartPad). It keeps
+  // the module-level name so the geometry below reads unchanged.
+  const PAD = useMemo(() => chartPad(labelFs), [labelFs]);
+
   const geometry = useMemo(() => {
     const innerW = W - PAD.left - PAD.right;
     const innerH = H - PAD.top - PAD.bottom;
@@ -177,7 +241,7 @@ function Chart({
       regression,
       polyline: points.map((p, i) => `${x(i)},${y(p.cents)}`).join(' '),
     };
-  }, [points, trend]);
+  }, [points, trend, PAD]);
 
   const { innerH, lo, hi, x, y, bands, ticks, regression, polyline } = geometry;
   const last = points[points.length - 1];
@@ -185,6 +249,7 @@ function Chart({
 
   return (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       className="w-full"
       aria-hidden="true"
@@ -206,12 +271,18 @@ function Chart({
             data-testid="efficiency-season-band"
             data-season={b.season}
           />
-          {b.bars >= 3 && (
+          {/* D3c — a WIDTH test, not a bar count. At `labelFs` the word is
+              ~4.1 × labelFs user units wide, so a band narrower than
+              4.3 × labelFs pushes its label out of the band and into the
+              y-axis gutter. At desktop `labelFs` is 10 → 43 units, and a
+              3-bar band is 82 units at 24 bills: everything that passed the
+              old `bars >= 3` still passes. */}
+          {b.x2 - b.x1 >= 4.3 * labelFs && (
             <text
               x={(b.x1 + b.x2) / 2}
-              y={PAD.top + 12}
+              y={PAD.top + Math.round(labelFs * 0.85)}
               textAnchor="middle"
-              fontSize={10}
+              fontSize={labelFs}
               fontWeight={900}
               fill="var(--ink-2)"
             >
@@ -238,14 +309,14 @@ function Chart({
         stroke="var(--ink)"
         strokeWidth={2}
       />
-      <text x={PAD.left - 6} y={PAD.top + 8} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
+      <text x={PAD.left - 6} y={PAD.top + 8} textAnchor="end" fontSize={labelFs} fontWeight={900} fill="var(--ink)">
         {fmtCents(hi, 0)}
       </text>
       <text
         x={PAD.left - 6}
         y={PAD.top + innerH + 4}
         textAnchor="end"
-        fontSize={10}
+        fontSize={labelFs}
         fontWeight={900}
         fill="var(--ink)"
       >
@@ -262,18 +333,24 @@ function Chart({
             y1={PAD.top}
             x2={tick.x}
             y2={PAD.top + innerH}
-            stroke="#b91c1c"
+            stroke="var(--bad)"
             strokeWidth={2}
             strokeDasharray="5 4"
             data-testid="efficiency-rate-tick"
             data-date={tick.date}
           />
+          {/* D3b — the rate word used to share the band labels' baseline,
+              which is the crowding Mark saw at 390px. Its own row at the
+              bottom of the plot is ~140 units below the band row, centred on
+              the tick it names, with its descender clearing the axis line
+              (`Math.round(labelFs * 0.45)`) at every label size. */}
           <text
-            x={tick.x + 3}
-            y={PAD.top + 12}
-            fontSize={9}
+            x={tick.x}
+            y={PAD.top + innerH - Math.round(labelFs * 0.45)}
+            textAnchor="middle"
+            fontSize={labelFs}
             fontWeight={900}
-            fill="#b91c1c"
+            fill="var(--bad)"
           >
             {t('efficiency.ratesTick')}
           </text>
@@ -285,7 +362,7 @@ function Chart({
         <polyline
           points={regression.join(' ')}
           fill="none"
-          stroke="#2563eb"
+          stroke="var(--info)"
           strokeWidth={3}
           strokeDasharray="7 5"
           data-testid="efficiency-regression-line"
@@ -332,10 +409,10 @@ function Chart({
       )}
 
       {/* First and last period only — 24 monthly labels would be noise. */}
-      <text x={PAD.left} y={H - 10} fontSize={10} fontWeight={900} fill="var(--ink)">
+      <text x={PAD.left} y={H - 10} fontSize={labelFs} fontWeight={900} fill="var(--ink)">
         {first.label}
       </text>
-      <text x={W - PAD.right} y={H - 10} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink)">
+      <text x={W - PAD.right} y={H - 10} textAnchor="end" fontSize={labelFs} fontWeight={900} fill="var(--ink)">
         {last.label}
       </text>
     </svg>
