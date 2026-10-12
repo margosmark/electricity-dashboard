@@ -148,7 +148,12 @@ function windowStats(
     n += 1;
     kwh += d.kwh;
     offPeakKwh += d.offPeakKwh;
-    inWindow.push(...d.rows);
+    // Append ONE at a time. `inWindow.push(...d.rows)` passes the day's rows as
+    // CALL ARGUMENTS, and a day's reading count comes from the uploaded export
+    // (one reading per IntervalReading entry), so a six-figure day is reachable
+    // and V8 throws `RangeError: Maximum call stack size exceeded` past the
+    // argument limit (~123 000 on node v22.23.3). A loop is bounded by memory.
+    for (const r of d.rows) inWindow.push(r);
   }
   // Priced as a window: on Tiered the per-reading cost is tier 1 only, and a
   // week over the (day-prorated) threshold is not a tier-1 week.

@@ -2472,7 +2472,16 @@ function fitChargeCore(amounts: number[], kwh: number[]): ChargeFitOutcome {
   }
   const meanX = kwh.reduce((a, b) => a + b, 0) / n;
   const meanY = amounts.reduce((a, b) => a + b, 0) / n;
-  const spread = Math.max(...kwh) - Math.min(...kwh);
+  // Min/max as a LOOP: `Math.max(...kwh)` passes one ARGUMENT per billing
+  // period, and the loaded file decides how many periods there are, so a
+  // six-figure bill set threw `RangeError: Maximum call stack size exceeded`.
+  let kwhHi = -Infinity;
+  let kwhLo = Infinity;
+  for (const v of kwh) {
+    if (v > kwhHi) kwhHi = v;
+    if (v < kwhLo) kwhLo = v;
+  }
+  const spread = kwhHi - kwhLo;
   if (meanX <= 0 || spread < meanX * 0.03) {
     return { ok: false, why: 'usage barely moves between periods, so a slope would be noise' };
   }

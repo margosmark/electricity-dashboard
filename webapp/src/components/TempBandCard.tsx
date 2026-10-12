@@ -90,8 +90,10 @@ function Chart({ report }: { report: TempBandReport }) {
   const geo = useMemo(() => {
     const innerW = W - PAD.left - PAD.right;
     const step = innerW / TEMP_BANDS.length;
+    // eslint-disable-next-line no-restricted-syntax -- report.rows is one row per TEMP_BANDS bin: 7 by construction
     const peak = Math.max(...report.rows.map((r) => r.meanKwhPerHour), 0.001);
     const top = Math.ceil(peak * 10) / 10 + 0.2;
+    // eslint-disable-next-line no-restricted-syntax -- report.rows is one row per TEMP_BANDS bin: 7 by construction
     const maxShare = Math.max(...report.rows.map((r) => r.shareOfKwh), 0.0001);
     const x = (i: number) => PAD.left + step * i + step / 2;
     const barW = Math.min(64, step * 0.62);

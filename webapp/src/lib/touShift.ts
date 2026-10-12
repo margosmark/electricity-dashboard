@@ -570,7 +570,11 @@ export function analyzeTouShifts(
     const startHour = run[0].hour;
     const endHour = run[run.length - 1].hour + 1;
     const avgWeeklyKwh = run.reduce((acc, c) => acc + c.meanKwh, 0);
+    // `run` is consecutive HOURS of one weekday and one tier — at most 24
+    // entries by construction.
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const weeksSeen = Math.min(...run.map((c) => c.weeksPresent));
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const cv = Math.max(...run.map((c) => c.cv));
     const readings = run.flatMap((c) => c.readings);
     const baselineRate = baselineRateCents(plan, readings, rates!, tier);

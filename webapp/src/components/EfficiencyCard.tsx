@@ -176,8 +176,15 @@ function Chart({
     const x = (i: number) => PAD.left + step * (i + 0.5);
 
     const values = points.map((p) => p.cents);
-    let lo = Math.min(...values);
-    let hi = Math.max(...values);
+    // Min/max as a LOOP: `Math.min(...values)` passes one ARGUMENT per billing
+    // period, and the loaded file decides how many periods there are, so a
+    // six-figure bill set threw `RangeError: Maximum call stack size exceeded`.
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const v of values) {
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
     if (!(hi > lo)) {
       lo -= 0.5;
       hi += 0.5;

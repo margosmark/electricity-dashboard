@@ -209,3 +209,57 @@ describe('analyzeShiftVerification', () => {
     expect(v.caveat).toContain('hint, not proof');
   });
 });
+
+/* ==========================================================================
+ * Document scale — one calendar day carrying a custodian-sized reading count
+ * ========================================================================== */
+
+describe('document scale — a day whose readings outnumber the call arguments V8 takes', () => {
+  /**
+   * 130 000 readings inside ONE calendar day, 2026-06-14. Reading timestamps
+   * come from the uploaded export, so a single day really can hold six figures
+   * of them; `windowStats` then handed that day's rows to the window as CALL
+   * ARGUMENTS (`inWindow.push(...d.rows)`) and V8 throws
+   * `RangeError: Maximum call stack size exceeded` from 125 487 elements up.
+   *
+   * The cost assertion is the traversal proof: `totalCost` is priced from the
+   * window's own array (`planCostFor(inWindow, plan)`), so a window that
+   * stopped at the stack limit, or skipped rows, cannot reproduce the
+   * hand-summed bill of the same rows.
+   */
+  const HUGE = 130_000;
+  const SECONDS_PER_DAY = 86_400;
+
+  function scaledDataset(): ProcessedPoint[] {
+    const raw: DataPoint[] = [];
+    // 13 ordinary days (2026-06-01 .. 2026-06-13) at the fixture's 24/day, so
+    // both windows are full and the newest day is the anchor.
+    for (let day = 1; day <= 13; day++) {
+      for (let h = 0; h < 24; h++) {
+        raw.push({ timestamp: Math.floor(new Date(2026, 5, day, h).getTime() / 1000), usage_kwh: 1 });
+      }
+    }
+    // The anchor day itself: one reading per second of the day, then round again.
+    const dayStart = Math.floor(new Date(2026, 5, 14, 0, 0, 0).getTime() / 1000);
+    for (let i = 0; i < HUGE; i++) {
+      raw.push({ timestamp: dayStart + (i % SECONDS_PER_DAY), usage_kwh: 0.5 });
+    }
+    return processRawData(raw, [RATES]);
+  }
+
+  const scaled = scaledDataset();
+  const windowRows = scaled.filter((r) => r.dayStr >= '2026-06-08' && r.dayStr <= '2026-06-14');
+
+  it('counts and prices every reading of the oversized day', () => {
+    expect(scaled).toHaveLength(13 * 24 + HUGE);
+    expect(windowRows).toHaveLength(6 * 24 + HUGE);
+
+    const v = analyzeShiftVerification(scaled, 'TOU');
+
+    expect(v.ready).toBe(true);
+    expect(v.anchorDay).toBe('2026-06-14');
+    expect(v.recent!.days).toBe(7);
+    expect(v.recent!.totalKwh).toBeCloseTo(windowRows.reduce((s, r) => s + r.usage_kwh, 0), 6);
+    expect(v.recent!.totalCost).toBeCloseTo(windowRows.reduce((s, r) => s + r.costTOU, 0), 6);
+  }, 120_000);
+});

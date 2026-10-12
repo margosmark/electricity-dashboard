@@ -53,6 +53,7 @@ const CHUNK = 0x8000;
 export function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.length; i += CHUNK) {
+    // eslint-disable-next-line no-restricted-syntax -- chunked by construction: subarray holds at most CHUNK (32 768) elements
     binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
   }
   return btoa(binary);

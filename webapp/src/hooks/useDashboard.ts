@@ -411,7 +411,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       const next =
         mode === "replace"
           ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
-          : unionBillFeeds(prev, ...incoming);
+          : // `incoming` holds one feed per FILE the user selected (one entry for a
+            // live sync) — not one per bill in the file — and the batch is cleared
+            // on commit. `unionBillFeeds`'s variadic tail is therefore file-count-sized.
+            // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
+            unionBillFeeds(prev, ...incoming);
       writeStoredBillFeed(next);
       return next;
     });
