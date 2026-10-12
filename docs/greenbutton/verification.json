@@ -19,8 +19,25 @@
     "tests_passed": 141,
     "log": "existing-tests.log"
   },
-  "reconciliation_self_tests_passed": 7,
-  "internal_links_checked": 173,
+  "reconciliation_self_tests_passed": 14,
+  "internal_links_checked": 174,
+  "review_revision": {
+    "checked": "2026-10-12",
+    "origin_main_read": "c531ecc842e90b9eef97b08600928e94de6f10a0",
+    "corrected_blocks": [43, 46, 47, 48, 49, 50],
+    "classification": "explicitly unsupported; applicability unverified pending P0; G12/P4",
+    "existing_vitest_files_passed": 6,
+    "existing_vitest_tests_passed": 141,
+    "remote_schema_fixture_java_hashes_matched": 15,
+    "legacy_table_hash_matched": true,
+    "fb43_pinned_description": "empty",
+    "checks": [
+      "Unknown/unverified meaning cannot justify a role exclusion",
+      "Source limitations still reject N/A when matrix warning is removed",
+      "Markdown/JSON FB statuses, subsets, phases and gap IDs reconcile",
+      "All 174 internal file/anchor links resolve"
+    ]
+  },
   "per_schema": [
     {
       "file": "espi-v4.0.xsd",

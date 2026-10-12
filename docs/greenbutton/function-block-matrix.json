@@ -608,7 +608,8 @@
     "java_state": "not enumerated",
     "gba_title": null,
     "legacy_title": "Third Party Management REST Services",
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
@@ -616,7 +617,7 @@
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
       "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Historical title only; the pinned FB43 description is empty and Java does not enumerate it. Applicability is unverified pending P0; no evidence-backed third-party role exclusion is claimed. Explicitly unsupported at G12/P4, not an instruction to implement administration interfaces or widen scopes."
   },
   {
     "id": 44,
@@ -641,14 +642,15 @@
     "java_state": "deprecated",
     "gba_title": null,
     "legacy_title": null,
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
     "source_urls": [
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
   },
   {
     "id": 47,
@@ -656,14 +658,15 @@
     "java_state": "deprecated",
     "gba_title": null,
     "legacy_title": null,
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
     "source_urls": [
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
   },
   {
     "id": 48,
@@ -671,14 +674,15 @@
     "java_state": "deprecated",
     "gba_title": null,
     "legacy_title": null,
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
     "source_urls": [
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
   },
   {
     "id": 49,
@@ -686,14 +690,15 @@
     "java_state": "deprecated",
     "gba_title": null,
     "legacy_title": null,
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
     "source_urls": [
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
   },
   {
     "id": 50,
@@ -701,14 +706,15 @@
     "java_state": "deprecated",
     "gba_title": null,
     "legacy_title": null,
-    "status": "not applicable to our third-party role",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
     "implemented_features": [],
     "gap": "G12",
     "phase": "P4",
     "source_urls": [
       "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
     ],
-    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
   },
   {
     "id": 51,

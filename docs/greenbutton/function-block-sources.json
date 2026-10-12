@@ -242,6 +242,18 @@
       }
     ]
   },
+  "unverified_applicability": [
+    {
+      "ids": [43],
+      "evidence": "Pinned historical table supplies a title but an empty description; pinned Java does not enumerate FB43. No block-specific role restriction is established.",
+      "url": "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    },
+    {
+      "ids": [46, 47, 48, 49, 50],
+      "evidence": "Pinned Java records these IDs only in DEPRECATED_IDS, without block titles, definitions or role restrictions. Deprecation is not applicability evidence.",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    }
+  ],
   "java": {
     "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
     "sha256": "935c31b8a0723acc2d188312b6a3e8fce942c9bde62fb78aee41c0e53d1cf72b"

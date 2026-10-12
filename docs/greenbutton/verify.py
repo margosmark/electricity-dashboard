@@ -64,6 +64,43 @@ def reconcile(schemas, matrix):
     return len(expected_globals), len(expected_types)
 
 
+def check_fb_applicability(rows, catalog):
+    """Reject role exclusions based only on unknown meaning/deprecation.
+
+    This is a conservative evidence floor, not proof of role/profile compliance.
+    Source limitations live outside matrix claims, so deleting an applicability
+    marker or inventing a matrix title cannot make the cited evidence stronger.
+    """
+    unresolved = {i for item in catalog['unverified_applicability'] for i in item['ids']}
+    for item in catalog['unverified_applicability']:
+        assert item['evidence'] and item['url']
+    java = (HERE / 'function-block-catalog.java.txt').read_text()
+    titled = {int(i) for i in re.findall(r'FB_\d+\((\d+),', java)}
+    titled |= {e['id'] for name in ['current_page', 'legacy']
+               for e in catalog[name]['entries'] if e.get('title')}
+    for row in rows:
+        if row['status'] == 'not applicable to our third-party role':
+            uncertain = 'unverified' in row.get('applicability', '').lower()
+            unknown = 'not independently verified' in row['title'].lower()
+            assert row['id'] in titled and row['id'] not in unresolved and not uncertain and not unknown, (
+                f"unverified FB applicability cannot justify role exclusion: FB{row['id']}")
+
+
+def reconcile_fb_markdown(rows, markdown):
+    table = []
+    for line in markdown.splitlines():
+        if re.match(r'^\| \d+ \|', line):
+            cells = [x.strip() for x in line.strip('|').split('|')]
+            assert len(cells) == 5, 'malformed Markdown function-block row'
+            match = re.fullmatch(r'(P[0-4]) / \[(G\d+)\]\(#g\d+\)', cells[4])
+            assert match, 'malformed Markdown function-block phase/gap'
+            table.append((int(cells[0]), cells[2], cells[3], *match.groups()))
+    assert len(table) == len({r[0] for r in table}), 'duplicate Markdown function-block row'
+    expected = {(r['id'], r['status'], ', '.join(r['implemented_features']) or 'None',
+                 r['phase'], r['gap']) for r in rows}
+    assert set(table) == expected, 'Markdown/JSON function-block mismatch'
+
+
 def check():
     schemas = read('schema-inventory.json')
     for s in schemas:
@@ -121,6 +158,9 @@ def check():
         expected_state = 'active' if row['id'] in active else 'deprecated' if row['id'] in deprecated else 'not enumerated'
         assert row['java_state'] == expected_state
         assert row['source_urls']
+    check_fb_applicability(read('function-block-matrix.json'), cat)
+    reconcile_fb_markdown(read('function-block-matrix.json'),
+                          (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text())
     fixture_count = 0
     for fx in read('fixture-manifest.json')['fixtures']:
         assert fx['provenance'] and fx['sha256'] and fx['kind']
@@ -177,6 +217,58 @@ class ReconciliationAdversarialTests(unittest.TestCase):
         self.assertEqual(s['role'], 'unverified-draft-delta')
         self.assertEqual(s['version'], '4.0')
         self.assertIn('Published Pending', (HERE / s['file']).read_text())
+
+    def test_fb_baseline_applicability_and_markdown_match(self):
+        rows = read('function-block-matrix.json')
+        check_fb_applicability(rows, read('function-block-sources.json'))
+        reconcile_fb_markdown(rows, (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text())
+
+    def test_unverified_fb_role_exclusions_rejected(self):
+        catalog = read('function-block-sources.json')
+        for block_id in [43, 46, 47, 48, 49, 50]:
+            with self.subTest(block_id=block_id):
+                rows = read('function-block-matrix.json')
+                row = next(r for r in rows if r['id'] == block_id)
+                row['status'] = 'not applicable to our third-party role'
+                # Reproduce the original generic note; remove the matrix warning
+                # to ensure the source limitation, not just a label, gates N/A.
+                row.pop('applicability')
+                row['note'] = 'Producer/custodian/admin-only role.'
+                with self.assertRaisesRegex(AssertionError, 'unverified FB applicability'):
+                    check_fb_applicability(rows, catalog)
+
+    def test_unknown_fb_meaning_rejected_despite_invented_title(self):
+        row = copy.deepcopy(read('function-block-matrix.json')[0])
+        row.update(id=999, title='Invented administration block',
+                   status='not applicable to our third-party role')
+        with self.assertRaisesRegex(AssertionError, 'unverified FB applicability'):
+            check_fb_applicability([row], read('function-block-sources.json'))
+
+    def test_missing_markdown_fb_rejected(self):
+        text = (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text()
+        text = '\n'.join(line for line in text.splitlines() if not line.startswith('| 43 |'))
+        with self.assertRaisesRegex(AssertionError, 'Markdown/JSON function-block mismatch'):
+            reconcile_fb_markdown(read('function-block-matrix.json'), text)
+
+    def test_duplicate_markdown_fb_rejected(self):
+        text = (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text()
+        text += '\n' + next(line for line in text.splitlines() if line.startswith('| 43 |'))
+        with self.assertRaisesRegex(AssertionError, 'duplicate Markdown function-block'):
+            reconcile_fb_markdown(read('function-block-matrix.json'), text)
+
+    def test_markdown_fb_classification_drift_rejected(self):
+        rows = read('function-block-matrix.json')
+        next(r for r in rows if r['id'] == 43)['status'] = 'not applicable to our third-party role'
+        with self.assertRaisesRegex(AssertionError, 'Markdown/JSON function-block mismatch'):
+            reconcile_fb_markdown(rows, (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text())
+
+    def test_markdown_fb_phase_gap_and_subset_drift_rejected(self):
+        for key, value in [('phase', 'P3'), ('gap', 'G11'), ('implemented_features', ['F01'])]:
+            with self.subTest(key=key):
+                rows = read('function-block-matrix.json')
+                next(r for r in rows if r['id'] == 43)[key] = value
+                with self.assertRaisesRegex(AssertionError, 'Markdown/JSON function-block mismatch'):
+                    reconcile_fb_markdown(rows, (HERE.parent / 'GREENBUTTON-SUPPORT.md').read_text())
 
 
 if __name__ == '__main__':

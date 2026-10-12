@@ -385,7 +385,7 @@
       "acceptance_test": "profile-role-exclusions",
       "phase": "P4",
       "source": "GBA catalog; pinned legacy connect_function_blocks.md; FunctionBlock.java",
-      "construction": "Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence.",
+      "construction": "Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence. FB43 and FB46–50 remain explicitly unsupported with applicability unverified pending P0; absence of definitions or deprecation alone cannot justify a role exclusion.",
       "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
       "source_urls": [
         "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",

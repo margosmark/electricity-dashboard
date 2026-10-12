@@ -190,13 +190,13 @@ Inventory is the union of the live GBA full catalog, pinned GBA Java active/depr
 | 40 | Offline Authorization (Energy Usage) (active; see source-label differences) | explicitly unsupported | None | P4 / [G12](#g12) |
 | 41 | Manage ApplicationInformation Resource (active; see source-label differences) | explicitly unsupported | None | P4 / [G12](#g12) |
 | 42 | Third Party Core REST Services (not enumerated) | explicitly unsupported | None | P4 / [G12](#g12) |
-| 43 | Third Party Management REST Services (not enumerated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
+| 43 | Third Party Management REST Services (not enumerated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
 | 44 | Manage Authorization Resource (active; see source-label differences) | explicitly unsupported | None | P4 / [G12](#g12) |
-| 46 | Deprecated ID; title not independently verified (deprecated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
-| 47 | Deprecated ID; title not independently verified (deprecated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
-| 48 | Deprecated ID; title not independently verified (deprecated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
-| 49 | Deprecated ID; title not independently verified (deprecated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
-| 50 | Deprecated ID; title not independently verified (deprecated) | not applicable to our third-party role | None | P4 / [G12](#g12) |
+| 46 | Deprecated ID; title not independently verified (deprecated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
+| 47 | Deprecated ID; title not independently verified (deprecated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
+| 48 | Deprecated ID; title not independently verified (deprecated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
+| 49 | Deprecated ID; title not independently verified (deprecated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
+| 50 | Deprecated ID; title not independently verified (deprecated; applicability unverified pending P0) | explicitly unsupported | None | P4 / [G12](#g12) |
 | 51 | Common (Retail Customer) (active) | explicitly unsupported | None | P3 / [G11](#g11) |
 | 52 | Download My Data (Retail Customer) (active) | explicitly unsupported | None | P3 / [G11](#g11) |
 | 53 | Connect My Data (Retail Customer) (active) | explicitly unsupported | None | P3 / [G11](#g11) |
@@ -219,6 +219,8 @@ Inventory is the union of the live GBA full catalog, pinned GBA Java active/depr
 | 70 | Offline Authorization (Retail Customer) (active) | explicitly unsupported | None | P3 / [G11](#g11) |
 
 Current public GBA profile: usage FB01 + FB04 common; DMD adds FB02/30; CMD adds FB03/13/31/37/39. FB04 additionally needs at least one of FB05/10/11/29. Retail-customer profiles are separate: FB51 common; DMD FB52/63; CMD FB53/64/65/69, plus selected customer data blocks. These lists describe GBA’s public custodian testing page, **not independently reviewed v4.1 normative obligations for this application**. Many individual FB pages are placeholders (“Markup”); FB41/44 returned 404. Empty content is not a complete acceptance specification.
+
+**Applicability evidence boundary:** FB43's pinned historical title is *Third Party Management REST Services*, but its description is empty and the Java catalog does not enumerate it. FB46–50 appear only in Java's `DEPRECATED_IDS`, with no titles, definitions or role restrictions. These six blocks are **explicitly unsupported, applicability unverified pending P0**, retained at **G12/P4**; neither an unknown meaning nor deprecation proves a custodian/admin-only role. Their source limitations are recorded in [function-block-sources.json](greenbutton/function-block-sources.json). This conservative exclusion does not authorize optional administration implementation, buying gated specifications or widening OAuth scopes. Custodian-side producer exclusions remain separate from these unresolved blocks.
 
 ## Scope-ready phased backlog (PM decomposes build tasks)
 
@@ -363,7 +365,7 @@ Impact today: No dynamic registration/SFTP/offline authorization/admin REST impl
 
 Acceptance test to implement (NOT present yet): `profile-role-exclusions`. Fixture recipe: `profile-role` in [fixture-manifest.json](greenbutton/fixture-manifest.json).
 
-Pass criteria: Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence.
+Pass criteria: Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence. FB43 and FB46–50 remain explicitly unsupported with applicability unverified pending P0; absence of definitions or deprecation alone cannot justify a role exclusion.
 
 Evidence: GBA catalog; pinned legacy connect_function_blocks.md; FunctionBlock.java — [source 1](https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java), [source 2](https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md), [source 3](https://www.greenbuttonalliance.org/function-blocks). Checked 2026-10-12.
 
@@ -402,7 +404,7 @@ Evidence: GBA catalog; pinned legacy connect_function_blocks.md; FunctionBlock.j
 python3 docs/greenbutton/verify.py --self-test
 ```
 
-This offline command re-extracts global declarations, complex/simple types, fields, attributes, bases, cardinalities and enum values directly from **hash-pinned XSD bytes**, and rejects missing/duplicate resource/type/field rows. It checks the function-block union against the pinned enum + source catalogs, each supported feature’s exact executable test title, unsupported phases/acceptance-fixture links, and existing local fixture hashes. Its seven self-tests prove missing-resource/duplicate/type/field mutations fail and that customer namespace and draft edition stay separate. It is **inventory reconciliation**, not schema validation, a fuzz suite or MBP/certification testing.
+This offline command re-extracts global declarations, complex/simple types, fields, attributes, bases, cardinalities and enum values directly from **hash-pinned XSD bytes**, and rejects missing/duplicate resource/type/field rows. It checks the function-block union against the pinned enum + source catalogs, each supported feature’s exact executable test title, unsupported phases/acceptance-fixture links, and existing local fixture hashes. It also rejects unknown/unverified FB meanings as role exclusions and reconciles all Markdown FB classifications, subsets, phases and gap IDs against JSON. Its fourteen self-tests cover the original schema mutations/namespace/draft checks plus applicability and Markdown drift regressions. It is **inventory reconciliation**, not schema validation, a fuzz suite or MBP/certification testing; checking source limitations is not a substitute for P0's role/profile review.
 
 Counts include compatibility/draft/Atom rows per snapshot, so the same QName across different versions is counted more than once; do not call them distinct endpoints. Per-schema counts and complete machine inventory are committed. **No Actions billing work is needed or claimed**; only local verification was run. See [verification.json](greenbutton/verification.json) for execution results.
 
