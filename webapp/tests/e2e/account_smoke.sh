@@ -13,6 +13,20 @@
 # answer 404 — indistinguishable from "no such route" — rather than admit
 # that an account API exists somewhere else.
 #
+# BOTH modes now run a SURFACE GUARD and a MATRIX, so the gate cannot be
+# complete-by-accident again:
+#
+#   surface guard — the path list below is compared with the route files under
+#     `src/app/account/**/route.ts`. Add a route and forget the gate and the
+#     guard fails, instead of that route shipping unprobed.
+#   matrix — every path × every HTTP method × {no cookie, a live session, a
+#     forged cookie}. Over the real router, because the router is where the
+#     verb is decided: Next answers a verb the route does not export (and its
+#     auto-OPTIONS) by PATH, before any handler runs — the mechanism behind
+#     `2c8ca8d`, which shipped a `405`/`204 + Allow` on a deployment claiming
+#     to have no account API. `HEAD` is served by the route's `GET`, so it is
+#     probed as `GET`'s status (measured, not assumed — see section 9).
+#
 # No secrets, no fixtures, no jq dependency beyond what CI already ships.
 # Runtime: a few seconds (argon2id dominates: ~4 hashes).
 
@@ -22,15 +36,40 @@ BASE="${1:?usage: account_smoke.sh <base_url> [--expect-disabled]}"
 MODE="${2:-enabled}"
 MAX_WAIT="${SMOKE_WAIT_SECS:-30}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 JAR="$(mktemp -d)/cookies.txt"
 JAR2="$(mktemp -d)/cookies.txt"
-trap 'rm -rf "$(dirname "$JAR")" "$(dirname "$JAR2")"' EXIT
+JAR3="$(mktemp -d)/cookies.txt"
+trap 'rm -rf "$(dirname "$JAR")" "$(dirname "$JAR2")" "$(dirname "$JAR3")"' EXIT
 
 PASS=0
 FAIL=0
 check() { # check <label> <condition-exit-status>
   if [ "$2" -eq 0 ]; then PASS=$((PASS + 1)); printf '  PASS  %s\n' "$1"
   else FAIL=$((FAIL + 1)); printf '  FAIL  %s\n' "$1"; fi
+}
+
+# The matrix probe: an explicit `cookie:` header instead of a jar, so a client
+# can present a cookie it was never issued (the `forged` column) and no cell can
+# be satisfied by cookie state some earlier section left behind. Body-carrying
+# verbs send `{}` — deliberately invalid — so each cell asks WHICH GATE ANSWERED
+# (feature flag → origin → session → payload), not what the handler does with a
+# good payload. The happy paths are sections 1–8.
+matrix_req() { # matrix_req <cookie|-> <method> <path>
+  local cookie="$1" method="$2" path="$3" body="" hdr_args=()
+  [ "$cookie" != "-" ] && hdr_args=(-H "cookie: $cookie")
+  case "$method" in POST|PUT|PATCH|DELETE) body='{}' ;; esac
+  if [ -n "$body" ]; then
+    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
+      -X "$method" -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+  elif [ "$method" = "HEAD" ]; then
+    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
+      --head "${BASE}${path}"
+  else
+    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
+      -X "$method" "${BASE}${path}"
+  fi
 }
 
 # HTTP verb helpers: body + status + headers land in /tmp so greps are cheap.
@@ -54,12 +93,103 @@ req() { # req <jar|-> <method> <path> [json-body]
 
 jget() { jq -r "$1" < /tmp/acct.body 2>/dev/null; }
 
+# True when $1 equals any of the remaining arguments — for the cells whose
+# contract has more than one correct answer (see `matrix_expect`).
+accepts() { local code="$1"; shift; local w; for w in "$@"; do [ "$code" = "$w" ] && return 0; done; return 1; }
+
+# The `acct_session` value curl stored in a jar (netscape format: name is
+# field 6, value field 7).
+cookie_from_jar() { awk -v n='acct_session' '$6 == n { print $7 }' "$1" | tail -1; }
+
+# A cookie that was never issued to anybody: no row can exist behind it.
+forged_token() { printf '%s%s' "$(date +%s%N)" "$$" | sha256sum | cut -c1-48; }
+
+# ---------------------------------------------------------------------------
+# The surface
+#
+# ONE list, used by the guard, the disabled method sweep and the ON matrix — so
+# a path can never be probed in one mode and forgotten in the other.
+# `/account/internal/*` is excluded ON PURPOSE: it is denied at the edge with
+# 403 and never reaches an app container (the containerised topology gate owns
+# that leg). `/account/logout` is LAST because the ON matrix really does log
+# that session out; see section 9.
+# ---------------------------------------------------------------------------
+MATRIX_PATHS="/account/login /account/notify /account/recover /account/register
+              /account/session /account/sync /account/push/preferences
+              /account/push/subscribe /account/logout"
+
+# The paths this script probes and the route files on disk must be the SAME
+# set. A new `/account/*` route that nobody adds here would otherwise ship
+# outside the gate — the whole reason this guard exists. Skipped (with a note)
+# when the script is run from outside a checkout, e.g. against a deployment.
+surface_guard() {
+  local dir="$SCRIPT_DIR/../../src/app/account"
+  if [ ! -d "$dir" ]; then
+    echo "  note  route surface not checked (no checkout next to this script)"
+    return 0
+  fi
+  local on_disk declared
+  on_disk=$(cd "$dir" && find . -name route.ts \
+    | sed -e 's#^\./##' -e 's#/route\.ts$##' -e 's#^#/account/#' \
+    | grep -v '^/account/internal/' | sort)
+  declared=$(printf '%s\n' $MATRIX_PATHS | sort)
+  if [ "$on_disk" != "$declared" ]; then
+    echo "FAIL: the route files and this gate's path list disagree" >&2
+    diff <(printf '%s\n' "$on_disk") <(printf '%s\n' "$declared") >&2 || true
+    exit 1
+  fi
+  echo "  note  surface guard: $(printf '%s\n' "$declared" | wc -l) app-owned /account routes, all probed"
+}
+
+# ---------------------------------------------------------------------------
+# The expected answer for one ON-mode matrix cell.
+#
+# `HEAD` is answered by the route's `GET`; every verb a route does not export is
+# the shared `wrongMethod` stub (405, naming the method). The session-gated
+# routes answer 401 for BOTH the no-cookie and the forged-cookie column: a
+# cookie that resolves to no live row is not a session — one code, one message,
+# never an oracle that tells a prober whether a cookie was ever real.
+# ---------------------------------------------------------------------------
+matrix_expect() { # matrix_expect <path> <method> <none|valid|forged>
+  local path="$1" method="$2" auth="$3" verbs eff
+  case "$path" in
+    /account/register|/account/login|/account/logout|/account/notify|/account/recover) verbs="POST" ;;
+    /account/session) verbs="GET" ;;
+    /account/sync|/account/push/preferences) verbs="GET PUT" ;;
+    /account/push/subscribe) verbs="POST DELETE" ;;
+    *) echo "UNKNOWN"; return ;;
+  esac
+  eff="$method"
+  [ "$method" = "HEAD" ] && eff="GET"
+  case " $verbs " in
+    *" $eff "*) : ;;
+    *) echo 405; return ;;
+  esac
+  case "$path $eff" in
+    "/account/register POST"|"/account/login POST"|"/account/recover POST") echo 400 ;;
+    "/account/logout POST") echo 200 ;;
+    "/account/session GET") echo 200 ;;
+    "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT")
+      if [ "$auth" = "valid" ]; then echo 200; else echo 401; fi ;;
+    "/account/sync PUT"|"/account/notify POST"|"/account/push/subscribe DELETE")
+      if [ "$auth" = "valid" ]; then echo 400; else echo 401; fi ;;
+    # No VAPID keys on a default deployment ⇒ push is inert (503). A deployment
+    # that DID configure push must still not answer 401/403/404 here, so the
+    # invalid-body answer is accepted too.
+    "/account/push/subscribe POST")
+      if [ "$auth" = "valid" ]; then echo "503|400"; else echo 401; fi ;;
+    *) echo "UNKNOWN" ;;
+  esac
+}
+
 # --- Wait for the server ----------------------------------------------------
 for i in $(seq 1 "${MAX_WAIT}"); do
   if curl -fsS -o /dev/null --max-time 2 "${BASE}/"; then break; fi
   [ "$i" = "${MAX_WAIT}" ] && { echo "FAIL: server did not come up within ${MAX_WAIT}s at ${BASE}" >&2; exit 1; }
   sleep 1
 done
+
+surface_guard
 
 if [ "$MODE" = "--expect-disabled" ]; then
   echo "account gate (expecting the feature OFF): ${BASE}"
@@ -84,15 +214,31 @@ if [ "$MODE" = "--expect-disabled" ]; then
   # 204 + Allow — admitting an account API on a deployment that claims to
   # have none. /account/internal/* is skipped on purpose: that path is
   # denied at the edge with 403, so it is not this process's answer to give.
-  for path in /account/login /account/logout /account/notify /account/recover \
-              /account/register /account/session /account/sync \
-              /account/push/preferences /account/push/subscribe; do
+  for path in $MATRIX_PATHS; do
     for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
-      code=$(req - "$method" "$path") || code=000
+      code=$(matrix_req - "$method" "$path") || code=000
       check "${method} ${path} → 404 (no such route, whatever the method)" \
         $([ "$code" = "404" ] && echo 0 || echo 1)
     done
   done
+  # …and no cookie may change that answer. The full method × auth-state OFF
+  # matrix runs in-process (`src/lib/account/route-matrix.test.ts`); over HTTP
+  # this is the representative sweep, with a cookie the server never issued.
+  FORGED="acct_session=$(forged_token)"
+  for path in $MATRIX_PATHS; do
+    for method in GET POST; do
+      code=$(matrix_req "$FORGED" "$method" "$path") || code=000
+      check "${method} ${path} [forged cookie] → 404 (a cookie cannot reveal a route)" \
+        $([ "$code" = "404" ] && echo 0 || echo 1)
+    done
+  done
+  # The header tells the 2c8ca8d story: a `405`, or an auto-`OPTIONS 204`, would
+  # have carried `Allow` — a machine-readable list of the verbs this origin
+  # answers, the one thing an OFF deployment must never emit.
+  code=$(matrix_req - DELETE /account/session) || code=000
+  check "DELETE /account/session → 404 (not 405)" $([ "$code" = "404" ] && echo 0 || echo 1)
+  check "…and the answer carries no Allow header" \
+    $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
   [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
   echo "account gate OK (feature off): ${PASS} checks"
   exit 0
@@ -221,6 +367,62 @@ check "the cookie it left behind no longer authenticates (401)" \
 code=$(req "$JAR2" GET /account/sync)
 check "the OTHER device's session survives this logout" \
   $([ "$code" = "200" ] && echo 0 || echo 1)
+
+# --- 9. The matrix: every method × every auth state, over the real router ---
+#
+# Section 8 signed its cookie out on purpose, so the matrix mints its own
+# session. This is the LAST section because one of its cells really does log
+# that session out — POST /account/logout [valid] → 200 wasAuthenticated:true —
+# which is why /account/logout is last in MATRIX_PATHS.
+echo "== 9. the method × auth-state matrix (${BASE}) =="
+code=$(req "$JAR3" POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
+check "the matrix's own session logs in → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
+VALID="acct_session=$(cookie_from_jar "$JAR3")"
+FORGED="acct_session=$(forged_token)"
+check "the matrix holds a real acct_session cookie" \
+  $([ "$(cookie_from_jar "$JAR3")" != "" ] && echo 0 || echo 1)
+
+for path in $MATRIX_PATHS; do
+  for method in GET HEAD POST PUT PATCH DELETE OPTIONS; do
+    for auth in none valid forged; do
+      case "$auth" in
+        none) CK="-" ;;
+        valid) CK="$VALID" ;;
+        forged) CK="$FORGED" ;;
+      esac
+      want=$(matrix_expect "$path" "$method" "$auth")
+      code=$(matrix_req "$CK" "$method" "$path") || code=000
+      if [ "$want" = "UNKNOWN" ]; then
+        check "${method} ${path} [${auth}] — this cell has no expectation" 1
+        continue
+      fi
+      # `503|400` in the table means either is correct; the unquoted expansion
+      # splits it into the arguments `accepts` compares against.
+      if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi
+      check "${method} ${path} [${auth}] → ${code} (want ${want})" "$ok"
+      # The other tell of 2c8ca8d: a 405 (or an auto-OPTIONS 204) names the
+      # verbs this origin answers. On the OFF half nothing may carry `Allow`;
+      # on the ON half only the honest 405 may.
+      if [ "$code" != "405" ]; then
+        check "  …and it names no verbs (no Allow header)" \
+          $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
+      fi
+    done
+  done
+done
+
+# The internal fan-out is not the router's to answer, and there are two ways to
+# be refused: through the edge it is a flat `403` with no upstream at all (the
+# containerised topology gate runs this script through the router), and against
+# the container directly it is the token gate's own bare `404`. Both are
+# "unreachable"; what must NEVER happen is a 2xx — and, the cell this exists
+# for, a live SESSION must not stand in for the shared secret.
+code=$(matrix_req - POST /account/internal/notify) || code=000
+if accepts "$code" 403 404; then ok=0; else ok=1; fi
+check "POST /account/internal/notify → ${code} (403 at the edge, or 404 at the token gate — never 2xx)" "$ok"
+code=$(matrix_req "$VALID" POST /account/internal/notify) || code=000
+if accepts "$code" 403 404; then ok=0; else ok=1; fi
+check "…and a live session is NOT the internal token → ${code}" "$ok"
 
 echo "account gate: ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ] || exit 1
