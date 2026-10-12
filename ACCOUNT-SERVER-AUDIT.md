@@ -17,6 +17,21 @@ Card: `t_95f5ffbe`.
 > the merge. Going live is a separate, explicit decision (untracked `.env`
 > with `ACCT_ENABLED=true` + `VAPID_*`), per §6's merge-order rule: this file
 > stays the place where the *state* is written down.
+>
+> **UPDATE 2026-10-12 (t_49579c75): DEPLOYED, still OFF.** `main@a06d70d` is
+> running on `.110` — **four** containers (`energy-dashboard`,
+> `greenbutton-shim`, `account-server`, `edge-router`), all rebuilt from that
+> commit, so the Wave N edge template is live: `/account/*` →
+> `X-Edge-Location: account` and `/account/internal/*` → **403** at the edge
+> with no upstream contact (measured from the public URL, both the 403 and the
+> location header). The feature itself is still off — `ACCT_ENABLED` is unset,
+> `/account/session` answers **404** and `.account/` holds no database — so
+> every "not deployed / nothing reaches the account server" claim in §1 below
+> still describes the *user-visible* state; what changed is the container and
+> the route, not the surface. Enabling (or not) is Mark's call: see
+> `OPERATIONS.md` → *Account server*. The containerised gate now covers this
+> leg — `webapp/scripts/e2e-greenbutton-topology.sh`, 102/102 on `.110`,
+> both flag states plus the register/login/sync matrix through the router.
 
 ---
 

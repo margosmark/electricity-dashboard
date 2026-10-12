@@ -23,7 +23,7 @@ they agree on what a merge means.
 | Gate | State |
 | --- | --- |
 | Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (609 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 29/29 checks against a live `next start` + mock custodian) |
-| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (three containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router — including a recreate of both upstreams under a running router: 46/46; see §5) |
+| Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (four containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router — including a recreate of all three upstreams under a running router, plus Wave N's `/account` leg in both flag states: 102/102 on `.110` 2026-10-12; see §5) |
 | Edge routes `/greenbutton/*` to this host | **DONE — verified empirically** (the edge forwards *every* path to `:3939`, so the split is made on-box; see §5) |
 | Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
 | Production loop with Mark's real account | **BLOCKED on §6** |
