@@ -91,12 +91,20 @@ export function diagnoseGreenButtonDocument(xmlText: string, parsedReadings?: nu
   const validity = XMLValidator.validate(text);
   if (validity !== true) {
     const err = (validity as { err: { code?: string; msg?: string; line?: number } }).err;
+    // BOTH sentences take the line, and the detail template needs it too:
+    // `malformedDetailMsg` reads "{msg} at line {line}.", so a call that passed
+    // only `msg` printed the placeholder at the user literally — "… found. at
+    // line {line}." (t_1fca89fa). A validator error with no line at all keeps
+    // its own message instead of claiming a line it does not have.
+    const line = typeof err.line === 'number' ? err.line : null;
     return {
       ok: false,
-      headline: err.line
-        ? t('diag.malformedHeadlineLine', { line: err.line })
-        : t('diag.malformedHeadline'),
-      detail: err.msg ? t('diag.malformedDetailMsg', { msg: err.msg }) : t('diag.malformedDetail'),
+      headline:
+        line !== null ? t('diag.malformedHeadlineLine', { line }) : t('diag.malformedHeadline'),
+      detail:
+        err.msg && line !== null
+          ? t('diag.malformedDetailMsg', { msg: err.msg, line })
+          : err.msg || t('diag.malformedDetail'),
       hints: [t('diag.malformedHint1'), t('diag.malformedHint2')],
     };
   }

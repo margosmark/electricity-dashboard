@@ -1,5 +1,10 @@
 import { XMLParser } from 'fast-xml-parser';
-import { parseReadingSeries, type ReadingSeries, type SeriesNote } from './greenbutton/series';
+import {
+  parseReadingSeries,
+  type ReadingSeries,
+  type SeriesNote,
+  type SeriesReading,
+} from './greenbutton/series';
 import { isOntarioHoliday } from './ontarioHolidays';
 import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
@@ -379,9 +384,10 @@ export type UsagePointGroup = {
   label: string;
   /**
    * CONSUMED electricity only: every supported active-energy series of this
-   * point, in kWh. Never a sum across incompatible series — exported energy,
-   * reactive data, another commodity and register readings are on `series`
-   * instead, not here.
+   * point, in kWh, with the duplicate-resolution guard applied — a point that
+   * published the same interval at several sizes contributes it ONCE. Never a
+   * sum across incompatible series either: exported energy, reactive data,
+   * another commodity and register readings are on `series` instead, not here.
    */
   readings: DataPoint[];
   /** Number of IntervalBlock elements the readings came from. */
@@ -392,7 +398,12 @@ export type UsagePointGroup = {
    * meter's data is missing; nothing prices an unsupported series.
    */
   series: ReadingSeries[];
-  /** The reasons attached to this point's series (empty when all were clean). */
+  /**
+   * The reasons attached to this point's series — refusals, dropped readings,
+   * assumptions, and how the point's several series were combined or pruned to
+   * one stream (empty when the point was fully understood and contributed
+   * every series as-is).
+   */
   notes: SeriesNote[];
 };
 
@@ -411,11 +422,261 @@ export type GreenButtonFeed = {
   localTime: LocalTimeParams | null;
   /**
    * Every refusal, dropped reading and unit assumption the ingestion made —
-   * including notes that belong to no single group. Empty means the document
-   * was fully understood.
+   * including the group-level notes that explain how a point's several series
+   * were combined, and the notes that belong to no single group. Empty means
+   * the document was fully understood. This is the list the dashboard's
+   * refusal row prints, so a note a user needs in order to trust a total must
+   * be here, not only on its group (which a single-UsagePoint file never
+   * shows).
    */
   notes: SeriesNote[];
 };
+
+/* ==========================================================================
+ * Duplicate-resolution guard — one point, the same energy at several sizes
+ * ========================================================================== */
+
+/** A reading's covered interval in UTC epoch seconds; `start` inclusive, `end` exclusive. */
+type Span = { start: number; end: number };
+
+/**
+ * The length to credit a reading that states none.
+ *
+ * ESPI lets a reading omit `timePeriod.duration`; `series.ts` then falls back
+ * to the block's duration and to the ReadingType's own `intervalLength`, so a
+ * reading that still has no `duration_s` is one the document gave no length
+ * for at all. The guard below cannot treat such a reading as zero-length —
+ * two series of the same quantity would then look disjoint and be summed —
+ * so the series' own most common stated duration is used, then its
+ * `intervalLength`, and one second as the last resort: enough to make two
+ * readings at the SAME instant overlap (the case that decides the outcome)
+ * without claiming a length the feed never stated.
+ */
+function unstatedDuration(s: ReadingSeries): number {
+  const counts = new Map<number, number>();
+  for (const r of s.readings) {
+    if (r.duration_s !== null && r.duration_s > 0) {
+      counts.set(r.duration_s, (counts.get(r.duration_s) ?? 0) + 1);
+    }
+  }
+  let best = 0;
+  let bestCount = 0;
+  for (const [duration, count] of counts) {
+    if (count > bestCount || (count === bestCount && duration < best)) {
+      best = duration;
+      bestCount = count;
+    }
+  }
+  if (best > 0) return best;
+  const declared = s.meta.intervalLength;
+  return declared !== null && declared > 0 ? declared : 1;
+}
+
+/** One reading's span, with a duration the document left unstated filled in. */
+function spanOf(r: SeriesReading, fallback: number): Span {
+  return { start: r.timestamp, end: r.timestamp + (r.duration_s ?? fallback) };
+}
+
+/** A series' spans, sorted by start — the coverage its readings describe. */
+function coverageSpans(readings: SeriesReading[], fallback: number): Span[] {
+  return readings.map((r) => spanOf(r, fallback)).sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+/**
+ * True when the two coverages share an instant.
+ *
+ * Half-open `[start, end)` spans, so two readings that merely abut (one ends
+ * where the next starts) are NOT the same instant and do not overlap — while
+ * a series whose readings carry no stated length still overlaps one timed at
+ * the same instant, because {@link unstatedDuration} never returns zero.
+ * Two-pointer over sorted spans: O(n + m), which matters on a year of
+ * 15-minute readings.
+ */
+function spansOverlap(a: Span[], b: Span[]): boolean {
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const x = a[i];
+    const y = b[j];
+    if (x.end > y.start && y.end > x.start) return true;
+    // No intersection: one of them ends before the other starts.
+    if (x.end <= y.start) i++;
+    else j++;
+  }
+  return false;
+}
+
+/** Sorted, disjoint union of spans (abutting spans merge too). */
+function mergeSpans(spans: Span[]): Span[] {
+  const sorted = [...spans].sort((a, b) => a.start - b.start || a.end - b.end);
+  const out: Span[] = [];
+  for (const span of sorted) {
+    const last = out[out.length - 1];
+    if (last && span.start <= last.end) {
+      if (span.end > last.end) last.end = span.end;
+    } else {
+      out.push({ ...span });
+    }
+  }
+  return out;
+}
+
+/** True when `span` meets any of a merged ({@link mergeSpans}) coverage. */
+function spanHitsCoverage(span: Span, merged: Span[]): boolean {
+  // First span that REACHES span.start, then: does span reach its start?
+
+  let lo = 0;
+  let hi = merged.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (merged[mid].end > span.start) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo < merged.length && span.end > merged[lo].start;
+}
+
+/** One billable series and the readings of it that may be priced. */
+type PricedStream = { series: ReadingSeries; readings: SeriesReading[] };
+
+/** A series whose stream partly duplicates a finer one, and what was kept. */
+type DuplicateResolutionRefusal = {
+  series: ReadingSeries;
+  /** The series whose coverage the refused readings fall inside. */
+  keeper: ReadingSeries;
+  /** Readings refused: their interval is already covered by priced energy. */
+  overlapped: number;
+  /** Readings kept: their interval lies outside that coverage, so they are new energy. */
+  kept: number;
+};
+
+/**
+ * Partition one UsagePoint's billable series so that NO instant is priced twice.
+ *
+ * The defect this closes: a point may publish the same consumption at several
+ * resolutions — one 4.0 kWh day as 16×15-min, 8×30-min and 4×60-min readings.
+ * Series isolation already keeps those apart per (UsagePoint, MeterReading,
+ * ReadingType), but the group's billable stream is their union, so the day was
+ * summed to 12.0 kWh, stored that way and shown as "12 KWH". Summing is never
+ * right here: the three series describe the SAME physical energy, and which of
+ * them the custodian considers authoritative is not stated anywhere.
+ *
+ * The rule: series whose covered instants intersect form one cluster; inside a
+ * cluster only the FINEST series (smallest stated interval, then the most
+ * readings, then document order) is priced in full, and a coarser one keeps
+ * only the readings no priced coverage reaches — so a point that switched
+ * resolution mid-history still contributes every interval it recorded, exactly
+ * once. Nothing is dropped silently: every refusal is counted and reported.
+ */
+function duplicateResolutionStreams(candidates: ReadingSeries[]): {
+  streams: PricedStream[];
+  refused: DuplicateResolutionRefusal[];
+} {
+  const priced = (s: ReadingSeries): SeriesReading[] => s.readings.filter((r) => r.kwh !== null);
+  if (candidates.length < 2) {
+    return { streams: candidates.map((s) => ({ series: s, readings: priced(s) })), refused: [] };
+  }
+
+  const fallback = candidates.map(unstatedDuration);
+  const spans = candidates.map((s, i) => coverageSpans(priced(s), fallback[i]));
+
+  // Cluster by "these two describe overlapping instants".
+  const parent = candidates.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      if (spansOverlap(spans[i], spans[j])) parent[find(i)] = find(j);
+    }
+  }
+  const clusters = new Map<number, number[]>();
+  for (let i = 0; i < candidates.length; i++) {
+    const root = find(i);
+    const members = clusters.get(root) ?? [];
+    members.push(i);
+    clusters.set(root, members);
+  }
+
+  const streams: PricedStream[] = [];
+  const refused: DuplicateResolutionRefusal[] = [];
+  for (const members of clusters.values()) {
+    const ordered = [...members].sort(
+      (a, b) =>
+        fallback[a] - fallback[b] ||
+        candidates[b].readings.length - candidates[a].readings.length ||
+        a - b,
+    );
+    const keeper = ordered[0];
+    const keeperReadings = priced(candidates[keeper]);
+    streams.push({ series: candidates[keeper], readings: keeperReadings });
+    let coverage = mergeSpans(coverageSpans(keeperReadings, fallback[keeper]));
+    for (const i of ordered.slice(1)) {
+      const readings = priced(candidates[i]);
+      const kept: SeriesReading[] = [];
+      let overlapped = 0;
+      for (const r of readings) {
+        if (spanHitsCoverage(spanOf(r, fallback[i]), coverage)) overlapped += 1;
+        else kept.push(r);
+      }
+      if (kept.length > 0) {
+        streams.push({ series: candidates[i], readings: kept });
+        // What a coarser series keeps is coverage too, so a third series in the
+        // cluster cannot re-price it.
+        coverage = mergeSpans([...coverage, ...coverageSpans(kept, fallback[i])]);
+      }
+      if (overlapped > 0) {
+        refused.push({ series: candidates[i], keeper: candidates[keeper], overlapped, kept: kept.length });
+      }
+    }
+  }
+  return { streams, refused };
+}
+
+/**
+ * The note that explains a duplicate-resolution refusal, as one
+ * {@link SeriesNote}.
+ *
+ * `detail` is the canonical English sentence AND the source the catalog's
+ * English rendering must reproduce byte for byte (`i18n/seriesNote.test.ts`);
+ * `params` are the values that sentence interpolates, so the same sentence can
+ * be composed in the reader's own language. The counts are TOTALS across the
+ * refused series — naming each series with its own count would need a
+ * per-language list grammar the catalog cannot express, and the labels are
+ * already there for anyone who needs to see which series is which. The
+ * readings a refused series' coverage did NOT reach are still priced, and
+ * which of the two sentences this is says whether there were any.
+ */
+function duplicateResolutionNote(
+  groupId: string,
+  refused: DuplicateResolutionRefusal[],
+): SeriesNote {
+  const keeper = refused[0].keeper;
+  const labels = [keeper.label, ...refused.map((r) => r.series.label)];
+  const refusedTotal = refused.reduce((n, r) => n + r.overlapped, 0);
+  const keptTotal = refused.reduce((n, r) => n + r.kept, 0);
+  const head =
+    `UsagePoint ${groupId || '(unidentified)'} carries ${labels.length} consumption series that describe ` +
+    `overlapping periods (${labels.join(', ')}). They repeat the same consumption at different sizes, so ` +
+    `summing them would price the same energy more than once; only the finest series (${keeper.label}) was ` +
+    `priced, and the ${refusedTotal} reading(s) of the others that fall inside its coverage were refused.`;
+  const tail =
+    keptTotal > 0
+      ? ` The ${keptTotal} reading(s) of theirs that lie outside that coverage were still priced.`
+      : '';
+  return {
+    code: 'combined-series',
+    params: {
+      // Two sentences, one code: whether a coarser series kept anything is a
+      // different statement, and a template cannot leave a clause out.
+      variant: keptTotal > 0 ? 'duplicate-resolution-partial' : 'duplicate-resolution',
+      point: groupId,
+      count: labels.length,
+      labels: labels.join(', '),
+      keeper: keeper.label,
+      refused: refusedTotal,
+      kept: keptTotal,
+    },
+    detail: head + tail,
+  };
+}
 
 /**
  * One pass over one document: readings, bills and the feed's own clock.
@@ -473,6 +734,24 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     g.blocks += s.blocks;
   }
 
+  /**
+   * Notes this function ADDS to a group also join `feed.notes`.
+   *
+   * `feed.notes` is the ingestion's own list of everything it decided, and it
+   * is what the dashboard's refusal row prints. A group note used to live only
+   * on the group, where the multi-UsagePoint picker shows it and a
+   * single-UsagePoint file — which never renders the picker — dropped it: the
+   * user saw a total that was 3× the real one and nothing on screen to explain
+   * it (t_1fca89fa). One sentence, both surfaces.
+   */
+  const groupNotes: SeriesNote[] = [];
+  const pushGroupNote = (g: UsagePointGroup, note: SeriesNote): void => {
+    g.notes.push(note);
+    groupNotes.push(note);
+  };
+  /** The billable series that actually reached each group's stream. */
+  const pricedSeriesOf = new Map<UsagePointGroup, ReadingSeries[]>();
+
   // ONLY billable consumption joins the group's reading stream. An exported,
   // reactive, gas, water or register series stays on `series` with its reason
   // attached, so it can never be priced as consumption by accident.
@@ -481,12 +760,15 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   // states the same consumption twice: the power series is converted and
   // preserved, but only the declared energy series is priced, because adding
   // both would double the household's usage.
+  //
+  // The same point can state it twice in ANOTHER way — one day published as
+  // 15-min readings, again as 30-min and again as 60-min. `duplicateResolutionStreams`
+  // is the guard for that case; every decision it makes is announced below.
   for (const g of groups.values()) {
     const energy = g.series.filter((s) => s.status === 'supported');
     const power = g.series.filter((s) => s.status === 'power-converted');
-    const priced = energy.length > 0 ? energy : power;
     if (energy.length > 0 && power.length > 0) {
-      g.notes.push({
+      pushGroupNote(g, {
         code: 'combined-series',
         params: {
           variant: 'energy-and-power',
@@ -499,7 +781,13 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
           .join(', ')}) and interval-average power (${power.map((s) => s.label).join(', ')}). They describe the same consumption, so only the energy series was priced; the power series is preserved unconverted-to-total on the point.`,
       });
     }
-    for (const s of priced) {
+    const { streams, refused } = duplicateResolutionStreams(energy.length > 0 ? energy : power);
+    if (refused.length > 0) pushGroupNote(g, duplicateResolutionNote(g.id, refused));
+    pricedSeriesOf.set(
+      g,
+      streams.map((s) => s.series),
+    );
+    for (const s of streams) {
       for (const r of s.readings) {
         if (r.kwh === null) continue;
         g.readings.push({ timestamp: r.timestamp, usage_kwh: r.kwh });
@@ -520,11 +808,13 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   // More than one billable series under one point means THIS app is combining
   // them into one stream. That is the historical single-meter UX, so it stays —
   // but it is said out loud, and each series remains separately identifiable on
-  // the group, instead of a picker row quietly looking like one series.
+  // the group, instead of a picker row quietly looking like one series. A
+  // duplicate-resolution cluster is NOT this: only its finest series was
+  // priced, and its own note says so.
   for (const g of groups.values()) {
-    const billable = g.series.filter((s) => s.status === 'supported' || s.status === 'power-converted');
+    const billable = pricedSeriesOf.get(g) ?? [];
     if (billable.length > 1) {
-      g.notes.push({
+      pushGroupNote(g, {
         code: 'combined-series',
         params: {
           variant: 'several-series',
@@ -552,7 +842,7 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     groups: out,
     summaries: parseUsageSummaryNodes(parsed),
     localTime: parseLocalTimeNode(parsed),
-    notes,
+    notes: [...notes, ...groupNotes],
   };
 }
 export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {

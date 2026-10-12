@@ -63,6 +63,12 @@ export const VARIANT_KEY: Partial<Record<SeriesNote['code'], Record<string, stri
   'combined-series': {
     'energy-and-power': 'gbseries.note.combinedEnergyAndPower',
     'several-series': 'gbseries.note.combinedConsumptionSeries',
+    // One point repeating the same consumption at several resolutions: the
+    // finest series is priced and the rest are refused where they overlap
+    // (t_1fca89fa). Two sentences, because whether a refused series kept any
+    // reading outside the priced coverage is a different statement.
+    'duplicate-resolution': 'gbseries.note.combinedDuplicateResolution',
+    'duplicate-resolution-partial': 'gbseries.note.combinedDuplicateResolutionPartial',
   },
 };
 
