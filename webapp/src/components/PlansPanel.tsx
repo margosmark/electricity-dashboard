@@ -114,7 +114,7 @@ export default function PlansPanel({
       <PlanTimelineEditor summaries={summaries} />
       <SwitchTrackRecord summaries={summaries} allData={allData} />
 
-      {/* Wave V — what should have happened: plan lever + behaviour lever. */}
+      {/* Wave V — what should have happened: the same readings repriced across the other plans. */}
       <HindsightPanel summaries={summaries} allData={allData} />
 
       {/* What the utility actually billed, against what these models say. */}
