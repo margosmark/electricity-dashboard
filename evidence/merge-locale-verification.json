@@ -1,0 +1,61 @@
+{
+  "base": "http://127.0.0.1:3210/",
+  "files": [
+    "file-a.xml",
+    "file-b.xml"
+  ],
+  "locales": {
+    "fr": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons",
+    "en": "Merged range2026-09-21 → 2026-09-21Rows to import4Duplicates dropped2 of 6file-a.xml: 3 kept · file-b.xml: 1 kept, 2 duplicate"
+  },
+  "expected": {
+    "fr": "file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons",
+    "en": "file-a.xml: 3 kept · file-b.xml: 1 kept, 2 duplicate"
+  },
+  "checks": [
+    {
+      "name": "the dialog painted the per-file summary line",
+      "ok": true,
+      "detail": "fr=Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "fr: the whole line is French",
+      "ok": true,
+      "detail": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "fr: no English `kept`",
+      "ok": true,
+      "detail": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "fr: no English `duplicate`",
+      "ok": true,
+      "detail": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "fr: `{rows} kept` agrees (conservés / conservé)",
+      "ok": true,
+      "detail": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "fr: the duplicate clause agrees (2 doublons)",
+      "ok": true,
+      "detail": "Plage fusionnée2026-09-21 → 2026-09-21Lignes à importer4Doublons écartés2 sur 6file-a.xml : 3 conservés · file-b.xml : 1 conservé, 2 doublons"
+    },
+    {
+      "name": "en: the line is byte-identical to the shipped wording",
+      "ok": true,
+      "detail": "Merged range2026-09-21 → 2026-09-21Rows to import4Duplicates dropped2 of 6file-a.xml: 3 kept · file-b.xml: 1 kept, 2 duplicate"
+    },
+    {
+      "name": "en: the quirk survives (2 duplicate, not 2 duplicates)",
+      "ok": true,
+      "detail": "Merged range2026-09-21 → 2026-09-21Rows to import4Duplicates dropped2 of 6file-a.xml: 3 kept · file-b.xml: 1 kept, 2 duplicate"
+    }
+  ],
+  "passed": 8,
+  "total": 8,
+  "exit": 0,
+  "at": "2026-10-12T21:40:41.888Z"
+}
