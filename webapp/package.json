@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "node scripts/bump-sw-version.mjs",
+    "prebuild": "node scripts/bump-sw-version.mjs && node scripts/bump-build-info.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

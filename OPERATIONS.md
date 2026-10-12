@@ -53,7 +53,11 @@ mid-verification. `--no-fetch` skips the git step for tar-pushed deploys. It
 also exports `GIT_SHA=$(git rev-parse HEAD)` before the build, so every image
 it produces names its own commit at `GET /api/version` (§ Deploying changes) —
 the clone is a branch that gets `reset --hard origin/main`, so this export is
-the only place the deployed SHA is read.
+the only place the deployed SHA is read. The value is **compiled into the
+bundle** by `webapp/scripts/bump-build-info.mjs` (the `prebuild` lifecycle, read
+out of the builder stage's environment), not read from the container's
+environment at request time — so a container started some way other than this
+compose file still names the commit it was built from.
 
 **Check disk before a deploy.** This host runs the **vfs** storage driver
 (`/var/lib/docker/vfs/dir` ≈ 92 G), so an image build can eat several GB of
@@ -339,6 +343,17 @@ names its own build at `GET /api/version` (`{"sha": …, "buildId": …}`, with
 ```bash
 curl -s http://10.10.11.110:3939/api/version   # → {"sha":"<the deployed commit>",…}
 ```
+
+The SHA is **compiled into the bundle**, not read at runtime: `GIT_SHA` reaches
+`webapp/scripts/bump-build-info.mjs` (wired into `prebuild`) in the builder
+stage's environment, and that script writes the committed constant
+`webapp/src/lib/buildInfo.generated.ts` (`'unknown'` — the placeholder a fresh
+clone carries — when nothing supplies it). So the answer is a literal in the
+emitted server chunk, the image config declares no stamp at all, and
+`docker run -e NEXT_PUBLIC_BUILD_SHA=deadbeef… <image>` still answers the commit
+the image was built from. A build with `GIT_SHA` set dirties exactly that one
+tracked file (the `public/sw.js` precedent) — restore it and stage by name,
+never `git add -A`.
 
 Read that instead of inferring identity from built bytes. A wrong `sha` means
 the container was not recreated by the deploy; `buildId` changes on every

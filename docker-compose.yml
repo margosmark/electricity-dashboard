@@ -25,9 +25,11 @@ services:
       # The commit this image stamps ITSELF with. The deploy runbook
       # (`~/bin/deploy-energy-dashboard.sh` on .110) exports
       # `GIT_SHA=$(git rev-parse HEAD)` before `docker compose up -d --build`,
-      # this file forwards it, and the Dockerfile bakes it in as
-      # `NEXT_PUBLIC_BUILD_SHA` — so the deployed app answers its own commit at
-      # `GET /api/version`. Unset ⇒ empty ⇒ the app reports 'unknown' (a local
+      # and the Dockerfile's builder stage runs
+      # `scripts/bump-build-info.mjs` with it in the environment, which
+      # COMPILES it into the bundle the image serves — so the deployed app
+      # answers its own commit at `GET /api/version`, and no runtime
+      # environment can relabel it. Unset ⇒ the app reports 'unknown' (a local
       # build has no commit; it must never inherit someone else's).
       args:
         GIT_SHA: ${GIT_SHA:-}
