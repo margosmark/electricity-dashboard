@@ -66,7 +66,14 @@ stubs the verbs its handler does not export, because the router answers a
 method mismatch (and auto-`OPTIONS`) by path, from inside the bundle,
 before the handler's feature-flag check could run. So a deployment without
 accounts behaves exactly as it did before Wave N — no `405`, no `204 +
-Allow`, nothing that says an account API is registered here.
+Allow`, nothing that says an account API is registered here. That contract is
+asserted over the **whole surface** rather than route by route:
+`webapp/src/lib/account/route-matrix.test.ts` reads the route files off disk
+and drives every path × every method × {no cookie, live session, forged,
+expired, stale} × both flag states, so a new route or a new verb fails the
+gate until it is declared; `webapp/tests/e2e/account_smoke.sh` proves the
+routing half over real HTTP in both states and refuses to run if the route
+files and its path list disagree.
 
 1. **Parse** — `parseGreenButtonXML` walks the feed object stack, pulls every
    `IntervalReading` (`timePeriod.start` unix seconds + `value` in Wh → kWh).

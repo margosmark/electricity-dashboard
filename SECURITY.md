@@ -220,8 +220,13 @@ as HTML.
    `ACCT_*` / `VAPID_*`, or the `/account` locations in
    `ops/edge/default.conf.template`? → the live half of that contract is
    `webapp/scripts/e2e-greenbutton-topology.sh` (§0d runs BOTH flag states and
-   the real register/login/sync matrix through the router), the static half is
-   `webapp/src/lib/account/topology.test.ts`. Three properties are not
+   the real register/login/sync matrix through the router) plus
+   `webapp/tests/e2e/account_smoke.sh` (both states, every path × every method
+   × {no cookie, live session, forged cookie}), the static half is
+   `webapp/src/lib/account/topology.test.ts`, and the route surface itself is
+   pinned by `webapp/src/lib/account/route-matrix.test.ts` — which reads the
+   route files off disk, so a NEW `/account/*` route fails the gate until its
+   contract is declared rather than shipping unprobed. Three properties are not
    negotiable and no other test covers them: the server stores **ciphertext it
    cannot read** (the derived key never leaves the device), the notify log
    holds topic/title/outcome and **never a reading**, and `/account/*` answers
