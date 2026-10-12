@@ -89,12 +89,18 @@ export default function TabNav({ active, onChange }: TabNavProps) {
       className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 py-2 md:py-3 bg-inset/95 backdrop-blur-sm border-b-4 border-edge"
       data-testid="tab-nav"
     >
+      {/*
+        D2 (t_fcbba376): the selected pill's `shadow-hard-blue-3` is a 3px hard
+        offset, and at gap-1 it ate 4 of the 4px gap — the blue band welded
+        itself to the next pill. gap-2 leaves 8 − 3 = 5px of clear air; the
+        360px fit still holds (4 × 76px + 3 × 8px = 328px).
+      */}
       <div
         role="tablist"
         aria-label={t('tabnav.aria')}
         aria-orientation="horizontal"
         onKeyDown={onKeyDown}
-        className="flex gap-1 md:gap-2 overflow-x-auto"
+        className="flex gap-2 md:gap-3 overflow-x-auto"
       >
         {TABS.map((tab, index) => {
           const Icon = ICONS[tab.id];

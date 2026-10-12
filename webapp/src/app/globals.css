@@ -472,13 +472,21 @@ body {
 
 /**
  * Same idea for the document: in standalone display the last row of content
- * must clear the home indicator. All three are 0 in a browser tab, so this is
- * a no-op for the desktop and screenshot paths.
+ * must clear the home indicator.
+ *
+ * The BOTTOM inset needs a floor, the sides do not. On a gesture-nav device
+ * the system bar OVERLAYS the layout viewport and `env()` reports 0 for it
+ * (it is OS chrome, not an inset the browser was given), so without a floor
+ * the bar covers the last 36 CSS px of every page — `main`'s 16px reserve
+ * plus part of whatever card is last (the "PROJECTED bill cut in half" defect
+ * from t_fcbba376/D4). Measured on the report device: 108 image px ÷ DPR 3.0
+ * = 36 CSS px, so 2.5rem (40px) clears it by 4px; iOS home-indicator devices
+ * report ~34px. Same reasoning as `.overlay-safe` above, one size up.
  */
 body {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
 }
 
 /**
