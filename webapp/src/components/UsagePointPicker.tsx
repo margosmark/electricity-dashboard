@@ -7,10 +7,30 @@
 
 "use client";
 
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { Combine, Gauge, X } from 'lucide-react';
 import { type UsagePointGroup, type DataPoint, combineUsagePointGroups } from '@/lib/energy';
 import { fmtKwh, useTranslation } from '@/i18n';
+
+/**
+ * The `yyyy-MM-dd` day of a reading's start, which may not be a time at all.
+ *
+ * `<start>` is unbounded in the ESPI schema, so a start can be a finite number
+ * that is not a date — `999999999999999` (the year 33 658), `8640000000000001`
+ * (past the Date range), `1e308`. `new Date(ts * 1000)` is then Invalid and
+ * date-fns `format()` THROWS `RangeError: Invalid time value`; because this
+ * runs inside the picker's render, one such reading in a multi-meter file took
+ * the whole picker down before the user could choose a point.
+ *
+ * The parser bounds starts at ingest (`series.ts`); this is the picker's own
+ * boundary, so a stale persisted row or any future reader that lets one
+ * through still cannot crash the render. An unrenderable instant reads as '—',
+ * the placeholder an empty group already gets.
+ */
+function dayKey(ts: number): string {
+  const d = new Date(ts * 1000);
+  return isValid(d) ? format(d, 'yyyy-MM-dd') : '—';
+}
 
 export function usagePointStats(group: UsagePointGroup): {
   kwh: number;
@@ -21,13 +41,11 @@ export function usagePointStats(group: UsagePointGroup): {
   const readings = group.readings;
   if (readings.length === 0) return { kwh: 0, count: 0, from: '—', to: '—' };
   const kwh = readings.reduce((sum, r) => sum + r.usage_kwh, 0);
-  const first = new Date(readings[0].timestamp * 1000);
-  const last = new Date(readings[readings.length - 1].timestamp * 1000);
   return {
     kwh,
     count: readings.length,
-    from: format(first, 'yyyy-MM-dd'),
-    to: format(last, 'yyyy-MM-dd'),
+    from: dayKey(readings[0].timestamp),
+    to: dayKey(readings[readings.length - 1].timestamp),
   };
 }
 
