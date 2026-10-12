@@ -99,7 +99,7 @@ import { getProcessIdentity } from "@/lib/greenbutton/config";
  * the point: third-party HTML rendered here is then held to `default-src
  * 'self'` and cannot load script, frames or connections from our origin.
  */
-function buildCsp(secure: boolean): string {
+function buildCsp(upgradeInsecureRequests: boolean): string {
   return [
     "default-src 'self'",
     // `'unsafe-inline'` is what lets Next's inline RSC payload run — a nonce
@@ -121,18 +121,64 @@ function buildCsp(secure: boolean): string {
     // The same guarantee X-Frame-Options gives, expressed in CSP.
     "frame-ancestors 'none'",
     "form-action 'self'",
-    // Only on the https deployment. Left on over http, this would rewrite the
-    // local dev server's own asset URLs to https and break `docker compose up`
-    // at http://localhost:3939 — the HSTS header in next.config.ts is scoped
-    // to the real origin for the same reason.
-    ...(secure ? ["upgrade-insecure-requests"] : []),
+    // Only for an origin whose TLS we have inventoried (see
+    // INVENTORIED_HTTPS_ORIGINS) — never for a surface that serves plaintext.
+    ...(upgradeInsecureRequests ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }
 
+/**
+ * The origins whose TLS is inventoried and handed over — and therefore the
+ * ONLY ones that may receive `upgrade-insecure-requests`.
+ *
+ * The directive rewrites EVERY subresource request to https. On a surface that
+ * serves no TLS that is not a hardening, it is a total outage: measured
+ * 2026-10-12 on `http://10.10.11.110:3939` — the documented local surface
+ * (OPERATIONS.md: "localhost health checks still work at :3939") — the browser
+ * upgraded all 15 subresources to `https://10.10.11.110:3939/`, where nothing
+ * listens (`curl https://…:3939` = 000; `http` = 200). The page then rendered
+ * as HTML with ZERO interactive elements, hydration never ran, and the UI sat
+ * on "PREPARING OPTIMIZER…" permanently. CSP took the whole app down.
+ *
+ * WHY THIS IS A HOST LIST AND NOT `request.url`'s SCHEME — measured, because
+ * the first implementation did exactly that and shipped the outage. nginx
+ * (`edge-router`, host `:3939`) sets `X-Forwarded-Proto: https` for the whole
+ * deployment — it cannot distinguish a request forwarded from the public TLS
+ * edge (10.10.11.100) from a direct plaintext LAN hit — so Next resolves
+ * `request.url` to `https://` in both cases. Verified from this box: a
+ * plaintext request to :3939 that ALSO carried `X-Forwarded-Proto: http` came
+ * back `https://`-shaped, so the scheme check always chose the upgrade. The
+ * Host header is the one signal that survives the chain: the public name
+ * arrives as `electricity.markarslan.ca`, a LAN hit as `10.10.11.110:3939`.
+ *
+ * Default is OFF. An unknown host means "no TLS inventory", which is the safe
+ * direction — a surface nobody has inventoried simply does not get the
+ * directive, so it can never be broken by it. Adding an HTTPS origin means
+ * adding it here AND to OPERATIONS.md §Public URL.
+ *
+ * (`electricity.princessandmark.com` resolves to the same host but answers
+ * with Traefik's default self-signed cert, so it is NOT in the inventory.)
+ *
+ * Note the deliberate asymmetry with `Strict-Transport-Security`, which
+ * next.config.ts emits on every response: RFC 6797 §8.1 requires a UA to
+ * IGNORE an STS header received over non-secure transport, so on the :3939
+ * surface it is inert (measured present, and harmless). `upgrade-insecure-
+ * requests` has no such rule and acts on the response it arrives with — which
+ * is exactly why it is the one that must be scoped.
+ */
+const INVENTORIED_HTTPS_ORIGINS = new Set(["electricity.markarslan.ca"]);
+
+function isInventoriedHttpsOrigin(request?: NextRequest): boolean {
+  // The Host header is authoritative in production (nginx passes the client's
+  // Host through). `nextUrl.host` is the fallback: Next derives it from that
+  // same header, and a Request built in a test does not always carry an
+  // explicit `host` header (it is a forbidden header name in the Fetch spec).
+  const host = request?.headers.get("host") || request?.nextUrl?.host || "";
+  return INVENTORIED_HTTPS_ORIGINS.has(host.split(":")[0].trim().toLowerCase());
+}
+
 export default function proxy(request?: NextRequest): NextResponse {
-  // The deployment is https in production; localhost dev is not (see below).
-  const secure = (request?.url ?? "https://").startsWith("https://");
-  const csp = buildCsp(secure);
+  const csp = buildCsp(isInventoriedHttpsOrigin(request));
   const response = NextResponse.next();
   response.headers.set("Content-Security-Policy", csp);
   // Cheap companions that need no nonce work at all.

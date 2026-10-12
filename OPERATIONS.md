@@ -13,6 +13,18 @@ Daily-driver operations for the deploy at `~/electricity-dashboard`.
 **Public URL:** https://electricity.markarslan.ca/ (Let's Encrypt TLS, edge
 proxy fronting `:3939`; localhost health checks still work at :3939).
 
+**Only that origin may serve `upgrade-insecure-requests`.** The CSP is built
+in `webapp/src/proxy.ts` and adds the directive for an INVENTORIED HTTPS
+origin only — `electricity.markarslan.ca`, the list in that file. It matters
+because the directive rewrites every subresource to https: on the plaintext
+`:3939` surface the browser then asks for `https://<host>:3939/…`, nothing
+listens there, and the app loads as an unhydrated HTML shell (0 interactive
+elements, stuck on "PREPARING OPTIMIZER…"). Diagnose with
+`curl -sI http://<host>:3939/ | grep -i upgrade` — a hit on a plaintext
+surface is the bug. Never scope that directive by `request.url`'s scheme:
+edge-router sets `X-Forwarded-Proto: https` for the whole deployment, so
+Next sees https even for a direct plaintext LAN hit (measured 2026-10-12).
+
 Which container answered a request: every response carries
 `x-gb-process: app` or `x-gb-process: shim` — set **by the serving process**
 from its own config — plus `X-Edge-Location: default|greenbutton`, which is
