@@ -16,8 +16,7 @@ import { addDays, format } from 'date-fns';
 // Wave U — the weekly before/after verdict speaks the active language.
 import { fmtKwh, fmtMoney, fmtPercent, fmtDay, t } from '@/i18n';
 import { planCostFor, type ProcessedPoint } from './energy';
-
-export type PlanId = 'TOU' | 'Tiered' | 'ULO';
+import type { PlanId } from './planIds';
 
 /** Days in each window. */
 export const WINDOW_DAYS = 7;

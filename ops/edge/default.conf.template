@@ -48,9 +48,54 @@
 # they record — path instead of path+query.
 log_format gb_noquery '$remote_addr [$time_local] "$uri" $status';
 
+# …and the notify token is a PATH SEGMENT (`/greenbutton/notify/<token>`),
+# so `$uri` prints it. That is a long-lived shared secret, and `oauthFlow.test.ts`
+# treats "never publish the notify token" as a property worth testing — while
+# this format would hand it to anyone with `docker logs edge-router`. Redact
+# the whole segment instead of logging the value.
+log_format gb_notify '$remote_addr [$time_local] "/greenbutton/notify/<redacted>" $status';
+
+# Rate limits for the /greenbutton surface, which is public and, before the
+# session cookie, unauthenticated. Nothing else in this file throttles it —
+# the only limit the app itself has is the 15-minute client-side refresh
+# interval, which an attacker is free to ignore.
+#
+# Two zones, because the two threats need different numbers:
+#
+#   gb_strict — endpoints with NO session and NO state check to fall back on.
+#               `POST /greenbutton/notify/[token]` accepts a body nginx will
+#               admit at `client_max_body_size 64m`, with
+#               `proxy_request_buffering off`, so an unauthenticated caller can
+#               stream 64 MB per request; `GET /greenbutton/start` mints a CSRF
+#               state into an in-memory map that is only pruned after a
+#               10-minute TTL.
+#   gb_soft   — everything else under /greenbutton (status, usage, disconnect,
+#               callback). Each needs a valid `gb_session` cookie or a valid
+#               single-use `state`, so a flood buys nothing — while a number
+#               low enough to catch a flood would also catch a legitimate
+#               browser: one connect flow makes ~19 of these requests, and
+#               `e2e-greenbutton-loop.sh` deliberately repeats them. Set high
+#               enough that honest traffic never trips it, because a limit only
+#               stops an attacker if it does not fire on the user.
+#
+# The leak note: nginx's ERROR log lines carry `$request`, query string
+# included. Tripping a limit on `/greenbutton/callback?code=…` would therefore
+# write the authorization code back out — the exact thing `gb_noquery` exists
+# to prevent on the access log. That is why the two locations whose URI holds
+# a secret (`callback`, `notify`) raise their own `error_log` to `crit`: the
+# limit still refuses the request, but the message that would quote the URI is
+# never written. The access log for both already redacts.
+limit_req_zone $binary_remote_addr zone=gb_strict:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=gb_soft:10m rate=300r/m;
+limit_conn_zone $binary_remote_addr zone=gb_conn:10m;
+
 server {
   listen 80;
   server_name _;
+
+  # Do not advertise the nginx version in `Server:` headers or generated error
+  # pages. One line, no downside.
+  server_tokens off;
 
   # Docker's embedded DNS, re-read every 10s.
   #
@@ -94,10 +139,76 @@ server {
     proxy_buffering off;
     proxy_request_buffering off;
     proxy_read_timeout 300s;
+
+    # gb_soft: session- or state-gated, so the limit is a backstop rather than
+    # the first line of defence — and it is deliberately high enough that one
+    # legitimate connect flow (~19 requests) can never trip it.
+    limit_req zone=gb_soft burst=100 nodelay;
+    limit_conn gb_conn 20;
+
     # Log the path only: `$uri` drops the query string, so a canary
     # `?code=…&state=…` can never reach the docker json log. Verified by
     # webapp/scripts/e2e-greenbutton-topology.sh.
     access_log /var/log/nginx/access.log gb_noquery;
+    add_header X-Edge-Location greenbutton always;
+
+    # The unauthenticated state-minter: `GET /greenbutton/start` mints a CSRF
+    # value into an in-memory map on EVERY hit. Nothing else on this location
+    # is cheap enough to be worth its own zone, and the URI carries no secret,
+    # so it can be throttled hard AND logged normally.
+    location = /greenbutton/start {
+      proxy_pass http://$gb_shim;
+      limit_req zone=gb_strict burst=10 nodelay;
+      limit_conn gb_conn 10;
+      access_log /var/log/nginx/access.log gb_noquery;
+      add_header X-Edge-Location greenbutton always;
+    }
+
+    # THE REDIRECT LEAK. The callback answers 302 → `/?gb=connected`, and that
+    # hop is SAME-ORIGIN, so `strict-origin-when-cross-origin` (next.config.ts)
+    # sends the FULL callback URL — `?code=…&state=…` included — as Referer on
+    # the follow-up request. The follow-up lands on `location /`, which used to
+    # inherit nginx's stock `combined` format — and that one DOES include
+    # `$http_referer`. `gb_noquery` above could never help: the leak is a header
+    # on a DIFFERENT request, not a query on the logged one. Two independent
+    # fixes, so neither has to be perfect:
+    #   1. `Referrer-Policy: no-referrer` here stops the browser sending it;
+    #   2. `location /` now logs `gb_noquery` (no query, no referer), so even
+    #      a client that ignores the header cannot get it recorded.
+    location = /greenbutton/callback {
+      proxy_pass http://$gb_shim;
+      proxy_read_timeout 300s;
+      limit_req zone=gb_soft burst=100 nodelay;
+      limit_conn gb_conn 20;
+      access_log /var/log/nginx/access.log gb_noquery;
+      add_header X-Edge-Location greenbutton always;
+      add_header Referrer-Policy "no-referrer" always;
+      # `?code=` is in THIS request's URI, so an error line — a proxy failure
+      # or a tripped limit — would quote it straight back into the log. Raise
+      # this location's error threshold to `crit`: the request is still
+      # refused, it is just not narrated in a way that repeats the credential.
+      # Outcomes remain visible two lines elsewhere: the access log records
+      # the status, and the shim logs `[greenbutton] …` itself.
+      error_log /var/log/nginx/error.log crit;
+    }
+  }
+
+  # The custodian POSTs to /greenbutton/notify/<token>. `^~` so it wins over
+  # the prefix `location /greenbutton` above regardless of what follows, and
+  # the redacting format keeps the token out of `docker logs`.
+  location ^~ /greenbutton/notify/ {
+    proxy_pass http://$gb_shim;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 300s;
+    # gb_strict: this is the one genuinely unauthenticated, body-accepting
+    # endpoint on the host.
+    limit_req zone=gb_strict burst=10 nodelay;
+    limit_conn gb_conn 10;
+    # The token is a PATH SEGMENT, so an error line here would print it —
+    # same reason and same remedy as the callback above.
+    error_log /var/log/nginx/error.log crit;
+    access_log /var/log/nginx/access.log gb_notify;
     add_header X-Edge-Location greenbutton always;
   }
 
@@ -125,8 +236,27 @@ server {
   }
 
   # Everything else — the dashboard itself.
+  #
+  # `gb_noquery`, NOT nginx's stock `combined`. Three separate reasons, all
+  # about this app's data:
+  #
+  #  1. THE REFERER LEAK. The OAuth callback answers 302 → `/?gb=connected`.
+  #     That hop is SAME-ORIGIN, so `strict-origin-when-cross-origin` sends the
+  #     full callback URL — `?code=…&state=…` — as `Referer` on the
+  #     follow-up. `combined` includes `$http_referer`, so it would record them
+  #     on THIS location. `gb_noquery` records `$uri` (path, no query) and no
+  #     referer at all, so the header cannot be logged here even if a client
+  #     sends one. (Defense in depth with `Referrer-Policy: no-referrer` on the
+  #     callback, which stops the browser sending it in the first place.)
+  #  2. `/import?d=<base64>` — the payload IS the user's meter readings. The
+  #     stock format logs `$request`, query string included, which would put
+  #     a copy of the dataset in a 3×10 MB rotating file.
+  #  3. Every other `?…` here (`?gb=connected`, `?gb=error:…`) is a flag worth
+  #     reading, not a secret worth protecting, and losing it costs one log
+  #     line of debugging context.
   location / {
     proxy_pass http://$gb_app;
+    access_log /var/log/nginx/access.log gb_noquery;
     add_header X-Edge-Location default always;
   }
 }

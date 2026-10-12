@@ -169,7 +169,13 @@ export async function fetchResource(
   return {
     kind: "stream",
     status: res.status,
-    contentType: res.headers.get("content-type") || "application/atom+xml",
+    // NOT passed through verbatim. `/greenbutton/usage` answers with
+    // `X-Content-Type-Options: nosniff`, so whatever the custodian declares
+    // is what the browser honours — and if it ever answered `text/html`, the
+    // ESPI body would render as HTML on OUR origin, next to the readings in
+    // localStorage. The client ignores the header anyway (it calls
+    // `res.text()`), so pinning it costs nothing and removes the vector.
+    contentType: "application/xml",
     body: res.body.pipeThrough(counter),
     bytes,
     url,

@@ -221,7 +221,53 @@ case "$ROUTER_LOG" in
 esac
 
 echo
-echo "== baseline security headers, through the real router =="
+echo "== the REFERER hop (fixed 2026-10-12) =="
+# `gb_noquery` alone was never enough: the callback 302s to `/?gb=connected`,
+# which is SAME-ORIGIN, so a browser echoes the full callback URL as
+# `Referer` on that follow-up. The follow-up is logged by `location /`,
+# which inherits nginx's stock `combined` format — and that DOES include
+# `$http_referer`. Prove the header is suppressed on the callback itself,
+# then follow the redirect the way a browser would and assert nothing
+# credential-bearing came along for the ride.
+REF_CANARY="ref-$TAG"
+CB_HDRS="$(curl -sSI "$BASE/greenbutton/callback?code=$REF_CANARY" | tr -d '\r')"
+printf '%s\n' "$CB_HDRS" | grep -qi '^referrer-policy: *no-referrer'
+check "callback sets Referrer-Policy: no-referrer" $?
+case "$CB_HDRS" in
+  *"$REF_CANARY"*) check "callback response does not echo the code back to the client" 1 ;;
+  *)               check "callback response does not echo the code back to the client" 0 ;;
+esac
+# Follow the redirect with a Referer the way a browser would, then look for
+# the code in BOTH the router log and the app container's own log — the leak
+# lands on `location /`, so checking only the router's greenbutton scope
+# would have passed while production kept leaking.
+curl -s -o /dev/null -H "Referer: $BASE/greenbutton/callback?code=$REF_CANARY&state=x" \
+  "$BASE/?gb=connected"
+sleep 1
+case "$(docker logs gb-topo-router 2>&1)$(docker logs gb-topo-app 2>&1)" in
+  *"$REF_CANARY"*) check "authorization code never reaches any log via \$http_referer" 1 ;;
+  *)               check "authorization code never reaches any log via \$http_referer" 0 ;;
+esac
+
+echo
+echo "== notify token path redaction =="
+# The notify token is a PATH SEGMENT, so `$uri` — the exact field gb_noquery
+# records — would print it. It must come out redacted instead.
+NOTE_TOKEN="tok-$TAG-not-a-real-secret"
+curl -s -o /dev/null -X POST "$BASE/greenbutton/notify/$NOTE_TOKEN"
+sleep 1
+ROUTER_LOG2="$(docker logs gb-topo-router 2>&1)"
+case "$ROUTER_LOG2" in
+  *"/greenbutton/notify/<redacted>"*) check "notify path logged with the token REDACTED" 0 ;;
+  *)                                 check "notify path logged with the token REDACTED" 1 ;;
+esac
+case "$ROUTER_LOG2" in
+  *"$NOTE_TOKEN"*) check "notify token never reaches the edge log" 1 ;;
+  *)               check "notify token never reaches the edge log" 0 ;;
+esac
+
+echo
+echo "== baseline security headers, CSP and rate limit, through the real router =="
 HDRS="$(curl -sSI "$BASE/" | tr -d '\r')"
 for h in strict-transport-security x-content-type-options referrer-policy x-frame-options; do
   printf '%s\n' "$HDRS" | grep -qi "^$h:"; check "GET / carries $h" $?
@@ -230,5 +276,53 @@ printf '%s\n' "$HDRS" | grep -qi '^strict-transport-security: *max-age=31536000;
 check "HSTS is max-age=31536000; includeSubDomains" $?
 printf '%s\n' "$HDRS" | grep -qi '^x-frame-options: *DENY'
 check "X-Frame-Options is DENY" $?
+
+# server_tokens off — the version must not be advertised. The grep is inverted
+# on purpose: matching `nginx/<digits>` means the version IS exposed, which is
+# the failure case. (An earlier revision of this line passed `$?` straight to
+# `check`, so a CORRECT response — `Server: nginx` — failed the check.)
+if printf '%s\n' "$HDRS" | grep -qi '^server: *nginx/[0-9]'; then
+  check "Server header hides the nginx version" 1
+else
+  check "Server header hides the nginx version" 0
+fi
+
+# CSP is what contains `/oeb-rates-page`, which proxies www.oeb.ca onto OUR
+# origin, a few lines from the readings in localStorage.
+printf '%s\n' "$HDRS" | grep -qi '^content-security-policy:'
+check "GET / carries Content-Security-Policy" $?
+printf '%s\n' "$HDRS" | grep -qi "content-security-policy:.*object-src 'none'"
+check "CSP sets object-src 'none'" $?
+printf '%s\n' "$HDRS" | grep -qi "content-security-policy:.*base-uri 'none'"
+check "CSP sets base-uri 'none'" $?
+printf '%s\n' "$HDRS" | grep -qi "content-security-policy:.*connect-src 'self' https://archive-api.open-meteo.com"
+check "CSP connect-src names only self + Open-Meteo" $?
+printf '%s\n' "$HDRS" | grep -qi '^content-security-policy:.*default-src .self.'
+check "CSP default-src is 'self'" $?
+printf '%s\n' "$HDRS" | grep -qi '^permissions-policy: *camera=()'
+check "GET / carries Permissions-Policy" $?
+printf '%s\n' "$HDRS" | grep -qi '^cross-origin-opener-policy: *same-origin'
+check "GET / carries Cross-Origin-Opener-Policy" $?
+
+# The rate limit guarding the genuinely unauthenticated endpoints. The two
+# zones are `gb_strict` (30r/m, burst=10) on `/greenbutton/start` and
+# `/greenbutton/notify/`, and `gb_soft` (300r/m, burst=100) on the rest —
+# high enough that one connect flow (~19 requests) never trips it, so honest
+# traffic is never the thing being refused. 15 against the strict zone must
+# reach the ceiling AT THE ROUTER rather than the shim.
+for i in $(seq 1 15); do
+  curl -s -m 5 -o /dev/null "$BASE/greenbutton/start" || true
+done
+sleep 1
+case "$(docker logs gb-topo-router 2>&1)" in
+  *"limiting requests"*) check "rate limit engages on /greenbutton/start" 0 ;;
+  *)                     check "rate limit engages on /greenbutton/start" 1 ;;
+esac
+# And the soft zone must NOT have fired — if it did, this gate (which makes
+# ~19 legitimate requests above) would itself be the thing being throttled.
+case "$(docker logs gb-topo-router 2>&1)" in
+  *'by zone "gb_soft"'*) check "gb_soft never fires on legitimate traffic" 1 ;;
+  *)                     check "gb_soft never fires on legitimate traffic" 0 ;;
+esac
 
 exit "$FAIL"

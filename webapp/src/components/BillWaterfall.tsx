@@ -21,9 +21,11 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 
 import { billWaterfall, type WaterfallKind, type WaterfallStep } from '@/lib/moneyViz';
 import type { UsageSummary } from '@/lib/energy';
-import { useTranslation } from '@/i18n';
+import { fmtMoney, useTranslation } from '@/i18n';
 
-const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
+// Signed money through the locale formatter: en-CA prints `$12.34` / `−$12.34`
+// exactly as the hand-rolled version did, fr-CA prints `12,34 $` / `−12,34 $`.
+const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
 const KIND_COLOR: Record<WaterfallKind, string> = {
   start: '#2563EB',

@@ -23,9 +23,6 @@ import {
 /** Served from `public/` — same origin, no CORS, cached by the SW like any asset. */
 export const EXAMPLE_DATA_URL = '/samples/example-usage.xml';
 
-/** On-disk name, so the label can promise what the file is. */
-export const EXAMPLE_DATA_FILENAME = 'example-usage.xml';
-
 /** What the UI calls it — the "not real usage" promise, in the user's words. */
 export const EXAMPLE_DATA_LABEL = 'Example data — not real usage';
 

@@ -118,7 +118,13 @@ export async function GET(request: Request): Promise<Response> {
       path: "/",
       maxAge: SESSION_MAX_AGE,
     });
-    out.cookies.set(STATE_COOKIE, "", { path: "/", maxAge: 0 });
+    out.cookies.set(STATE_COOKIE, "", {
+      httpOnly: true,
+      secure: cookieSecure(),
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
     return out;
   } catch (e) {
     if (e instanceof OAuthError) {

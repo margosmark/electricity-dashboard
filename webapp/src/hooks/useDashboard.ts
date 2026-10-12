@@ -912,6 +912,16 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
       // The service worker staged a feed while this window was open.
       onSwMessage = (event: MessageEvent) => {
+        // Only OUR service worker may drive a refresh. Without this, any
+        // window that can reach this origin (an embedded frame, a `window.open`
+        // handle it kept) could post this message and force repeated cache
+        // reads and XML parses of a multi-megabyte feed — and make the app
+        // claim a refresh happened when it did not. `drainStagedFeed` returns
+        // nothing to the sender, so this is a work-amplification and
+        // trust-boundary bug, not an exfiltration one.
+        const fromWorker = event.source as unknown;
+        if (fromWorker !== (navigator.serviceWorker as unknown)) return;
+        if (event.origin !== self.location.origin) return;
         if (!mounted || event.data?.type !== GB_STAGED_MESSAGE) return;
         void drainStagedFeed().then((got) => {
           if (got?.ok) setGbRefreshTick((t) => t + 1);
@@ -1375,6 +1385,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // read — drop it with the authorisation.
     if (ok) {
       void unregisterGreenButtonPeriodicSync();
+      // …and drop whatever the worker staged. `oeo-gb-staged` holds a full
+      // ESPI feed — real meter readings — and it is deliberately exempt from
+      // the version scrub, so it outlives deploys by design. Stopping the sync
+      // alone would leave a periodic-sync feed staged while the app was closed
+      // sitting on disk AFTER the user revoked the authorisation. Delete it
+      // with the grant.
+      void caches.delete(GB_STAGED_CACHE).catch(() => undefined);
+      void caches.delete(GB_CURSOR_CACHE).catch(() => undefined);
       setBackgroundSync("unconfigured");
     }
     await refreshGbStatus();

@@ -38,7 +38,7 @@ import PeriodDeltaTable from './PeriodDeltaTable';
 import PlanCards from './PlanCards';
 import SwitchTrackRecord from './SwitchTrackRecord';
 import VerdictLine from './VerdictLine';
-import { getLocale, setLocale } from '@/i18n';
+import { getLocale, planLabel, setLocale } from '@/i18n';
 import { buildPeriodStacks, periodDeltaRows, type PlanOverlay } from '@/lib/moneyViz';
 import {
   billTotals,
@@ -329,7 +329,11 @@ describe('Truth in UI — the disclosures survive the French toggle', () => {
     setLocale('fr');
     render(<EvScenarioCard rows={withEv} rates={RATES} />);
     const comparison = screen.getByTestId('ev-plan-comparison');
-    expect(comparison).toHaveTextContent('Référence $');
+    // fr-CA puts the currency symbol AFTER the number — this also pins that
+    // the card's money goes through the locale formatter rather than a
+    // hand-rolled `$`-prefixed template (which would read "Référence $34.98").
+    expect(comparison.textContent).toMatch(/Référence \d[\d\s.,]*\s*\$/);
+    expect(comparison.textContent).not.toMatch(/Référence \$/);
     expect(comparison).not.toHaveTextContent('Today');
     expect(comparison.textContent).not.toMatch(/ev\./);
     const basis = screen.getByTestId('ev-exposure-basis');
@@ -385,14 +389,17 @@ const overlayOff: PlanOverlay = {
  * A READY overlay, injected: the chart takes it as a prop, so the key can be
  * pinned without a fixture that also clears the coverage AND rate gates.
  */
+// Labels come from `planLabel()` — exactly what `moneyViz.planOverlay`
+// produces — so this fixture follows the locale the way the real overlay does
+// rather than hardcoding one language.
 const overlayOn = (actual: number): PlanOverlay => ({
   ...overlayOff,
   ready: true,
   reason: '',
   lines: [
-    { plan: 'TOU', label: 'Time-of-Use', amount: 210.5, perPeriod: 105.25 },
-    { plan: 'Tiered', label: 'Tiered', amount: 198.25, perPeriod: 99.13 },
-    { plan: 'ULO', label: 'Ultra-Low Overnight', amount: 187.4, perPeriod: 93.7 },
+    { plan: 'TOU', label: planLabel('TOU'), amount: 210.5, perPeriod: 105.25 },
+    { plan: 'Tiered', label: planLabel('Tiered'), amount: 198.25, perPeriod: 99.13 },
+    { plan: 'ULO', label: planLabel('ULO'), amount: 187.4, perPeriod: 93.7 },
   ],
   actual,
   actualPerPeriod: actual / 2,
@@ -524,10 +531,14 @@ describe('Truth in UI — the Money tab', () => {
     setLocale('fr');
     render(<MoneyStackedChart stacks={pricedStacks} overlay={overlayOn(889.44)} />);
     const key = screen.getByTestId('money-overlay-key');
-    expect(key).toHaveTextContent('Vous avez payé $444.72');
-    expect(key).toHaveTextContent('($889.44 au total)');
+    expect(key).toHaveTextContent('Vous avez payé 444,72 $');
+    expect(key).toHaveTextContent('(889,44 $ au total)');
     expect(screen.getByTestId('money-overlay-lines')).toHaveTextContent(
-      'vous avez payé $889.44',
+      'vous avez payé 889,44 $',
+    );
+    // The overlay legend's plan names are display text, so they translate too.
+    expect(screen.getByTestId('money-overlay-lines')).toHaveTextContent(
+      'Tarification par paliers',
     );
   });
 

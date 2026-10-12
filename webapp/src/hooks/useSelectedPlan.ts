@@ -19,36 +19,23 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { createStoredStore } from '@/lib/createStoredStore';
 
-export type PlanId = 'TOU' | 'Tiered' | 'ULO';
+// The plan identity itself lives in lib/planIds.ts — one definition, shared by
+// the hook, the pure libs and the components. Re-exported here because this
+// module has always been where the tree imports them from.
+import { DEFAULT_PLAN, PLAN_IDS, PLAN_LABEL, isPlanId, type PlanId } from '@/lib/planIds';
 
-export const PLAN_IDS: readonly PlanId[] = ['Tiered', 'TOU', 'ULO'];
+export { DEFAULT_PLAN, PLAN_IDS, PLAN_LABEL, isPlanId };
+export type { PlanId };
 
 export const PLAN_STORAGE_KEY = 'selected_plan';
 
-/** Human name for the header chip — matches the switcher labels. */
-export const PLAN_LABEL: Record<PlanId, string> = {
-  TOU: 'Time-of-Use',
-  Tiered: 'Tiered',
-  ULO: 'Ultra-Low Overnight',
-};
-
-export const DEFAULT_PLAN: PlanId = 'TOU';
-
-export function isPlanId(value: unknown): value is PlanId {
-  return typeof value === 'string' && (PLAN_IDS as readonly string[]).includes(value);
-}
-
 /* --------------------------------------------------------------------------
  * Store: one module-level snapshot + subscriber set (works across tabs too).
+ * The mechanics live in createStoredStore — see lib/createStoredStore.ts for
+ * what each store must supply and why the server snapshot must be stable.
  * ------------------------------------------------------------------------ */
-
-let snapshot: PlanId | null = null;
-const listeners = new Set<() => void>();
-
-function emit() {
-  for (const listener of listeners) listener();
-}
 
 /** Read the stored plan. Unreadable storage or a bad value => default. */
 export function readStoredPlan(): PlanId {
@@ -61,54 +48,33 @@ export function readStoredPlan(): PlanId {
   return DEFAULT_PLAN;
 }
 
+const store = createStoredStore<PlanId>({
+  key: PLAN_STORAGE_KEY,
+  read: readStoredPlan,
+  persist: (plan) => window.localStorage.setItem(PLAN_STORAGE_KEY, plan),
+  serverSnapshot: DEFAULT_PLAN,
+});
+
 /**
  * Drop the cached snapshot so the next read goes back to storage.
  * Called when storage is cleared wholesale (emergency reset, tests).
  */
 export function resetPlanStore(): void {
-  snapshot = null;
-  emit();
+  store.reset();
 }
 
 /** Write + broadcast. Safe to call when storage is unavailable. */
 export function writePlan(plan: PlanId): void {
-  snapshot = plan;
-  try {
-    window.localStorage.setItem(PLAN_STORAGE_KEY, plan);
-  } catch {
-    /* keep the in-memory value; the session still honours the choice */
-  }
-  emit();
-}
-
-function getSnapshot(): PlanId {
-  if (snapshot === null) snapshot = readStoredPlan();
-  return snapshot;
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  // Another tab changed the plan: re-read instead of holding a stale one.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === PLAN_STORAGE_KEY || e.key === null) {
-      snapshot = null;
-      emit();
-    }
-  };
-  window.addEventListener('storage', onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-}
-
-function getServerSnapshot(): PlanId {
-  return DEFAULT_PLAN;
+  store.write(plan);
 }
 
 /** The active plan + its setter, shared by every subscriber. */
 export function useSelectedPlan(): [PlanId, (plan: PlanId) => void] {
-  const plan = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const plan = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
+  );
   const setPlan = useCallback((next: PlanId) => {
     if (!isPlanId(next)) return;
     writePlan(next);

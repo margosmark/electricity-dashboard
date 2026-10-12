@@ -14,6 +14,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { createStoredStore } from '@/lib/createStoredStore';
 
 import {
   PLAN_TIMELINE_KEY,
@@ -27,13 +28,6 @@ import {
 /** Stable server snapshot — useSyncExternalStore forbids fresh arrays. */
 const EMPTY: PlanTimelineEntry[] = [];
 
-let snapshot: PlanTimelineEntry[] | null = null;
-const listeners = new Set<() => void>();
-
-function emit(): void {
-  for (const listener of listeners) listener();
-}
-
 /** Read the stored timeline. Unreadable storage => empty, never a throw. */
 export function readStoredTimeline(): PlanTimelineEntry[] {
   try {
@@ -43,45 +37,21 @@ export function readStoredTimeline(): PlanTimelineEntry[] {
   }
 }
 
+const store = createStoredStore<PlanTimelineEntry[]>({
+  key: PLAN_TIMELINE_KEY,
+  read: readStoredTimeline,
+  persist: (entries) => window.localStorage.setItem(PLAN_TIMELINE_KEY, JSON.stringify(entries)),
+  serverSnapshot: EMPTY,
+});
+
 /** Write + broadcast. Storage failures keep the in-memory value only. */
 export function writeStoredTimeline(entries: PlanTimelineEntry[]): void {
-  snapshot = entries;
-  try {
-    window.localStorage.setItem(PLAN_TIMELINE_KEY, JSON.stringify(entries));
-  } catch {
-    /* quota / private mode: the session still honours the choice */
-  }
-  emit();
+  store.write(entries);
 }
 
 /** Drop the cached snapshot (emergency reset, tests). */
 export function resetPlanTimelineStore(): void {
-  snapshot = null;
-  emit();
-}
-
-function getSnapshot(): PlanTimelineEntry[] {
-  if (snapshot === null) snapshot = readStoredTimeline();
-  return snapshot;
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === PLAN_TIMELINE_KEY || e.key === null) {
-      snapshot = null;
-      emit();
-    }
-  };
-  window.addEventListener('storage', onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-}
-
-function getServerSnapshot(): PlanTimelineEntry[] {
-  return EMPTY;
+  store.reset();
 }
 
 export type NewTimelineEntry = {
@@ -100,17 +70,21 @@ export type PlanTimelineApi = {
 };
 
 export function usePlanTimeline(): [PlanTimelineEntry[], PlanTimelineApi] {
-  const entries = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const entries = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getServerSnapshot,
+  );
 
   const add = useCallback((input: NewTimelineEntry): boolean => {
     const candidate: PlanTimelineEntry = { id: newTimelineId(), ...input };
     if (!isValidPlanTimelineEntry(candidate)) return false;
-    writeStoredTimeline([...getSnapshot(), candidate]);
+    writeStoredTimeline([...store.getSnapshot(), candidate]);
     return true;
   }, []);
 
   const update = useCallback((id: string, patch: Partial<Pick<PlanTimelineEntry, 'plan' | 'from' | 'to'>>): boolean => {
-    const current = getSnapshot();
+    const current = store.getSnapshot();
     const target = current.find((e) => e.id === id);
     if (!target) return false;
     const merged: PlanTimelineEntry = { ...target, ...patch };
@@ -120,7 +94,7 @@ export function usePlanTimeline(): [PlanTimelineEntry[], PlanTimelineApi] {
   }, []);
 
   const remove = useCallback((id: string): void => {
-    writeStoredTimeline(getSnapshot().filter((e) => e.id !== id));
+    writeStoredTimeline(store.getSnapshot().filter((e) => e.id !== id));
   }, []);
 
   return [entries, { add, update, remove }];

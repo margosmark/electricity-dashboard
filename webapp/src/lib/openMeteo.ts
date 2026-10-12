@@ -53,7 +53,6 @@ export const OPEN_METEO_CHUNK_DAYS = 183;
 export const OPEN_METEO_CACHE_KEY = 'oeo_openmeteo_v1';
 
 const MS_PER_HOUR = 3_600_000;
-const MS_PER_DAY = 86_400_000;
 
 /** The one clock: absolute hours since the epoch. */
 export const hourIndexOf = (unixSeconds: number): number => Math.floor(unixSeconds / 3600);
@@ -330,7 +329,3 @@ function safeLocalStorage(): Storage | null {
     return null;
   }
 }
-
-/** Exported for the tests that want the day math without a Date round trip. */
-export const HOUR_MS = MS_PER_HOUR;
-export const DAY_MS = MS_PER_DAY;

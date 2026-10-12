@@ -55,8 +55,20 @@ import { fmtMoney, t } from '@/i18n';
  * Types shared with the rest of the app
  * -------------------------------------------------------------------------- */
 
-export type PlanType = 'TOU' | 'Tiered' | 'ULO';
+/**
+ * The same three plans as everywhere else — `PlanType` is this module's
+ * historical name for what `lib/planIds.ts` calls `PlanId`, aliased so the
+ * timeline's own callers keep their vocabulary.
+ */
+export type PlanType = PlanId;
 
+import type { PlanId } from './planIds';
+
+/**
+ * Detection order, NOT the switcher's alphabetical one. Order is load-bearing
+ * here: it is the order `detectPlanType` tests the charge-line patterns in and
+ * the order conflict candidates are reported in, so it stays as declared.
+ */
 export const PLAN_TYPES: readonly PlanType[] = ['TOU', 'Tiered', 'ULO'];
 
 export function isPlanType(value: unknown): value is PlanType {

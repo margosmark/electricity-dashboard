@@ -63,6 +63,7 @@ import {
 import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
 import { projectMonthBill } from '@/lib/billProjection';
+import { daysBetweenDayKeys } from '@/lib/dateSpan';
 
 /**
  * One row per storage problem — never let a failed write look like a saved one.
@@ -392,17 +393,9 @@ export default function Dashboard() {
 
   // --- Totals-strip display state (Wave H items 5 + 7) --------------------
   // The strip reports the WHOLE dataset, so its unit conversions are anchored
-  // on the dataset's own span — never on the visible window.
-  const totalDays = totals
-    ? Math.max(
-        1,
-        Math.round(
-          (new Date(totals.lastDate + 'T00:00:00').getTime() -
-            new Date(totals.firstDate + 'T00:00:00').getTime()) /
-            86_400_000,
-        ) + 1,
-      )
-    : 1;
+  // on the dataset's own span — never on the visible window. Shared with
+  // OverviewPanel so the two cannot drift (lib/dateSpan.ts).
+  const totalDays = totals ? daysBetweenDayKeys(totals.firstDate, totals.lastDate) : 1;
 
   const perDayOf = (datasetTotal: number): number => datasetTotal / totalDays;
   const perYearOf = (datasetTotal: number): number => perDayOf(datasetTotal) * 365.25;

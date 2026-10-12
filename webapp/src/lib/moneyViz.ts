@@ -92,13 +92,10 @@ export const COST_SLICE_ORDER: CostSliceKey[] = [
   'credit',
 ];
 
-/** The kicker over the open-period panel. */
-export const ESTIMATE_KEY_LABEL = 'Money your meter has used, not yet a bill';
-
 /* Wave U — every user-visible reason/note in this file comes from the
  * locale catalog at call time; the bucket keys and classifier regexes stay
  * canonical English (they are data). */
-import { fmtMoney, fmtNumber, t } from '@/i18n';
+import { fmtMoney, fmtNumber, planLabel, t } from '@/i18n';
 /** Wave U — the catalog key the display layer translates instead. */
 export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
 
@@ -948,7 +945,8 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
  * Plan overlay — the three plans, modelled over the periods we can see
  * ========================================================================== */
 
-export type PlanId = 'TOU' | 'Tiered' | 'ULO';
+export type { PlanId } from './planIds';
+import type { PlanId } from './planIds';
 
 export type PlanOverlayLine = {
   plan: PlanId;
@@ -978,12 +976,6 @@ export type PlanOverlay = {
   rebateRate: number | null;
   /** Everything the numbers assume, printed under the chart. */
   assumptions: string[];
-};
-
-export const PLAN_LABEL: Record<PlanId, string> = {
-  TOU: 'Time-of-Use',
-  Tiered: 'Tiered',
-  ULO: 'Ultra-Low Overnight',
 };
 
 /**
@@ -1098,7 +1090,10 @@ export function planOverlay(
     const amount = estimate.total + (rebateRate === null ? 0 : rebateRate * preTax);
     lines.push({
       plan,
-      label: PLAN_LABEL[plan],
+      // Display name, so the overlay legend reads "Tarification par paliers"
+      // in French. PLAN_LABEL stays the canonical English DATA name; this is
+      // the localized view of it (same rule as every other plan label).
+      label: planLabel(plan),
       amount: round2(amount),
       // The chart draws ONE horizontal line, and its bars are per period — so
       // the line is the per-period average of this total. Plotting the total

@@ -211,7 +211,11 @@ describe("authorization_code loop", () => {
     // --- the feed, with it -------------------------------------------
     const feed = await usageGET(appRequest("/greenbutton/usage"));
     expect(feed.status).toBe(200);
-    expect(feed.headers.get("content-type")).toContain("application/atom+xml");
+    // Deliberately NOT the custodian's own header: the route sets
+    // `nosniff`, so whatever type comes back is honoured by the browser. A
+    // custodian answering `text/html` would otherwise render the feed as HTML
+    // on our origin, next to the readings in localStorage.
+    expect(feed.headers.get("content-type")).toBe("application/xml");
     expect(feed.headers.get("x-greenbutton-pipe")).toBe("stream");
     const xml = await feed.text();
     // Namespaced in the feed (espi:), un-prefixed after the app's parser

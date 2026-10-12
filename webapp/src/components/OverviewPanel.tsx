@@ -26,6 +26,7 @@ import { EFFICIENCY_SUBTITLE_KEY, type EfficiencyReport } from '@/lib/statistics
 import BestChoiceBanner from '@/components/BestChoiceBanner';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
+import { daysBetweenDayKeys } from '@/lib/dateSpan';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -64,17 +65,9 @@ export default function OverviewPanel({
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
   // The strip reports the WHOLE dataset, so its unit conversions are anchored
-  // on the dataset's own span — never on the visible window.
-  const totalDays = totals
-    ? Math.max(
-        1,
-        Math.round(
-          (new Date(totals.lastDate + 'T00:00:00').getTime() -
-            new Date(totals.firstDate + 'T00:00:00').getTime()) /
-            86_400_000,
-        ) + 1,
-      )
-    : 1;
+  // on the dataset's own span — never on the visible window. Shared with
+  // Dashboard so the two cannot drift (lib/dateSpan.ts).
+  const totalDays = totals ? daysBetweenDayKeys(totals.firstDate, totals.lastDate) : 1;
   /** The per-day/per-year figure, formatted with the locale's money rules. */
   const money = (datasetTotal: number): string => {
     const perDay = datasetTotal / totalDays;

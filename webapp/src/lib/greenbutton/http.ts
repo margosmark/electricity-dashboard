@@ -10,7 +10,7 @@
  *    behind a public hostname.
  */
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getConfig, getProcessIdentity } from "./config";
 import { getTokenStore, type TokenSet } from "./tokens";
@@ -60,16 +60,26 @@ export function readCookie(request: Request, name: string): string | null {
   return null;
 }
 
-/** Constant-time comparison that tolerates length mismatches. */
+/**
+ * Constant-time comparison of two secrets.
+ *
+ * Compares SHA-256 DIGESTS rather than the raw values: `timingSafeEqual`
+ * throws on unequal lengths, so comparing raw bytes forces an early
+ * `return false` that leaks the secret's length. Hashing first makes both
+ * operands a fixed 32 bytes and the whole comparison branch-free with respect
+ * to the inputs.
+ *
+ * (The notify token's length was never actually secret — it is fixed at 32 by
+ * construction and published by the config — but the session token minted in
+ * the OAuth callback is a genuine 48-hex secret, and this is the function that
+ * guards it.)
+ */
 export function secretEquals(
   a: string | null | undefined,
   b: string | null | undefined,
 ): boolean {
   if (!a || !b) return false;
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
+  return timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
 }
 
 /**

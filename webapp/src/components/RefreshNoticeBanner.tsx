@@ -19,7 +19,7 @@
 
 import { RefreshCw, Bell, X } from "lucide-react";
 import type { RefreshNotice } from "@/lib/backgroundRefresh";
-import { useTranslation } from "@/i18n";
+import { fmtMoney, useTranslation } from "@/i18n";
 
 type Props = {
   notices: RefreshNotice[];
@@ -60,7 +60,7 @@ function PlanNotice({
         <div className="hidden sm:flex flex-col items-end bg-card border-2 border-edge rounded-lg px-3 py-2">
           <span className="text-[8px] md:text-[10px] font-black uppercase">{t('bgRefresh.bestVsCurrent')}</span>
           <span data-testid="refresh-notice-saving" className="text-base md:text-xl italic font-black">
-            ${notice.monthlySavingVsCurrent.toFixed(2)}
+            {fmtMoney(notice.monthlySavingVsCurrent)}
             <span className="text-[9px] md:text-[11px] not-italic ml-1">{t('common.perMonth')}</span>
           </span>
         </div>
