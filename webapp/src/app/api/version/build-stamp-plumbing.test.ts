@@ -24,6 +24,7 @@
  * not use.
  */
 import { describe, it, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -114,6 +115,18 @@ describe('the stamp is compiled into the image, not read by the container', () =
   it('writes that exact file from the generator, so the wiring above is real', () => {
     expect(generator).toContain("src', 'lib', 'buildInfo.generated.ts'");
     expect(generator).toContain('process.env.GIT_SHA');
+  });
+
+  it('commits the PLACEHOLDER, not a SHA', () => {
+    // Read from the object store, not the working tree: a tree that has run a
+    // stamped build holds the SHA locally, and this is about what a fresh
+    // clone gets — no commit may inherit someone else's identity.
+    const committed = execFileSync('git', ['show', 'HEAD:webapp/src/lib/buildInfo.generated.ts'], {
+      cwd: REPO,
+      encoding: 'utf8',
+    });
+    expect(committed).toMatch(/^export const BUILD_SHA = 'unknown';$/m);
+    expect(committed).not.toMatch(/\b[0-9a-f]{40}\b/);
   });
 
   it('commits no literal 40-hex SHA in the build config', () => {
