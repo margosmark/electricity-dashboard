@@ -90,6 +90,34 @@ export function requireEnabled(): AccountConfig | NextResponse {
   return cfg;
 }
 
+/**
+ * Gate 1 for the verbs a route does not export.
+ *
+ * The routes exist in the bundle in BOTH processes — same image — so Next
+ * routes by path FIRST and answers a method the route has no handler for
+ * itself: `405 Method Not Allowed`, plus an auto-`OPTIONS` `204` carrying
+ * `Allow`. Both answers come from the router, before any handler (and so
+ * before `requireEnabled()`) can run, so on a deployment with the feature
+ * off they would admit that an account API exists on this origin — which
+ * is exactly what SECURITY.md 5.1 ("indistinguishable from no such route")
+ * forbids. "Invisible, not broken" has to hold for every method, not just
+ * the one the handler implements.
+ *
+ * So every `/account/*` route re-exports this as the verbs it does not
+ * implement (`export { wrongMethod as GET, … } from "@/lib/account/http"`):
+ * the same `404` body `requireEnabled()` answers while the feature is off,
+ * and an honest `405` — naming the refused method — once it is on. `HEAD`
+ * needs no export of its own: Next serves it from the route's `GET`, stub
+ * or real, which is why `GET` must be stubbed wherever it is missing.
+ *
+ * `request` is read only so the enabled-path answer can name the method;
+ * Next calls every export as `(request, context)`.
+ */
+export function wrongMethod(request: Request): NextResponse {
+  if (!getAccountConfig().enabled) return accountError(404, "not_found");
+  return accountError(405, "method_not_allowed", `${request.method} is not supported on this route.`);
+}
+
 /** The database handle for an enabled process. */
 export function getDb(cfg: AccountConfig): DatabaseSync {
   return openDb(cfg.dbPath);

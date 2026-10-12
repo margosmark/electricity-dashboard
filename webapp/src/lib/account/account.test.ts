@@ -162,6 +162,42 @@ describe("the feature flag", () => {
     resetAccountConfigCache();
   });
 
+  it("404s every method on every route while the feature is off — wrong-method probes included", async () => {
+    // The router answers a method the route does not export BEFORE any
+    // handler runs, so `requireEnabled()` alone never saw these: a bundle
+    // that contains the route answered 405 (and auto-OPTIONS 204 + Allow)
+    // on a deployment that claims to have no account API. The per-route
+    // `wrongMethod` stubs carry Gate 1 to those verbs.
+    delete process.env.ACCT_ENABLED;
+    resetAccountConfigCache();
+    const probes = [
+      await loginRoute.GET(new Request(`${BASE}/account/login`)),
+      await loginRoute.OPTIONS(new Request(`${BASE}/account/login`, { method: "OPTIONS" })),
+      await sessionRoute.POST(new Request(`${BASE}/account/session`, { method: "POST" })),
+      await notifyRoute.GET(new Request(`${BASE}/account/notify`)),
+      await syncRoute.DELETE(new Request(`${BASE}/account/sync`, { method: "DELETE" })),
+      await prefsRoute.PATCH(new Request(`${BASE}/account/push/preferences`, { method: "PATCH" })),
+      await subscribeRoute.GET(new Request(`${BASE}/account/push/subscribe`)),
+      await internalNotifyRoute.PUT(new Request(`${BASE}/account/internal/notify`, { method: "PUT" })),
+    ];
+    for (const res of probes) {
+      expect(res.status).toBe(404);
+      // Byte-identical to `requireEnabled()`'s answer — no detail, no header
+      // that could tell a probe which of these routes exist.
+      expect(await res.json()).toEqual({ error: "not_found" });
+    }
+    process.env.ACCT_ENABLED = "true";
+    resetAccountConfigCache();
+  });
+
+  it("keeps an honest 405 for those methods once the feature IS on (the stub must not blanket-404)", async () => {
+    const res = await loginRoute.GET(new Request(`${BASE}/account/login`));
+    expect(res.status).toBe(405);
+    const body = (await res.json()) as Record<string, string>;
+    expect(body.error).toBe("method_not_allowed");
+    expect(body.detail).toContain("GET");
+  });
+
   it("answers 200 with enabled:false when signed out, so the UI knows the feature exists", async () => {
     const res = await sessionRoute.GET(new Request(`${BASE}/account/session`));
     expect(res.status).toBe(200);

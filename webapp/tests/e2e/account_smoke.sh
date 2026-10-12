@@ -6,7 +6,7 @@
 # Two modes, because the feature has two ship criteria:
 #
 #   account_smoke.sh <base_url>                   # ACCT_ENABLED=true required
-#   account_smoke.sh <base_url> --expect-disabled  # every /account/* → 404
+#   account_smoke.sh <base_url> --expect-disabled  # every /account/* × every method → 404
 #
 # The disabled mode is the "public app is unchanged with the feature off"
 # gate (P0): the app container carries no ACCT_* env at all, so it must
@@ -41,6 +41,11 @@ req() { # req <jar|-> <method> <path> [json-body]
   if [ -n "$body" ]; then
     curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
       -X "$method" -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+  elif [ "$method" = "HEAD" ]; then
+    # --head, not -X HEAD: with -X HEAD curl waits for a body that never
+    # comes and exits 18, which `set -e` would take as a dead server.
+    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
+      --head "${BASE}${path}"
   else
     curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
       -X "$method" "${BASE}${path}"
@@ -70,6 +75,24 @@ if [ "$MODE" = "--expect-disabled" ]; then
   proc=$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')
   check "x-gb-process: app on an account path (process identity, not path)" \
     $([ "$proc" = "app" ] && echo 0 || echo 1)
+  # Every METHOD, on every app-owned /account/* path — not just the verb each
+  # handler implements. The routes are registered in the bundle in BOTH
+  # processes, and Next routes by path: it answers a method the route does
+  # not export (and its auto-OPTIONS) itself, BEFORE any handler's
+  # feature-flag check can 404. Until the `wrongMethod` stubs landed
+  # (t_4eac9fde) GET /account/login therefore answered 405 and OPTIONS
+  # 204 + Allow — admitting an account API on a deployment that claims to
+  # have none. /account/internal/* is skipped on purpose: that path is
+  # denied at the edge with 403, so it is not this process's answer to give.
+  for path in /account/login /account/logout /account/notify /account/recover \
+              /account/register /account/session /account/sync \
+              /account/push/preferences /account/push/subscribe; do
+    for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
+      code=$(req - "$method" "$path") || code=000
+      check "${method} ${path} → 404 (no such route, whatever the method)" \
+        $([ "$code" = "404" ] && echo 0 || echo 1)
+    done
+  done
   [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
   echo "account gate OK (feature off): ${PASS} checks"
   exit 0

@@ -61,8 +61,12 @@ password (PBKDF2-HMAC-SHA256, 600k iterations → AES-GCM) and uploads bytes the
 server cannot read; push subscriptions, topic caps and quiet hours live with
 that server, while every decision that needs the readings still runs in the
 browser. With `ACCT_ENABLED` unset — the default for the public app — every
-`/account/*` route answers 404, so a deployment without accounts behaves
-exactly as it did before Wave N.
+`/account/*` route answers 404 **for every HTTP method**: each route also
+stubs the verbs its handler does not export, because the router answers a
+method mismatch (and auto-`OPTIONS`) by path, from inside the bundle,
+before the handler's feature-flag check could run. So a deployment without
+accounts behaves exactly as it did before Wave N — no `405`, no `204 +
+Allow`, nothing that says an account API is registered here.
 
 1. **Parse** — `parseGreenButtonXML` walks the feed object stack, pulls every
    `IntervalReading` (`timePeriod.start` unix seconds + `value` in Wh → kWh).

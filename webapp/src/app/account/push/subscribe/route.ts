@@ -110,3 +110,14 @@ export async function DELETE(request: Request): Promise<Response> {
   deleteSubscription(getDb(cfg), auth.account.id, endpoint);
   return accountJson({ ok: true, subscriptions: listSubscriptions(getDb(cfg), auth.account.id).length });
 }
+
+/*
+ * Wrong-method stubs — see `wrongMethod()` in `lib/account/http.ts`.
+ *
+ * Next routes by path and answers the verbs this route does not export
+ * (and its auto-OPTIONS) before any handler runs, so without these a
+ * disabled deployment would answer 405/204 and admit that an account API
+ * exists here (SECURITY.md 5.1). With them: 404 while the feature is off,
+ * an honest 405 — naming the method — once it is on.
+ */
+export { wrongMethod as GET, wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as OPTIONS } from "@/lib/account/http";
