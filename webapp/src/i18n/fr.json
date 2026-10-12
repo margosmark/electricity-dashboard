@@ -539,6 +539,8 @@
   "gb.unreachableHint": "Vérifiez la connexion et réessayez ; vos données existantes ne sont pas modifiées.",
   "gbseries.count": "{count} séries de relevés",
   "gbseries.none": "aucun relevé facturable — les données de ce point n'ont pas pu être évaluées",
+  "gbseries.notice.dismiss": "Masquer",
+  "gbseries.notice.heading": "Certains relevés n'ont pas été inclus dans la consommation évaluée",
   "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :",
   "heatmap.blurb": "Jours ouvrables et fins de semaine séparés — un chargeur qui ne fonctionne que du lundi au vendredi à 19 h disparaît quand samedi et dimanche partagent sa même échelle de couleurs. Les deux grilles utilisent la MÊME échelle (avec un pic de {max} en une heure), donc les couleurs restent comparables.",
   "heatmap.cellLabel": "{day} {hour} — {kwh} en moyenne sur {count} jour",

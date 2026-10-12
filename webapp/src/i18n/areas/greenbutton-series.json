@@ -2,11 +2,15 @@
   "en": {
     "gbseries.count": "{count} reading series",
     "gbseries.none": "no billable readings — this point's data could not be priced",
-    "gbseries.reasons": "Why some of this point was left out:"
+    "gbseries.reasons": "Why some of this point was left out:",
+    "gbseries.notice.heading": "Some readings weren’t included in priced consumption",
+    "gbseries.notice.dismiss": "Dismiss"
   },
   "fr": {
     "gbseries.count": "{count} séries de relevés",
     "gbseries.none": "aucun relevé facturable — les données de ce point n'ont pas pu être évaluées",
-    "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :"
+    "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :",
+    "gbseries.notice.heading": "Certains relevés n'ont pas été inclus dans la consommation évaluée",
+    "gbseries.notice.dismiss": "Masquer"
   }
 }

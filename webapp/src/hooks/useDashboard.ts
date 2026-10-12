@@ -30,6 +30,9 @@ import {
   fetchGbStatus, fetchGbUsage, disconnectGb, describeGbError,
   type GbStatus,
 } from "@/lib/greenbutton/client";
+// The ingestion's own refusals, in the shape the notice renders verbatim
+// (t_880370e6 — presentation only; nothing here changes what was priced).
+import type { SeriesNote } from "@/lib/greenbutton/series";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
   EXAMPLE_DATA_KEY,
@@ -208,6 +211,12 @@ export type MergeFileChoice = {
   /** Set when this file produced no readings: what to tell the user. */
   issue?: ParseDiagnostic;
   /**
+   * The feed's refusal notes — what this file carried that was NOT priced.
+   * They ride with the rows so the dashboard can say it after the import
+   * commits (a single-UsagePoint file never renders the picker).
+   */
+  notes?: SeriesNote[];
+  /**
    * The UsageSummary bills parsed out of this same file. They ride along with
    * the readings so the first-load window can be cut on the FILE's periods —
    * the window is chosen in the same call that imports the rows, before any
@@ -297,6 +306,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     origin?: "upload" | "greenbutton";
     /** Bills from the same file — see MergeFileChoice.summaries. */
     summaries?: UsageSummary[];
+    /** The feed's refusals — see MergeFileChoice.notes. Held until the pick
+     *  actually commits, so cancelling raises no notice. */
+    notes?: SeriesNote[];
   } | null>(null);
 
   /** 2+ files waiting on the merge review screen (range + rows before import). */
@@ -346,6 +358,26 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   /** The notice row's dismiss button. The failure stays true; the user moves on. */
   const dismissStorageNotice = () => setStorageNotice(null);
+
+  /**
+   * The refusal notes the last COMMITTED import carried: readings the
+   * ingestion parsed and preserved but did not price (t_880370e6).
+   *
+   * Presentation only. It is set from the same `feed.notes` the picker and
+   * the diagnostics panels read, so it can only ever repeat a refusal the
+   * parser actually made, and dismissing it clears THIS row — never the
+   * readings, never the notes themselves. A commit with no refusals clears
+   * it, so the row always describes the dataset on screen.
+   */
+  const [refusalNotes, setRefusalNotes] = useState<SeriesNote[]>([]);
+
+  /** Clear (or refresh) the refusal row for a just-committed import. */
+  const publishRefusalNotes = (notes: SeriesNote[] | undefined | null) => {
+    setRefusalNotes(notes && notes.length > 0 ? notes : []);
+  };
+
+  /** The refusal row's dismiss button. Nothing is deleted or altered. */
+  const dismissRefusalNotes = () => setRefusalNotes([]);
 
   /**
    * Raise (or, with null, clear) the notice from a caller outside this hook —
@@ -524,6 +556,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     data: DataPoint[],
     source: "upload" | "example" = "upload",
     bills?: UsageSummary[],
+    /**
+     * The refusals this dataset came with (t_880370e6). Every import path
+     * passes its own `feed.notes`; a path with none (the bundled example set)
+     * clears the row instead of leaving a stale one over other data.
+     */
+    notes?: SeriesNote[],
   ) => {
     writeRows(data);
     // Persist through the storage layer: versioned key, quota surfaced. The
@@ -551,6 +589,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       applyInitialWindow(data, billingDay, bills ?? billFeed.summaries);
     }
     setParseIssue(null);
+    // The refusal row describes THIS dataset: a clean commit clears whatever
+    // the previous file raised (see refusalNotes above).
+    publishRefusalNotes(notes);
     setShowUploadModal(false);
   };
 
@@ -590,6 +631,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         groups,
         origin: "greenbutton",
         summaries: feed.summaries,
+        // Held until the pick commits (see chooseUsagePoint).
+        notes: feed.notes,
       });
       setShowUploadModal(false);
       return { ok: true, incoming, picker: true };
@@ -608,7 +651,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
-    commitReadings(merged, "upload", feed.summaries);
+    commitReadings(merged, "upload", feed.summaries, feed.notes);
     commitBillFeed("union");
     if (hadWindow) {
       setStartDate(keep.start);
@@ -1028,6 +1071,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             name: file.name,
             groups,
             chosen: groups.length === 1 ? 0 : null,
+            // The refusals ride with the rows, the same way the bills do: the
+            // notice is raised by the commit that actually imports them.
+            notes: feed.notes,
             // The bills ride with the readings: the first-load window is
             // chosen in the same call that imports them.
             summaries: feed.summaries,
@@ -1060,12 +1106,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           const only = results[0];
           if (only.groups.length > 1) {
             // Held until the picker commits: cancelling must leave the bills
-            // the user already had alone.
-            setPendingUpload({ fileName: only.name, groups: only.groups, summaries: only.summaries });
+            // the user already had alone (and raise no refusal row).
+            setPendingUpload({
+              fileName: only.name,
+              groups: only.groups,
+              summaries: only.summaries,
+              notes: only.notes,
+            });
             setShowUploadModal(false);
             return;
           }
-          commitReadings(only.groups[0].readings, "upload", only.summaries);
+          commitReadings(only.groups[0].readings, "upload", only.summaries, only.notes);
           // An upload REPLACES: this file is what the user asked to see, so
           // an unrelated upload also replaces the panel (to nothing, if it
           // carried no bills) instead of leaving a stranger's bill on screen.
@@ -1093,14 +1144,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   /** Import the rows the merge review screen computed. */
   const chooseMerge = (readings: DataPoint[]) => {
+    const files = pendingMerge ?? [];
     setPendingMerge(null);
     if (readings.length > 0) {
       // Every file in the merge review, bills included: the axis de-dupes
-      // periods that two exports describe differently.
+      // periods that two exports describe differently. The refusals from the
+      // same files ride along — one review, one import, one notice.
       commitReadings(
         readings,
         "upload",
-        (pendingMerge ?? []).flatMap((f) => f.summaries ?? []),
+        files.flatMap((f) => f.summaries ?? []),
+        files.flatMap((f) => f.notes ?? []),
       );
       // The merged dataset IS those files, bills included (replace).
       commitBillFeed("replace");
@@ -1124,15 +1178,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * choosing a meter must not delete the history already in the browser.
    */
   const chooseUsagePoint = (readings: DataPoint[]) => {
-    const origin = pendingUpload?.origin;
+    const pick = pendingUpload;
+    const origin = pick?.origin;
     setPendingUpload(null);
     if (readings.length === 0) return;
+    // The refusals the file carried are raised by the commit below: choosing a
+    // point is what makes the import real, so a cancelled pick never shows it.
     if (origin === "greenbutton") {
-      commitReadings(mergeForWrite(rawDataRef.current, readings), "upload", pendingUpload?.summaries);
+      commitReadings(mergeForWrite(rawDataRef.current, readings), "upload", pick?.summaries, pick?.notes);
       commitBillFeed("union");
       return;
     }
-    commitReadings(readings, "upload", pendingUpload?.summaries);
+    commitReadings(readings, "upload", pick?.summaries, pick?.notes);
     commitBillFeed("replace");
   };
 
@@ -1196,6 +1253,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setParseIssue(null);
     setPendingUpload(null);
     setPendingMerge(null);
+    // Nothing was imported any more, so there is nothing to explain.
+    setRefusalNotes([]);
     setStartDate("");
     setEndDate("");
     setViewScope("BillingPeriod");
@@ -1436,6 +1495,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     handleFileUpload, updateBillingDay, applyViewScope,
     // Storage surfacing + a two-step, scoped reset (t_a8a54e33).
     storageNotice, dismissStorageNotice, raiseStorageNotice,
+    // What the last committed import refused to price (t_880370e6).
+    refusalNotes, dismissRefusalNotes,
     resetConfirmOpen, resetKeys,
     openResetConfirm, cancelResetConfirm, confirmReset,
     pendingUpload, chooseUsagePoint, cancelUsagePoint,

@@ -42,6 +42,7 @@ import MultiFileMerge from '@/components/MultiFileMerge';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
+import SeriesNotesNotice from '@/components/SeriesNotesNotice';
 import { NotificationToggle } from '@/components/NotificationToggle';
 import LocaleToggle from '@/components/LocaleToggle';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -104,6 +105,8 @@ export default function Dashboard() {
     exportBackup, importBackupFile,
     // Storage surfacing + the two-step, scoped reset (t_a8a54e33)
     storageNotice, dismissStorageNotice, raiseStorageNotice,
+    // What the last import refused to price (t_880370e6)
+    refusalNotes, dismissRefusalNotes,
     resetConfirmOpen, resetKeys, openResetConfirm, cancelResetConfirm, confirmReset,
     parseIssue, setParseIssue,
     exampleData, loadExampleData, discardExampleData,
@@ -761,6 +764,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* What the import left out of priced consumption (t_880370e6). Here,
+          under the toolbar and above the panels, because it explains the
+          numbers below it: a single-UsagePoint file never renders the picker,
+          so this is the only place its refusals can be said out loud. */}
+      {refusalNotes.length > 0 && !showUploadModal && (
+        <SeriesNotesNotice notes={refusalNotes} onDismiss={dismissRefusalNotes} />
+      )}
 
       {/* Storage failure row (visible whenever a read/write did not land) */}
       {storageNotice && !showUploadModal && (
