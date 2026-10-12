@@ -20,13 +20,16 @@ import { fileURLToPath } from 'node:url';
 import MoneySection from './MoneySection';
 import Dashboard from './Dashboard';
 import { billedKwh, billTotals, billWindow, parseUsageSummaries, type ProcessedPoint, type RateSet } from '@/lib/energy';
+import { fmtMoney } from '@/i18n';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const summaries = parseUsageSummaries(
   fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
 );
 
-const money = (n: number) => `$${n.toFixed(2)}`;
+// The same formatter the components print with — grouping included, so the
+// expectation tracks whatever the UI actually renders.
+const money = (n: number) => fmtMoney(n);
 
 const rateSet: RateSet = {
   effectiveDate: '2025-11-01',
@@ -159,8 +162,9 @@ describe('plan overlay', () => {
     expect(lines).toHaveTextContent(/Tiered/);
     expect(lines).toHaveTextContent(/Ultra-Low Overnight/);
     expect(lines).toHaveTextContent(`you paid ${money(payable)}`);
-    // No thousands separator anywhere in the app — match its own format.
-    expect(lines.textContent).toMatch(/\$1\d{3}\.\d{2}/);
+    // Money goes through the locale formatter, which groups thousands —
+    // the app-wide convention (I18N.md, `fmtMoney(1365.03)` → `$1,365.03`).
+    expect(lines.textContent).toMatch(/\$1,\d{3}\.\d{2}/);
   });
 
   it('states its assumptions rather than implying a tariff quote', async () => {

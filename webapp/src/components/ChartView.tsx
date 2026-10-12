@@ -23,8 +23,9 @@ import { type ZoomLevel } from '@/hooks/useDashboard';
 import { fmtMoney, useTranslation } from '@/i18n';
 import { ExportCsvButton } from '@/components/ExportCsvButton';
 import { chartSegments } from '@/lib/season';
+import type { PlanId } from '@/lib/planIds';
 
-export type PlanId = 'TOU' | 'Tiered' | 'ULO';
+export type { PlanId };
 export type Comparison = { TOU: number; Tiered: number; ULO: number };
 
 export type ChartViewProps = {

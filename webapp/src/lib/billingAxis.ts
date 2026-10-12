@@ -114,15 +114,7 @@ export type BillingAxis = {
   note: string;
 };
 
-export const EMPTY_AXIS: BillingAxis = {
-  periods: [],
-  billed: [],
-  gaps: [],
-  open: null,
-  usedFallback: false,
-  droppedDuplicates: 0,
-  note: t('axis.emptyNote'),
-};
+
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 

@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import { isOntarioHoliday } from './ontarioHolidays';
+import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
 /* Wave U — user-visible sentences in this file come from the locale catalog
@@ -792,16 +793,6 @@ export function fmtMonthKey(dt: Date): string {
   return `${dt.getFullYear()}-${p2(dt.getMonth() + 1)}`;
 }
 
-/** `MMM yyyy` — the monthly bar label ("Sep 2026"). */
-export function fmtMonthLabel(dt: Date): string {
-  return `${MONTH_ABBR()[dt.getMonth()]} ${dt.getFullYear()}`;
-}
-
-/** `MMM dd` — the daily bar label ("Oct 04"), zero-padded exactly like date-fns. */
-export function fmtDayLabel(dt: Date): string {
-  return `${MONTH_ABBR()[dt.getMonth()]} ${p2(dt.getDate())}`;
-}
-
 /** `HH:mm` — the hourly bar label ("07:00"), zero-padded. */
 export function fmtHour(dt: Date): string {
   return `${p2(dt.getHours())}:${p2(dt.getMinutes())}`;
@@ -817,8 +808,8 @@ export function mondayOf(dt: Date): Date {
 /* --- day-key arithmetic -------------------------------------------------
  * A `yyyy-MM-dd` day key carries no timezone, so it must be read back with
  * calendar maths rather than through a local Date (whose answer would depend
- * on the machine). These are the label/key twins of fmtDayLabel / fmtMonthKey
- * / mondayOf, for code that already holds a key. */
+ * on the machine). These are the label/key twins of fmtMonthKey / mondayOf,
+ * for code that already holds a key. */
 
 function dayKeyParts(key: string): { year: number; month: number; day: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
@@ -2056,7 +2047,7 @@ function jsWeekday(espiDow: number): number | null {
 }
 
 function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return utcDaysInMonth(year, month);
 }
 
 /** Day of month the rule fires on in `year`, or null when it cannot. */

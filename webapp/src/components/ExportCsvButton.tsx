@@ -12,6 +12,7 @@
 import { useTranslation } from "@/i18n";
 import { Download } from 'lucide-react';
 import { type ProcessedPoint, processedDataToCSV, csvFilenameForRows } from '@/lib/energy';
+import { downloadTextFile } from '@/lib/download';
 
 export const CSV_MIME = 'text/csv;charset=utf-8';
 
@@ -20,18 +21,7 @@ export const CSV_MIME = 'text/csv;charset=utf-8';
  * Returns the filename used, so callers/tests can assert on it.
  */
 export function downloadCSV(rows: ProcessedPoint[]): string {
-  const filename = csvFilenameForRows(rows);
-  const blob = new Blob([processedDataToCSV(rows)], { type: CSV_MIME });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
-  return filename;
+  return downloadTextFile(csvFilenameForRows(rows), processedDataToCSV(rows), CSV_MIME);
 }
 
 type Props = {

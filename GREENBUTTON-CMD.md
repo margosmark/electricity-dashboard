@@ -137,7 +137,10 @@ It is never:
   unlocks *this* service and nothing else — it is not an OAuth credential),
 - in a commit (the `.env` and `.greenbutton/` are both gitignored),
 - in a log (the edge logs the `/greenbutton/*` **path only** — `log_format
-  gb_noquery` drops the query string, so `?code=` never lands anywhere),
+  gb_noquery` drops the query string. The one place a query string could
+  still arrive is the `Referer` on the callback's `302` to `/?gb=connected`;
+  that is closed by `Referrer-Policy: no-referrer` on the exact callback
+  location — see SECURITY.md §4 for why `gb_noquery` alone did not cover it),
 - anywhere but the token set itself.
 
 The file's key set is pinned by tests (`PERSISTED_KEYS` in

@@ -1,7 +1,9 @@
 /**
- * Blob download of a text file. Kept separate from the CSV exporter so the
- * backup drawer can reuse the same anchor-click mechanics without pulling in
- * the processed-row types.
+ * Blob download of a text file — the one place the anchor-click mechanics
+ * live (CSV export, backup export, everything else that writes a file).
+ *
+ * Kept separate from the exporters so they can reuse the mechanics without
+ * pulling in the processed-row / backup types.
  *
  * Returns the filename used, so callers/tests can assert on it.
  */

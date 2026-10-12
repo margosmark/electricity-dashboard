@@ -31,5 +31,4 @@ export const PLAN_BAND_STYLE: Record<PlanType, { fill: string; label: string }> 
   ULO: { fill: 'var(--plan-ulo)', label: 'ULO' }, // green-200
 };
 
-/** Periods with no known plan get no honest tint — this is what "none" draws. */
-export const UNKNOWN_PLAN_FILL = 'var(--plan-unknown)'; // slate-200, hatched in the UI
+

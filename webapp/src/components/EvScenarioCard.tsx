@@ -23,7 +23,7 @@
 "use client";
 
 /* Wave U — user-visible copy translates; lib code reads the module locale. */
-import { fmtMoney, planLabel, t, useTranslation } from "@/i18n";
+import { fmtMoney, fmtSignedMoney, planLabel, t, useTranslation } from "@/i18n";
 import { useMemo, useState } from 'react';
 import { Car, TriangleAlert, Moon, Info, Clock } from 'lucide-react';
 import { type ProcessedPoint, type RateSet } from '@/lib/energy';
@@ -252,7 +252,7 @@ export default function EvScenarioCard({
                 >
                   <span className="text-[8px] md:text-[10px]">{t('ev.perChargeUnit')}</span>
                   <span className="italic text-xl md:text-2xl">
-                    ${scenario.prices[plan].perCharge.toFixed(2)}
+                    {fmtMoney(scenario.prices[plan].perCharge)}
                   </span>
                 </div>
                 <div
@@ -261,7 +261,7 @@ export default function EvScenarioCard({
                 >
                   <span className="text-[8px] md:text-[10px]">{t('ev.perMonthLong')}</span>
                   <span className="italic text-xl md:text-2xl">
-                    ${scenario.prices[plan].perMonth.toFixed(2)}
+                    {fmtMoney(scenario.prices[plan].perMonth)}
                   </span>
                 </div>
               </div>
@@ -273,10 +273,10 @@ export default function EvScenarioCard({
             className="bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
           >
             {t('ev.headlineLead')}{' '}
-            <span className="italic">${scenario.prices.ULO.perCharge.toFixed(2)}</span> {t('ev.vs')}{' '}
-            <span className="italic">${scenario.prices.TOU.perCharge.toFixed(2)}</span> {t('ev.onTouDash')}{' '}
+            <span className="italic">{fmtMoney(scenario.prices.ULO.perCharge)}</span> {t('ev.vs')}{' '}
+            <span className="italic">{fmtMoney(scenario.prices.TOU.perCharge)}</span> {t('ev.onTouDash')}{' '}
             <span className="italic">
-              ${scenario.chargeSavingUloVsTouPerMonth.toFixed(2)}{t('ev.perMonthLong')}
+              {fmtMoney(scenario.chargeSavingUloVsTouPerMonth)}{t('ev.perMonthLong')}
             </span>{' '}
             {t('ev.cheaperOnCharge')}
           </div>
@@ -322,11 +322,11 @@ export default function EvScenarioCard({
                   >
                     <span className="text-[8px] md:text-[10px]">{t('ev.perMonthLong')}</span>
                     <span className="italic text-xl md:text-2xl">
-                      ${cm.stayCostPerMonth.toFixed(2)}
+                      {fmtMoney(cm.stayCostPerMonth)}
                     </span>
                   </div>
                   <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
-                    ${cm.stayCostPerCharge.toFixed(2)} {t('ev.perChargeWord')}
+                    {fmtMoney(cm.stayCostPerCharge)} {t('ev.perChargeWord')}
                   </div>
                 </div>
                 <div data-testid="ev-move-side" className="p-3 md:p-4 bg-emerald-100">
@@ -342,11 +342,11 @@ export default function EvScenarioCard({
                   >
                     <span className="text-[8px] md:text-[10px]">{t('ev.perMonthLong')}</span>
                     <span className="italic text-xl md:text-2xl">
-                      ${cm.moveCostPerMonth.toFixed(2)}
+                      {fmtMoney(cm.moveCostPerMonth)}
                     </span>
                   </div>
                   <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
-                    ${cm.moveCostPerCharge.toFixed(2)} {t('ev.perChargeWord')}
+                    {fmtMoney(cm.moveCostPerCharge)} {t('ev.perChargeWord')}
                   </div>
                 </div>
               </div>
@@ -407,10 +407,10 @@ export default function EvScenarioCard({
                         className="text-[8px] md:text-[10px] font-bold text-ink-3"
                         data-testid={`ev-plan-baseline-${plan}`}
                       >
-                        {t('ev.baseline')} ${pc.baseline[plan].toFixed(2)}
+                        {t('ev.baseline')} {fmtMoney(pc.baseline[plan])}
                       </div>
                       <div className="text-lg md:text-xl italic font-black">
-                        ${pc.withChargeOnOvernight[plan].toFixed(2)}
+                        {fmtMoney(pc.withChargeOnOvernight[plan])}
                       </div>
                       <div
                         className={`text-[9px] md:text-[11px] font-black ${
@@ -419,7 +419,7 @@ export default function EvScenarioCard({
                       >
                         {Math.abs(delta) < 0.005
                           ? t('ev.noChange')
-                          : `${delta < 0 ? '−' : '+'}$${Math.abs(delta).toFixed(2)} ${t('ev.vsBaseline')}`}
+                          : `${fmtSignedMoney(delta)} ${t('ev.vsBaseline')}`}
                       </div>
                     </div>
                   );
@@ -442,10 +442,10 @@ export default function EvScenarioCard({
                   {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonth')}
                 </div>
                 <div className="text-lg md:text-2xl font-black">
-                  ${exposure.costPerMonth.toFixed(2)}{t('ev.perMonthAt')} {exposure.rateCents.toFixed(1)}¢
+                  {fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')} {exposure.rateCents.toFixed(1)}¢
                 </div>
                 <div className="text-xs md:text-sm font-black">
-                  ${exposure.atStakePerMonth.toFixed(2)}{t('ev.perMonthMore')}
+                  {fmtMoney(exposure.atStakePerMonth)}{t('ev.perMonthMore')}
                 </div>
               </div>
               <div className="text-[9px] md:text-[11px] font-bold mt-2 normal-case">
@@ -479,7 +479,7 @@ export default function EvScenarioCard({
             <Moon size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
           </div>
           <div className="text-xl md:text-2xl italic font-black mt-1">
-            {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonthArrow')}{exposure.costPerMonth.toFixed(2)}{t('ev.perMonthAt')}{' '}
+            {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonthArrow')}{fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')}{' '}
             {exposure.rateCents.toFixed(1)}¢
           </div>
           <ExposureBasis exposure={exposure} />

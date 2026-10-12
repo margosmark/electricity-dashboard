@@ -29,8 +29,28 @@ export type StateEntry = {
 
 const states = new Map<string, StateEntry>();
 
+/**
+ * Hard ceiling on parked states.
+ *
+ * `prune()` only drops entries past their 10-minute TTL, so a sustained flood
+ * of `/greenbutton/start` requests grows this map for the whole TTL window —
+ * each entry is a CSRF value the app minted for an attacker, none of which
+ * will ever be redeemed. The edge router's `limit_req` (see
+ * ops/edge/default.conf.template) is the real control; this is the in-process
+ * backstop for a deployment that has no router in front of it, and for the
+ * moment before the router's limit has taken effect.
+ */
+const MAX_PARKED_STATES = 5000;
+
 export function newState(codeVerifier?: string): string {
   prune();
+  // Drop the oldest rather than refusing: a legitimate user mid-flow keeps
+  // working, and the entries lost are the ones closest to expiring anyway.
+  while (states.size >= MAX_PARKED_STATES) {
+    const oldest = states.keys().next();
+    if (oldest.done) break;
+    states.delete(oldest.value);
+  }
   const value = randomBytes(24).toString("hex");
   const entry: StateEntry = { createdAt: Date.now() };
   if (codeVerifier) entry.codeVerifier = codeVerifier;

@@ -23,14 +23,14 @@
 /** A day the OEB prices at the lowest rate all day. */
 export type OntarioHoliday = { month: number; day: number; label: string };
 
+import { daysInMonth } from './dateSpan';
+
 /** Day of week, `Date#getDay` order (0 = Sunday). */
 function dowOf(year: number, month: number, day: number): number {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
-function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
+
 
 /** The `n`th `weekday` (0 = Sunday) of `month`, or null when there is none. */
 function nthWeekday(year: number, month: number, weekday: number, n: number): number | null {

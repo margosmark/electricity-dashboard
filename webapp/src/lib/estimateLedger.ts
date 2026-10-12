@@ -33,7 +33,8 @@ export const CLOSE_COVERAGE = 0.9;
 /** Below this, a bill's own span is only partly inside the window. */
 export const PARTIAL_BILL = 0.9;
 
-export type PlanId = 'TOU' | 'Tiered' | 'ULO';
+export type { PlanId } from './planIds';
+import type { PlanId } from './planIds';
 
 /** What this browser told the user, and when. */
 export type OpenEstimateRecord = {

@@ -58,11 +58,6 @@ export function notificationSupport(): boolean {
   return window.isSecureContext !== false;
 }
 
-export function notificationPermission(): NotificationPermission | 'unsupported' {
-  if (!notificationSupport()) return 'unsupported';
-  return Notification.permission;
-}
-
 /** The user's explicit opt-in inside this app (independent of the browser). */
 export function notificationsEnabled(): boolean {
   return storageGet(NOTIFICATIONS_ENABLED_KEY) === '1';

@@ -37,11 +37,11 @@ import {
   type PlanOverlay,
 } from '@/lib/moneyViz';
 import PlanBands from '@/components/PlanBands';
-import { PLAN_LABEL } from '@/hooks/useSelectedPlan';
+
 import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
 // Wave U — every label, badge, aria-label and footnote below speaks the
 // active locale; `t` is a hook, so each component calls useTranslation().
-import { fmtPercent, useTranslation } from '@/i18n';
+import { fmtMoney, fmtPercent, planLabel, useTranslation } from '@/i18n';
 import {
   calculateTrueBill,
   hasExtraCharges,
@@ -59,7 +59,8 @@ const OVERLAY_LINE_STYLE: { plan: PlanId; dash: string }[] = [
   { plan: 'ULO', dash: '2 5' },
 ];
 
-const money = (n: number) => (n < 0 ? `−$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
+// Signed money through the locale formatter (see BillWaterfall for why).
+const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 const kwhFmt = (n: number) =>
   `${n.toLocaleString('en-CA', { maximumFractionDigits: 1 })} kWh`;
 
@@ -277,8 +278,8 @@ export default function MoneyStackedChart({
   /** The plan cell for a row keyed by period start — same lookup as bands. */
   const planLabelFor = (start: number): string => {
     const a = planByStart.get(Number(start));
-    if (!a || a.plan === 'unknown') return 'Unknown';
-    return PLAN_LABEL[a.plan];
+    if (!a || a.plan === 'unknown') return t('track.planUnknown');
+    return planLabel(a.plan);
   };
 
   const costKeys = useMemo(

@@ -161,14 +161,6 @@ export function useTranslation(): TranslationBag {
   return { t: translate, locale, setLocale };
 }
 
-/**
- * Locale-only subscription for components that format (no prose of their
- * own) — formatters read the module locale, so a re-render re-formats.
- */
-export function useLocale(): Locale {
-  return useSyncExternalStore(subscribeLocale, getLocale, () => DEFAULT_LOCALE);
-}
-
 /** Applies the stored locale to <html lang> once, after hydration. */
 export function useLocaleBootstrap(): void {
   useEffect(() => {
@@ -244,11 +236,6 @@ export function fmtKwh(value: number, digits = 1): string {
   return `${num(value, digits)} kWh`;
 }
 
-/** "412 Wh" / "412 Wh". */
-export function fmtWh(value: number, digits = 0): string {
-  return `${num(value, digits)} Wh`;
-}
-
 /** Plain locale-aware number — "1,249" / "1 249". */
 export function fmtNumber(value: number, digits = 0): string {
   return num(value, digits);
@@ -315,11 +302,6 @@ export function fmtDay(day: string): string {
 export function fmtDayRange(startDay: string, endDay: string): string {
   const dash = ' – ';
   return fmtDay(startDay) + dash + fmtDay(endDay);
-}
-
-/** "Mon 26" style short weekday — charts label buckets with this. */
-export function fmtWeekday(date: Date | number, pattern = 'EEE'): string {
-  return fmtDate(date, pattern);
 }
 
 /* -------------------------------------------------------------------------- *

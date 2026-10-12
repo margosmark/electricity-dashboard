@@ -10,6 +10,7 @@
  */
 
 import {
+  cookieSecure,
   getConfig,
   getTokenStore,
   isSameOrigin,
@@ -33,6 +34,16 @@ export async function POST(request: Request): Promise<Response> {
   clearSyncMeta();
 
   const res = jsonResponse({ ok: true, wasConnected: true });
-  res.cookies.set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
+  // Same attributes the cookie was minted with. Browsers key deletion on
+  // name/path/domain, so a partial match happens to work — but writing a
+  // non-Secure `gb_session` on the https deployment, even empty, is not a
+  // trade worth making for the convenience.
+  res.cookies.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: cookieSecure(),
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
   return res;
 }

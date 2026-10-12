@@ -35,7 +35,7 @@
 
 'use client';
 
-import { fmtDate, useTranslation } from '@/i18n';
+import { fmtDate, fmtMoney, useTranslation } from '@/i18n';
 import { useId, useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
@@ -86,7 +86,7 @@ export const ACCRUAL_EXPLAINER =
 export const ACCRUAL_EXPLAINER_KEY = 'accrual.explainer';
 
 function money(n: number): string {
-  return `$${n.toFixed(2)}`;
+  return fmtMoney(n);
 }
 
 /** ms per day — used only on yyyy-MM-dd stamps, so no DST can skew it. */
