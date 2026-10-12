@@ -167,7 +167,13 @@ export function detectEvCandidate(rows: ProcessedPoint[]): EvCandidate | null {
     nights,
     days,
     label,
-    detail: `${fmtNumber(kwhPerNight, 1)} kWh a night across ${best.length} h (${fmtNumber(meanKwRun, 1)} kW average), seen on ${nights} of ${days} days`,
+    detail: t('ev.detectedDetail', {
+      kwh: fmtNumber(kwhPerNight, 1),
+      hours: best.length,
+      kw: fmtNumber(meanKwRun, 1),
+      nights,
+      days,
+    }),
   };
 }
 
@@ -660,7 +666,7 @@ export function buildEvScenario(input: {
         costPerMonth,
         overnightCostPerMonth,
         atStakePerMonth: costPerMonth - overnightCostPerMonth,
-        windowLabel: 'Weekdays 16:00–21:00',
+        windowLabel: t('ev.uloWindowLabel'),
         days: daySet.size,
       };
     }

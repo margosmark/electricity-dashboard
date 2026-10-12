@@ -78,7 +78,9 @@ export function PlanTimelineEditor({ summaries }: Props) {
           }),
         };
       }),
-    [summaries, entries],
+    // `assignPeriodPlan` labels the assignment in the active language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, entries, t],
   );
 
   // No bills and nothing declared: this surface has nothing to say yet.

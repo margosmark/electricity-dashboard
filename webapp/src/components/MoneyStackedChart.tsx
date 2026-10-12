@@ -252,7 +252,8 @@ export default function MoneyStackedChart({
       charges,
     });
     return estimate?.total ?? null;
-  }, [charges, stacks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  }, [charges, stacks, t]);
 
   const share = useMemo(() => shareBreakdown(stacks), [stacks]);
 
@@ -428,7 +429,9 @@ export default function MoneyStackedChart({
                 className="inline-block w-4 h-4 border-2 border-edge"
                 style={{ background: meta.color }}
               />
-              {mode === 'usage' ? `${meta.short}${t('money.kwhUnit')}` : meta.label}
+              {mode === 'usage'
+                ? `${t(meta.shortKey)}${t('money.kwhUnit')}`
+                : t(meta.labelKey)}
             </span>
           );
         })}
@@ -439,7 +442,7 @@ export default function MoneyStackedChart({
               className="inline-block w-4 h-4 border-2 border-edge"
               style={{ background: COST_SLICE_META.credit.color }}
             />
-            {COST_SLICE_META.credit.label} {t('money.belowLine')}
+            {t(COST_SLICE_META.credit.labelKey)} {t('money.belowLine')}
           </span>
         )}
       </div>

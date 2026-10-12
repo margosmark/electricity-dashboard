@@ -362,7 +362,8 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
       (['delivery', 'regulatory'] as const)
         .map((line) => chargeDecomposition(summaries, allData, line))
         .filter((d): d is ChargeDecomposition => d !== null),
-    [summaries, allData],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, t],
   );
 
   if (summaries.length === 0) return null;

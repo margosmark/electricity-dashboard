@@ -275,13 +275,16 @@ export default function Dashboard() {
   // a period that has no data, and never through this app's server.
   const temps = useHourlyTemps(processedData);
 
-  const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget, t]);
 
   const comparison = useMemo(() => calculateComparison(activeChartData), [activeChartData]);
 
   const anomalies = useMemo(
     () => detectAnomalies(processedData, filteredData, temps.temps),
-    [processedData, filteredData, temps.temps],
+    // Wave U rule: the callee builds its sentences in the active language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, filteredData, temps.temps, t],
   );
 
   // Wave N: anomalies are computed HERE (the data never leaves the browser),
@@ -293,11 +296,13 @@ export default function Dashboard() {
 
   // Always-on floor (the old "vampire load"), phrased against the ~10% of
   // bill community benchmark and priced at THIS household's blended rate.
-  const floor = useMemo(() => calculateAlwaysOnFloor(filteredData, userPlan), [filteredData, userPlan]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const floor = useMemo(() => calculateAlwaysOnFloor(filteredData, userPlan), [filteredData, userPlan, t]);
 
   // Work-from-home window: what share of the visible energy lands on a
   // weekday between 07:00 and 19:00 — explains why a plan wins or loses.
-  const wfh = useMemo(() => calculateWfhShare(filteredData), [filteredData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const wfh = useMemo(() => calculateWfhShare(filteredData), [filteredData, t]);
 
   // "This month's bill" projection: month-to-date + the recent daily average
   // carried to month end, gated on day 5 (see lib/billProjection).
@@ -313,12 +318,18 @@ export default function Dashboard() {
   // dataset (a before/after must not move when the chart is zoomed).
   const verification = useMemo(
     () => analyzeShiftVerification(processedData, userPlan),
-    [processedData, userPlan],
+    // The headline, the caveat and the money inside them are built at call
+    // time in the active language — without `t` a toggle keeps the old one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, userPlan, t],
   );
 
   // Whole-dataset totals for the strip — deliberately NOT filtered by the
   // visible window: this row answers "what would all my data have cost?".
-  const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData]);
+  // `fmtDay` inside formats the first/last day labels, so the totals strip is
+  // locale-dependent too.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData, t]);
 
   // Wave S — the window the user is actually LOOKING at: the date
   // selection, narrowed further by whatever the chart is zoomed into (a
@@ -342,7 +353,8 @@ export default function Dashboard() {
         rates: rateHistory,
         view: viewRange,
       }),
-    [billFeed.summaries, rateHistory, viewRange],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [billFeed.summaries, rateHistory, viewRange, t],
   );
 
   // Rate schedule in force for the plan cards — read live, never hardcoded.
@@ -372,7 +384,10 @@ export default function Dashboard() {
   // independent of which slice the chart currently shows.
   const shiftAnalysis = useMemo(
     () => analyzeTouShifts(processedData, userPlan, activeRateSet),
-    [processedData, userPlan, activeRateSet],
+    // Every block's verdict, evidence line and day-window label is produced
+    // inside the callee in the active language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, userPlan, activeRateSet, t],
   );
 
   const selectionCost = useMemo(() => {

@@ -286,7 +286,8 @@ export function HindsightPanel({ summaries, allData }: Props) {
   const [timeline] = usePlanTimeline();
   const report = useMemo(
     () => buildHindsight(summaries, allData, timeline),
-    [summaries, allData, timeline],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, timeline, t],
   );
 
   if (summaries.length === 0) return null;

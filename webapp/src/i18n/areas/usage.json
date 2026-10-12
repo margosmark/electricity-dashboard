@@ -125,6 +125,7 @@
     "shift.sigHvac": "Looks like HVAC-like whole-house load",
     "shift.sigHvacDetailFlat": "{span}h daytime span, weekly total moves ±{cv} — tracks the day, not a timer",
     "shift.sigHvacDetailRamp": "{span}h daytime span, ramps ±{ramp} across the day — tracks the day, not a timer",
+    "shift.evidenceFlat": "{hours}h in the same slot {seen}/5 weeks, flat across every hour (±{pct})",
     "shift.sigUnidentified": "Unidentified weekday routine",
     "shift.sigUnidentifiedDetail": "{span}h window, ±{cv} week to week — too short or too unsteady to call",
     "shift.confVery": "Very consistent",
@@ -209,6 +210,10 @@
     "chart.barsSuffix_one": " · {bars} bar",
     "chart.barsSuffix_other": " · {bars} bars",
     "heatmap.hourSuffix": "h",
+    "heatmap.weekdays": "Weekdays",
+    "heatmap.weekend": "Weekend",
+    "heatmap.weekdays": "Weekdays",
+    "heatmap.weekend": "Weekend",
     "anomalies.tempSuffix": "°C · "
   },
   "fr": {
@@ -337,6 +342,7 @@
     "shift.sigHvac": "Ressemble à une charge de chauffage/climatisation pour toute la maison",
     "shift.sigHvacDetailFlat": "plage de {span} h en journée, total hebdomadaire qui bouge de ±{cv} — suit la journée, pas un minuteur",
     "shift.sigHvacDetailRamp": "plage de {span} h en journée, variations de ±{ramp} au fil de la journée — suit la journée, pas un minuteur",
+    "shift.evidenceFlat": "{hours} h dans la même plage {seen}/5 semaines, stable à toutes les heures (±{pct})",
     "shift.sigUnidentified": "Routine de jour ouvrable non identifiée",
     "shift.sigUnidentifiedDetail": "fenêtre de {span} h, ±{cv} d’une semaine à l’autre — trop courte ou trop irrégulière pour conclure",
     "shift.confVery": "Très régulier",
@@ -421,6 +427,8 @@
     "chart.barsSuffix_one": " · {bars} barre",
     "chart.barsSuffix_other": " · {bars} barres",
     "heatmap.hourSuffix": "h",
+    "heatmap.weekdays": "Jours de semaine",
+    "heatmap.weekend": "Fin de semaine",
     "anomalies.tempSuffix": "°C · "
   }
 }

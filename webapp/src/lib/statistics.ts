@@ -115,7 +115,6 @@
  *     the ¢/kWh headline still stands, and the panel says the split is off.
  */
 
-import { format } from 'date-fns';
 
 import {
   billedKwh,
@@ -126,7 +125,7 @@ import {
 } from './energy';
 import { seasonForDay, type Season } from './season';
 // Wave U — trend prose reads the locale catalog at call time.
-import { fmtNumber, fmtPercent, t } from '@/i18n';
+import { fmtDate, fmtNumber, t } from '@/i18n';
 
 /* -------------------------------------------------------------------------- *
  * Window rules
@@ -298,7 +297,9 @@ export function efficiencyPeriods(
       start: summary.start,
       startDate: summary.startDate,
       endDate: summary.endDate,
-      label: format(new Date(`${summary.startDate}T00:00:00`), 'MMM yyyy'),
+      // `fmtDate`, not date-fns' bare `format`: the axis label is read by a
+      // person, so it follows the toggle ("May 2026" / "mai 2026").
+      label: fmtDate(`${summary.startDate}T00:00:00`, 'MMM yyyy'),
       kwh,
       cost,
       tax,
@@ -421,18 +422,12 @@ export function impliedTaxPct(average: EfficiencyAverage | null): number | null 
 export function taxFootnote(average: EfficiencyAverage | null): string {
   const pct = impliedTaxPct(average);
   if (pct === null) {
-    return 'Water and gas are billed separately and are never in these numbers.';
+    return t('efficiency.taxNoteNone');
   }
   if (pct === 0) {
-    return (
-      'This file states no tax line, so the two figures are the same. ' +
-      'Water and gas are billed separately and are never in these numbers.'
-    );
+    return t('efficiency.taxNoteNoTax');
   }
-  return (
-    `HST on your bills is ${fmtPercent(pct, 1)}; the incl.-tax figure adds that line back ` +
-    'over the same kWh. Water and gas are billed separately and are never in these numbers.'
-  );
+  return t('efficiency.hstNote', { pct: fmtNumber(pct, 1) });
 }
 
 /* -------------------------------------------------------------------------- *

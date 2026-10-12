@@ -355,7 +355,8 @@ export default function BillAccrualCurve({
         billDate,
         priorBills,
       }),
-    [rows, plan, period, now, projection, billDate, priorBills],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [rows, plan, period, now, projection, billDate, priorBills, t],
   );
 
   if (curve.points.length === 0) {

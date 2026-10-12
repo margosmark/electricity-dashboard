@@ -109,7 +109,10 @@ export default function EvScenarioCard({
   plan?: EvPlan;
 }) {
   const { t } = useTranslation();
-  const candidate = useMemo(() => detectEvCandidate(rows), [rows]);
+  // `detectEvCandidate` writes the "we found this window" sentence in the
+  // active language, so the memo has to re-derive on a toggle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const candidate = useMemo(() => detectEvCandidate(rows), [rows, t]);
 
   // `kwhText` stays null until the household types — before that we show the
   // block we found, so the field tracks the data without an effect.
@@ -139,7 +142,8 @@ export default function EvScenarioCard({
         chargeHourSource,
         currentPlan: plan,
       }),
-    [rows, rates, dailyKwh, candidate, shownHour, chargeHourSource, plan],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [rows, rates, dailyKwh, candidate, shownHour, chargeHourSource, plan, t],
   );
 
   const pc = scenario.planComparison;
