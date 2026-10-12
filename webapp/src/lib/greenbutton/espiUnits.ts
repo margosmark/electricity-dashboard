@@ -489,10 +489,49 @@ export function uomName(uom: number | null | undefined): string {
   return name ? `${name} (uom ${Math.trunc(uom)})` : `uom ${Math.trunc(uom)} (undefined by the schema)`;
 }
 
-/** `10 ** n`, or 0 when the multiplier is not a usable number. */
-export function multiplierFactor(multiplier: number | null | undefined): number {
-  if (multiplier === null || multiplier === undefined || !Number.isFinite(multiplier)) return 1;
-  return 10 ** Math.trunc(multiplier);
+/* ==========================================================================
+ * Magnitude bounds — what ONE interval reading can physically be
+ * ========================================================================== */
+
+/**
+ * The most energy ONE interval reading can carry, in kWh.
+ *
+ * A 15-minute household interval is ~0.1 kWh and a large industrial site's
+ * hourly interval is ~10^4 kWh, so 10^6 kWh — a gigawatt-hour inside a single
+ * interval — sits ~5 orders of magnitude above anything a meter can publish.
+ *
+ * Why a bound at all, when the arithmetic is already checked: a huge but
+ * FINITE value is not a `NaN` that trips a guard, it is a plausible-looking
+ * number that poisons everything downstream. 2000 × `<value>1e308</value>` (a
+ * 210 099-byte document) sums to `Infinity`, so every total, every `fmtKwh`
+ * and every average on the page is lost; and each individual 1e305 passes
+ * `Number.isFinite` in `storage.ts`/`backup.ts`, so the poison is persisted
+ * and re-validated as legitimate. The ingest gate refuses it here.
+ */
+export const MAX_INTERVAL_KWH = 1e6;
+
+/**
+ * The longest span ONE interval reading can describe, in seconds (366 days).
+ * Anything longer is not an interval: it is a mis-parsed register span or a
+ * hostile number that scales a power reading into nonsense (a 1e150 W reading
+ * over 1e150 s is 2.78e293 kWh).
+ */
+export const MAX_INTERVAL_SECONDS = 366 * 24 * 3600;
+
+/**
+ * `10 ** n` for a multiplier that yields a usable factor, else `null`.
+ *
+ * Not stated (null/undefined) is 10^0 = 1. A multiplier that IS stated but
+ * whose power of ten overflows to `Infinity` (309 upwards) or underflows to
+ * `0` (-400) is not a factor at all, and is refused here rather than at each
+ * caller: `0 * Infinity` is `NaN`, and a zero factor would silently zero a
+ * whole series' usage.
+ */
+export function multiplierFactor(multiplier: number | null | undefined): number | null {
+  if (multiplier === null || multiplier === undefined) return 1;
+  if (!Number.isFinite(multiplier)) return null;
+  const factor = 10 ** Math.trunc(multiplier);
+  return Number.isFinite(factor) && factor > 0 ? factor : null;
 }
 
 export function multiplierName(multiplier: number | null | undefined): string {
@@ -507,6 +546,10 @@ export function multiplierName(multiplier: number | null | undefined): string {
  * Raw reading → kWh for an ACTIVE ENERGY series (Wh, J). Returns null for every
  * other quantity: an apparent/reactive/power value is not an amount of energy
  * and must be refused here rather than silently priced.
+ *
+ * Finiteness only: whether the resulting number is physically possible is the
+ * ingest gate's decision ({@link MAX_INTERVAL_KWH}), so the physical bound
+ * lives in exactly one place.
  */
 export function energyKwhFromRaw(
   raw: number,
@@ -516,9 +559,11 @@ export function energyKwhFromRaw(
   if (!Number.isFinite(raw)) return null;
   const kind = quantityKindOf(uom);
   if (kind !== 'active-energy') return null;
-  const inBaseUnit = raw * multiplierFactor(multiplier);
+  const factor = multiplierFactor(multiplier);
+  if (factor === null) return null;
   const perKwh = Math.trunc(uom as number) === 31 ? 3_600_000 : 1000; // J vs Wh
-  return inBaseUnit / perKwh;
+  const kwh = (raw * factor) / perKwh;
+  return Number.isFinite(kwh) ? kwh : null;
 }
 
 /**
@@ -533,7 +578,10 @@ export function legacyWhKwhFromRaw(
   multiplier: number | null | undefined,
 ): number | null {
   if (!Number.isFinite(raw)) return null;
-  return (raw * multiplierFactor(multiplier)) / 1000;
+  const factor = multiplierFactor(multiplier);
+  if (factor === null) return null;
+  const kwh = (raw * factor) / 1000;
+  return Number.isFinite(kwh) ? kwh : null;
 }
 
 /**
@@ -542,6 +590,9 @@ export function legacyWhKwhFromRaw(
  * energy it represents is P × Δt because the meter reports the average over the
  * interval. Without a positive duration there is no answer, so this returns null
  * (the caller then reports the series as unsupported rather than inventing one).
+ *
+ * A duration beyond {@link MAX_INTERVAL_SECONDS} is not an interval either, and
+ * is refused rather than allowed to scale a power reading into nonsense.
  */
 export function energyKwhFromIntervalPower(
   raw: number,
@@ -553,8 +604,11 @@ export function energyKwhFromIntervalPower(
   if (quantityKindOf(uom) !== 'active-power') return null;
   if (durationSeconds === null || durationSeconds === undefined) return null;
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
-  const watts = raw * multiplierFactor(multiplier);
-  return (watts * durationSeconds) / 3600 / 1000;
+  if (durationSeconds > MAX_INTERVAL_SECONDS) return null;
+  const factor = multiplierFactor(multiplier);
+  if (factor === null) return null;
+  const kwh = (raw * factor * durationSeconds) / 3600 / 1000;
+  return Number.isFinite(kwh) ? kwh : null;
 }
 
 /**

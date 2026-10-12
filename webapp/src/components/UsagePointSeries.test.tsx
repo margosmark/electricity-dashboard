@@ -41,7 +41,7 @@ function series(status: SeriesStatus, label: string, kwh: number | null): Readin
     },
     readings: [{ timestamp: at, duration_s: 3600, raw: 1000, kwh, quality: 0, cost: null }],
     blocks: 1,
-    dropped: { negative: 0, unparsable: 0 },
+    dropped: { negative: 0, unparsable: 0, magnitude: 0 },
     legacy: false,
     unlinked: false,
   };
