@@ -16,7 +16,7 @@
 "use client";
 
 /* Wave U — user-visible copy translates; lib/hook code reads the module locale. */
-import { t, useTranslation } from "@/i18n";
+import { fmtNumber, t, useTranslation } from "@/i18n";
 import { RefreshCw, Link2, Unplug } from "lucide-react";
 import type { GbStatus } from "@/lib/greenbutton/client";
 
@@ -54,7 +54,7 @@ export function gbUiState(status: GbStatus | null): GbUiState {
 function lastSyncLine(status: GbStatus): string {
   if (!status.lastSyncAt) return t("gb.authorisedNoData");
   const at = new Date(status.lastSyncAt);
-  const mb = status.lastSyncBytes !== null ? ` · ${(status.lastSyncBytes / 1024).toFixed(0)} KB` : "";
+  const mb = status.lastSyncBytes !== null ? ` · ${fmtNumber(status.lastSyncBytes / 1024)} KB` : "";
   return `Synced ${at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${mb}`;
 }
 

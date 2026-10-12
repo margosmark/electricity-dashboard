@@ -43,7 +43,7 @@ import {
 // stay verbatim, because they ARE the file's data.
 // `t` (module-level) is used by the pure label helpers above the components;
 // `useTranslation` subscribes the components to locale switches.
-import { fmtCents, fmtKwh, fmtMoney, fmtPercent, t, useTranslation } from '@/i18n';
+import { fmtCents, fmtKwh, fmtMoney, fmtNumberAuto, fmtPercent, t, useTranslation } from '@/i18n';
 
 type Props = {
   /** Bill periods parsed out of the file (Wave L parser). */
@@ -78,9 +78,9 @@ function measurementLabel(item: BillLineItem): string | null {
   }
   if (m.uom === 114 || /days/.test(note))
     return t('actualBill.days', { count: m.scaled, days: m.scaled });
-  if (/loss factor/.test(note)) return `${m.scaled.toFixed(4)} ×`;
+  if (/loss factor/.test(note)) return `${fmtNumberAuto(m.scaled, 4)} ×`;
   if (/usage|meter read/.test(note)) return kwh(m.scaled);
-  return String(m.scaled);
+  return fmtNumberAuto(m.scaled, 4);
 }
 
 /**

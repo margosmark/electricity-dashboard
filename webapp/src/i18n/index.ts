@@ -207,6 +207,29 @@ export function fmtMoney0(value: number): string {
   return fmtMoney(value, 0);
 }
 
+export type MoneyPeriod = 'yr' | 'day';
+
+/**
+ * The SYMBOL-FREE period unit that rides next to a money figure.
+ *
+ * `fmtMoney` already emits the currency symbol, so a unit label rendered
+ * beside it must not carry one: `t('overview.perYear')` is "$/yr" / "$/an"
+ * — correct as a standalone toggle label, and a doubled "$$/AN" the moment
+ * it is appended to `fmtMoney`'s output. That is the fr-CA regression this
+ * module now makes structurally impossible: every chip that sits beside a
+ * money value takes its unit from `moneyPeriodUnit()`, and that unit comes
+ * from a symbol-free catalog key.
+ */
+export const MONEY_PERIOD_UNIT_KEY: Record<MoneyPeriod, string> = {
+  yr: 'overview.perYearUnit',
+  day: 'overview.perDayUnit',
+};
+
+/** "/yr" / "/an" — the unit alone, never a currency symbol. */
+export function moneyPeriodUnit(period: MoneyPeriod): string {
+  return t(MONEY_PERIOD_UNIT_KEY[period]);
+}
+
 /** Signed money for deltas — "−$45.10" / "−45,10 $"; zero stays "$0.00". */
 export function fmtSignedMoney(value: number, digits = 2): string {
   const abs = fmtMoney(Math.abs(value), digits);
@@ -239,6 +262,17 @@ export function fmtKwh(value: number, digits = 1): string {
 /** Plain locale-aware number — "1,249" / "1 249". */
 export function fmtNumber(value: number, digits = 0): string {
   return num(value, digits);
+}
+
+/**
+ * Locale-aware number with the value's OWN precision, up to `maxDigits`.
+ * The bare-number formatter to hand a catalog `{token}` (e.g. a template
+ * that already prints "%", "¢" or "kWh"): `fmtKwh`/`fmtCents`/`fmtPercent`
+ * already carry their unit, so passing one of those into such a token
+ * prints the unit twice.
+ */
+export function fmtNumberAuto(value: number, maxDigits = 1): string {
+  return new Intl.NumberFormat(bcp47(), { maximumFractionDigits: maxDigits }).format(value);
 }
 
 /** Percent — "63%" / "63 %". */

@@ -1,0 +1,250 @@
+{
+  "base": "http://127.0.0.1:3100/",
+  "fixture": "usage-summary-open-tail.xml",
+  "locales": {
+    "en": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 6,
+        "textLength": 1873
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 1,
+        "textLength": 3009
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 211,
+        "textLength": 25565
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 145,
+        "textLength": 9767
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 363,
+      "untranslated": []
+    },
+    "fr": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 12,
+        "textLength": 2499
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 2,
+        "textLength": 3478
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [
+          "Overnight (ULO 23:00–07:00)",
+          "Requires switching to the ULO plan and moving the load into 23:00–07:00.",
+          "Very consistent",
+          "Looks like HVAC-like whole-house load",
+          "Weekend off-peak",
+          "Off-peak same day (19:00–07:00)",
+          "Looks like a fixed-schedule load (EV timer / appliance cycle)",
+          "Unidentified weekday routine",
+          "Off-peak share down 8 pts · $1.80/wk worse than the prior 7 days",
+          "Last 7 days (Sep 13 – Sep 19): 59.0% off-peak · $33.58 · 250.9 kWh over 7 days. Prior 7 da",
+          "Weekly cost also moves with weather and how much time you were home — one week is a hint, ",
+          "Ontario Electricity Rebate",
+          "Billing Period - Current Read Date",
+          "Billing Period - Previous Read Date"
+        ],
+        "moneyRenders": 410,
+        "textLength": 30741
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [
+          "Commodity · off-peak",
+          "Commodity · mid-peak",
+          "Commodity · on-peak",
+          "Ontario Electricity Rebate",
+          "Modelled over 3 fully-covered billing periods (87 days, 3 118 kWh of your own readings).",
+          "Delivery, regulatory and HST priced at your bill's own rates (22 juil. 2026 – 20 août); th",
+          "D’après vos propres données : 03:00–06:00, 5,9 kWh a night across 3 h (2,0 kW average), se",
+          "Fenêtre de recharge lue dans vos propres données : 03:00–06:00, 5,9 kWh a night across 3 h"
+        ],
+        "moneyRenders": 286,
+        "textLength": 12311
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 710,
+      "untranslated": [
+        "plans: Overnight (ULO 23:00–07:00)",
+        "plans: Requires switching to the ULO plan and moving the load into 23:00–07:00.",
+        "plans: Very consistent",
+        "plans: Looks like HVAC-like whole-house load",
+        "plans: Weekend off-peak",
+        "plans: Off-peak same day (19:00–07:00)",
+        "plans: Looks like a fixed-schedule load (EV timer / appliance cycle)",
+        "plans: Unidentified weekday routine",
+        "plans: Off-peak share down 8 pts · $1.80/wk worse than the prior 7 days",
+        "plans: Last 7 days (Sep 13 – Sep 19): 59.0% off-peak · $33.58 · 250.9 kWh over 7 days. Prior 7 da",
+        "plans: Weekly cost also moves with weather and how much time you were home — one week is a hint, ",
+        "plans: Ontario Electricity Rebate",
+        "plans: Billing Period - Current Read Date",
+        "plans: Billing Period - Previous Read Date",
+        "money: Commodity · off-peak",
+        "money: Commodity · mid-peak",
+        "money: Commodity · on-peak",
+        "money: Ontario Electricity Rebate",
+        "money: Modelled over 3 fully-covered billing periods (87 days, 3 118 kWh of your own readings).",
+        "money: Delivery, regulatory and HST priced at your bill's own rates (22 juil. 2026 – 20 août); th",
+        "money: D’après vos propres données : 03:00–06:00, 5,9 kWh a night across 3 h (2,0 kW average), se",
+        "money: Fenêtre de recharge lue dans vos propres données : 03:00–06:00, 5,9 kWh a night across 3 h"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "en/overview painted real content",
+      "ok": true,
+      "detail": "1873 chars"
+    },
+    {
+      "name": "en/usage painted real content",
+      "ok": true,
+      "detail": "3009 chars"
+    },
+    {
+      "name": "en/plans painted real content",
+      "ok": true,
+      "detail": "25565 chars"
+    },
+    {
+      "name": "en/money painted real content",
+      "ok": true,
+      "detail": "9767 chars"
+    },
+    {
+      "name": "en: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "363 money strings"
+    },
+    {
+      "name": "en: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 doubled units (kWh kWh / ¢ ¢ / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 fr-comma decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr/overview painted real content",
+      "ok": true,
+      "detail": "2499 chars"
+    },
+    {
+      "name": "fr/usage painted real content",
+      "ok": true,
+      "detail": "3478 chars"
+    },
+    {
+      "name": "fr/plans painted real content",
+      "ok": true,
+      "detail": "30741 chars"
+    },
+    {
+      "name": "fr/money painted real content",
+      "ok": true,
+      "detail": "12311 chars"
+    },
+    {
+      "name": "fr: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "710 money strings"
+    },
+    {
+      "name": "fr: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 doubled units (kWh kWh / ¢ ¢ / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 en-dot decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 money strings with $ in front of the number",
+      "ok": true,
+      "detail": "none"
+    }
+  ],
+  "passed": 17,
+  "failed": 0
+}

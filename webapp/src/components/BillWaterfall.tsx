@@ -21,7 +21,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 
 import { billWaterfall, type WaterfallKind, type WaterfallStep } from '@/lib/moneyViz';
 import type { UsageSummary } from '@/lib/energy';
-import { fmtMoney, useTranslation } from '@/i18n';
+import { fmtMoney, fmtMoney0, useTranslation } from '@/i18n';
 
 // Signed money through the locale formatter: en-CA prints `$12.34` / `−$12.34`
 // exactly as the hand-rolled version did, fr-CA prints `12,34 $` / `−12,34 $`.
@@ -176,7 +176,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                     stroke="var(--axis)"
                     strokeWidth={2}
                     width={56}
-                    tickFormatter={(v: number | string) => `$${Math.round(Number(v))}`}
+                    tickFormatter={(v: number | string) => fmtMoney0(Number(v))}
                   />
                   <Tooltip
                     cursor={{ fill: 'var(--ink)', opacity: 0.05 }}

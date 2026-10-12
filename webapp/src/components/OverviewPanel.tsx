@@ -16,7 +16,7 @@
 import React from 'react';
 import { dataFreshness } from '@/lib/freshness';
 import {
-  fmtCents, fmtDateLong, fmtDay, fmtKwh, fmtMoney, planLabel, useTranslation,
+  fmtCents, fmtDateLong, fmtDay, fmtKwh, fmtMoney, moneyPeriodUnit, planLabel, useTranslation,
 } from '@/i18n';
 import type { FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
@@ -74,6 +74,15 @@ export default function OverviewPanel({
     return fmtMoney(costMode === 'yr' ? perDay * 365.25 : perDay);
   };
   const freshness = totals ? dataFreshness(totals.lastDate, new Date()) : null;
+
+  /**
+   * The period unit beside every money chip, never the "$/yr" toggle label:
+   * `fmtMoney` already prints the currency symbol, so a label carrying one
+   * renders as the fr-CA "1 420,89 $$/AN" regression. `moneyPeriodUnit()`
+   * is the catalog's symbol-FREE unit ("/yr" · "/an"), and the i18n money
+   * contract test pins that shape.
+   */
+  const unit = moneyPeriodUnit(costMode);
 
   return (
     <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="space-y-6 md:space-y-10" data-testid="tab-panel-overview">
@@ -225,7 +234,7 @@ export default function OverviewPanel({
                 <div className="text-lg md:text-2xl italic font-black">
                   {money(p.cost)}
                   <span className="text-[9px] md:text-[11px] not-italic font-black ml-1">
-                    {costMode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
+                    {unit}
                   </span>
                 </div>
               </div>
@@ -237,7 +246,7 @@ export default function OverviewPanel({
             <div className="text-lg md:text-2xl italic font-black">
               {money(totals.planDelta)}
               <span className="text-[9px] md:text-[11px] font-black ml-1">
-                {costMode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
+                {unit}
               </span>
             </div>
             <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>

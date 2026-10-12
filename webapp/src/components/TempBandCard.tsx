@@ -26,7 +26,7 @@
 import React, { useMemo } from 'react';
 import { Thermometer } from 'lucide-react';
 
-import { fmtNumber, useTranslation } from '@/i18n';
+import { fmtCents, fmtNumber, useTranslation } from '@/i18n';
 import { OPEN_METEO, type TempFetchStatus } from '@/lib/openMeteo';
 import { TEMP_BANDS, tempBandEmpty, type TempBandReport } from '@/lib/tempBands';
 
@@ -113,7 +113,7 @@ function Chart({ report }: { report: TempBandReport }) {
         <g key={v}>
           <line x1={PAD.left} y1={y(v)} x2={W - PAD.right} y2={y(v)} stroke="var(--grid)" strokeWidth={1} />
           <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" fontSize={10} fontWeight={900} fill="var(--ink-3)">
-            {v.toFixed(1)}
+            {fmtNumber(v, 1)}
           </text>
         </g>
       ))}
@@ -153,7 +153,7 @@ function Chart({ report }: { report: TempBandReport }) {
                 fontWeight={900}
                 fill="var(--ink)"
               >
-                {row.meanKwhPerHour.toFixed(1)}
+                {fmtNumber(row.meanKwhPerHour, 1)}
               </text>
             )}
             {/* The ¢/kWh sits INSIDE its own bar, so the row below the
@@ -168,7 +168,7 @@ function Chart({ report }: { report: TempBandReport }) {
               fontWeight={900}
               fill={row.hours > 0 ? 'var(--card)' : 'var(--ink-4)'}
             >
-              {row.hours > 0 ? `${row.centsPerKwh.toFixed(1)}¢` : '—'}
+              {row.hours > 0 ? fmtCents(row.centsPerKwh, 1) : '—'}
             </text>
 
             {/* Share of the window's kWh — where the energy actually sits. */}
@@ -264,10 +264,10 @@ export default function TempBandCard({ report, status, loading, source, spanLabe
               return ratio > 0
                 ? t('tempBand.verdict', {
                     cold: cold.band.label,
-                    base: base.toFixed(2),
+                    base: fmtNumber(base, 2),
                     hot: hot.band.label,
-                    hotval: hot.meanKwhPerHour.toFixed(2),
-                    ratio: ratio.toFixed(1),
+                    hotval: fmtNumber(hot.meanKwhPerHour, 2),
+                    ratio: fmtNumber(ratio, 1),
                     pct: String(Math.round(hot.shareOfKwh * 100)),
                   })
                 : t('tempBand.verdictThin');

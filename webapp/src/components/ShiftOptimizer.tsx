@@ -23,7 +23,7 @@
 
 import React from 'react';
 import { Clock, ArrowRight, CalendarClock, Sunrise } from 'lucide-react';
-import { fmtCents, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
+import { fmtCents, fmtMoney, fmtNumber, fmtPercent, useTranslation } from '@/i18n';
 import { collapseHeadline } from '@/lib/touShift';
 import type {
   TouShiftAnalysis,
@@ -193,7 +193,7 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
             </div>
             <div className="text-[10px] md:text-xs font-bold text-ink-3 mt-1 md:mt-2">
               {t('shift.blockMeta', {
-                kwh: block.avgWeeklyKwh.toFixed(1),
+                kwh: fmtNumber(block.avgWeeklyKwh, 1),
                 seen: block.weeksSeen,
                 rate: fmtCents(block.baselineRateCents),
               })}
@@ -252,7 +252,7 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
       </div>
       <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
         {t('shift.blockMeta', {
-          kwh: block.avgWeeklyKwh.toFixed(1),
+          kwh: fmtNumber(block.avgWeeklyKwh, 1),
           seen: block.weeksSeen,
           rate: fmtCents(block.baselineRateCents),
         })}

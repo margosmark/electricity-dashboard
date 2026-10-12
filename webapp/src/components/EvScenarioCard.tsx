@@ -23,7 +23,7 @@
 "use client";
 
 /* Wave U — user-visible copy translates; lib code reads the module locale. */
-import { fmtMoney, fmtSignedMoney, planLabel, t, useTranslation } from "@/i18n";
+import { fmtCents, fmtMoney, fmtNumber, fmtNumberAuto, fmtSignedMoney, planLabel, t, useTranslation } from "@/i18n";
 import { useMemo, useState } from 'react';
 import { Car, TriangleAlert, Moon, Info, Clock } from 'lucide-react';
 import { type ProcessedPoint, type RateSet } from '@/lib/energy';
@@ -183,7 +183,7 @@ export default function EvScenarioCard({
             inputMode="decimal"
             value={shownKwh}
             onChange={(e) => setKwhText(e.target.value)}
-            placeholder={candidate ? candidate.kwhPerNight.toFixed(1) : t('ev.kwhPlaceholder')}
+            placeholder={candidate ? fmtNumberAuto(candidate.kwhPerNight, 1) : t('ev.kwhPlaceholder')}
             className="w-32 md:w-40 p-3 md:p-4 border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft text-lg md:text-2xl font-black text-ink"
           />
         </label>
@@ -244,7 +244,7 @@ export default function EvScenarioCard({
               >
                 <div className="text-[10px] md:text-xs font-black uppercase">{planLabel(plan)}</div>
                 <div className={`text-[8px] md:text-[10px] font-bold ${plan === 'ULO' ? 'text-accent-ink' : 'text-ink-2'}`}>
-                  {scenario.prices[plan].rateCents.toFixed(1)}{t('ev.rateOvernight')}
+                  {fmtNumber(scenario.prices[plan].rateCents, 1)}{t('ev.rateOvernight')}
                 </div>
                 <div
                   className="text-lg md:text-xl font-black mt-2 flex justify-between items-baseline"
@@ -313,7 +313,7 @@ export default function EvScenarioCard({
                     {t('ev.stayPut')} {planLabel(plan)}
                   </div>
                   <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
-                    {cm.stayLabel} · {cm.stayRateCents.toFixed(1)}{t('ev.perKwh')}
+                    {cm.stayLabel} · {fmtNumber(cm.stayRateCents, 1)}{t('ev.perKwh')}
                     {cm.stayBasis === 'worst-case' ? ` ${t('ev.upperBound')}` : ''}
                   </div>
                   <div
@@ -334,7 +334,7 @@ export default function EvScenarioCard({
                     {t('ev.moveUlo')}
                   </div>
                   <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
-                    23:00–07:00 · {cm.moveRateCents.toFixed(1)}{t('ev.perKwh')}
+                    23:00–07:00 · {fmtNumber(cm.moveRateCents, 1)}{t('ev.perKwh')}
                   </div>
                   <div
                     className="text-lg md:text-xl italic font-black mt-1 flex justify-between items-baseline"
@@ -385,7 +385,7 @@ export default function EvScenarioCard({
               className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden"
             >
               <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
-                <span>{t('ev.wholeDataset')} {pc.evKwh.toFixed(0)} {t('ev.kwhMoved')}</span>
+                <span>{t('ev.wholeDataset')} {fmtNumber(pc.evKwh)} {t('ev.kwhMoved')}</span>
                 <span className="text-accent-yellow">{pc.days} {t('ev.daysOfData', { count: pc.days })}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3">
@@ -439,10 +439,10 @@ export default function EvScenarioCard({
               </div>
               <div className="flex flex-wrap items-baseline gap-3 md:gap-6 mt-2">
                 <div className="text-2xl md:text-4xl italic font-black">
-                  {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonth')}
+                  {fmtNumber(exposure.kwhPerMonth, 1)} {t('ev.kwhPerMonth')}
                 </div>
                 <div className="text-lg md:text-2xl font-black">
-                  {fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')} {exposure.rateCents.toFixed(1)}¢
+                  {fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')} {fmtCents(exposure.rateCents, 1)}
                 </div>
                 <div className="text-xs md:text-sm font-black">
                   {fmtMoney(exposure.atStakePerMonth)}{t('ev.perMonthMore')}
@@ -479,8 +479,8 @@ export default function EvScenarioCard({
             <Moon size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
           </div>
           <div className="text-xl md:text-2xl italic font-black mt-1">
-            {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonthArrow')}{fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')}{' '}
-            {exposure.rateCents.toFixed(1)}¢
+            {fmtNumber(exposure.kwhPerMonth, 1)} {t('ev.kwhPerMonthArrow')}{fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')}{' '}
+            {fmtCents(exposure.rateCents, 1)}
           </div>
           <ExposureBasis exposure={exposure} />
         </div>

@@ -41,7 +41,7 @@ import PlanBands from '@/components/PlanBands';
 import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
 // Wave U — every label, badge, aria-label and footnote below speaks the
 // active locale; `t` is a hook, so each component calls useTranslation().
-import { fmtMoney, fmtPercent, planLabel, useTranslation } from '@/i18n';
+import { fmtCents, fmtKwh, fmtMoney, fmtMoney0, fmtNumber, fmtPercent, planLabel, useTranslation } from '@/i18n';
 import {
   calculateTrueBill,
   hasExtraCharges,
@@ -61,8 +61,8 @@ const OVERLAY_LINE_STYLE: { plan: PlanId; dash: string }[] = [
 
 // Signed money through the locale formatter (see BillWaterfall for why).
 const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
-const kwhFmt = (n: number) =>
-  `${n.toLocaleString('en-CA', { maximumFractionDigits: 1 })} kWh`;
+/** kWh with the ACTIVE locale's separators — never a pinned en-CA one. */
+const kwhFmt = (n: number) => fmtKwh(n, 1);
 
 /**
  * A tier this period was never billed on — a TOU period (it has no tiers at
@@ -144,7 +144,7 @@ function CompositionTooltip({
     const meta = COST_SLICE_META[key as keyof typeof COST_SLICE_META];
     const label = meta ? meta.short : key;
     if (mode === 'usage') return `${label}: ${kwhFmt(value)}`;
-    if (mode === 'share') return `${label}: ${value.toFixed(1)}%`;
+    if (mode === 'share') return `${label}: ${fmtPercent(value, 1)}`;
     return `${label}: ${money(value)}`;
   };
 
@@ -484,28 +484,28 @@ export default function MoneyStackedChart({
           <div className="bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.shareDeliveryReg')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="non-commodity-pct">
-              {share.nonCommodityPct.toFixed(1)}%
+              {fmtPercent(share.nonCommodityPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.electricityItself')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="commodity-pct">
-              {share.commodityPct.toFixed(1)}%
+              {fmtPercent(share.commodityPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.commoditySplit')}</div>
           </div>
           <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('slice.tax')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="tax-pct">
-              {share.taxPct.toFixed(1)}%
+              {fmtPercent(share.taxPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-good-soft border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.rebateGivesBack')}</div>
             <div className="text-lg md:text-2xl italic text-good" data-testid="rebate-pct">
-              {share.rebatePct.toFixed(1)}%
+              {fmtPercent(share.rebatePct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">
               {t('money.youNet')} {money(share.payable)} {t('money.acrossPeriods')}
@@ -581,7 +581,7 @@ export default function MoneyStackedChart({
                 unit={!isShare && mode === 'usage' ? ' kWh' : undefined}
                 tickFormatter={
                   !isShare && mode === 'dollars'
-                    ? (v: number | string) => `$${Math.round(Number(v))}`
+                    ? (v: number | string) => fmtMoney0(Number(v))
                     : undefined
                 }
               />
@@ -785,12 +785,12 @@ export default function MoneyStackedChart({
           {t('money.shareExplainerA')} <em>{t('money.shareExplainerB')}</em>{' '}
           {t('money.shareExplainerC')}{' '}
           <strong>
-            {share.commodityPct.toFixed(1)}¢ {t('money.shareElectricity')} ·{' '}
-            {share.deliveryPct.toFixed(1)}¢ {t('money.shareDelivery')} ·{' '}
-            {share.regulatoryPct.toFixed(1)}¢ {t('money.shareRegulatory')} ·{' '}
-            {share.taxPct.toFixed(1)}¢ {t('money.shareTax')}
+            {fmtCents(share.commodityPct, 1)} {t('money.shareElectricity')} ·{' '}
+            {fmtCents(share.deliveryPct, 1)} {t('money.shareDelivery')} ·{' '}
+            {fmtCents(share.regulatoryPct, 1)} {t('money.shareRegulatory')} ·{' '}
+            {fmtCents(share.taxPct, 1)} {t('money.shareTax')}
           </strong>
-          {t('money.shareExplainerD', { rebate: share.rebatePct.toFixed(1) })}
+          {t('money.shareExplainerD', { rebate: fmtNumber(share.rebatePct, 1) })}
         </div>
       )}
 
@@ -870,7 +870,7 @@ export default function MoneyStackedChart({
                   return (
                     <td key={k} className="py-1 px-2 text-right tabular-nums">
                       {mode === 'usage'
-                        ? v.toLocaleString('en-CA', { maximumFractionDigits: 1 })
+                        ? fmtNumber(v, 1)
                         : isAbsentTier(k, v)
                           ? '—'
                           : r.kind === 'gap'
@@ -885,7 +885,7 @@ export default function MoneyStackedChart({
                                  do not exist yet. */
                               ? '—'
                               : isShare
-                                ? `${v.toFixed(1)}%`
+                                ? fmtPercent(v, 1)
                                 : money(v)}
                     </td>
                   );

@@ -7,7 +7,7 @@ import { tempAtC } from './openMeteo';
 /* Wave U — user-visible sentences in this file come from the locale catalog
  * at call time (lib code reads the module locale; components re-render on
  * toggle via useTranslation). Numeric fields stay numeric. */
-import { fmtMoney0, getLocale, t } from '@/i18n';
+import { fmtMoney, fmtMoney0, fmtNumber, fmtNumberAuto, getLocale, t } from '@/i18n';
 import {
   isWeekend, startOfMonth,
   setDate, isBefore, subMonths, addMonths, subDays,
@@ -255,12 +255,10 @@ function longestRunAbove(
  * fr-CA moves the symbol: "0,0412 $/kWh".
  */
 function fmtCharge(rate: number, digits: number, unit: 'kWh' | 'month'): string {
-  const fr = getLocale() === 'fr';
-  const n = new Intl.NumberFormat(fr ? 'fr-CA' : 'en-CA', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(rate);
-  return fr ? `${n} $/${unit}` : `$${n}/${unit}`;
+  // A rate IS money: one formatter, so the symbol lands on the locale's own
+  // side of the number ($0.0412/kWh · 0,0412 $/kWh) instead of a hand-built
+  // `$${…}` that is en-CA by construction.
+  return `${fmtMoney(rate, digits)}/${unit}`;
 }
 
 function hourRange(start: number, hours: number): string {
@@ -292,7 +290,7 @@ export function classifyDayShape(
       detail: t('sig.sustained.detail', {
         hours: sustained.hours,
         kw: SIGNATURE_SUSTAINED_KW,
-        avg: sustained.avg.toFixed(1),
+        avg: fmtNumber(sustained.avg, 1),
         range: hourRange(sustained.start, sustained.hours),
       }),
     };
@@ -304,7 +302,7 @@ export function classifyDayShape(
       label: t('sig.spike.label'),
       detail: t('sig.spike.detail', {
         hours: sustained.hours,
-        peak: sustained.peak.toFixed(1),
+        peak: fmtNumber(sustained.peak, 1),
         range: hourRange(sustained.start, sustained.hours),
       }),
     };
@@ -323,7 +321,7 @@ export function classifyDayShape(
         label: t('sig.tail.label'),
         detail: t('sig.tail.detail', {
           hours: tailValues.length,
-          kw: mean.toFixed(1),
+          kw: fmtNumber(mean, 1),
           spread: Math.round(cv * 100),
         }),
       };
@@ -1294,10 +1292,10 @@ export function calculateAlwaysOnFloor(
     billShare,
     benchmarkShare: ALWAYS_ON_BENCHMARK_SHARE,
     verdict,
-    label: t('floor.calcLabel', { kwh: kwhPerDay.toFixed(1), cost: fmtMoney0(annualCost) }),
+    label: t('floor.calcLabel', { kwh: fmtNumber(kwhPerDay, 1), cost: fmtMoney0(annualCost) }),
     detail: t(`floor.benchmark.${verdict}`, {
       benchmark: Math.round(ALWAYS_ON_BENCHMARK_SHARE * 100),
-      actual: (billShare * 100).toFixed(0),
+      actual: fmtNumber(billShare * 100),
     }),
   };
 }
@@ -2747,7 +2745,9 @@ export type ChargeDecomposition = {
   detail: string;
 };
 
-const money2 = (n: number) => `$${n.toFixed(2)}`;
+/** Money for the charge sentences — the locale formatter, so the symbol
+ *  lands where fr-CA puts it instead of a hand-built en-CA `$1,234.56`. */
+const money2 = (n: number) => fmtMoney(n, 2);
 
 /* Wave U — the noun travels into the sentence as a {noun} param, so it must
  * speak the active language. `be` is the verb that agrees with it ("Delivery
@@ -2850,15 +2850,15 @@ export function chargeDecomposition(
       detail:
         t('charge.fitUnstable', {
           flat: money2(flat),
-          perKwh: perKwh.toFixed(4),
+          perKwh: fmtNumber(perKwh, 4),
           periods: pairs.length,
           miss: money2(maxResidual),
-          share: ((residualShare ?? 0) * 100).toFixed(1),
+          share: fmtNumber((residualShare ?? 0) * 100, 1),
           amount: money2(newest.amount),
           noun: noun.lower,
           bar: Math.round(CHARGE_FIT_MAX_RESIDUAL_SHARE * 100),
           worst: worstPeriod ?? t('charge.unknown'),
-          blended: String(round(blendedCentsPerKwh, 2)),
+          blended: fmtNumberAuto(round(blendedCentsPerKwh, 2), 2),
         }),
     };
   }
@@ -2884,11 +2884,11 @@ export function chargeDecomposition(
     detail:
       t('charge.detail', {
         prefix: outcome.fit.throughOrigin ? '' : `${money2(flat)} + `,
-        perKwh: perKwh.toFixed(4),
+        perKwh: fmtNumber(perKwh, 4),
         periods: pairs.length,
         origin: outcome.fit.throughOrigin ? t('charge.throughOrigin') : '',
         miss: money2(maxResidual),
-        share: ((residualShare ?? 0) * 100).toFixed(1),
+        share: fmtNumber((residualShare ?? 0) * 100, 1),
         worst: worstPeriod ? `, ${worstPeriod}` : '',
       }),
   };

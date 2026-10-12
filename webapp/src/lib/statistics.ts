@@ -126,7 +126,7 @@ import {
 } from './energy';
 import { seasonForDay, type Season } from './season';
 // Wave U — trend prose reads the locale catalog at call time.
-import { t } from '@/i18n';
+import { fmtNumber, fmtPercent, t } from '@/i18n';
 
 /* -------------------------------------------------------------------------- *
  * Window rules
@@ -430,7 +430,7 @@ export function taxFootnote(average: EfficiencyAverage | null): string {
     );
   }
   return (
-    `HST on your bills is ${pct.toFixed(1)}%; the incl.-tax figure adds that line back ` +
+    `HST on your bills is ${fmtPercent(pct, 1)}; the incl.-tax figure adds that line back ` +
     'over the same kWh. Water and gas are billed separately and are never in these numbers.'
   );
 }
@@ -499,13 +499,15 @@ export function verdictOf(fit: LinearFit | null): TrendVerdict | null {
 
 /** Signed to one decimal: `+0.2`, `-0.5`. */
 export function fmtSigned(n: number): string {
-  const rounded = Math.round(n * 10) / 10;
-  return rounded > 0 ? `+${rounded.toFixed(1)}` : rounded.toFixed(1);
+  // `+ 0` folds a rounded-away -0.04 into a plain 0: Intl would print "-0".
+  const rounded = Math.round(n * 10) / 10 + 0;
+  const shown = fmtNumber(rounded, 1);
+  return rounded > 0 ? `+${shown}` : shown;
 }
 
 /** Unsigned to one decimal, for ±-style bands. */
 export function fmtBand(n: number): string {
-  return (Math.round(Math.abs(n) * 10) / 10).toFixed(1);
+  return fmtNumber(Math.round(Math.abs(n) * 10) / 10, 1);
 }
 
 /* -------------------------------------------------------------------------- *
