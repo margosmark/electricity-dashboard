@@ -28,6 +28,7 @@ import PlanCards from '@/components/PlanCards';
 import PlanSwitchTimeline from '@/components/PlanSwitchTimeline';
 import { PlanTimelineEditor } from '@/components/PlanTimelineEditor';
 import SwitchTrackRecord from '@/components/SwitchTrackRecord';
+import HindsightPanel from '@/components/HindsightPanel';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
 import { fmtKwh, fmtPercent, useTranslation } from '@/i18n';
 
@@ -112,6 +113,9 @@ export default function PlansPanel({
       <PlanSwitchTimeline summaries={summaries} allData={allData} />
       <PlanTimelineEditor summaries={summaries} />
       <SwitchTrackRecord summaries={summaries} allData={allData} />
+
+      {/* Wave V — what should have happened: plan lever + behaviour lever. */}
+      <HindsightPanel summaries={summaries} allData={allData} />
 
       {/* What the utility actually billed, against what these models say. */}
       <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />

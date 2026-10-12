@@ -44,6 +44,7 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'ev.signedNegative', // "−{amount}" — the minus glyph is the same in both
   'ev.categoriesAnd', // " + " — the joiner between period names is glyph-only
   'account.quietFormat', // "HH:MM-HH:MM" — a clock-format code, identical in fr
+  'hindsight.moveSaved', // "−{amount}" — the minus glyph is the same in both
 ]);
 
 describe('i18n catalogs', () => {
