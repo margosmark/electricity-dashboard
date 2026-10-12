@@ -49,7 +49,11 @@ cd ~/electricity-dashboard && docker compose down   # stop
 
 The deploy script (`~/bin/deploy-energy-dashboard.sh` on .110) refuses to run
 concurrently (`DEPLOY_REFUSED`, exit 3) so sibling agents can't swap the image
-mid-verification. `--no-fetch` skips the git step for tar-pushed deploys.
+mid-verification. `--no-fetch` skips the git step for tar-pushed deploys. It
+also exports `GIT_SHA=$(git rev-parse HEAD)` before the build, so every image
+it produces names its own commit at `GET /api/version` (§ Deploying changes) —
+the clone is a branch that gets `reset --hard origin/main`, so this export is
+the only place the deployed SHA is read.
 
 **Check disk before a deploy.** This host runs the **vfs** storage driver
 (`/var/lib/docker/vfs/dir` ≈ 92 G), so an image build can eat several GB of
@@ -326,7 +330,19 @@ cd webapp && npm run lint && npm run typecheck && npm run test && npm run build
 cd .. && pytest tests/ -v        # only if root parser changed
 ```
 
-Then commit/push and rebuild the container. CI's workflow is
+Then commit/push and rebuild the container. Every image stamps the commit it
+was built from — the deploy runbook exports `GIT_SHA=$(git rev-parse HEAD)`
+and `docker-compose.yml` forwards it as a build arg — so the deployed app
+names its own build at `GET /api/version` (`{"sha": …, "buildId": …}`, with
+`"unknown"` for a local build):
+
+```bash
+curl -s http://10.10.11.110:3939/api/version   # → {"sha":"<the deployed commit>",…}
+```
+
+Read that instead of inferring identity from built bytes. A wrong `sha` means
+the container was not recreated by the deploy; `buildId` changes on every
+build, so it distinguishes a rebuild of the same commit. CI's workflow is
 **disabled server-side** (2026-10-10, Actions minutes exhausted — push/PR
 runs died in 3–4s with zero steps scheduled, so the run-history reds were
 billing, not failures; see the header in
