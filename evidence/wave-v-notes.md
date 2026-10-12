@@ -35,6 +35,15 @@ figure equals the switch track record's above it, to the cent).
 
 `sha256` of both files is pinned inside the JSON; neither enters the repo.
 
+**Where they live on this box** (so the next wave does not have to hunt): both are in the
+`pm` profile's document cache — the 2-year export is
+`~/.hermes/profiles/pm/cache/documents/doc_3d4f339925bf_oakvillehydro_Electricity_60_Minute_30-04-2024_06-10-2026.xml`
+(6,424,909 bytes, sha256 `e292de50a560f56e…` — the same file the Wave S/T/U write-ups pin) and the
+3-month export is
+`~/.hermes/profiles/pm/cache/documents/doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml`
+(807,118 bytes). Copy them somewhere writable, point `WAVE_V_XML_LONG` / `WAVE_V_XML_SHORT` at the
+copies, and delete the copies when done.
+
 ## What the browser checks (all 132, in the JSON)
 
 - the panel renders in PLANS & TRACK RECORD and nowhere else;
