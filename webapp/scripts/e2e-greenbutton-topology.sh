@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
-# Containerised topology gate — the SAME three-container shape production
+# Containerised topology gate — the SAME four-container shape production
 # runs, exercised end to end against a mock data custodian:
 #
-#   curl :3940 → edge-router ─┬─ /greenbutton/* → greenbutton-shim (creds, token file)
-#                             └─ everything else → energy-dashboard (no creds)
+#   curl :3940 → edge-router ─┬─ /greenbutton/*      → greenbutton-shim (creds, token file)
+#                             ├─ /account/internal/* → DENIED here (403, no upstream)
+#                             ├─ /account/*          → account-server  (verifiers, VAPID key)
+#                             └─ everything else     → energy-dashboard (no creds)
 #
 # It reuses the 29 checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
 # adds what only makes sense at the edge: which location the router matched
 # and which container actually answered, whether a credential-bearing query
 # string reaches the access log, the baseline security headers on a real
-# response, and — the H1 regression — that the split still holds after BOTH
-# upstreams are recreated underneath a router that keeps running.
+# response, and — the H1 regression — that the split still holds after ALL
+# THREE upstreams are recreated underneath a router that keeps running.
+#
+# Wave N added the third pair (`X-Edge-Location: account` ↔
+# `x-gb-process: account`) and the one location with NO upstream at all
+# (`/account/internal/*` → 403 from nginx). The account leg runs in BOTH
+# states, because "off" is what ships by default: off first (the public
+# surface unchanged), then with ACCT_ENABLED=true, where the pairing and the
+# real register/login/sync matrix (`tests/e2e/account_smoke.sh`) run through
+# the router — the only way to exercise them the way a browser reaches them.
 #
 # Nothing in this script touches the live stack: the router binds 3940, the
 # mock 8099, and every container name is prefixed gb-topo-.
@@ -55,17 +65,28 @@ fi
 TOKEN_DIR="$(mktemp -d)"
 chmod 777 "$TOKEN_DIR"
 
+# The account server runs as the same uid (1001 `nextjs`) and creates its
+# SQLite file — plus the `-wal`/`-shm` siblings — INSIDE this mount, so the
+# directory has to be writable by it. Throwaway like TOKEN_DIR: the account
+# leg registers real accounts against it and the whole tree is deleted after.
+ACCT_DIR="$(mktemp -d)"
+chmod 777 "$ACCT_DIR"
+
 # The mock has to be reachable from TWO places with ONE URL: the shim
 # container (over the network) and the curl "browser" running on this host.
 HOST_IP="${GB_TOPO_HOST_IP:-$(hostname -I | awk '{print $1}')}"
 export GB_TOPO_TOKEN_DIR="$TOKEN_DIR"
 export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:8099"
+export GB_TOPO_ACCT_DIR="$ACCT_DIR"
+# The shipping default, stated explicitly rather than relied on as a compose
+# default: section 0d flips this and recreates the container.
+export GB_TOPO_ACCT_ENABLED=false
 
 cleanup() {
-  docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 >/dev/null 2>&1 || true
+  docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 gb-topo-iphold-3 >/dev/null 2>&1 || true
   if [ "$FAIL" -eq 0 ]; then
     docker compose -p gb-topo -f "$COMPOSE_FILE" down --remove-orphans >/dev/null 2>&1
-    rm -rf "$TOKEN_DIR"
+    rm -rf "$TOKEN_DIR" "$ACCT_DIR"
     printf '\nTOPOLOGY OK — %d checks passed\n' "$PASS"
   else
     printf '\nTOPOLOGY FAILED — %d passed, %d failed\n' "$PASS" "$FAIL"
@@ -100,14 +121,15 @@ if ! curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
 fi
 
 echo
-echo "== 0. the router really is splitting the path =="
+echo "== 0. the router really is splitting the path (three ways) =="
 # TWO headers, TWO questions — never read one for the other.
 #   X-Edge-Location  which location nginx matched (this router's own config)
 #   x-gb-process     which container produced the body, read from that
 #                    process's own config (getProcessIdentity)
-# They must agree: greenbutton<->shim, default<->app. The old header was
-# location-derived only, so it claimed `shim` while the app container was
-# answering — production ran that way for 31 minutes on 2026-10-07 (H1).
+# They must agree: greenbutton<->shim, account<->account, default<->app. The
+# old header was location-derived only, so it claimed `shim` while the app
+# container was answering — production ran that way for 31 minutes on
+# 2026-10-07 (H1).
 hdr() { # hdr <url> <header-name>
   curl -sSI "$1" | tr -d '\r' |
     awk -v want="$(echo "$2" | tr '[:upper:]' '[:lower:]')" -F': ' \
@@ -124,6 +146,37 @@ PROC_APP="$(hdr "$BASE/" x-gb-process)"
 [ "$LOC_APP" = "default" ] && [ "$PROC_APP" = "app" ]
 check "/ → location=$LOC_APP, process=$PROC_APP (want default/app)" $?
 
+# Wave N's third location. The account container is started OFF
+# (ACCT_ENABLED=false, the shipping default) and getProcessIdentity() keys on
+# that same flag — it is the one answer nginx cannot forge — so while the
+# feature is off the process truthfully says `app`: it has NOT been told it is
+# the account server. Both halves are asserted anyway, because "the router
+# matched /account AND that container answers 404" is what makes the homepage
+# byte-identical to pre-Wave-N. The PAIRING (account ↔ account) is only
+# meaningful with the flag on — section 0d proves it there.
+LOC_ACCT="$(hdr "$BASE/account/session" x-edge-location)"
+PROC_ACCT="$(hdr "$BASE/account/session" x-gb-process)"
+CODE_ACCT="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/account/session")"
+[ "$LOC_ACCT" = "account" ]
+check "/account/* → location=$LOC_ACCT (want account — Wave N's location shipped)" $?
+[ "$CODE_ACCT" = "404" ] && [ "$PROC_ACCT" = "app" ]
+check "feature OFF: /account/session → $CODE_ACCT, process=$PROC_ACCT (want 404/app)" $?
+
+# The ONE location with no upstream. /account/internal/* is the shim→account
+# fan-out, denied at the edge so a stolen ACCT_INTERNAL_TOKEN still has no path
+# from the internet. 403 + `X-Edge-Location: account-deny` is the answer, and
+# the ABSENCE of `x-gb-process` is the proof that `deny all` never proxied: any
+# container that answered would have set that header. Read the line above
+# together with this one — the SAME container answers 404 on /account/session,
+# so a 403 here cannot mean "the account API is simply closed".
+DENY_CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/account/internal/notify")"
+DENY_LOC="$(hdr "$BASE/account/internal/notify" x-edge-location)"
+DENY_PROC="$(hdr "$BASE/account/internal/notify" x-gb-process)"
+[ "$DENY_CODE" = "403" ] && [ "$DENY_LOC" = "account-deny" ]
+check "POST /account/internal/notify → $DENY_CODE at location=$DENY_LOC (want 403/account-deny)" $?
+[ -z "$DENY_PROC" ]
+check "the deny is nginx's own answer (no x-gb-process upstream header)" $?
+
 # The app container has NO GB_* environment — only the shim can say configured:true.
 STATUS="$(curl -fsS "$BASE/greenbutton/status")"
 case "$STATUS" in *'"configured":true'*) check "credentials live only in the shim container" 0;; *) check "credentials live only in the shim container" 1;; esac
@@ -135,29 +188,41 @@ echo "== 0b. the router survives its upstreams being recreated (H1 regression) =
 # The bug this section exists for: nginx resolved each upstream ONCE, at
 # config load, so when the app and the shim were recreated (new IPs) while the
 # router kept running the split inverted — /greenbutton went to the app and
-# the dashboard went to the shim, for as long as the router lived. Two
-# stand-ins hold the old addresses so the recreated containers cannot reuse
-# them; the router must follow the names, not the addresses it remembers.
+# the dashboard went to the shim, for as long as the router lived. Stand-ins
+# hold the old addresses so the recreated containers cannot reuse them; the
+# router must follow the names, not the addresses it remembers.
+#
+# ALL THREE upstreams now, not two: Wave N added a third, and the inversion is
+# per-upstream — an account container left talking to a stale address would put
+# the password verifiers' API behind the wrong process just as quietly.
 ip_of() {
   docker inspect "$1" --format '{{range $k, $v := .NetworkSettings.Networks}}{{$v.IPAddress}}{{end}}'
 }
 NET="$(docker inspect gb-topo-router --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}')"
-OLD_APP="$(ip_of gb-topo-app)"
-OLD_SHIM="$(ip_of gb-topo-shim)"
+RECREATE_SVCS=(energy-dashboard greenbutton-shim account-server)
+RECREATE_CTRS=(gb-topo-app gb-topo-shim gb-topo-account)
+OLD_IPS=()
+for c in "${RECREATE_CTRS[@]}"; do OLD_IPS+=("$(ip_of "$c")"); done
 
-docker compose -p gb-topo -f "$COMPOSE_FILE" rm -sf energy-dashboard greenbutton-shim >/dev/null 2>&1
-docker run -d --name gb-topo-iphold-1 --network "$NET" --entrypoint sleep nginx:1.29-alpine 1800 >/dev/null
-docker run -d --name gb-topo-iphold-2 --network "$NET" --entrypoint sleep nginx:1.29-alpine 1800 >/dev/null
-docker compose -p gb-topo -f "$COMPOSE_FILE" up -d energy-dashboard greenbutton-shim >/dev/null 2>&1
+docker compose -p gb-topo -f "$COMPOSE_FILE" rm -sf "${RECREATE_SVCS[@]}" >/dev/null 2>&1
+# One stand-in per freed address: a container that reuses an old IP would make
+# the "the address really changed" check vacuous.
+for i in "${!RECREATE_CTRS[@]}"; do
+  docker run -d --name "gb-topo-iphold-$((i + 1))" --network "$NET" --entrypoint sleep nginx:1.29-alpine 1800 >/dev/null
+done
+docker compose -p gb-topo -f "$COMPOSE_FILE" up -d "${RECREATE_SVCS[@]}" >/dev/null 2>&1
 
 for _ in $(seq 1 60); do
   curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1 && break
   sleep 1
 done
-NEW_APP="$(ip_of gb-topo-app)"
-NEW_SHIM="$(ip_of gb-topo-shim)"
-[ -n "$NEW_APP" ] && [ "$NEW_APP" != "$OLD_APP" ] && [ -n "$NEW_SHIM" ] && [ "$NEW_SHIM" != "$OLD_SHIM" ]
-check "upstream IPs really changed ($OLD_APP/$OLD_SHIM → $NEW_APP/$NEW_SHIM)" $?
+NEW_IPS=()
+CHANGED=0
+for i in "${!RECREATE_CTRS[@]}"; do
+  NEW_IPS+=("$(ip_of "${RECREATE_CTRS[$i]}")")
+  [ -n "${NEW_IPS[$i]}" ] && [ "${NEW_IPS[$i]}" != "${OLD_IPS[$i]}" ] || CHANGED=1
+done
+check "upstream IPs really changed (${OLD_IPS[*]} → ${NEW_IPS[*]})" $CHANGED
 
 # The resolver is pinned at valid=10s; wait out the cache before asking again.
 sleep 12
@@ -169,9 +234,70 @@ LOC3="$(hdr "$BASE/" x-edge-location)"
 PROC3="$(hdr "$BASE/" x-gb-process)"
 [ "$LOC3" = "default" ] && [ "$PROC3" = "app" ]
 check "after recreate, / → location=$LOC3, process=$PROC3" $?
+LOC4="$(hdr "$BASE/account/session" x-edge-location)"
+PROC4="$(hdr "$BASE/account/session" x-gb-process)"
+CODE4="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/account/session")"
+[ "$LOC4" = "account" ] && [ "$CODE4" = "404" ]
+check "after recreate, /account/* → location=$LOC4, $CODE4 (still off, still routed)" $?
 STATUS2="$(curl -fsS "$BASE/greenbutton/status")"
 case "$STATUS2" in *'"configured":true'*) check "after recreate, still the shim's body" 0;; *) check "after recreate, still the shim's body" 1;; esac
-docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 >/dev/null 2>&1 || true
+docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 gb-topo-iphold-3 >/dev/null 2>&1 || true
+
+echo
+echo "== 0d. the account leg, feature ON: the third pair has to agree =="
+# Off is what ships; ON is the state the pairing claim is about, and the flag
+# is read from the container's own environment — so the gate recreates the
+# account container underneath the RUNNING router (which also re-proves the
+# resolver follows the third upstream's name, the H1 failure mode).
+export GB_TOPO_ACCT_ENABLED=true
+docker compose -p gb-topo -f "$COMPOSE_FILE" up -d account-server >/dev/null 2>&1
+for _ in $(seq 1 60); do
+  curl -fsS --max-time 2 "$BASE/account/session" >/dev/null 2>&1 && break
+  sleep 1
+done
+ON_CODE="$(curl -sS -o /dev/null -w '%{http_code}' "$BASE/account/session")"
+ON_BODY="$(curl -sS --max-time 5 "$BASE/account/session")"
+ON_LOC="$(hdr "$BASE/account/session" x-edge-location)"
+ON_PROC="$(hdr "$BASE/account/session" x-gb-process)"
+[ "$ON_CODE" = "200" ]
+check "ACCT_ENABLED=true: /account/session → $ON_CODE (the feature answers)" $?
+case "$ON_BODY" in
+  *'"enabled":true'*'"authed":false'*) check "…and the payload is the signed-out session (enabled:true, authed:false)" 0 ;;
+  *)                                   check "…and the payload is the signed-out session (enabled:true, authed:false)" 1 ;;
+esac
+[ "$ON_LOC" = "account" ] && [ "$ON_PROC" = "account" ]
+check "/account/* → location=$ON_LOC, process=$ON_PROC (THE pairing: account/account)" $?
+# The fan-out secret only exists while the feature does, so this is the check
+# that matters: the deny must hold in the state where there is something to
+# reach behind it.
+DENY2="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/account/internal/notify")"
+[ "$DENY2" = "403" ]
+check "feature ON: /account/internal/notify is still $DENY2 at the edge" $?
+
+echo
+echo "== the account matrix through the REAL router (register → login → sync) =="
+# tests/e2e/account_smoke.sh is the same gate CI runs, but every request here
+# has crossed nginx first: the session cookie has to survive the location
+# boundary, the 409/401 statuses have to pass through unaltered, and the
+# router must not turn any of it into a redirect or a 502. jq-only dependency,
+# checked so a host without it fails loudly instead of silently skipping.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "ERROR: jq is required for the account matrix" >&2
+  FAIL=$((FAIL + 1))
+else
+  ACCT_LOG="$(mktemp)"
+  "$WEBAPP/tests/e2e/account_smoke.sh" "$BASE" 2>&1 | tee "$ACCT_LOG"
+  ACCT_STATUS=${PIPESTATUS[0]}
+  N_PASS="$(grep -c '^  PASS' "$ACCT_LOG" || true)"
+  N_FAIL="$(grep -c '^  FAIL' "$ACCT_LOG" || true)"
+  PASS=$((PASS + N_PASS))
+  FAIL=$((FAIL + N_FAIL))
+  if [ "$ACCT_STATUS" -ne 0 ] && [ "$N_FAIL" -eq 0 ]; then
+    # It died before it could count (server never came up, jq missing…).
+    FAIL=$((FAIL + 1))
+  fi
+  rm -f "$ACCT_LOG"
+fi
 
 echo
 echo "== the OAuth/ESPI checks, through the router =="

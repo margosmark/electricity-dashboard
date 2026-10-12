@@ -2,13 +2,14 @@
 
 Daily-driver operations for the deploy at `~/electricity-dashboard`.
 
-**Three containers, one host port (3939):**
+**Four containers, one host port (3939):**
 
 | Container | Job |
 | --- | --- |
-| `edge-router` | nginx on host `:3939` — `/greenbutton*` → shim, everything else → app |
+| `edge-router` | nginx on host `:3939` — `/greenbutton*` → shim, `/account/internal/*` denied (403), `/account/*` → account server, everything else → app |
 | `greenbutton-shim` | the Connect My Data shim; the ONLY container with `GB_*` env and the token mount |
-| `energy-dashboard` | the dashboard; no Green Button env, no token mount |
+| `account-server` | the account API (Wave N): the only process with `ACCT_*` that opens the database, plus the VAPID key. Shipped **off** (`ACCT_ENABLED` unset ⇒ every `/account/*` answers 404); see *Account server* below |
+| `energy-dashboard` | the dashboard; no Green Button env, no account env, no token mount |
 
 **Public URL:** https://electricity.markarslan.ca/ (Let's Encrypt TLS, edge
 proxy fronting `:3939`; localhost health checks still work at :3939).
@@ -26,10 +27,17 @@ edge-router sets `X-Forwarded-Proto: https` for the whole deployment, so
 Next sees https even for a direct plaintext LAN hit (measured 2026-10-12).
 
 Which container answered a request: every response carries
-`x-gb-process: app` or `x-gb-process: shim` — set **by the serving process**
-from its own config — plus `X-Edge-Location: default|greenbutton`, which is
+`x-gb-process: app`, `shim` or `account` — set **by the serving process**
+from its own config — plus `X-Edge-Location: default|greenbutton|account|account-deny`, which is
 which nginx branch matched. The pair must agree (see §5 of
-GREENBUTTON-CMD.md); a location-derived header on its own cannot answer this
+GREENBUTTON-CMD.md), with one measured exception worth knowing before you
+read a mismatch as an incident: `x-gb-process` is derived from the flag that
+tells a process who it is, so while accounts are OFF the account container
+answers `/account/*` with `X-Edge-Location: account` **and**
+`x-gb-process: app` — it has not been told it is the account server, and
+404 with no account API is exactly what an off deployment must look like
+(measured 2026-10-12; the pairing `account`↔`account` holds with
+`ACCT_ENABLED=true`). A location-derived header on its own cannot answer this
 question and did not, on 2026-10-07.
 
 ## Start / stop / update
@@ -150,7 +158,7 @@ notifications.
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
 | Turn PKCE on (once Oakville confirms the platform accepts `code_challenge`) | `GB_PKCE=true` in the untracked `.env`, then `docker compose up -d greenbutton-shim` |
 | Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (29 checks, needs docker only for the second) |
-| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (46 checks, incl. recreating both upstreams under a running router; binds :3940 + :8099, tears itself down) |
+| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (**102 checks**: all three upstreams recreated under a running router, the `/account` leg in BOTH flag states — off, then `ACCT_ENABLED=true` — plus the real register/login/sync matrix through the router; binds :3940 + :8099, tears itself down) |
 | Re-run the **browser** connect flow | `cd webapp && ./scripts/e2e-greenbutton-browser.sh` — builds, boots a mock custodian + a *configured* shim on :3941, then runs the whole Playwright suite against it: the Authorise button → authorize → callback → localStorage loop with a "no token material in browser storage" assertion, plus `/import` and the journey specs with the feature switched on |
 | Diagnose a "reconnect" complaint | `docker compose logs greenbutton-shim \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
 | Shim unreachable (`/greenbutton/*` 502) | `docker compose ps` (shim stopped?) then `docker compose logs edge-router` |

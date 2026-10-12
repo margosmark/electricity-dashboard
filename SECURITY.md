@@ -3,12 +3,13 @@
 Scope: the deployed app at https://electricity.markarslan.ca/ — a Next.js
 frontend that parses **untrusted files in the browser** (Green Button XML from
 a utility portal, JSON backups picked from disk) and a service worker that
-decides what may be cached. There is no account system and **no server-side
-user data** on this branch or in this deployment: readings live only in
-`localStorage` — the optional account server that would change this exists as
-built-but-unmerged branch code and is parked, and the full state of that is
-recorded in one place, [ACCOUNT-SERVER-AUDIT.md](ACCOUNT-SERVER-AUDIT.md).
-Alongside it runs the
+decides what may be cached. Readings live only in `localStorage` and **no
+server-side user data is stored**: the optional account server exists on
+`main` and is deployed as its own container, but it ships **off** —
+`ACCT_ENABLED` unset, so every `/account/*` answers 404 and the public
+surface is byte-identical to pre-Wave-N. The one place its state is recorded
+is [ACCOUNT-SERVER-AUDIT.md](ACCOUNT-SERVER-AUDIT.md); §5.8 below is the rule
+for changing it. Alongside it runs the
 Green Button Connect My Data shim (`/greenbutton/*`), which holds OAuth
 *credentials* — a client secret and one token file — but never a reading.
 
@@ -73,7 +74,13 @@ as HTML.
 
 ## 4. What is out of scope (and why)
 
-- **No accounts, no server-side user rows.** Readings live in
+- **No accounts, no server-side user rows** — *while the account server is
+  off, which is what ships:* `ACCT_ENABLED` unset means every `/account/*`
+  answers 404, for every method, and the deployment behaves exactly as it did
+  before Wave N. Turning it on adds argon2 verifiers, session rows and one
+  SQLite file of ciphertext, reachable only through the `/account/*` location
+  (`ACCOUNT-SERVER-AUDIT.md`; `OPERATIONS.md` → *Account server*). Readings
+  live in
   `localStorage` and are never sent to our server. What the server *does*
   hold is the shim's OAuth token set — one file, mode `0600`, outside the
   container — plus exactly two cookies, both set by `/greenbutton/*` and
@@ -209,3 +216,14 @@ as HTML.
    it belongs in the untracked `.env`, and `docker-compose.yml` must fail
    loudly (`${VAR:?…}`) rather than quietly falling back to a default that
    silently changes behaviour.
+8. Touched the account server — its routes, the E2EE blob, the push fan-out,
+   `ACCT_*` / `VAPID_*`, or the `/account` locations in
+   `ops/edge/default.conf.template`? → the live half of that contract is
+   `webapp/scripts/e2e-greenbutton-topology.sh` (§0d runs BOTH flag states and
+   the real register/login/sync matrix through the router), the static half is
+   `webapp/src/lib/account/topology.test.ts`. Three properties are not
+   negotiable and no other test covers them: the server stores **ciphertext it
+   cannot read** (the derived key never leaves the device), the notify log
+   holds topic/title/outcome and **never a reading**, and `/account/*` answers
+   404 with `ACCT_ENABLED` unset — the deployment claims no account API at
+   all, for every method.

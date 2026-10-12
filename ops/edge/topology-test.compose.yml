@@ -1,9 +1,10 @@
 # Containerised topology gate for the Green Button shim.
 #
-# Runs the SAME three-container shape production runs (router → shim | app)
-# against a mock data custodian, on host port 3940 so it can never touch the
-# live stack on 3939. Driven by webapp/scripts/e2e-greenbutton-topology.sh,
-# which also supplies GB_TOPO_TOKEN_DIR and GB_TOPO_MOCK_ORIGIN.
+# Runs the SAME four-container shape production runs (router → shim | account |
+# app) against a mock data custodian, on host port 3940 so it can never touch
+# the live stack on 3939. Driven by webapp/scripts/e2e-greenbutton-topology.sh,
+# which also supplies GB_TOPO_TOKEN_DIR, GB_TOPO_ACCT_DIR, GB_TOPO_ACCT_ENABLED
+# and GB_TOPO_MOCK_ORIGIN.
 #
 #   docker compose -p gb-topo -f ops/edge/topology-test.compose.yml up -d
 #
@@ -19,6 +20,12 @@
 #   * router: the BUILT edge-router image (same ops/edge/Dockerfile production
 #     uses), so the gate exercises the config that actually ships instead of a
 #     bind-mounted copy of it.
+#   * account-server: ACCT_ENABLED is TOGGLED by the gate (GB_TOPO_ACCT_ENABLED,
+#     default false) rather than pinned, because both states are part of the
+#     contract: off is what ships, on is where the `account`↔`account` pairing
+#     and the real register/login/sync matrix are provable end to end. Its
+#     SQLite file goes to a throwaway dir (GB_TOPO_ACCT_DIR), never to the
+#     repo or to the live `.account/`.
 
 services:
   # Public app, exactly as in production: no Green Button environment at all.
@@ -51,6 +58,27 @@ services:
     volumes:
       - ${GB_TOPO_TOKEN_DIR:?}:/var/lib/greenbutton
 
+  # Wave N — the account server: same image, fourth process, its own secrets
+  # (argon2 verifiers, session rows, the VAPID key — none set here, so push
+  # reports pushConfigured:false and sync is what this leg asserts). Service
+  # KEY is production's (`account-server`) because the router resolves its
+  # upstreams by service name; container_name stays gb-topo-*.
+  account-server:
+    image: electricity-dashboard-energy-dashboard:latest
+    container_name: gb-topo-account
+    restart: "no"
+    expose:
+      - "3000"
+    environment:
+      # Flipped by the gate: false (the shipping default) then true.
+      ACCT_ENABLED: ${GB_TOPO_ACCT_ENABLED:-false}
+      ACCT_DB_PATH: /data/accounts.db
+      # The origin this stack is reached on, so cookie flags match the surface
+      # (…same reason GB_PUBLIC_ORIGIN above points at :3940).
+      ACCT_PUBLIC_ORIGIN: http://localhost:3940
+    volumes:
+      - ${GB_TOPO_ACCT_DIR:?}:/data
+
   # London-Hydro-shaped mock custodian, listening on the host so both the
   # shim container (via the host's LAN address) and the curl "browser" in the
   # e2e script can reach the same URLs.
@@ -81,3 +109,4 @@ services:
     depends_on:
       - energy-dashboard
       - greenbutton-shim
+      - account-server
