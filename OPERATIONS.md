@@ -70,10 +70,15 @@ committed.
 | Green Button shim | `curl -fs http://localhost:3939/greenbutton/status` → JSON; `configured:false` until Oakville issues credentials |
 | Green Button live | `curl -fs https://electricity.markarslan.ca/greenbutton/status \| jq .configured` → `true` once `GB_CLIENT_ID`/`GB_CLIENT_SECRET` are set |
 | Token file | `sudo ls -l .greenbutton/` → `tokens.json`, owner uid 1001, mode `600` (absent until the first authorisation) |
+| Account API **on** | `curl -sS -D- https://electricity.markarslan.ca/account/session` → `200` `{"enabled":true,…}` with `x-gb-process: account` (must pair with `X-Edge-Location: account`) |
+| Account API **off** | same URL → `404` with `x-gb-process: app` — indistinguishable from "no such route" |
+| Internal fan-out is unreachable | `curl -sS -o /dev/null -w '%{http_code}' https://electricity.markarslan.ca/account/internal/notify` → `403` (denied at the edge; it exists only on the compose network) |
 
 ## Data model (user-visible)
 
-Nothing is stored server-side. The browser holds:
+Nothing readable is stored server-side: the dashboard process holds no user
+data at all, and the optional account server holds a copy only as ciphertext
+(`## Account server (Wave N)`). The browser holds:
 
 - `localStorage.energy_data` — the parsed Green Button readings
   (`{timestamp, usage_kwh}` sorted ascending; from the last uploaded XML).
@@ -91,7 +96,9 @@ one point or "Combine all", and only the chosen rows are written to
 `energy_data`.
 
 User recovery: re-upload the Oakville Hydro Green Button XML. There is nothing
-else to back up.
+else to back up — **unless** the account server is in use, in which case the
+encrypted copy in `.account/accounts.db` is a second source (see
+`## Account server (Wave N)`).
 
 ## Data source
 
@@ -141,6 +148,119 @@ notifications.
 
 The browser polls `/greenbutton/usage` on load and every 15 minutes while the
 tab is visible. Nothing is stored server-side between those calls.
+
+## Account server (Wave N) — multi-device sync + Web Push
+
+A fourth container (`account-server`), same image, started by `docker compose
+up -d`. It is the only process that holds the account database — argon2
+verifiers, session rows, the SQLite file — plus `VAPID_*` (the push signing
+key); the dashboard container gets none of that, which is why `/account/*`
+answers **404** on the public app process by design. (The shim is the one
+deliberate exception to "only this container sees `ACCT_*`": it gets
+`ACCT_NOTIFY_URL` + `ACCT_INTERNAL_TOKEN` and nothing that opens the
+database.) **The feature is off until you turn it on:** `ACCT_ENABLED`
+defaults to `false`, so a deploy of this change is a no-op for the site. To
+enable it (and to disable it again), set `ACCT_ENABLED=true` in the untracked
+`.env` and `docker compose up -d account-server`; the data file stays on disk
+whichever way it is set, and the container stays running either way so the
+path answers 404 rather than 502.
+
+```bash
+# one-time: turn the feature on. Push keys and the shared shim→account token
+# both go in the untracked .env, never in docker-compose.yml.
+cd ~/electricity-dashboard/webapp && npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
+openssl rand -hex 32                                                     # → ACCT_INTERNAL_TOKEN
+cd .. && printf 'ACCT_ENABLED=true
+' >> .env
+docker compose up -d account-server
+docker compose up -d --build edge-router   # the /account locations are BAKED into that image
+```
+
+The router rebuild is only needed when `ops/edge/default.conf.template`
+changes; the `/account/*` locations shipped with this change, so it is a
+one-time step for this upgrade.
+
+| Check | Command / expectation |
+| --- | --- |
+| Service up | `docker compose ps` → `account-server` running |
+| API answers | `curl -fs http://localhost:3939/account/session` → `{"enabled":true,…}` |
+| Right container answered | response carries `x-gb-process: account` **and** `X-Edge-Location: account` (a mismatch = the split is inverted, H1's failure mode) |
+| Push configured | same payload has `pushConfigured:true` once `VAPID_*` are set; `false` means sync works and notifications are simply inert |
+| Data file | `sudo ls -l .account/` → `accounts.db` (created on first register) |
+
+**Backup.** `.account/accounts.db` is user data — ciphertext, but theirs. It
+is a bind mount for exactly that reason: include `.account/` next to
+`.greenbutton/` in whatever copies this host's state off-box. SQLite runs in
+WAL mode here, so a *live* copy of `accounts.db` alone can be behind by the
+last few writes — copy `accounts.db`, `accounts.db-wal` and `accounts.db-shm`
+together with the service stopped (a second of downtime at family scale):
+
+```bash
+cd ~/electricity-dashboard
+docker compose stop account-server && sudo cp -a .account "/backup/account-$(date +%F)" && docker compose start account-server
+```
+
+Losing the file costs the *server* copy only: every device that still holds
+the derived key and its own `localStorage` is unaffected, and re-registering
+starts a fresh account.
+
+**Passwords.** There is no SMTP and no reset e-mail. A one-time recovery code
+is shown once, at the first upload into an account, and stored only as an
+argon2id hash. It is enforced in the UI and in `SECURITY.md` §5:
+
+- code + forgotten password → a new password can be set, but the stored blob
+  (encrypted with the old one) is dropped — the code recovers the *account*,
+  not the data; re-sync from a device that still has it.
+- no code → the server copy is unrecoverable; local data is untouched and a
+  new account can be registered.
+
+**VAPID rotation.** Replacing `VAPID_PRIVATE_KEY` invalidates every existing
+subscription silently (pushes fail and are dropped as dead on a 410). After a
+rotation, sign in → Notifications → turn off, then on, on each device.
+
+**Account ceiling.** `ACCT_MAX_ACCOUNTS` (default 10) bounds registration —
+registration is deliberately unauthenticated (no invite loop), so the cap plus
+the attempt budget below are what actually bound it. Hitting it returns `403
+account_limit`.
+
+**Attempt budget.** `login`, `recover` and `register` refuse after a bounded
+number of attempts (token buckets per e-mail, per source address and
+process-wide — `webapp/src/lib/account/ratelimit.ts`), answering `429` with a
+`Retry-After` header instead of a generic error. Operational notes:
+
+- Counters are **in the account-server process**. `docker compose restart
+  account-server` clears them; that is a convenience for you and not a hole,
+  because nobody else can restart it.
+- A user who mistypes their password eight times in fifteen minutes sees
+  `429 rate_limited` for up to a minute or two. It is a refillable budget,
+  not a lockout: no state, no unlock procedure, no operator action.
+- If you ever need to see why a request was refused, the body carries
+  `retryAfterSeconds` and the header carries the same number.
+
+### Removing an account (undoes `ACCT_MAX_ACCOUNTS` squatting)
+
+Registration is open, so a stranger who reaches the endpoint can occupy all
+ten slots with junk e-mail addresses. The attempt budget makes that slow, the
+cap makes it finite, and this makes it reversible — `sessions`, `blobs`,
+`push_subs` and `push_prefs` all carry `ON DELETE CASCADE`, so one statement
+cleans the whole account:
+
+```bash
+cd ~/electricity-dashboard
+docker compose stop account-server
+# -cmd is not decoration: sqlite3 starts with foreign_keys OFF, so without
+# the PRAGMA this DELETE would leave orphaned sessions/blobs/subscriptions.
+sudo sqlite3 -cmd "PRAGMA foreign_keys=ON;" .account/accounts.db \
+  "DELETE FROM accounts WHERE email = 'squatter@example.com';"
+docker compose start account-server
+sudo sqlite3 .account/accounts.db "SELECT id, email, datetime(created_at/1000,'unixepoch') FROM accounts;"
+```
+
+Nothing else needs doing: the squatter never held a session that survives the
+delete, their ciphertext (if any) goes with the row, and their push
+subscriptions are dropped by the cascade. To free every slot at once,
+`DELETE FROM accounts;` — every other device keeps its local `localStorage`
+copy, because the server copy is the only thing being removed.
 
 ## Rate data updates
 

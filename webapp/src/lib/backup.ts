@@ -24,6 +24,16 @@
 import { t } from '@/i18n';
 import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges } from './energy';
 import { isValidPlanTimelineEntry, type PlanTimelineEntry } from './planTimeline';
+import { PLAN_STORAGE_KEY, PLAN_IDS, isPlanId } from '@/hooks/useSelectedPlan';
+
+/**
+ * The flag that marks the loaded readings as the bundled example set
+ * (Wave H item 1). Declared HERE — not in `hooks/useDashboard.ts` — because
+ * this module must be able to write it without importing the hook (which
+ * imports this module: that would be a cycle). `useDashboard` re-exports it
+ * so every existing import keeps working.
+ */
+export const EXAMPLE_DATA_KEY = 'energy_data_is_example';
 
 /** Marker written into every export; Import refuses files without it. */
 export const BACKUP_SCHEMA = 'ontario-energy-optimizer.backup';
@@ -33,7 +43,17 @@ export const BACKUP_SCHEMA = 'ontario-energy-optimizer.backup';
  *   - additive/optional change → also accept the previous version explicitly.
  *   - breaking change          → readers reject older/newer versions loudly.
  */
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
+
+/**
+ * Schema versions THIS build reads. An explicit set, not `<= BACKUP_VERSION`,
+ * so the compatibility promise is testable in one place: v1 predates
+ * `selected_plan` / `energy_data_is_example` and still restores (the file's
+ * own rule: "additive/optional change → also accept the previous version").
+ */
+export const SUPPORTED_BACKUP_VERSIONS: ReadonlySet<number> = new Set([1, 2]);
+
+const PLAN_IDS_FOR_ERROR = PLAN_IDS.map((id) => `"${id}"`).join(', ');
 
 export type BackupPayload = {
   /** The parsed Green Button rows (same shape localStorage.energy_data holds). */
@@ -46,6 +66,16 @@ export type BackupPayload = {
    *  documents built before Wave P (or without entries) simply lack the key,
    *  and the reader treats its absence as an empty timeline. */
   plan_timeline?: PlanTimelineEntry[];
+  /**
+   * v2, additive: which plan the user had selected (Wave H).
+   * Optional so a v1 document still parses — see `BACKUP_VERSION`.
+   */
+  selected_plan?: string;
+  /**
+   * v2, additive: whether these readings are the synthetic example set.
+   * Optional for the same reason.
+   */
+  energy_data_is_example?: boolean;
 };
 
 export type BackupDocument = {
@@ -62,6 +92,9 @@ export type BackupInput = {
   extraCharges?: ExtraCharges;
   /** Declared plan periods to carry across a restore. */
   planTimeline?: PlanTimelineEntry[];
+  /** Wave N: restore must also restore the plan, not just the readings. */
+  selectedPlan?: string;
+  isExample?: boolean;
   exportedAt?: Date;
 };
 
@@ -82,6 +115,10 @@ export function buildBackupDocument(input: BackupInput): BackupDocument {
       billing_day: normalizeBillingDay(input.billingDay),
       extra_charges: whitelistCharges(input.extraCharges),
       ...(planTimeline.length > 0 ? { plan_timeline: planTimeline } : {}),
+      // Only written when known: a caller that has no plan must not stamp
+      // "TOU" onto a document that means "nothing was recorded".
+      ...(isPlanId(input.selectedPlan) ? { selected_plan: input.selectedPlan } : {}),
+      ...(typeof input.isExample === 'boolean' ? { energy_data_is_example: input.isExample } : {}),
     },
   };
 }
@@ -169,9 +206,12 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
       error: t('backup.errNewer', { version, max: BACKUP_VERSION }),
     };
   }
-  if (version < BACKUP_VERSION) {
-    // v1 is the first schema; anything older cannot exist. Kept explicit so a
-    // future v2 build has an obvious place to add the migration shim.
+  if (!SUPPORTED_BACKUP_VERSIONS.has(version)) {
+    // Explicit allow-list rather than "anything <= current": the file's own
+    // rule is "additive/optional change → also accept the PREVIOUS version",
+    // which means exactly {1, 2} for this build, not an open range. A hole
+    // below v1 (corrupt, or a schema this repo never shipped) is rejected
+    // with the same loudness as everything else here.
     return {
       ok: false,
       error: t('backup.errUnsupportedSchema', { version, max: BACKUP_VERSION }),
@@ -223,6 +263,33 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
     }
   }
 
+  // v2 fields: present ⇒ validated, absent ⇒ left absent (a v1 document
+  // legitimately has no opinion about the selected plan).
+  let selectedPlan: string | undefined;
+  if (p.selected_plan !== undefined && p.selected_plan !== null) {
+    if (!isPlanId(p.selected_plan)) {
+      return {
+        ok: false,
+        error: t('backup.errSelectedPlan', {
+          got: JSON.stringify(p.selected_plan),
+          plans: PLAN_IDS_FOR_ERROR,
+        }),
+      };
+    }
+    selectedPlan = p.selected_plan;
+  }
+
+  let isExample: boolean | undefined;
+  if (p.energy_data_is_example !== undefined && p.energy_data_is_example !== null) {
+    if (typeof p.energy_data_is_example !== 'boolean') {
+      return {
+        ok: false,
+        error: t('backup.errExampleFlag', { got: JSON.stringify(p.energy_data_is_example) }),
+      };
+    }
+    isExample = p.energy_data_is_example;
+  }
+
   return {
     ok: true,
     value: {
@@ -234,6 +301,8 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
         billing_day: billingDay,
         extra_charges: extraCharges,
         ...(planTimeline ? { plan_timeline: planTimeline } : {}),
+        ...(selectedPlan !== undefined ? { selected_plan: selectedPlan } : {}),
+        ...(isExample !== undefined ? { energy_data_is_example: isExample } : {}),
       },
     },
   };
@@ -278,10 +347,20 @@ function describe(v: unknown): string {
  * plan timeline), so a restore is indistinguishable from a re-upload.
  */
 export function storageValuesFromBackup(doc: BackupDocument): Record<string, string> {
-  return {
+  const values: Record<string, string> = {
     energy_data: JSON.stringify(doc.payload.energy_data),
     billing_day: String(doc.payload.billing_day),
     extra_charges: JSON.stringify(doc.payload.extra_charges),
     plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
   };
+  // The two v2 keys are written ONLY when the document carries them: a v1
+  // backup has no opinion, so restoring one must not silently re-plan the
+  // user's dashboard or clear the example-data banner.
+  if (doc.payload.selected_plan !== undefined) values[PLAN_STORAGE_KEY] = doc.payload.selected_plan;
+  // The example flag is ALWAYS written, even for a v1 document that never
+  // recorded one: a restore replaces the whole profile, and leaving a stale
+  // "these are demo numbers" banner over the user's real restored readings
+  // would be a lie the app has no way to detect afterwards.
+  values[EXAMPLE_DATA_KEY] = doc.payload.energy_data_is_example === true ? '1' : '';
+  return values;
 }

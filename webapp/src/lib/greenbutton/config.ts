@@ -15,6 +15,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { isAccountProcess } from "@/lib/account/config";
 
 export type TokenAuthStyle = "basic" | "body";
 
@@ -130,9 +131,15 @@ export function getConfig(): GreenButtonConfig {
  * location could never detect the inversion. This one changes with the
  * process, not with the path.
  */
-export type ProcessIdentity = "shim" | "app";
+export type ProcessIdentity = "shim" | "app" | "account";
 
 export function getProcessIdentity(): ProcessIdentity {
+  // Wave N added a THIRD container running this same image: `account-server`
+  // is the only process with ACCT_* env (password verifiers, session rows,
+  // VAPID key), so it reports "account" and pairs with the router's
+  // `X-Edge-Location: account`. Checked FIRST, because the app and shim
+  // containers deliberately carry no ACCT_* at all.
+  if (isAccountProcess()) return "account";
   // The in-repo default is what a process keeps when nobody told it where a
   // token file lives. The app container sets no GB_* env, so it keeps the
   // default and reports "app"; the shim is pointed at its mounted

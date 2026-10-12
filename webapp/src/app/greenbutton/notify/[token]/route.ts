@@ -18,6 +18,7 @@
  * unauthenticated caller a 64 MB allocation per request (finding L1).
  */
 
+import { notifyAccountServer } from "@/lib/greenbutton/accountNotify";
 import { getNotifyToken } from "@/lib/greenbutton/config";
 import { getConfig, secretEquals } from "@/lib/greenbutton/http";
 import { markDataAvailable } from "@/lib/greenbutton/session";
@@ -97,6 +98,13 @@ export async function POST(
   // `bytesRead` is what actually came off the wire before the cap, so the log
   // can never claim — and never hold — more than MAX_BODY_BYTES.
   console.log(`[greenbutton] notification: resources=${resources} bytes=${bytesRead}`);
+
+  // Wave N: hand the "something changed" fact to the account server so
+  // subscribers get a push while the tab is closed. Deliberately `void` and
+  // deliberately AFTER the decision to answer 200 — a fan-out that is down,
+  // unconfigured or slow must never make Oakville's webhook bounce (they
+  // would retry a notification we have already recorded).
+  void notifyAccountServer({ resources, bytes: bytesRead }).catch(() => false);
 
   return new Response(null, { status: 200 });
 }

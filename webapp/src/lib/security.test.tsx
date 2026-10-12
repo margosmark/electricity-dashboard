@@ -197,8 +197,15 @@ type FetchEvent = {
  * this request (and therefore may cache it)"; never being called means the
  * browser's default handling applies and nothing is stored.
  */
-function bootServiceWorker() {
-  const listeners: Record<string, (e: FetchEvent) => void> = {};
+function bootServiceWorker(options: { windowClients?: unknown[] } = {}) {
+  const listeners: Record<string, (e: unknown) => void> = {};
+  // Wave N: the worker can now show notifications, so the harness has to be
+  // able to observe them — a push handler nobody can assert on would be a
+  // test that proves nothing.
+  const showNotification = vi.fn(async (...args: unknown[]) => { void args; });
+  const openWindow = vi.fn(async (...args: unknown[]) => { void args; return null; });
+  const focused = vi.fn(async () => true);
+  const navigated = vi.fn(async () => null);
   const cachePut = vi.fn(async (...args: unknown[]) => { void args; });
   const cacheAddAll = vi.fn(async () => {});
   const opened: string[] = [];
@@ -214,13 +221,18 @@ function bootServiceWorker() {
   };
 
   const fakeSelf = {
-    addEventListener: (type: string, fn: (e: FetchEvent) => void) => {
+    addEventListener: (type: string, fn: (e: unknown) => void) => {
       listeners[type] = fn;
     },
     caches: fakeCaches,
     location: { origin: 'https://app.example' },
     skipWaiting: vi.fn(async () => {}),
-    clients: { claim: vi.fn(async () => {}) },
+    registration: { showNotification },
+    clients: {
+      claim: vi.fn(async () => {}),
+      matchAll: vi.fn(async () => options.windowClients ?? []),
+      openWindow,
+    },
   };
 
   const fetchMock = vi.fn(async () => ({ ok: true, status: 200, clone: () => ({}) }));
@@ -234,11 +246,19 @@ function bootServiceWorker() {
       respondWith: vi.fn(),
       waitUntil: vi.fn(),
     };
-    listeners.fetch(event);
+    (listeners.fetch as (e: unknown) => void)(event);
     return event;
   };
 
-  return { dispatch, cachePut, opened, listeners };
+  /** Dispatch a `push` / `notificationclick` event at the worker. */
+  const dispatchRaw = (type: string, event: unknown): unknown => {
+    listeners[type](event);
+    return event;
+  };
+
+  const makeWindowClient = () => ({ focus: focused, navigate: navigated });
+
+  return { dispatch, dispatchRaw, cachePut, opened, listeners, showNotification, openWindow, focused, navigated, makeWindowClient };
 }
 
 const req = (url: string, opts: { method?: string; mode?: string } = {}) => ({
@@ -324,14 +344,105 @@ describe('service worker cache-poisoning surface', () => {
 });
 
 /* ==========================================================================
- * 4. JSON backup import — prototype pollution (the other untrusted parse)
+ * 3b. Service worker push surface (Wave N) — executed, not eyeballed
  * ========================================================================== */
 
-describe('JSON import hardening', () => {
-  it('is covered by backup.test.ts (hostile __proto__ / constructor payloads)', async () => {
-    // Cross-reference so a gap here is visible in the security checklist run.
-    const text = fs.readFileSync(path.join(WEBAPP_ROOT, 'src/lib/backup.test.ts'), 'utf8');
-    expect(text).toMatch(/pollute Object\.prototype/);
-    expect(text).toMatch(/constructor.*prototype/);
+type PushEvent = {
+  data: { json: () => unknown } | null;
+  waitUntil: ReturnType<typeof vi.fn>;
+};
+
+type NotificationClickEvent = {
+  notification: { close: ReturnType<typeof vi.fn>; data: unknown };
+  waitUntil: ReturnType<typeof vi.fn>;
+};
+
+describe('service worker push handlers (Wave N)', () => {
+  it('registers push and notificationclick next to the fetch handlers', () => {
+    const { listeners } = bootServiceWorker();
+    expect(Object.keys(listeners)).toEqual(expect.arrayContaining(['install', 'activate', 'fetch', 'push', 'notificationclick']));
+  });
+
+  it('shows the server-rendered title, body and same-origin target', async () => {
+    const { dispatchRaw, showNotification } = bootServiceWorker();
+    const event: PushEvent = {
+      data: {
+        json: () => ({ topic: 'oeb_rates', title: 'New electricity rates', body: 'Effective Nov 1', url: '/insights' }),
+      },
+      waitUntil: vi.fn(),
+    };
+    dispatchRaw('push', event);
+    expect(event.waitUntil).toHaveBeenCalled();
+    await event.waitUntil.mock.calls[0][0];
+    expect(showNotification).toHaveBeenCalledWith(
+      'New electricity rates',
+      expect.objectContaining({ body: 'Effective Nov 1', data: { url: '/insights' }, tag: 'oeb_rates' }),
+    );
+  });
+
+  it('never follows a cross-origin URL carried in a push payload', async () => {
+    const { dispatchRaw, showNotification } = bootServiceWorker();
+    const event: PushEvent = {
+      data: { json: () => ({ title: 'x', url: 'https://evil.example/steal' }) },
+      waitUntil: vi.fn(),
+    };
+    dispatchRaw('push', event);
+    await event.waitUntil.mock.calls[0][0];
+    const [, options] = showNotification.mock.calls[0] as unknown as [string, { data: { url: string } }];
+    expect(options.data.url).toBe('/');
+  });
+
+  it('falls back to a neutral title when the payload is not usable JSON', async () => {
+    const { dispatchRaw, showNotification } = bootServiceWorker();
+    const event: PushEvent = {
+      data: {
+        json: () => {
+          throw new Error('not json');
+        },
+      },
+      waitUntil: vi.fn(),
+    };
+    dispatchRaw('push', event);
+    await event.waitUntil.mock.calls[0][0];
+    expect(showNotification.mock.calls[0][0]).toBe('Ontario Energy Optimizer');
+  });
+
+  it('ignores a push with no body instead of throwing', () => {
+    const { dispatchRaw, showNotification } = bootServiceWorker();
+    const event = { data: null, waitUntil: vi.fn() };
+    dispatchRaw('push', event);
+    expect(event.waitUntil).not.toHaveBeenCalled();
+    expect(showNotification).not.toHaveBeenCalled();
+  });
+
+  it('closes the notification, focuses an open window and navigates it', async () => {
+    const client = { focus: vi.fn(async () => true), navigate: vi.fn(async () => null) };
+    const { dispatchRaw } = bootServiceWorker({ windowClients: [client] });
+    const close = vi.fn();
+    const event: NotificationClickEvent = {
+      notification: { close, data: { url: '/import' } },
+      waitUntil: vi.fn(),
+    };
+    dispatchRaw('notificationclick', event);
+
+    // The notification must be gone before anything else happens, or a
+    // second tap stacks a duplicate behind a stale one.
+    expect(close).toHaveBeenCalled();
+    expect(event.waitUntil).toHaveBeenCalled();
+    await event.waitUntil.mock.calls[0][0];
+    expect(client.focus).toHaveBeenCalled();
+    expect(client.navigate).toHaveBeenCalledWith('/import');
+  });
+
+  it('opens a window when none is already open, and never leaves the origin', async () => {
+    const { dispatchRaw, openWindow } = bootServiceWorker({ windowClients: [] });
+    const close = vi.fn();
+    const event: NotificationClickEvent = {
+      notification: { close, data: { url: 'https://evil.example/' } },
+      waitUntil: vi.fn(),
+    };
+    dispatchRaw('notificationclick', event);
+    await event.waitUntil.mock.calls[0][0];
+    expect(openWindow).toHaveBeenCalledWith('/');
   });
 });
