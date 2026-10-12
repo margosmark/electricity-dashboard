@@ -90,12 +90,13 @@ Screenshots (not tracked — see `ASSETS.md`): `wave-v-{desktop,mobile}-{long,sh
 (full page), `-panel.png` (the panel), `-headline.png` (the headline figure).
 
 `evidence/wave-v-verification.json` is the **DEPLOYED** record: the same harness
-run against `http://10.10.11.110:3939/`, `112/112`, `failed: 0`,
-`ranAt 2026-10-12T21:51:19.661Z`, and it carries the two pins that make it
+run against `http://10.10.11.110:3939/`, `120/120`, `failed: 0`,
+`ranAt 2026-10-12T22:12:06.825Z`, and it carries the two pins that make it
 attributable — `"base": "http://10.10.11.110:3939/"` and
-`"deployedCommit": "054d60fb335e63b0d7d29b081d30f16ec0e29760"`. The local-build
-record is `evidence/wave-v-verification-local.json`. The pre-correction `9dcd1cd`
-record (two levers, move lists) is history only.
+`"deployedCommit": "fe7a5ff91bcb1b97660d6687df8495dd86c73d56"` (this is the
+t_97f4c904 fix; the pre-fix `112/112` record for `054d60f` is superseded). The
+local-build record is `evidence/wave-v-verification-local.json`. The
+pre-correction `9dcd1cd` record (two levers, move lists) is history only.
 
 ## Gates run before the push
 
@@ -184,13 +185,20 @@ The sub-line now carries `data-testid="hindsight-headline-note"`.
 
 | build | harness | painted sub-line (2-year / 3-month) |
 | --- | --- | --- |
-| DEPLOYED `054d60f` (pre-fix, still served while this was written) | **112/120**, 8 failed — 2 per run, all four runs | "…cost you **$0.00 more** than the cheapest of the other two…" / same |
-| local build of this change (`next start` on `127.0.0.1:3939`) | **120/120**, 0 failed | "The alternatives would have cost you **$251.89 more** on the very same readings." / "$33.19 more" |
+| DEPLOYED `054d60f` (pre-fix control) | **112/120**, 8 failed — 2 per run, all four runs | "…cost you **$0.00 more** than the cheapest of the other two…" / same |
+| local build of the fix (`next start` on `127.0.0.1:3939`) | **120/120**, 0 failed | "The alternatives would have cost you **$251.89 more** on the very same readings." / "$33.19 more" |
+| DEPLOYED `fe7a5ff` (the fix, the record) | **120/120**, 0 failed | same sentence, read off the deployed stack |
 
-The failing control run is the defect QA flagged, read verbatim out of the
-painted DOM by the new check
-(`evidence/wave-v-verification-control.json`, not tracked — the deployed record is
-re-run after the deploy).
+The failing control run is the defect QA flagged, read verbatim out of the painted
+DOM by the new check (`wave-v-verification-control.json`, written to scratch and
+**not** tracked — a deliberately red run does not belong in `evidence/`; the
+deployed re-run above is the tracked record).
+
+**FR, live on the deployed stack** (the 2-year export, the locale toggle flipped
+after the panel painted, probe output in the task's scratch): the headline reads
+`LES AUTRES TARIFS AURAIENT COÛTÉ PLUS CHER −251,89 $` above
+`Les autres tarifs vous auraient coûté 251,89 $ de plus, sur exactement les mêmes
+relevés.` — the fr-CA sentence, composed from the catalog, no English on the page.
 
 `HindsightPanel.test.tsx` pins the same rule at the component: the net-negative
 fixture (`peakHouse` — a Tiered bill whose readings only ever run at 08:00, so the
@@ -209,3 +217,15 @@ other two, on the very same readings.").
 | `node scripts/i18n-merge.mjs --check` | up to date, **1257** keys (+1: `hindsight.headlineNoteSaved`, en + fr) |
 | `.venv/bin/pytest tests/` / `ops/dmd/tests` | 41 passed / 19 passed, 1 skipped |
 | `node evidence/wave-v-verify.cjs` (local build, both exports, 1440 + 390 px) | **120/120** (`wave-v-verification-local.json`) |
+
+`main` did not move between the branch point (`3111cbd`) and the squash, so the
+merged commit is that tree: PR #101 → squash `fe7a5ff`.
+
+| | |
+| --- | --- |
+| merged commit = deployed SHA | `fe7a5ff91bcb1b97660d6687df8495dd86c73d56` |
+| deploy | `ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'` → `DEPLOY_OK at fe7a5ff`, `DEPLOY_SHA=fe7a5ff…` |
+| served identity | `GET http://10.10.11.110:3939/api/version` → `{"sha":"fe7a5ff91bcb1b97660d6687df8495dd86c73d56","buildId":"8zXl19S9MYhSMqeey27kr"}` |
+| deployed browser re-run | `120/120`, `failed: 0`, both exports at 1440 px and 390 px (`evidence/wave-v-verification.json`) |
+| builder pruned after the build | `ssh hermescomputer 'docker builder prune -af'` → 1.441 GB reclaimed (the vfs store keeps every layer) |
+| export copies | taken from the `pm` document cache (the two `oakvillehydro_…60_Minute…xml` files the Wave S/T/U write-ups pin), sha256-verified before use (`e292de50…` long, `6a3f0e14…` short), used, **deleted**; neither ever entered the repo |
