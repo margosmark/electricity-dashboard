@@ -470,7 +470,7 @@ const REFUSAL_REASON: Record<
   string
 > = {
   register:
-    'is a register reading (its ESPI accumulationBehaviour is a cumulative or bulk quantity), not an interval increment: registers must be differenced against a known reset, and no such contract is available here.',
+    'is a register reading (its ESPI accumulationBehaviour is a cumulative, bulk or summation quantity), not an interval increment: registers must be differenced against a known reset, and no such contract is available here.',
   spot: 'is a spot measurement (indicating, instantaneous or time-delayed), so it has no interval it could be an amount of energy for.',
   'other-commodity':
     'measures a non-electricity commodity (gas, water, steam, refuse …), so it must never be priced with electricity rates.',

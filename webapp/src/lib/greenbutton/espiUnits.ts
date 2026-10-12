@@ -557,18 +557,37 @@ export function energyKwhFromIntervalPower(
   return (watts * durationSeconds) / 3600 / 1000;
 }
 
-/** How a series' values accumulate over time (ESPI AccumulationKind). */
+/**
+ * How a series' values accumulate over time (ESPI AccumulationKind).
+ *
+ * `summation` (9) is deliberately classified with the registers, NOT as an
+ * interval increment. ESPI v4.0 (`naesb.org/espi.xsd`, 4.0.20231213, REQ.21)
+ * defines it as "A form of accumulation which is selective with respect to
+ * time", and its own note places it in the register family by inheritance:
+ * "'Summation' could be considered a specialization of 'Bulk Quantity'
+ * according to the rules of inheritance where 'Summation' selectively
+ * accumulates pulses over a timing pattern, and 'BulkQuantity' accumulates
+ * pulses all of the time." BulkQuantity (1) is a dial-reading register and is
+ * refused, so a cumulative pulse register carrying 9 must be refused too:
+ * pricing it as a per-interval increment is exactly the register-summing
+ * failure this resolver exists to make impossible. Refusing is announced as an
+ * `unsupported-series` diagnostic, never a silent drop. Every feed in evidence
+ * uses 4 deltaData (both owner exports and the Hydro One fixture), so this
+ * costs nothing observed; a real 9-valued interval feed must prove the interval
+ * reading before 9 may move into INTERVAL_ACCUMULATION.
+ */
 export type AccumulationClass =
-  /** An increment for this interval: 0/absent (implied by the uom), 4 deltaData, 9 summation. */
+  /** An increment for this interval: 0/absent (implied by the uom), 4 deltaData. */
   | 'interval'
-  /** A register reading: adding them up produces nonsense, not consumption. */
+  /** A register reading (1/2/3/9/13/14): adding them up produces nonsense, not consumption. */
   | 'register'
   /** A spot value with no interval meaning (indicating / instantaneous / timeDelay). */
   | 'spot'
   | 'unknown';
 
-const INTERVAL_ACCUMULATION = new Set<number>([0, 4, 9]);
-const REGISTER_ACCUMULATION = new Set<number>([1, 2, 3, 13, 14]);
+const INTERVAL_ACCUMULATION = new Set<number>([0, 4]);
+// 9 summation joins the register class on purpose — see the type doc above.
+const REGISTER_ACCUMULATION = new Set<number>([1, 2, 3, 9, 13, 14]);
 const SPOT_ACCUMULATION = new Set<number>([6, 10, 12]);
 
 export function accumulationClassOf(ab: number | null | undefined): AccumulationClass {

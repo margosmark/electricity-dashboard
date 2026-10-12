@@ -15,6 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseReadingSeries, classifySeries, type SeriesMetadata } from './series';
+import { accumulationClassOf } from './espiUnits';
 import { parseGreenButtonFeed } from '@/lib/energy';
 import { XMLParser } from 'fast-xml-parser';
 
@@ -383,12 +384,38 @@ describe('accumulation — registers are never summed as energy', () => {
     }
   });
 
-  it('accepts deltaData (4) and summation (9), which ARE per-interval increments', () => {
-    for (const ab of [4, 9]) {
-      expect(classifySeries({ ...meta({ ab, uom: 72, mult: 0, commodity: 1, fd: 1 }) }).status, `ab=${ab}`).toBe(
-        'supported',
-      );
-    }
+  it('accepts deltaData (4), the per-interval increment ESPI defines', () => {
+    expect(accumulationClassOf(4)).toBe('interval');
+    expect(classifySeries({ ...meta({ ab: 4, uom: 72, mult: 0, commodity: 1, fd: 1 }) }).status).toBe('supported');
+  });
+
+  it('refuses summation (9): the schema inherits it from BulkQuantity, so it is a pulse register', () => {
+    // ESPI v4.0 (naesb.org/espi.xsd, 4.0.20231213, REQ.21) defines 9 as "a form
+    // of accumulation which is selective with respect to time" and notes it "could
+    // be considered a specialization of 'Bulk Quantity' ... where 'Summation'
+    // selectively accumulates pulses over a timing pattern". BulkQuantity (1) is a
+    // dial-reading register and IS refused, so a cumulative 9-series priced per
+    // reading would be precisely the register-summing failure this resolver exists
+    // to make impossible. No feed in evidence uses 9; refusing is the defensive read.
+    expect(accumulationClassOf(9)).toBe('register');
+    const verdict = classifySeries(meta({ ab: 9, uom: 72, mult: 0, commodity: 1, fd: 1 }));
+    expect(verdict.status).toBe('register');
+    expect(verdict.reason).toMatch(/summation/);
+  });
+
+  it('refuses a summation (9) series end to end instead of adding up its register values', () => {
+    const xml = simpleDoc({ uom: 72, mult: 0, kind: 12, ab: 9, commodity: 1, fd: 1 }, [
+      { start: 1_700_000_000, value: 100_000 },
+      { start: 1_700_003_600, value: 101_000 },
+      { start: 1_700_007_200, value: 102_500 },
+    ]);
+    const { series, notes } = parse(xml);
+    expect(series[0].status).toBe('register');
+    expect(series[0].readings.some((r) => r.kwh !== null)).toBe(false);
+    expect(priced(xml)).toEqual([]);
+    const note = notes.find((n) => n.code === 'unsupported-series');
+    expect(note?.detail).toMatch(/summation/i);
+    expect(note?.detail).toMatch(/none of them was priced/i);
   });
 
   it('refuses an indicating/instantaneous spot value (6, 12)', () => {
@@ -737,6 +764,7 @@ describe('classifySeries — the decision table', () => {
   it('names the status of every refusal so a diagnostic can say why', () => {
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: 1, fd: 1 }))).toEqual({ status: 'supported', reason: null });
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 3, commodity: 1, fd: 1 })).reason).toMatch(/register/);
+    expect(classifySeries(meta({ uom: 72, mult: 0, ab: 9, commodity: 1, fd: 1 })).reason).toMatch(/summation/);
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: 7, fd: 1 })).reason).toMatch(/non-electricity/);
     expect(classifySeries(meta({ uom: 73, mult: 0, ab: 4, commodity: 1, fd: 1 })).reason).toMatch(/reactive/);
     expect(classifySeries(meta({ uom: 72, mult: 0, ab: 4, commodity: 1, fd: 19 })).reason).toMatch(/exported/);
