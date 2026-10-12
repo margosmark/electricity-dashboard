@@ -20,6 +20,7 @@ import {
 } from '@/lib/energy';
 import type { MergeFileChoice } from '@/hooks/useDashboard';
 import { useTranslation } from '@/i18n';
+import { usagePointLabel } from '@/i18n/usagePointLabel';
 
 export type { MergeFileChoice };
 
@@ -112,7 +113,7 @@ export default function MultiFileMerge({
                         checked={file.chosen === j}
                         onChange={() => setChoice(i, j)}
                       />
-                      {g.label} · {g.readings.length} {t('merge.readings', { count: g.readings.length })}
+                      {usagePointLabel(g, t)} · {g.readings.length} {t('merge.readings', { count: g.readings.length })}
                     </label>
                   ))}
                   <label

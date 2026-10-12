@@ -375,7 +375,16 @@ export function combineUsagePointGroups(groups: UsagePointGroup[]): DataPoint[] 
 export type UsagePointGroup = {
   /** UsagePoint id from the feed links; '' when the feed does not identify one. */
   id: string;
-  /** Short human label for the picker. */
+  /**
+   * Short human label for the picker, in ENGLISH — the canonical value.
+   *
+   * The parser has no locale, so this is the English source of a translated
+   * heading: the two render sites (`UsagePointPicker`, `MultiFileMerge`) print
+   * `usagePointLabel(group, t)` from `@/i18n/usagePointLabel`, which composes
+   * the same label from the catalog and falls back to this string. Keep the
+   * two byte-identical in English — `src/i18n/usagePointLabel.test.ts` pins
+   * that (`Meter` here, the catalog's `gbseries.point.unidentified`, …).
+   */
   label: string;
   /**
    * CONSUMED electricity only: every supported active-energy series of this
@@ -395,6 +404,17 @@ export type UsagePointGroup = {
   /** The reasons attached to this point's series (empty when all were clean). */
   notes: SeriesNote[];
 };
+
+/**
+ * How much of a UsagePoint id the group's label prints.
+ *
+ * The id is a UUID (or a utility's own long token); the label is a heading, and
+ * the row underneath it carries the full id / `picker.noId`. Exported because
+ * the label is composed TWICE — here in English, and from the catalog at the
+ * render sites (`@/i18n/usagePointLabel`) — and the two must agree byte for
+ * byte (pinned by `src/i18n/usagePointLabel.test.ts`).
+ */
+export const POINT_LABEL_ID_LENGTH = 8;
 
 function asArray<T>(v: T | T[] | undefined | null): T[] {
   if (v === undefined || v === null) return [];
@@ -453,7 +473,7 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     if (!g) {
       g = {
         id,
-        label: id ? `UsagePoint ${id.slice(0, 8)}` : 'Meter',
+        label: id ? `UsagePoint ${id.slice(0, POINT_LABEL_ID_LENGTH)}` : 'Meter',
         readings: [],
         blocks: 0,
         series: [],

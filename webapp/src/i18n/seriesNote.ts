@@ -86,7 +86,13 @@ function refusalKey(status: unknown): string | null {
   return Object.prototype.hasOwnProperty.call(keys, status) ? keys[status] : null;
 }
 
-function catalogHas(key: string): boolean {
+/**
+ * Whether the catalog defines a key in the reader's language (or in English —
+ * a key the French catalog lacks must still be recognised as *a* key, so a
+ * display layer can fall back to its canonical English source instead of
+ * printing the raw key).
+ */
+export function catalogHas(key: string): boolean {
   return key in CATALOGS[getLocale()] || key in CATALOGS.en;
 }
 
