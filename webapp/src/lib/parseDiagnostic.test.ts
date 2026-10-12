@@ -57,6 +57,23 @@ describe('diagnoseGreenButtonDocument — malformed XML', () => {
     expect(d.headline).toMatch(/line \d+/);
     expect(d.hints.join(' ')).toMatch(/truncated|re-download/i);
   });
+
+  it('interpolates the line in the DETAIL sentence too — never a literal {line}', () => {
+    // The QA corpus' truncated export (F-07g) stops mid-element, and the
+    // validator answers `InvalidXml` at line 1. BOTH sentences take that line;
+    // the detail template reads "{msg} at line {line}." and used to be called
+    // with `msg` alone, so the user was shown the placeholder literally
+    // ("Invalid '…' found. at line {line}." — t_1fca89fa).
+    const d = failure(
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<feed xmlns="http://www.w3.org/2005/Atom">\n' +
+        '  <entry>\n' +
+        '    <updated>2026-01-01',
+    );
+    expect(d.headline).toBe('The XML is not well-formed at line 1.');
+    expect(d.detail).toBe("Invalid '[    \"feed\",    \"entry\",    \"updated\"]' found. at line 1.");
+    expect(d.detail).not.toContain('{');
+  });
 });
 
 describe('diagnoseGreenButtonDocument — security refusal', () => {

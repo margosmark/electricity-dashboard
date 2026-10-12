@@ -376,11 +376,11 @@ function noticeBlock(start: number, value: number | string): string {
 
 const NT = 1790000000;
 
-function noticePoint(up: string, mr: string, rtId: string, spec: RtSpec, value: number, related = true): string[] {
+function noticePoint(up: string, mr: string, rtId: string, spec: RtSpec, value: number, related = true, start = NT): string[] {
   return [
     noticeEntry(`/ReadingType/${rtId}`, noticeRt(spec)),
     noticeEntry(`/UsagePoint/${up}/MeterReading/${mr}`, '<espi:MeterReading/>', related ? [`/ReadingType/${rtId}`] : []),
-    noticeEntry(`/UsagePoint/${up}/MeterReading/${mr}/IntervalBlock/ib`, noticeBlock(NT, value)),
+    noticeEntry(`/UsagePoint/${up}/MeterReading/${mr}/IntervalBlock/ib`, noticeBlock(start, value)),
   ];
 }
 
@@ -401,9 +401,17 @@ const NOTICE_DOCS: Record<string, string> = {
   assumedDirection: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-nofd', { fd: null }, 1000)]),
   unlinkedReadingType: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-lone', {}, 1000, false)]),
   legacyNoUom: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-none', { uom: null }, 1000)]),
-  combinedSeries: noticeDoc([
+  // One point repeating the same consumption at two sizes: the
+  // duplicate-resolution sentence (t_1fca89fa).
+  duplicateResolution: noticeDoc([
     noticePoint('up-B', 'mr-B1', 'rt-cons', {}, 1500),
     noticePoint('up-B', 'mr-B2', 'rt-c2', { mult: 3 }, 1000),
+  ]),
+  // …and two consumption series over DIFFERENT hours, which are additive, so
+  // the group says it combined them.
+  combinedSeriesDisjoint: noticeDoc([
+    noticePoint('up-B', 'mr-B1', 'rt-cons', {}, 1500),
+    noticePoint('up-B', 'mr-B2', 'rt-c2', { mult: 3 }, 1000, true, NT + 3600),
   ]),
   ambiguousInline: noticeDoc([
     noticeEntry(

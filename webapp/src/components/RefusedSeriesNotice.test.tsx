@@ -259,3 +259,58 @@ describe('the multi-UsagePoint picker', () => {
     await waitFor(() => expect(storedRows()).toHaveLength(1));
   });
 });
+
+/* ==========================================================================
+ * One day published at three resolutions — t_1fca89fa (QA acceptance F-02)
+ * ========================================================================== */
+
+/**
+ * One series of `count` readings, `step` seconds each — the shape a custodian
+ * publishes when it states the same consumption more than once.
+ */
+function multiPart(up: string, mr: string, step: number, count: number, wh: number): string[] {
+  const readings = Array.from(
+    { length: count },
+    (_, i) =>
+      `<espi:IntervalReading><espi:timePeriod><espi:duration>${step}</espi:duration><espi:start>${T + i * step}</espi:start></espi:timePeriod><espi:value>${wh}</espi:value></espi:IntervalReading>`,
+  ).join('');
+  return [
+    entry(`/ReadingType/${mr}`, readingType({ uom: 72 })),
+    entry(`/UsagePoint/${up}/MeterReading/${mr}`, '<espi:MeterReading/>', [`/ReadingType/${mr}`]),
+    entry(
+      `/UsagePoint/${up}/MeterReading/${mr}/IntervalBlock/ib`,
+      `<espi:IntervalBlock><espi:interval><espi:duration>${step * count}</espi:duration><espi:start>${T}</espi:start></espi:interval>${readings}</espi:IntervalBlock>`,
+    ),
+  ];
+}
+
+/** The same 4.0 kWh day as 16×15-min, 8×30-min and 4×60-min readings. */
+const THREE_RESOLUTIONS = doc([
+  multiPart('up-B', 'mr-15', 900, 16, 250),
+  multiPart('up-B', 'mr-30', 1800, 8, 500),
+  multiPart('up-B', 'mr-60', 3600, 4, 1000),
+]);
+
+describe('one day published at three resolutions', () => {
+  it('imports the day ONCE — 4 kWh, not 12 — and says which series it priced', async () => {
+    const parsed = parseGreenButtonFeed(THREE_RESOLUTIONS);
+    expect(parsed.groups).toHaveLength(1);
+    expect(parsed.groups[0].readings).toHaveLength(16);
+    const note = parsed.notes.find((n) => n.code === 'combined-series');
+    expect(note, 'the parse names the series it priced').toBeDefined();
+
+    await renderEmptyDashboard();
+    await upload('three-resolutions.xml', THREE_RESOLUTIONS);
+
+    // A single-UsagePoint file never renders the picker, so this row is the
+    // only place the sentence can reach the user.
+    await screen.findByTestId('series-notes-notice');
+    expect(screen.queryByTestId('usage-point-picker')).toBeNull();
+    expect(noticeDetails()).toEqual([note!.detail]);
+
+    // Stored once, and the number the user reads is the real one.
+    await waitFor(() => expect(storedRows()).toHaveLength(16));
+    expect(storedRows().reduce((n, r) => n + r.usage_kwh, 0)).toBeCloseTo(4, 6);
+    expect(screen.getByTestId('totals-strip').textContent).toContain('4 kWh');
+  });
+});

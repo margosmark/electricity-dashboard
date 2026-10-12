@@ -93,6 +93,20 @@ function doc(parts: (string | string[])[]): string {
     .join('')}</feed>`;
 }
 
+/** One block holding `count` readings of `step` seconds each. */
+function multiBlk(start: number, step: number, count: number, value: number | string): string {
+  const rs = Array.from(
+    { length: count },
+    (_, i) =>
+      `<espi:IntervalReading><espi:timePeriod><espi:duration>${step}</espi:duration><espi:start>${
+        start + i * step
+      }</espi:start></espi:timePeriod><espi:value>${value}</espi:value></espi:IntervalReading>`,
+  ).join('');
+  return `<espi:IntervalBlock><espi:interval><espi:duration>${
+    step * count
+  }</espi:duration><espi:start>${start}</espi:start></espi:interval>${rs}</espi:IntervalBlock>`;
+}
+
 const T = 1790000000;
 
 /** One document per refusal clause the classifier can produce. */
@@ -137,10 +151,27 @@ const OTHER_DOCS: Record<string, string> = {
     pointPart('up-B', 'mr-B1', 'rt-cons', {}, 1500, T),
     pointPart('up-B', 'mr-B2', 'rt-pw', { uom: 38, kind: 37 }, 1000, T),
   ]),
-  // Two billable consumption series under one point.
+  // Two billable consumption series under one point, covering DIFFERENT hours:
+  // genuinely additive, so both are priced and the group says so.
   combinedConsumptionSeries: doc([
     pointPart('up-B', 'mr-B1', 'rt-c1', {}, 1500, T),
+    pointPart('up-B', 'mr-B2', 'rt-c2', { uom: 72, mult: 3 }, 1000, T + 3600),
+  ]),
+  // One point repeating the SAME instants at two sizes — the duplicate-resolution
+  // guard prices the finest and refuses the other where they overlap (t_1fca89fa).
+  duplicateResolution: doc([
+    pointPart('up-B', 'mr-B1', 'rt-c1', {}, 1500, T),
     pointPart('up-B', 'mr-B2', 'rt-c2', { uom: 72, mult: 3 }, 1000, T),
+  ]),
+  // The coarser series reaches BEYOND the finer one, so part of it is still the
+  // only source for its hours: the second sentence of that note.
+  duplicateResolutionPartial: doc([
+    entry('/ReadingType/rt-fine', rt({})),
+    entry('/UsagePoint/up-B/MeterReading/mr-fine', '<espi:MeterReading/>', ['/ReadingType/rt-fine']),
+    entry('/UsagePoint/up-B/MeterReading/mr-fine/IntervalBlock/ib', multiBlk(T, 900, 4, 250)),
+    entry('/ReadingType/rt-coarse', rt({})),
+    entry('/UsagePoint/up-B/MeterReading/mr-coarse', '<espi:MeterReading/>', ['/ReadingType/rt-coarse']),
+    entry('/UsagePoint/up-B/MeterReading/mr-coarse/IntervalBlock/ib', multiBlk(T, 3600, 4, 1000)),
   ]),
 };
 
@@ -188,11 +219,13 @@ describe('every note the parser emits carries the values its sentence needs', ()
       expect(note.params, `${name}: ${note.code} carries no params`).toBeTruthy();
       expect(seriesNoteKey(note), `${name}: ${note.code} has no key`).toBeTruthy();
     }
-    // Both variants of the two two-sentence codes are exercised.
+    // Both variants of the two-sentence codes are exercised.
     const variants = new Set(ALL_NOTES.map(({ note }) => String(note.params?.variant ?? '')));
     expect(variants).toContain('energy-and-power');
     expect(variants).toContain('several-series');
     expect(variants).toContain('no-uom');
+    expect(variants).toContain('duplicate-resolution');
+    expect(variants).toContain('duplicate-resolution-partial');
   });
 });
 
