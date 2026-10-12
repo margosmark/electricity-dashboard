@@ -44,6 +44,15 @@ services:
       GB_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       GB_REDIRECT_URI: https://electricity.markarslan.ca/greenbutton/callback
       GB_SCOPE: ${GB_SCOPE:-FB=1_3_4_5}
+      # Endpoints. The defaults ARE Oakville production (config.ts defaults to
+      # the same two URLs), so the re-point ceremony only sets these for a
+      # SANDBOX, or to pin a value explicitly rather than inheriting it from
+      # the build. They are named here because the ceremony's render check
+      # asserts what the CONTAINER received — an inherited default is not
+      # observable, and "which custodian is this stack actually talking to" is
+      # the one question a bad re-point gets wrong silently.
+      GB_AUTHORIZE_URL: ${GB_AUTHORIZE_URL:-https://greenbutton.oakvillehydro.com/oauth/authorize}
+      GB_TOKEN_URL: ${GB_TOKEN_URL:-https://greenbutton.oakvillehydro.com/oauth/token}
       # Notification URI path token. PINNED, not derived: the form records
       # this URL BEFORE Oakville issues the client secret, and a
       # secret-derived default would change the moment credentials arrive,

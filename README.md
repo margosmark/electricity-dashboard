@@ -66,6 +66,9 @@ and [`GREENBUTTON-CMD.md`](GREENBUTTON-CMD.md) §3.
 - [`REGISTRATION-OAKVILLE.md`](REGISTRATION-OAKVILLE.md) — Mark's step-by-step
   for Oakville Hydro's third-party registration form (every field value,
   copy-paste ready)
+- [`GREENBUTTON-REPOINT.md`](GREENBUTTON-REPOINT.md) — the one command that
+  switches the shim from unconfigured to a real custodian, the checks it runs
+  before it writes anything, and how to roll it back
 
 ## Development
 

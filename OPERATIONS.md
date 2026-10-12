@@ -154,7 +154,7 @@ notifications.
 
 | Task | Command |
 | --- | --- |
-| Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in the untracked `.env` (never in `docker-compose.yml`), then `docker compose up -d` — no rebuild |
+| Set credentials after Oakville issues them | run the re-point ceremony: `GB_CONFIRM_GO_LIVE=yes webapp/scripts/greenbutton-repoint.sh --apply --host hermescomputer --env-file ~/.oakville-creds.env --loop-gate` — it validates the pair, proves the secret reaches only the shim, writes the untracked `.env` and recreates the containers (no rebuild). Checklist: [GREENBUTTON-REPOINT.md](GREENBUTTON-REPOINT.md). Hand-editing `.env` still works but skips every check |
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
 | Turn PKCE on (once Oakville confirms the platform accepts `code_challenge`) | `GB_PKCE=true` in the untracked `.env`, then `docker compose up -d greenbutton-shim` |
 | Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (29 checks, needs docker only for the second) |
