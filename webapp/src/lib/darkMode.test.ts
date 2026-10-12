@@ -203,10 +203,11 @@ function contrast(fgRaw: string, bgRaw: string, theme: Theme): number {
  * more than one surface appears once per surface, because the background is
  * what the ratio is against.
  */
-// `min` is a floor per theme, not a single number: one pairing (--ink-4 on
-// the card) is below AA in LIGHT only, for reasons dark mode did not create.
-// Typing it per theme keeps that exception local to the row that owns it
-// instead of relaxing the floor for everything.
+// `min` is a floor per theme, not a single number: the ONE pairing that is
+// legitimately theme-dependent is --accent as TEXT, which is a background on
+// the light page and ink on the dark card. Typing it per theme keeps that
+// exception local to the row that owns it instead of relaxing the floor for
+// everything.
 type Floor = number | { light: number; dark: number };
 const floorFor = (min: Floor, theme: Theme): number =>
   typeof min === 'number' ? min : min[theme];
@@ -219,15 +220,14 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // light; the ratio has to hold on BOTH).
   { token: 'ink-2', on: ['card', 'page', 'inset', 'hover'], min: 4.5 },
   { token: 'ink-3', on: ['card', 'page', 'inset'], min: 4.5 },
-  // --ink-4 carries 56 micro-label sites at 8-10px, and in LIGHT it is
-  // slate-400: 2.56:1 on the card. That is a PRE-EXISTING defect, not one
-  // dark mode introduced — the spec's §2 #4 measures the same number and
-  // scopes the fix out. The test pins that floor with `min`, so the gap
-  // stays visible and cannot quietly widen; `dark` clears 5.78:1, so the
-  // threshold is only relaxed where the defect actually lives.
-  // Measured: 2.56 on card, 2.45 on page/inset. Pinned at the number the
-  // spec measured so the gap is visible in the test output, not hidden.
-  { token: 'ink-4', on: ['card', 'page', 'inset'], min: { light: 2.45, dark: 4.5 } },
+  // --ink-4 carries 56 micro-label sites at 8-10px. In LIGHT it used to be
+  // slate-400 (2.56:1 on the card) — the spec's §2 #4 measured that and
+  // scoped it out, so this row pinned the gap instead of widening the floor.
+  // t_3e571ddb Phase 2 (L1) DARKENED the light step to #5f6d80, which clears
+  // AA on every surface it paints (card 5.27, page/inset 5.04, worst 4.64 on
+  // emerald-100), so the row now holds the full 4.5:1 floor in BOTH themes —
+  // the debt is released, not relaxed.
+  { token: 'ink-4', on: ['card', 'page', 'inset'], min: 4.5 },
   // Text ON the accent. Unchanged in both themes (13.7:1) — but the rule is
   // still asserted, because "the brand colour never changes" is exactly the
   // kind of assumption that quietly stops being true.
@@ -316,6 +316,21 @@ const TEMP_RAMP_LIGHT_LITERALS = [
   '#b91c1c', // red-700
 ];
 const TEMP_RAMP = TEMP_RAMP_LIGHT_LITERALS.map((_, i) => `temp-band-${i + 1}`);
+/** The `¢/kWh` label's ink, one token PER STOP (L4, t_3e571ddb Phase 2): the
+ *  label sits inside its own bar, so a single colour cannot clear AA over
+ *  seven fills that run dark→pale→dark. LIGHT pairs white with the three dark
+ *  stops and black with the four light ones; DARK paints all seven #0f172a,
+ *  which is what `--card` already resolved to over the lifted ramp. */
+const TEMP_RAMP_LABEL_LIGHT_LITERALS = [
+  '#ffffff', // on blue-700
+  '#ffffff', // on blue-600
+  '#000000', // on blue-500
+  '#000000', // on amber-500
+  '#000000', // on orange-500
+  '#000000', // on red-500
+  '#ffffff', // on red-700
+];
+const TEMP_RAMP_LABELS = TEMP_RAMP_LABEL_LIGHT_LITERALS.map((_, i) => `temp-band-lab-${i + 1}`);
 /** The step-weight arc: it rises to the amber stop (4) and falls to the deep
  *  red end, in BOTH themes. Peaks at the same index or the "thermometer" lies. */
 const RAMP_PEAK_INDEX = 3;
@@ -377,6 +392,29 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
         ratio,
         `--${token} on --card (dark): ${ratio.toFixed(2)}:1 — the ¢/kWh label rides this fill in --card ink`,
       ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('paints the in-bar ¢/kWh label with the per-stop ink, AA in both themes (L4)', () => {
+    // LIGHT is byte-identical to the pairing the label shipped with: white on
+    // the dark stops, black on the light ones.
+    TEMP_RAMP_LABELS.forEach((token, i) => {
+      expect(
+        declared(token, 'light'),
+        `--${token} (light) must be the documented pairing for stop ${i + 1}`,
+      ).toBe(TEMP_RAMP_LABEL_LIGHT_LITERALS[i]);
+    });
+    // …and every stop clears the TEXT floor against its own fill, in BOTH
+    // themes. This is the pairing the graphics-only ramp check cannot see:
+    // the label sits inside the bar, so its background IS the fill.
+    for (const theme of THEMES) {
+      TEMP_RAMP_LABELS.forEach((token, i) => {
+        const ratio = contrast(declared(token, theme), declared(TEMP_RAMP[i], theme), theme);
+        expect(
+          ratio,
+          `--${token} on --${TEMP_RAMP[i]} (${theme}): ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(4.5);
+      });
     }
   });
 

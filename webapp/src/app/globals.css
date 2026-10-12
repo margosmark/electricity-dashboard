@@ -36,11 +36,19 @@
   --edge: #000000;
   --edge-muted: rgba(0, 0, 0, 0.4); /* border-black/40, border-slate-300 */
 
-  /* Ink. Four steps, matching slate-600/500/400 + pure black. */
+  /* Ink. Four steps, matching slate-600/500/400 + pure black.
+     The two muted steps were DARKENED in LIGHT (t_3e571ddb Phase 2, L1): slate-500
+     measured 4.19:1 on emerald-100 and slate-400 2.43:1 on emerald-50 — both under
+     AA on the pastel slabs they are used on. The new values clear 4.5:1 on every
+     surface they are painted on (worst: ink-3 5.07 on emerald-100, ink-4 4.64 on
+     emerald-100) while keeping the four-step ladder on white 21 / 7.58 / 5.76 / 5.27.
+     ink-4 ships the documented AA-safe fallback #5f6d80, NOT the #617084 the colour
+     call proposed — #617084 measures 4.45:1 on emerald-100, the exact case the call
+     anticipated; the fallback clears it everywhere measured. DARK is untouched. */
   --ink: #000000;
   --ink-2: #475569; /* slate-600 — secondary */
-  --ink-3: #64748b; /* slate-500 — tertiary */
-  --ink-4: #94a3b8; /* slate-400 — micro labels at 8–10px */
+  --ink-3: #59677a; /* was slate-500 #64748b — 5.07:1 on emerald-100 */
+  --ink-4: #5f6d80; /* was slate-400 #94a3b8 — 4.64:1 on emerald-100 */
 
   /* Accent. The brand's ONE constant: #facc15 in both modes. */
   --accent: #facc15;
@@ -138,6 +146,24 @@
   --temp-band-5: #f97316; /* orange-500 · L 2.80:1 — pre-existing, pinned */
   --temp-band-6: #ef4444; /* red-500 · L 3.76:1 */
   --temp-band-7: #b91c1c; /* red-700 · L 6.47:1 */
+
+  /* The `¢/kWh` label rides INSIDE its own bar, so its ink PAIRS PER STOP —
+     it is not one colour over seven backgrounds (t_3e571ddb Phase 2, L4).
+     White on the three dark stops (blue-700, blue-600, red-700), black on
+     the four light ones (blue-500, amber-500, orange-500, red-500). Measured
+     per stop in LIGHT: 6.70 / 5.17 / 5.71 / 9.78 / 7.49 / 5.58 / 6.47 — all
+     ≥AA (worst 5.17 on blue-600), where the single `--card` ink it replaced
+     was 2.15:1 on amber-500 and 2.80:1 on orange-500. The bar FILLS stay
+     byte-identical by decision — only the label ink follows the stop. DARK
+     paints all seven in #0f172a (measured 4.85 / 7.02 / 9.90 / 10.69 / 7.89 /
+     6.45 / 4.74), which is what `--card` already resolved to there. */
+  --temp-band-lab-1: #ffffff;
+  --temp-band-lab-2: #ffffff;
+  --temp-band-lab-3: #000000;
+  --temp-band-lab-4: #000000;
+  --temp-band-lab-5: #000000;
+  --temp-band-lab-6: #000000;
+  --temp-band-lab-7: #ffffff;
 
   /* EfficiencyCard's season bands are BACKGROUND context, not data: they
      are meant to sit quietly behind the line (1.6–2:1 vs card is correct). */
@@ -295,6 +321,18 @@
   --temp-band-5: #fb923c; /* orange-400 · 7.89:1 */
   --temp-band-6: #f87171; /* red-400  · 6.45:1 */
   --temp-band-7: #ef4444; /* red-500  · 4.74:1 */
+
+  /* The in-bar `¢/kWh` label ink. DARK is unchanged from what it already
+     painted: `--card` ink over every lifted fill is #0f172a, so the seven
+     stops resolve to the same value they did before (measured against the
+     dark ramp: 4.85 / 7.02 / 9.90 / 10.69 / 7.89 / 6.45 / 4.74 — all AA). */
+  --temp-band-lab-1: #0f172a;
+  --temp-band-lab-2: #0f172a;
+  --temp-band-lab-3: #0f172a;
+  --temp-band-lab-4: #0f172a;
+  --temp-band-lab-5: #0f172a;
+  --temp-band-lab-6: #0f172a;
+  --temp-band-lab-7: #0f172a;
 
   --season-winter: #1e293b;
   --season-summer: color-mix(in srgb, #f59e0b 14%, var(--card));
@@ -618,8 +656,8 @@ body {
     --edge-muted: rgba(0, 0, 0, 0.4);
     --ink: #000000;
     --ink-2: #475569;
-    --ink-3: #64748b;
-    --ink-4: #94a3b8;
+    --ink-3: #59677a;
+    --ink-4: #5f6d80;
     --accent: #facc15;
     --accent-ink: #000000;
     --accent-soft: #fefce8;
@@ -669,6 +707,16 @@ body {
     --temp-band-5: #f97316;
     --temp-band-6: #ef4444;
     --temp-band-7: #b91c1c;
+    /* …and its in-bar `¢/kWh` label ink prints the LIGHT pairing per stop,
+       or a dark-mode print keeps the single dark ink over the light fills
+       (dark ink on blue-700 is 2.6:1). */
+    --temp-band-lab-1: #ffffff;
+    --temp-band-lab-2: #ffffff;
+    --temp-band-lab-3: #000000;
+    --temp-band-lab-4: #000000;
+    --temp-band-lab-5: #000000;
+    --temp-band-lab-6: #000000;
+    --temp-band-lab-7: #ffffff;
     /* Print always renders LIGHT (spec §3.7), so the slab prints as the
        yellow flood with black ink — the dark de-escalation never inks. */
     --anomaly-slab: #facc15;

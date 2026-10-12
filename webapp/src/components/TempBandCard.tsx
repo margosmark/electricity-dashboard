@@ -52,8 +52,11 @@ const SHARE_MAX_H = 22;
  * non-text floor. The tokens carry a lifted dark variant that keeps the hue
  * direction and the step weight (see the `--temp-band-*` note in
  * globals.css); LIGHT resolves to the byte-identical literals this replaced.
- * The `¢/kWh` label inside each bar is painted in `--card` ink, which is the
- * same seven ratios, so the dark ramp is also its AA floor. */
+ * The `¢/kWh` label inside each bar carries its OWN per-stop ink
+ * (`--temp-band-lab-1..7`, t_3e571ddb Phase 2/L4): the label's background IS
+ * the fill it sits on, so a single colour cannot clear AA over a ramp that
+ * runs dark→pale→dark — the fills stay byte-identical and only the ink
+ * follows the stop. */
 const BAR_FILL = [
   'var(--temp-band-1)',
   'var(--temp-band-2)',
@@ -159,14 +162,20 @@ function Chart({ report }: { report: TempBandReport }) {
             {/* The ¢/kWh sits INSIDE its own bar, so the row below the
                 baseline belongs to the share strip and its title alone —
                 two labels fighting for one row is how axis captions end up
-                printed across somebody else's numbers. */}
+                printed across somebody else's numbers.
+                Its ink therefore PAIRS PER STOP (t_3e571ddb Phase 2, L4):
+                one colour cannot clear AA over seven fills that run
+                dark→pale→dark, so `--temp-band-lab-<stop>` carries the
+                white/black pairing. The FILLS stay byte-identical. */}
             <text
               x={x(i)}
               y={BASELINE - 6}
               textAnchor="middle"
               fontSize={10}
               fontWeight={900}
-              fill={row.hours > 0 ? 'var(--card)' : 'var(--ink-4)'}
+              fill={row.hours > 0 ? `var(--temp-band-lab-${i + 1})` : 'var(--ink-4)'}
+              data-testid="temp-band-cents"
+              data-band={row.band.id}
             >
               {row.hours > 0 ? fmtCents(row.centsPerKwh, 1) : '—'}
             </text>
