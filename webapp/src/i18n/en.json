@@ -551,6 +551,8 @@
   "gbseries.note.unsupportedSeries": "Series {label} was NOT loaded as consumption: it {reason} Its readings are preserved here and none of them was priced.",
   "gbseries.notice.dismiss": "Dismiss",
   "gbseries.notice.heading": "Some readings weren’t included in priced consumption",
+  "gbseries.point.label": "UsagePoint {id}",
+  "gbseries.point.unidentified": "Meter",
   "gbseries.pointUnidentified": "(unidentified)",
   "gbseries.reasons": "Why some of this point was left out:",
   "gbseries.refusal.combinedFlow": "combines directions (net, total or a quadrant), so it belongs to neither the import nor the export stream.",

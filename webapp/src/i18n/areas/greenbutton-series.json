@@ -7,6 +7,8 @@
     "gbseries.notice.dismiss": "Dismiss",
 
     "gbseries.pointUnidentified": "(unidentified)",
+    "gbseries.point.label": "UsagePoint {id}",
+    "gbseries.point.unidentified": "Meter",
     "gbseries.note.convertedToEnergy": "Series {label} is interval-average real power ({uom}); each reading was converted to energy with its own interval duration.",
     "gbseries.note.unsupportedSeries": "Series {label} was NOT loaded as consumption: it {reason} Its readings are preserved here and none of them was priced.",
     "gbseries.note.refusedReadings": "In series {label}, {negative} reading(s) failed value or direction validation, {unparsable} carried no usable start or value, and {magnitude} carried a magnitude no interval can hold (more than {max} kWh in one reading). None of them was priced; every count is recorded on the series.",
@@ -35,6 +37,8 @@
     "gbseries.notice.dismiss": "Masquer",
 
     "gbseries.pointUnidentified": "(non identifié)",
+    "gbseries.point.label": "Point de consommation {id}",
+    "gbseries.point.unidentified": "Compteur",
     "gbseries.note.convertedToEnergy": "La série {label} est une puissance réelle moyenne sur l'intervalle ({uom}) ; chaque relevé a été converti en énergie avec la durée de son propre intervalle.",
     "gbseries.note.unsupportedSeries": "La série {label} n'a PAS été chargée comme consommation : {reason} Ses relevés sont conservés ici et aucun n'a été évalué.",
     "gbseries.note.refusedReadings": "Dans la série {label}, {negative} relevé(s) ont échoué la validation de la valeur ou du sens, {unparsable} ne portaient aucun début ni aucune valeur utilisable, et {magnitude} portaient une magnitude qu'aucun intervalle ne peut contenir (plus de {max} kWh dans un seul relevé). Aucun n'a été évalué ; chaque compte est consigné sur la série.",

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MultiFileMerge, { type MergeFileChoice } from './MultiFileMerge';
 import type { DataPoint, UsagePointGroup } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 
 const at = (day: number, hour = 3) => Math.floor(new Date(2026, 9, day, hour).getTime() / 1000);
 
@@ -140,5 +141,51 @@ describe('MultiFileMerge', () => {
     await user.click(screen.getByTestId('merge-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The meter rows' HEADINGS — the picker's second render site (t_203c6445).
+ *
+ * `lib/energy.ts` words the group label in English (`UsagePoint <id>`, or
+ * `Meter` for a point the feed never identifies) and this dialog is the other
+ * place it reaches the screen. The painted sweep over the picker itself lives
+ * in `src/i18n/fr-runtime.test.tsx`; this pins the site those tests cannot
+ * mount, in both locale paths.
+ */
+describe('the meter rows on the French page', () => {
+  afterEach(() => setLocale('en'));
+
+  const dualFile = (): MergeFileChoice[] => [
+    {
+      name: 'dual.xml',
+      groups: [
+        group('UsagePoint up-bravo', range(1, 5), 'up-bravo'),
+        // The feed identifies no UsagePoint for this one — the parser's `Meter`.
+        group('Meter', range(6, 8), ''),
+      ],
+      chosen: null,
+    },
+  ];
+
+  it('names each meter in the reader’s language, not in the parser’s English', () => {
+    setLocale('fr');
+    render(<Harness initial={dualFile()} />);
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('Point de consommation up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Compteur');
+    expect(screen.getByTestId('merge-meter-0-1')).not.toHaveTextContent('Meter');
+    // The id the row carries is the file's own data and stays canonical.
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('up-bravo');
+  });
+
+  it('re-paints the headings when the locale flips', async () => {
+    setLocale('en');
+    render(<Harness initial={dualFile()} />);
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('UsagePoint up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Meter');
+
+    await act(async () => setLocale('fr'));
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('Point de consommation up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Compteur');
   });
 });

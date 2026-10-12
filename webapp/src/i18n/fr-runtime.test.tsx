@@ -45,6 +45,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Dashboard from '@/components/Dashboard';
 import SeriesNotesNotice from '@/components/SeriesNotesNotice';
+import { UsagePointPicker } from '@/components/UsagePointPicker';
 import { fmtDate, getLocale, setLocale } from '@/i18n';
 import { parseGreenButtonFeed } from '@/lib/energy';
 import { UnitMultiplierKind, UnitSymbolKind } from '@/lib/greenbutton/espiUnits';
@@ -487,6 +488,117 @@ describe('the refusal notice on the French page', () => {
     document.body.appendChild(host);
     const hits = sweep(host, NOTICE_IDENTITY);
     expect(hits.map((h) => h.rule)).toContain('english');
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * The UsagePoint picker — the heading is composed in the LIB, and nothing in
+ * the battery had ever painted this component (t_203c6445).
+ *
+ * `lib/energy.ts` words each group's label in English — `UsagePoint <id>` for a
+ * point the feed identifies, `Meter` for one it never does — because the parser
+ * has no locale. The dashboard sweep above cannot see it: that fixture is a
+ * single-UsagePoint file, so the picker never renders (it only exists for 2+
+ * groups, and then only after an import is pending). The notice sweep mounts
+ * the notice alone. So a French reader read the English word `Meter`, and no
+ * gate could have said so.
+ *
+ * These tests mount the picker on a real parse of a document carrying two
+ * identified meters AND one the feed never attributes to a UsagePoint, and
+ * sweep it in both locale paths.
+ * -------------------------------------------------------------------------- */
+
+/** Two identified points, plus one the document gives no UsagePoint at all. */
+const PICKER_DOC = noticeDoc([
+  noticePoint('up-bravo', 'mr-b1', 'rt-b1', {}, 1500),
+  noticePoint('up-delta', 'mr-c1', 'rt-c1', {}, 1000),
+  noticeEntry('/IntervalBlock/unidentified', `${noticeRt({})}${noticeBlock(NT + 7200, 800)}`),
+]);
+const PICKER_FILE = 'oakville-export.xml';
+const PICKER_GROUPS = parseGreenButtonFeed(PICKER_DOC).groups;
+
+/**
+ * The file's own identity as THIS dialog prints it: the UsagePoint ids read out
+ * of the document (through the same `identityVocab` the notice sweep uses — the
+ * id is the file's data, and the picker prints it twice: inside the heading and
+ * on the row underneath it) plus the name the user's file carries, which the
+ * picker prints verbatim exactly as the bill panel prints the utility's own
+ * line notes.
+ *
+ * Per-sweep, never the global sets: `Meter` must stay subject to all three
+ * rules, which is the whole point of this sweep.
+ */
+const PICKER_IDENTITY = new Set<string>([
+  ...identityVocab([PICKER_DOC]),
+  ...words(PICKER_FILE).map((w) => w.toLowerCase()),
+]);
+
+const paintPicker = () =>
+  render(
+    <UsagePointPicker
+      fileName={PICKER_FILE}
+      groups={PICKER_GROUPS}
+      onChoose={() => {}}
+      onCancel={() => {}}
+    />,
+  );
+
+describe('the UsagePoint picker on the French page', () => {
+  it('cold: the point headings the parser composed are painted in French', () => {
+    setLocale('fr');
+    const { container } = paintPicker();
+
+    // The picker really painted one row per point, including the one the feed
+    // never named — a sweep over an empty dialog proves nothing.
+    expect(PICKER_GROUPS.length).toBe(3);
+    expect(container.textContent).toContain('Point de consommation up-bravo');
+    expect(container.textContent).toContain('Compteur');
+    // …and the defect's own wording is gone: no English frame around the id.
+    expect(container.textContent).not.toContain('UsagePoint up-bravo');
+
+    expect(sweep(container, PICKER_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('flip: the toggle re-paints the headings, it does not keep the English it started with', async () => {
+    setLocale('en');
+    const { container } = paintPicker();
+    expect(container.textContent).toContain('Meter');
+    expect(container.textContent).toContain('UsagePoint up-bravo');
+    // The English page IS the English catalog rendered — the detector has to
+    // see it, or a clean French sweep below means nothing.
+    expect(sweep(container, PICKER_IDENTITY).map((h) => h.rule)).toContain('parity');
+
+    await act(async () => setLocale('fr'));
+    expect(container.textContent).toContain('Compteur');
+    expect(container.textContent).not.toContain('Meter');
+    expect(sweep(container, PICKER_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('sensitivity: the English heading is caught through the CATALOG, not the vocabulary rule', () => {
+    // The heading the parser composed for a point the feed never named, as the
+    // pre-fix build painted it.
+    //
+    // Measured, and worth knowing: the `english` vocabulary rule CANNOT see
+    // this word. The fixture's own bill lines say "Current Meter Read", so
+    // `meter` is in the data vocabulary this sweep exempts (the utility's own
+    // wording, read out of the file) — which is exactly why `Meter` could sit
+    // on the French page unexplained. What catches it is the PARITY rule: with
+    // `gbseries.point.unidentified` in the catalog, the heading IS an `en.json`
+    // value whose `fr.json` value differs, so a render site that goes back to
+    // `group.label` repaints that value verbatim. (Probed the other way too:
+    // with the key removed this same host sweeps clean, which is the state the
+    // defect shipped in.)
+    const host = document.createElement('div');
+    host.innerHTML = '<span>Meter</span>';
+    document.body.appendChild(host);
+    const rules = sweep(host, PICKER_IDENTITY).map((h) => h.rule);
+    expect(rules, 'the picker’s English heading passed the sweep').toContain('parity');
+    // The vocabulary exemption above is the reason the catalog key is not
+    // optional. Pinned so the note cannot go stale silently.
+    expect(
+      DATA_VOCAB.has('meter'),
+      'the bill-line vocabulary this file pins no longer covers `meter` — the note above is stale, not the fix',
+    ).toBe(true);
   });
 });
 

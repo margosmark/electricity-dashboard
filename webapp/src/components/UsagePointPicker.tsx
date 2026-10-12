@@ -12,6 +12,7 @@ import { Combine, Gauge, X } from 'lucide-react';
 import { type UsagePointGroup, type DataPoint, combineUsagePointGroups } from '@/lib/energy';
 import { fmtKwh, useTranslation } from '@/i18n';
 import { seriesNoteText } from '@/i18n/seriesNote';
+import { usagePointLabel } from '@/i18n/usagePointLabel';
 
 /**
  * The `yyyy-MM-dd` day of a reading's start, which may not be a time at all.
@@ -101,7 +102,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                 className="group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-yellow-400 hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-base md:text-2xl">{group.label}</span>
+                  <span className="text-base md:text-2xl">{usagePointLabel(group, t)}</span>
                   <span className="text-xl md:text-3xl italic">
                     {stats.count === 0 ? '—' : fmtKwh(stats.kwh)}
                   </span>

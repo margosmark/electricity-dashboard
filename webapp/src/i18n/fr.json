@@ -551,6 +551,8 @@
   "gbseries.note.unsupportedSeries": "La série {label} n'a PAS été chargée comme consommation : {reason} Ses relevés sont conservés ici et aucun n'a été évalué.",
   "gbseries.notice.dismiss": "Masquer",
   "gbseries.notice.heading": "Certains relevés n'ont pas été inclus dans la consommation évaluée",
+  "gbseries.point.label": "Point de consommation {id}",
+  "gbseries.point.unidentified": "Compteur",
   "gbseries.pointUnidentified": "(non identifié)",
   "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :",
   "gbseries.refusal.combinedFlow": "elle combine des sens (net, total ou un quadrant), donc elle n'appartient ni au flux d'importation ni au flux d'exportation.",
