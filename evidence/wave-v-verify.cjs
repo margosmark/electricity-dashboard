@@ -1,25 +1,23 @@
 /**
- * Wave V — the HINDSIGHT panel, checked on the DEPLOYED stack against BOTH of
- * Mark's real exports.
+ * Wave V (corrected) — the HINDSIGHT panel, checked on a RUNNING build against
+ * BOTH of Mark's real exports.
  *
- * The card's acceptance list, one check at a time:
- *   • per-period verdicts exist for EVERY closed bill, each with a plan chip
- *     and a behaviour chip;
- *   • the three headline numbers are additive — total = plan miss + behaviour
- *     miss — and the plan number agrees with the audited switch track record
- *     that sits above it (the same rows, read twice, from two panels);
- *   • each period's behaviour number equals the sum of the moves printed
- *     under it (the engine's own additivity, as painted);
- *   • the counterfactuals are directional: every printed move shows a
- *     destination rate BELOW the rate actually paid, and every printed saving
- *     is positive;
+ * The scope this harness enforces, one check at a time:
+ *   • per-period verdicts exist for EVERY closed bill, each with the plan it
+ *     was billed under and a plan chip;
+ *   • there is exactly ONE headline figure, it agrees with the audited switch
+ *     track record above it, and every per-period chip names a plan other than
+ *     the one that row was billed under (the headline is a NET figure, so the
+ *     chips are not expected to sum to it);
+ *   • the surface is plan-only: no behaviour chip, no move list, no second
+ *     headline and no hypothetical-usage wording anywhere in the panel;
  *   • seasonal rates are really per-period: the 2-year file carries summer
  *     bills, winter bills and bills that cross Nov 1, and the straddling ones
  *     say so;
- *   • the honest states are honest: Tiered periods say the hour does not
- *     change the price (a REAL zero), uncovered bills carry their reason and
- *     no number, and nothing anywhere leaks a raw key, `undefined` or `NaN`;
- *   • the chips and the headline figures clear AA against their own painted
+ *   • the honest states are honest: uncovered bills carry their reason and no
+ *     number, an unknown plan claims nothing, and nothing anywhere leaks a raw
+ *     key, `undefined` or `NaN`;
+ *   • the headline figure and the plan chip clear AA against their own painted
  *     backgrounds (colour read through a 1x1 canvas — Chrome serialises
  *     Tailwind v4 colours as lab()/oklch() and a rgb() regex misses them);
  *   • both viewports, no horizontal overflow at 390 px.
@@ -33,7 +31,7 @@
  *         TZ=America/Toronto node evidence/wave-v-verify.cjs
  * Env:  WAVE_V_BASE_URL   (default http://10.10.11.110:3939/ — the deployed stack)
  *       WAVE_V_CHROMIUM   (default /usr/bin/chromium)
- *       WAVE_V_DEPLOY     (commit the deployed stack serves — recorded, not asserted)
+ *       WAVE_V_DEPLOY     (commit the stack serves — recorded, not asserted)
  *       WAVE_V_SUFFIX     ('-local' writes wave-v-verification-local.json)
  *       WAVE_V_PREFIX     (default 'wave-v')
  *
@@ -173,27 +171,19 @@ async function readPanel(page) {
       const el = root.querySelector(sel);
       return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : null;
     };
-    const rows = Array.from(panel.querySelectorAll('[data-testid^="hindsight-period-"]')).map((row) => {
-      const details = row.querySelector('details');
-      const moves = details
-        ? Array.from(details.querySelectorAll('[data-testid^="hindsight-move-"]')).map((m) =>
-            (m.textContent || '').replace(/\s+/g, ' ').trim(),
-          )
-        : [];
-      return {
-        testid: row.getAttribute('data-testid'),
-        plan: row.getAttribute('data-plan'),
-        origin: row.getAttribute('data-origin'),
-        text: (row.textContent || '').replace(/\s+/g, ' ').trim(),
-        planChip: txt('[data-testid="hindsight-plan-chip"]', row),
-        behaviourChip: txt('[data-testid="hindsight-behaviour-chip"]', row),
-        badge: txt('[data-testid="hindsight-plan-badge"]', row),
-        skip: txt('[data-testid="hindsight-skip"]', row),
-        hasDetails: !!details,
-        detailsOpen: details ? details.open : null,
-        moves,
-      };
-    });
+    const rows = Array.from(panel.querySelectorAll('[data-testid^="hindsight-period-"]')).map((row) => ({
+      testid: row.getAttribute('data-testid'),
+      plan: row.getAttribute('data-plan'),
+      origin: row.getAttribute('data-origin'),
+      text: (row.textContent || '').replace(/\s+/g, ' ').trim(),
+      planChip: txt('[data-testid="hindsight-plan-chip"]', row),
+      badge: txt('[data-testid="hindsight-plan-badge"]', row),
+      skip: txt('[data-testid="hindsight-skip"]', row),
+      // The scope-corrected panel must not carry these at all.
+      behaviourChip: txt('[data-testid="hindsight-behaviour-chip"]', row),
+      details: row.querySelectorAll('details').length,
+      moves: row.querySelectorAll('[data-testid^="hindsight-move-"]').length,
+    }));
     return {
       planTotal: txt('[data-testid="hindsight-plan-total"]'),
       behaviourTotal: txt('[data-testid="hindsight-behaviour-total"]'),
@@ -237,81 +227,106 @@ async function auditExport({ browser, file, tag, viewport, expectPeriods, full =
     check(`${tag}: the row count matches the file's bill count`, before.rows.length === expectPeriods, `${before.rows.length} vs ${expectPeriods}`);
   }
 
-  // --- the three headline numbers -----------------------------------------
+  // --- ONE headline number, and it is the plan ----------------------------
   const plan = oneMoney(before.planTotal ?? '');
-  const behaviour = oneMoney(before.behaviourTotal ?? '');
-  const total = oneMoney(before.total ?? '');
-  check(`${tag}: the plan and behaviour headline numbers are painted`, plan !== null && behaviour !== null, `plan=${before.planTotal} behaviour=${before.behaviourTotal}`);
-  check(`${tag}: the total is plan + behaviour`, plan !== null && behaviour !== null && total !== null && near(plan + behaviour, total, 0.02), `${plan} + ${behaviour} = ${total}`);
-  check(`${tag}: the behaviour total is never negative`, behaviour !== null && behaviour >= 0, `${behaviour}`);
+  check(`${tag}: exactly one headline figure is painted, and it is the plan`, plan !== null, `plan=${before.planTotal}`);
+  check(
+    `${tag}: no behaviour headline, no summed total and no lever line exist`,
+    before.behaviourTotal === null && before.total === null && before.lever === null,
+    `behaviour=${before.behaviourTotal} total=${before.total} lever=${before.lever}`,
+  );
   if (plan !== null && plan < 0) {
     check(
-      `${tag}: a negative plan lever is labelled as the alternatives costing more`,
+      `${tag}: a negative figure is labelled as the alternatives costing more`,
       /alternatives would have cost more/i.test(flat(before.text)),
       flat(before.text).slice(0, 120),
     );
   }
-  check(`${tag}: the headline names which lever mattered`, flat(before.lever).length > 20, flat(before.lever));
 
-  // --- the plan number is Wave P's, read off the OTHER panel --------------
+  // --- the figure is Wave P's, read off the OTHER panel -------------------
   const switchTotal = await page.evaluate(() => {
     const el = document.querySelector('[data-testid="switch-overpaid-total"]');
     return el ? (el.textContent || '').trim() : null;
   });
   const switchValue = switchTotal === null ? null : oneMoney(switchTotal);
   check(
-    `${tag}: the HINDSIGHT plan figure agrees with the switch track record above it`,
+    `${tag}: the HINDSIGHT figure agrees with the switch track record above it`,
     switchValue !== null && plan !== null && near(switchValue, Math.abs(plan), 0.02),
     `track record=${switchTotal} hindsight=${before.planTotal}`,
   );
 
-  // --- per-period honesty --------------------------------------------------
+  // --- the scope correction, enforced on the painted panel ---------------
+  const behaviourChips = before.rows.filter((r) => r.behaviourChip !== null).length;
+  const moveLists = before.rows.filter((r) => r.details > 0 || r.moves > 0).length;
+  const wording = /\bbehaviour\b|\bhad run in\b|\bmove[ds]?\b|\bshift(ed|ing)?\b/i.exec(before.text);
+  check(
+    `${tag}: no behaviour chip and no move list anywhere on the panel`,
+    behaviourChips === 0 && moveLists === 0,
+    `${behaviourChips} chips, ${moveLists} rows with a disclosure`,
+  );
+  check(
+    `${tag}: no hypothetical-usage or load-shift wording anywhere on the panel`,
+    wording === null,
+    wording ? wording[0] : 'clean',
+  );
+  check(`${tag}: the panel states it compares the same readings`, /same readings/i.test(before.text), 'legend copy');
+
+  // --- per-period honesty -------------------------------------------------
   const priced = before.rows.filter((r) => r.skip === null);
   const skipped = before.rows.filter((r) => r.skip !== null);
-  check(`${tag}: every priced row carries BOTH a plan chip and a behaviour chip`, priced.every((r) => r.planChip && r.behaviourChip), `${priced.length} priced, ${priced.filter((r) => !r.planChip || !r.behaviourChip).length} missing a chip`);
+  check(`${tag}: every priced row carries a plan chip`, priced.every((r) => r.planChip && r.planChip.length > 3), `${priced.length} priced, ${priced.filter((r) => !r.planChip).length} missing a chip`);
   check(`${tag}: every priced row is stamped with the plan it was billed under`, priced.every((r) => r.badge && r.badge.length > 3), priced.map((r) => r.badge).slice(0, 3).join(' | '));
   check(`${tag}: an unaudited bill carries its reason instead of a number`, skipped.every((r) => r.skip.length > 10), skipped.map((r) => r.skip).join(' / ') || 'none skipped');
+  check(`${tag}: an unaudited bill carries no plan chip`, skipped.every((r) => r.planChip === null), 'no chip on skipped rows');
+  check(
+    `${tag}: every priced row states the kWh actually metered`,
+    priced.every((r) => /[\d.,]+\s*kWh/i.test(r.text)),
+    priced[0] ? priced[0].text.slice(0, 120) : 'none',
+  );
 
-  // Each period's behaviour number must equal the sum of the moves under it.
-  let additive = 0;
-  let additiveBad = 0;
+  // --- the per-period chips are internally consistent ----------------------
+  // The headline is a NET figure across every countable period, so the chips
+  // (which print money only on a period whose alternative was cheaper) are NOT
+  // expected to add up to it: three good periods against twenty-one bad ones is
+  // a negative net with real money on the chips. What must hold is the pair of
+  // claims themselves: a saving is only ever claimed against a DIFFERENT plan
+  // than the one the row says it was billed under, and never with a negative
+  // amount.
+  const PLAN_OF_LABEL = { 'time-of-use': 'TOU', tiered: 'Tiered', 'ultra-low overnight': 'ULO' };
+  const misdirected = [];
+  const negativeChips = [];
   for (const r of priced) {
-    const chip = oneMoney(r.behaviourChip ?? '');
-    if (chip === null || r.moves.length === 0) continue;
-    const sum = r.moves.reduce((acc, m) => acc + Math.abs(oneMoney(m) ?? 0), 0);
-    // Each move is rounded to the cent on screen, so the tolerance has to grow
-    // with the number of moves (n × half a cent) plus the chip's own rounding.
-    if (near(sum, chip, 0.005 * r.moves.length + 0.011)) additive += 1;
-    else additiveBad += 1;
+    if (!/WOULD HAVE SAVED/i.test(r.planChip ?? '')) continue;
+    const label = (/ ON (.+)$/i.exec(r.planChip ?? '') ?? [])[1];
+    const named = PLAN_OF_LABEL[flat(label).toLowerCase()];
+    if (named === undefined || named === r.plan) misdirected.push(`${r.plan} → ${label}`);
+    const amount = oneMoney(r.planChip ?? '');
+    if (amount === null || amount <= 0 || /[−-]\s*\$/.test(r.planChip ?? '')) negativeChips.push(r.planChip);
   }
-  check(`${tag}: each period's behaviour figure equals the sum of its own moves`, additiveBad === 0 && additive > 0, `${additive} verified, ${additiveBad} mismatched`);
-
-  // Moves are directional: destination rate below the rate paid, saving > 0.
-  const moveTexts = priced.flatMap((r) => r.moves);
-  const moveRates = moveTexts.map((t) => {
-    const cents = (t.match(/([\d.]+)¢\/kWh/g) ?? []).map((c) => Number(c.replace('¢/kWh', '')));
-    // The panel prints a saving as "−$1.23" (a minus = money back), so the
-    // magnitude is the saving and the sign is the direction, not the amount.
-    const raw = oneMoney(t);
-    return { paid: cents[0], dest: cents[1], saving: raw === null ? null : Math.abs(raw) };
-  });
-  check(`${tag}: every printed move is genuinely cheaper after the shift`, moveRates.length > 0 && moveRates.every((m) => Number.isFinite(m.dest) && Number.isFinite(m.paid) && m.dest < m.paid), `${moveRates.length} moves, ${moveRates.filter((m) => !(m.dest < m.paid)).length} not cheaper`);
-  check(`${tag}: every printed move shows a positive saving`, moveRates.every((m) => m.saving !== null && m.saving > 0), moveRates.map((m) => m.saving).slice(0, 4).join(', '));
-  check(`${tag}: the move copy is counterfactual ('IF … had run in … instead')`, moveTexts.length > 0 && moveTexts.every((t) => /\bIF\b/.test(t) && /had run in/i.test(t)), moveTexts[0] ? flat(moveTexts[0]).slice(0, 120) : 'no moves');
-  check(`${tag}: the legend states that behaviour is a counterfactual`, /counterfactual/i.test(before.text), 'legend copy');
+  check(
+    `${tag}: a period only ever claims a saving against a DIFFERENT plan than it was billed under`,
+    misdirected.length === 0,
+    misdirected.length ? misdirected.join(' | ') : `${priced.filter((r) => /WOULD HAVE SAVED/i.test(r.planChip ?? '')).length} chips checked`,
+  );
+  check(
+    `${tag}: no period prints a negative "would have saved" amount`,
+    negativeChips.length === 0,
+    negativeChips.join(' | ') || 'none',
+  );
 
   // No raw keys, no undefined, no NaN, no un-replaced placeholder.
   const leaks = [/\bhindsight\.[a-zA-Z]/.exec(before.text), /\bundefined\b/.exec(before.text), /\bNaN\b/.exec(before.text), /\{\w+\}/.exec(before.text)].filter(Boolean);
   check(`${tag}: no raw key, undefined, NaN or {placeholder} leaks into the panel`, leaks.length === 0, leaks.map((l) => l[0]).join(' , '));
 
-  // --- the honest empty / flat states --------------------------------------
-  const flatRows = before.rows.filter((r) => /FLAT RATE/.test(r.behaviourChip ?? ''));
+  // --- the honest empty state ---------------------------------------------
+  if (priced.length > 0) {
+    check(`${tag}: a priced file shows the headline instead of the empty state`, before.empty === null, 'no empty note');
+  } else {
+    check(`${tag}: with nothing countable the panel says so instead of printing a number`, before.empty !== null && plan === null, before.empty);
+  }
+
+  // --- seasons and the detected timeline (the long file) ------------------
   if (full) {
-    check(`${tag}: at least one Tiered period says the hour cannot change the price`, flatRows.length > 0, `${flatRows.length} flat-rate periods`);
-    check(`${tag}: a flat-rate period claims no money on the behaviour lever`, flatRows.every((r) => !moneyValues(r.behaviourChip ?? '').length && r.moves.length === 0), 'no amount, no moves');
-    check(`${tag}: the flat-rate reason names the flat price`, flatRows.every((r) => /hour does not change the price|same as any other hour|flat rate/i.test(r.text)), flatRows[0] ? flatRows[0].text.slice(0, 160) : 'none');
-    const moveable = before.rows.filter((r) => oneMoney(r.behaviourChip ?? '') !== null && oneMoney(r.behaviourChip ?? '') > 0);
-    check(`${tag}: at least one period has a moveable routine`, moveable.length > 0, `${moveable.length} periods`);
     const seasons = {
       summer: before.rows.filter((r) => /Summer/.test(r.text)).length,
       winter: before.rows.filter((r) => /Winter/.test(r.text)).length,
@@ -323,42 +338,37 @@ async function auditExport({ browser, file, tag, viewport, expectPeriods, full =
     const tiered = before.rows.filter((r) => r.plan === 'Tiered').length;
     const tou = before.rows.filter((r) => r.plan === 'TOU').length;
     check(`${tag}: the detected plan timeline reaches the panel (TOU + Tiered bills)`, tiered > 0 && tou > 0, `${tou} TOU / ${tiered} Tiered`);
+    check(`${tag}: a flat-rate (Tiered) bill is still judged on the plan lever`, before.rows.filter((r) => r.plan === 'Tiered').every((r) => r.planChip !== null), `${tiered} Tiered rows with a chip`);
   } else {
     check(`${tag}: the one countable period is priced, the uncovered ones are not`, priced.length === 1 && skipped.length === 2, `${priced.length} priced / ${skipped.length} skipped`);
+    check(`${tag}: the uncovered bills name the coverage shortfall`, skipped.every((r) => /readings cover|no readings/i.test(r.skip)), skipped.map((r) => r.skip).join(' / '));
   }
 
-  // --- worst-first ordering -------------------------------------------------
+  // --- worst-first ordering ------------------------------------------------
   if (before.worstTestid && before.rows.length > 1) {
     const worstDay = before.worstTestid.replace('hindsight-worst-', '');
     const firstDay = before.rows[0].testid.replace('hindsight-period-', '');
     check(`${tag}: the biggest-loss callout names the first row (worst-first)`, worstDay === firstDay, `${worstDay} vs ${firstDay}`);
-    check(`${tag}: the callout's split adds up to its total`, (() => {
-      const vals = moneyValues(before.worst);
-      if (vals.length < 3) return false;
-      return near(vals[1] + vals[2], vals[0], 0.02) || near(vals[0] + vals[1], vals[2], 0.02);
-    })(), flat(before.worst));
+    check(
+      `${tag}: the callout's amount is the figure the first row's chip names`,
+      (() => {
+        const vals = moneyValues(before.worst);
+        const firstChip = oneMoney(before.rows[0].planChip ?? '');
+        if (vals.length === 0 || firstChip === null) return false;
+        return vals.some((v) => near(Math.abs(v), Math.abs(firstChip), 0.02));
+      })(),
+      flat(before.worst),
+    );
   }
 
-  // --- progressive disclosure + keyboard operation --------------------------
-  const detailsRow = priced.find((r) => r.hasDetails);
-  if (detailsRow) {
-    check(`${tag}: the move list is closed until asked for`, detailsRow.detailsOpen === false, `${detailsRow.testid}`);
-    const row = page.getByTestId(detailsRow.testid);
-    await row.locator('summary').click();
-    await page.getByTestId(row_detailsTestId(detailsRow)).waitFor({ state: 'visible', timeout: 20_000 });
-    const afterOpen = await page.evaluate((id) => {
-      const d = document.querySelector(`[data-testid="${id}"]`);
-      return d ? d.open : null;
-    }, row_detailsTestId(detailsRow));
-    check(`${tag}: opening it reveals the per-block moves`, afterOpen === true, `${afterOpen}`);
-  }
-
-  // --- painted contrast ----------------------------------------------------
-  for (const id of ['hindsight-plan-total', 'hindsight-behaviour-total', 'hindsight-total']) {
-    const c = await contrastOf(page, id);
-    check(`${tag}: ${id} clears AA on its own painted background`, c !== null && c.ratio >= 4.5, c ? `${c.ratio}:1 (${c.fg} on ${c.bg})` : 'not found');
-  }
-  const chipRow = priced[0];
+  // --- painted contrast ---------------------------------------------------
+  const planContrast = await contrastOf(page, 'hindsight-plan-total');
+  check(
+    `${tag}: the headline figure clears AA on its own painted background`,
+    planContrast !== null && planContrast.ratio >= 4.5,
+    planContrast ? `${planContrast.ratio}:1 (${planContrast.fg} on ${planContrast.bg})` : 'not found',
+  );
+  const chipRow = priced.find((r) => r.planChip !== null);
   if (chipRow) {
     const c = await page.evaluate(
       ([id, lumSrc]) => {
@@ -390,10 +400,10 @@ async function auditExport({ browser, file, tag, viewport, expectPeriods, full =
     check(`${tag}: the plan chip clears AA on its own chip colour`, c !== null && c >= 4.5, `${c}:1`);
   }
 
-  // --- layout ---------------------------------------------------------------
+  // --- layout -------------------------------------------------------------
   check(`${tag}: no horizontal overflow`, before.scrollWidth <= before.innerWidth + 1, `scrollWidth=${before.scrollWidth} viewport=${before.innerWidth}`);
 
-  // --- screenshots ---------------------------------------------------------
+  // --- screenshots --------------------------------------------------------
   const shot = (suffix) => path.join(OUT, `${PREFIX}-${tag}${suffix}.png`);
   await page.screenshot({ path: shot(''), fullPage: true });
   await panel.screenshot({ path: shot('-panel') });
@@ -413,10 +423,6 @@ async function auditExport({ browser, file, tag, viewport, expectPeriods, full =
 
   await ctx.close();
   return before;
-}
-
-function row_detailsTestId(row) {
-  return row.testid.replace('hindsight-period-', 'hindsight-moves-');
 }
 
 async function main() {
@@ -448,12 +454,11 @@ async function main() {
     await auditExport({ browser, file: SHORT, tag: 'mobile-short', viewport: mobile, expectPeriods: 3 });
 
     // The two runs of the SAME file must agree in every number they print.
-    const sameMoney = [
-      ['plan', longDesktop.planTotal, longMobile.planTotal],
-      ['behaviour', longDesktop.behaviourTotal, longMobile.behaviourTotal],
-      ['total', longDesktop.total, longMobile.total],
-    ];
-    check('both viewports print the same three numbers for the 2-year file', sameMoney.every(([, a, b]) => a === b), sameMoney.map(([k, a, b]) => `${k}: ${a} / ${b}`).join(' · '));
+    check(
+      'both viewports print the same headline figure for the 2-year file',
+      longDesktop.planTotal === longMobile.planTotal,
+      `${longDesktop.planTotal} / ${longMobile.planTotal}`,
+    );
     check('both viewports agree on row count', longDesktop.rows.length === longMobile.rows.length, `${longDesktop.rows.length} / ${longMobile.rows.length}`);
   } finally {
     await browser.close();
@@ -462,6 +467,7 @@ async function main() {
   const failed = checks.filter((c) => !c.ok);
   const result = {
     ...meta,
+    scope: 'plan comparison only — the same metered readings repriced; no behaviour counterfactual',
     total: checks.length,
     passed: checks.length - failed.length,
     failed: failed.length,
