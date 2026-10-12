@@ -1,0 +1,565 @@
+{
+  "baseURL": "http://localhost:3210",
+  "generatedAt": "2026-10-12T01:10:06.869Z",
+  "viewports": {
+    "390x844": {
+      "kind": "mobile",
+      "checks": [
+        {
+          "name": "D2 gap between pills",
+          "ok": true,
+          "detail": "8px (gap-2)"
+        },
+        {
+          "name": "D2 clearance past the blue shadow",
+          "ok": true,
+          "detail": "5px"
+        },
+        {
+          "name": "D2 shadow is still the blue hard offset",
+          "ok": true,
+          "detail": "rgb(37, 99, 235) 3px 3px 0px 0px"
+        },
+        {
+          "name": "D2 sliver was never the focus ring",
+          "ok": true,
+          "detail": ":focus-visible=false"
+        },
+        {
+          "name": "D3 every label >= 8 CSS px",
+          "ok": true,
+          "detail": "min 10px"
+        },
+        {
+          "name": "D3 labels compensated for this width",
+          "ok": true,
+          "detail": "svg 298px -> 22px"
+        },
+        {
+          "name": "D3 no two label boxes intersect",
+          "ok": true,
+          "detail": "none"
+        },
+        {
+          "name": "D3 season labels stay inside their band",
+          "ok": true,
+          "detail": "4 labelled, 0 escaping"
+        },
+        {
+          "name": "D3 the fixture still has labelled bands",
+          "ok": true,
+          "detail": "4/5"
+        },
+        {
+          "name": "D4 body floor is 40px",
+          "ok": true,
+          "detail": "40px"
+        },
+        {
+          "name": "D4 projection card renders",
+          "ok": true,
+          "detail": "state=ready"
+        },
+        {
+          "name": "D4 card clears the 36px gesture bar",
+          "ok": true,
+          "detail": "56.1px below the card (spec: >=33px)"
+        },
+        {
+          "name": "D4 card fully visible at max scroll",
+          "ok": true,
+          "detail": "bottom 787.9 / 844px"
+        },
+        {
+          "name": "no horizontal overflow",
+          "ok": true,
+          "detail": "0px"
+        }
+      ],
+      "seed": {
+        "bills": 24,
+        "points": 8804
+      },
+      "measurements": {
+        "d2": {
+          "shadow": "rgb(37, 99, 235) 3px 3px 0px 0px",
+          "shadowOffsetPx": 3,
+          "pillGapPx": 8,
+          "shadowClearancePx": 5,
+          "focusVisible": false
+        },
+        "d3": {
+          "svgWidthPx": 298,
+          "labelCount": 10,
+          "minLabelHeightPx": 10,
+          "fontSizes": [
+            "22px"
+          ],
+          "overlaps": [],
+          "bands": [
+            {
+              "season": "summer",
+              "widthUnits": 27.3,
+              "widthCssPx": 11.3,
+              "label": null,
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 163.5,
+              "widthCssPx": 67.7,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 163.5,
+              "widthCssPx": 67.7,
+              "label": "Summer",
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 163.5,
+              "widthCssPx": 67.7,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 136.3,
+              "widthCssPx": 56.4,
+              "label": "Summer",
+              "escapesBand": false
+            }
+          ],
+          "labelledBands": 4,
+          "escapingLabels": 0,
+          "labels": [
+            {
+              "text": "Winter",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "Summer",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "Winter",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "Summer",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "24¢",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "15¢",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "rates",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "rates",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "Oct 2024",
+              "fontSize": "22px",
+              "heightPx": 10
+            },
+            {
+              "text": "Sep 2026",
+              "fontSize": "22px",
+              "heightPx": 10
+            }
+          ]
+        },
+        "d4": {
+          "state": "ready",
+          "bodyPadBottom": "40px",
+          "cardBottom": 787.9,
+          "viewportHeight": 844,
+          "clearancePx": 56.1,
+          "fullyVisible": true,
+          "atMaxScroll": true
+        },
+        "page": {
+          "verticalScrollReservePx": 2251,
+          "horizontalOverflowPx": 0
+        }
+      }
+    },
+    "427x952": {
+      "kind": "mobile",
+      "checks": [
+        {
+          "name": "D2 gap between pills",
+          "ok": true,
+          "detail": "8px (gap-2)"
+        },
+        {
+          "name": "D2 clearance past the blue shadow",
+          "ok": true,
+          "detail": "5px"
+        },
+        {
+          "name": "D2 shadow is still the blue hard offset",
+          "ok": true,
+          "detail": "rgb(37, 99, 235) 3px 3px 0px 0px"
+        },
+        {
+          "name": "D2 sliver was never the focus ring",
+          "ok": true,
+          "detail": ":focus-visible=false"
+        },
+        {
+          "name": "D3 every label >= 8 CSS px",
+          "ok": true,
+          "detail": "min 10px"
+        },
+        {
+          "name": "D3 labels compensated for this width",
+          "ok": true,
+          "detail": "svg 335px -> 19px"
+        },
+        {
+          "name": "D3 no two label boxes intersect",
+          "ok": true,
+          "detail": "none"
+        },
+        {
+          "name": "D3 season labels stay inside their band",
+          "ok": true,
+          "detail": "4 labelled, 0 escaping"
+        },
+        {
+          "name": "D3 the fixture still has labelled bands",
+          "ok": true,
+          "detail": "4/5"
+        },
+        {
+          "name": "D4 body floor is 40px",
+          "ok": true,
+          "detail": "40px"
+        },
+        {
+          "name": "D4 projection card renders",
+          "ok": true,
+          "detail": "state=ready"
+        },
+        {
+          "name": "D4 card clears the 36px gesture bar",
+          "ok": true,
+          "detail": "56.3px below the card (spec: >=33px)"
+        },
+        {
+          "name": "D4 card fully visible at max scroll",
+          "ok": true,
+          "detail": "bottom 895.7 / 952px"
+        },
+        {
+          "name": "no horizontal overflow",
+          "ok": true,
+          "detail": "0px"
+        }
+      ],
+      "seed": {
+        "bills": 24,
+        "points": 8804
+      },
+      "measurements": {
+        "d2": {
+          "shadow": "rgb(37, 99, 235) 3px 3px 0px 0px",
+          "shadowOffsetPx": 3,
+          "pillGapPx": 8,
+          "shadowClearancePx": 5,
+          "focusVisible": false
+        },
+        "d3": {
+          "svgWidthPx": 335,
+          "labelCount": 10,
+          "minLabelHeightPx": 10,
+          "fontSizes": [
+            "19px"
+          ],
+          "overlaps": [],
+          "bands": [
+            {
+              "season": "summer",
+              "widthUnits": 27.4,
+              "widthCssPx": 12.8,
+              "label": null,
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 164.5,
+              "widthCssPx": 76.5,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 164.5,
+              "widthCssPx": 76.5,
+              "label": "Summer",
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 164.5,
+              "widthCssPx": 76.5,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 137.1,
+              "widthCssPx": 63.8,
+              "label": "Summer",
+              "escapesBand": false
+            }
+          ],
+          "labelledBands": 4,
+          "escapingLabels": 0,
+          "labels": [
+            {
+              "text": "Winter",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "Summer",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "Winter",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "Summer",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "24¢",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "15¢",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "rates",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "rates",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "Oct 2024",
+              "fontSize": "19px",
+              "heightPx": 10
+            },
+            {
+              "text": "Sep 2026",
+              "fontSize": "19px",
+              "heightPx": 10
+            }
+          ]
+        },
+        "d4": {
+          "state": "ready",
+          "bodyPadBottom": "40px",
+          "cardBottom": 895.7,
+          "viewportHeight": 952,
+          "clearancePx": 56.3,
+          "fullyVisible": true,
+          "atMaxScroll": true
+        },
+        "page": {
+          "verticalScrollReservePx": 2024,
+          "horizontalOverflowPx": 0
+        }
+      }
+    },
+    "1280x900": {
+      "kind": "desktop",
+      "checks": [
+        {
+          "name": "desktop label size is the pre-D3 literal 10",
+          "ok": true,
+          "detail": "10px"
+        },
+        {
+          "name": "desktop: chart measures >= 648px",
+          "ok": true,
+          "detail": "1128px"
+        },
+        {
+          "name": "desktop: no label overlaps",
+          "ok": true,
+          "detail": "none"
+        },
+        {
+          "name": "desktop: no season label escapes its band",
+          "ok": true,
+          "detail": "4/5 labelled"
+        },
+        {
+          "name": "desktop: labels still legible",
+          "ok": true,
+          "detail": "min 17px"
+        }
+      ],
+      "seed": {
+        "bills": 24,
+        "points": 8804
+      },
+      "measurements": {
+        "d2": {
+          "shadow": "rgb(37, 99, 235) 3px 3px 0px 0px",
+          "shadowOffsetPx": 3,
+          "pillGapPx": 12,
+          "shadowClearancePx": 9,
+          "focusVisible": false
+        },
+        "d3": {
+          "svgWidthPx": 1128,
+          "labelCount": 10,
+          "minLabelHeightPx": 17,
+          "fontSizes": [
+            "10px"
+          ],
+          "overlaps": [],
+          "bands": [
+            {
+              "season": "summer",
+              "widthUnits": 27.4,
+              "widthCssPx": 43,
+              "label": null,
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 164.5,
+              "widthCssPx": 257.7,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 164.5,
+              "widthCssPx": 257.7,
+              "label": "Summer",
+              "escapesBand": false
+            },
+            {
+              "season": "winter",
+              "widthUnits": 164.5,
+              "widthCssPx": 257.7,
+              "label": "Winter",
+              "escapesBand": false
+            },
+            {
+              "season": "summer",
+              "widthUnits": 137.1,
+              "widthCssPx": 214.8,
+              "label": "Summer",
+              "escapesBand": false
+            }
+          ],
+          "labelledBands": 4,
+          "escapingLabels": 0,
+          "labels": [
+            {
+              "text": "Winter",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "Summer",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "Winter",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "Summer",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "24¢",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "15¢",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "rates",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "rates",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "Oct 2024",
+              "fontSize": "10px",
+              "heightPx": 17
+            },
+            {
+              "text": "Sep 2026",
+              "fontSize": "10px",
+              "heightPx": 17
+            }
+          ]
+        },
+        "d4": {
+          "state": "ready",
+          "bodyPadBottom": "40px",
+          "cardBottom": 827.5,
+          "viewportHeight": 900,
+          "clearancePx": 72.5,
+          "fullyVisible": true,
+          "atMaxScroll": true
+        },
+        "page": {
+          "verticalScrollReservePx": 1591,
+          "horizontalOverflowPx": 0
+        }
+      }
+    }
+  },
+  "failures": []
+}
