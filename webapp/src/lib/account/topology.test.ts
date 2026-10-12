@@ -138,3 +138,17 @@ describe("which process is given which secret", () => {
     expect(router).toMatch(/^\s+- account-server$/m);
   });
 });
+
+describe("edge — the OAuth referer hop (fix 7ee0375)", () => {
+  it("answers the greenbutton callback with no-referrer so the ?code= URL cannot ride a Referer", () => {
+    // The callback 302s to /?gb=connected. Without this header the browser
+    // sends the FULL callback URL (?code=…&state=…) as `Referer` on the
+    // follow-up request, and the edge's `combined` log format records
+    // $http_referer — i.e. an OAuth code in the app's own access log.
+    // The live hop is proven in e2e-greenbutton-topology.sh (docker-only);
+    // this is the gate-side pin on the config line that closes it, so the
+    // `add_header` cannot be dropped by a template edit without a red test.
+    const block = locationBlock("= /greenbutton/callback");
+    expect(block).toContain('add_header Referrer-Policy "no-referrer"');
+  });
+});
