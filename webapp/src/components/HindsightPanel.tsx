@@ -234,8 +234,18 @@ export function HindsightPanel({ summaries, allData }: Props) {
                 <Money value={planMiss} />
               </div>
             </div>
-            <div className="mt-2 md:mt-3 text-[10px] md:text-xs font-black normal-case">
-              {t('hindsight.headlineNote', { plan: money(Math.max(0, planMiss)) })}
+            {/* The clamp that used to decide this copy is gone (t_97f4c904): on a
+                net SAVING the subtitle used to interpolate `Math.max(0, planMiss)`
+                and printed "cost you $0.00 more" under the headline "the
+                alternatives would have cost more". The sign picks the sentence;
+                the magnitude is the headline's own, read without a clamp. */}
+            <div
+              data-testid="hindsight-headline-note"
+              className="mt-2 md:mt-3 text-[10px] md:text-xs font-black normal-case"
+            >
+              {planMiss < 0
+                ? t('hindsight.headlineNoteSaved', { plan: money(-planMiss) })
+                : t('hindsight.headlineNote', { plan: money(planMiss) })}
             </div>
             <div className="mt-1 text-[9px] md:text-[10px] font-bold text-ink-4 normal-case">
               {t('hindsight.totalNote')}

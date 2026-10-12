@@ -9,9 +9,14 @@
  *
  * The panel is also pinned on what it must NOT show: no behaviour chip, no
  * move list, no hypothetical-usage wording of any kind.
+ *
+ * And on the headline's own subtitle agreeing with the headline's sign
+ * (t_97f4c904): a net SAVING states the saving at the figure's own magnitude
+ * instead of interpolating a clamped `$0.00 more` under a "would have cost
+ * more" headline.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import {
@@ -22,6 +27,7 @@ import {
   type RateSet,
   type UsageSummary,
 } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 import HindsightPanel from './HindsightPanel';
 
 const RATES: RateSet = {
@@ -123,7 +129,27 @@ function nightHouse(day: string, days: number, kwh = 3.0) {
   return { rows, summary };
 }
 
+/** Readings that only ever run at 08:00 — on-peak under TOU and ULO — on a bill
+ *  that was itself priced on Tiered, i.e. the plan you were on WAS the cheapest
+ *  of the three. The hindsight net is a SAVING: `planMiss < 0`. */
+function peakHouse(day: string, days: number, kwh = 3.0) {
+  const rows = hourly(day, days, (dt) => (dt.getHours() === 8 ? kwh : 0));
+  const commodity = planCostFor(rows, 'Tiered');
+  const summary: UsageSummary = {
+    ...touSummary(day, days, 0),
+    items: [
+      line('BLOCK 1 - Winter', commodity),
+      line('Delivery', 75.5, 4),
+      line('Regulatory', 8.6, 4),
+      line('H.S.T. # 123456789', Math.round((commodity + 84.1) * 0.13 * 100) / 100, 5),
+      line('Total Electricity Charges', Math.round((commodity + 84.1) * 100) / 100),
+    ],
+  };
+  return { rows, summary };
+}
+
 describe('HindsightPanel', () => {
+  afterEach(() => setLocale('en'));
   it('paints ONE plan headline — the plan you were on, against the other two', () => {
     const { rows, summary } = nightHouse('2026-11-02', 28);
     const { container } = render(<HindsightPanel summaries={[summary]} allData={rows} />);
@@ -218,5 +244,50 @@ describe('HindsightPanel', () => {
     const row = screen.getByTestId(`hindsight-period-${silent.startDate}`);
     expect(within(row).getByTestId('hindsight-plan-chip').textContent).toMatch(/UNKNOWN/);
     expect(screen.getByTestId('hindsight-empty')).toBeInTheDocument();
+  });
+
+  /* ---- the headline's subtitle may not contradict it (t_97f4c904) --------- */
+
+  it('states the SAVING — never "$0.00 more" — under a negative headline', () => {
+    // The plan the bill was on WAS the cheapest of the three, so the net is a
+    // NEGATIVE figure. The old `Math.max(0, planMiss)` clamp printed
+    // "cost you $0.00 more" under "The alternatives would have cost more".
+    const { rows, summary } = peakHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    expect(total).toMatch(/^−\$/); // the headline is the negative net, as painted
+
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).not.toMatch(/\$0[.,]00/);
+    expect(note).not.toMatch(/Staying on the plan you were on/);
+    // …and the saving is stated at the HEADLINE's own magnitude, unclamped.
+    expect(note).toBe(
+      `The alternatives would have cost you ${total.replace('−', '')} more on the very same readings.`,
+    );
+  });
+
+  it('keeps the loss wording when the net really is a loss', () => {
+    const { rows, summary } = nightHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    expect(total).toMatch(/^\$/);
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).toBe(
+      `Staying on the plan you were on cost you ${total} more than the cheapest of the other two, on the very same readings.`,
+    );
+  });
+
+  it('composes the saving sentence from the French catalog on the fr page', () => {
+    setLocale('fr');
+    const { rows, summary } = peakHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).toBe(
+      `Les autres tarifs vous auraient coûté ${total.replace('−', '')} de plus, sur exactement les mêmes relevés.`,
+    );
   });
 });

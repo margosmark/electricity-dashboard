@@ -580,6 +580,7 @@
   "hindsight.eyebrow": "Same readings, repriced · every closed period",
   "hindsight.headlineEmpty": "Nothing auditable yet — this file holds {total} periods, and a period needs a known plan type plus readings covering {coverage}% of it before its plans can be priced.",
   "hindsight.headlineNote": "Staying on the plan you were on cost you {plan} more than the cheapest of the other two, on the very same readings.",
+  "hindsight.headlineNoteSaved": "The alternatives would have cost you {plan} more on the very same readings.",
   "hindsight.legendMeta": "{periods} periods · {plan} counted in the total · {kwh} kWh of readings inside them.",
   "hindsight.legendPlanSide": "The plan alternatives and the $1 model check come from the audited switch track record above — this panel reads those numbers, it does not re-price them.",
   "hindsight.legendScope": "Every figure here compares the same readings at the same timestamps and quantities, repriced across Time-of-Use, Tiered and Ultra-Low Overnight with the rate set in force on each reading's day. Nothing on this panel models a change in when, or how much, you used.",
