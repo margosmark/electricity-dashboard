@@ -158,9 +158,25 @@ export default function MultiFileMerge({
               </div>
             </div>
           </div>
+          {/*
+            The per-file line was composed in a template literal, so it was
+            invisible to the coverage gate and shipped English on the fr page
+            (t_dd0263c0). It now reads through the catalog: `merge.fileKept`
+            carries the `{rows} kept` agreement (the line's primary count drives
+            `_one`/`_other`), and the duplicate clause is its OWN key so the
+            SECOND count (`duplicates`) gets French agreement too — one `t()`
+            call can only key off one `count`. The English pair is identical, so
+            the en page keeps its existing wording byte for byte.
+          */}
           <div className="text-[9px] md:text-[11px] font-bold mt-2">
             {merged.files
-              .map((f) => `${f.name}: ${f.rows} kept${f.duplicates ? `, ${f.duplicates} duplicate` : ''}`)
+              .map(
+                (f) =>
+                  t('merge.fileKept', { count: f.rows, name: f.name, rows: f.rows }) +
+                  (f.duplicates
+                    ? t('merge.fileDuplicates', { count: f.duplicates, duplicates: f.duplicates })
+                    : ''),
+              )
               .join(' · ')}
           </div>
           {awaitingMeterChoice && (

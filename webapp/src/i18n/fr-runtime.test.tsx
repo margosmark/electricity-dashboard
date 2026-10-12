@@ -46,8 +46,9 @@ import { fileURLToPath } from 'node:url';
 import Dashboard from '@/components/Dashboard';
 import SeriesNotesNotice from '@/components/SeriesNotesNotice';
 import { UsagePointPicker } from '@/components/UsagePointPicker';
+import MultiFileMerge, { type MergeFileChoice } from '@/components/MultiFileMerge';
 import { fmtDate, getLocale, setLocale } from '@/i18n';
-import { parseGreenButtonFeed } from '@/lib/energy';
+import { parseGreenButtonFeed, type DataPoint, type UsagePointGroup } from '@/lib/energy';
 import { UnitMultiplierKind, UnitSymbolKind } from '@/lib/greenbutton/espiUnits';
 import { ENERGY_KEY_V2, BILLING_DAY_KEY } from '@/lib/storage';
 import { USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY } from '@/hooks/useDashboard';
@@ -607,6 +608,116 @@ describe('the UsagePoint picker on the French page', () => {
       DATA_VOCAB.has('meter'),
       'the bill-line vocabulary this file pins no longer covers `meter` — the note above is stale, not the fix',
     ).toBe(true);
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * The multi-file merge review — the per-file summary line (t_dd0263c0).
+ *
+ * The dialog composes `file1.xml: 5 kept · file2.xml: 5 kept, 2 duplicate` in a
+ * template literal, so it was invisible to the coverage gate (a literal inside
+ * a `.map(...).join(...)` call is not a JSX text node nor a collected
+ * expression) and shipped English inside French chrome. Nothing painted this
+ * dialog either: the dashboard sweep's fixture is a single file, so the merge
+ * review never renders.
+ *
+ * These tests mount the dialog on the two-file shape its own test builds — a
+ * single-meter `file1.xml` and a multi-group `dual.xml` whose first group
+ * repeats file1's first timestamp — and sweep it in both locale paths.
+ * -------------------------------------------------------------------------- */
+
+const MERGE_BASE = 1790000000;
+const mergeReading = (offset: number, kwh = 1): DataPoint => ({
+  timestamp: MERGE_BASE + offset,
+  usage_kwh: kwh,
+});
+const mergeGroup = (id: string, readings: DataPoint[]): UsagePointGroup => ({
+  id,
+  label: `UsagePoint ${id}`,
+  readings,
+  blocks: 1,
+  series: [],
+  notes: [],
+});
+
+/**
+ * Two files at once. `dual.xml` is the picker's second render site (its meter
+ * rows carry the heading labels) and its selected group repeats `file1.xml`'s
+ * first timestamp, so the summary line paints the duplicate clause too.
+ */
+const MERGE_FILES: MergeFileChoice[] = [
+  {
+    name: 'file1.xml',
+    groups: [mergeGroup('up-bravo', [mergeReading(0), mergeReading(3600)])],
+    chosen: 0,
+  },
+  {
+    name: 'dual.xml',
+    groups: [
+      mergeGroup('up-delta', [mergeReading(0), mergeReading(7200)]),
+      mergeGroup('up-echo', [mergeReading(10800)]),
+    ],
+    chosen: 0,
+  },
+];
+
+/**
+ * The file's OWN identity as this dialog prints it: the two file names and the
+ * UsagePoint ids — data, per the same rule as the picker sweep above. Per-sweep
+ * only, so `kept` and `duplicate` stay subject to every rule.
+ */
+const MERGE_IDENTITY = new Set<string>(
+  [...MERGE_FILES.map((f) => f.name), ...MERGE_FILES.flatMap((f) => f.groups.map((g) => g.id))]
+    .flatMap((s) => words(s))
+    .map((w) => w.toLowerCase()),
+);
+
+const paintMerge = () =>
+  render(
+    <MultiFileMerge
+      files={MERGE_FILES}
+      onFilesChange={() => {}}
+      onConfirm={() => {}}
+      onCancel={() => {}}
+    />,
+  );
+
+describe('the multi-file merge review on the French page', () => {
+  it('cold: the per-file summary line is painted in French', () => {
+    setLocale('fr');
+    const { container } = paintMerge();
+
+    const line = screen.getByTestId('merge-summary').textContent ?? '';
+    expect(line).toContain('file1.xml : 2 conservés');
+    expect(line).toContain('dual.xml : 1 conservé, 1 doublon');
+    // The defect's own English wording is gone from the French page.
+    expect(line).not.toContain('kept');
+
+    expect(sweep(container, MERGE_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('flip: the toggle re-paints the line, it does not keep the English it started with', async () => {
+    setLocale('en');
+    const { container } = paintMerge();
+    const line = () => screen.getByTestId('merge-summary').textContent ?? '';
+    expect(line()).toContain('file1.xml: 2 kept');
+    expect(line()).toContain('dual.xml: 1 kept, 1 duplicate');
+    // The English page IS the English catalog rendered — the detector has to
+    // see it, or a clean French sweep below means nothing.
+    expect(sweep(container, MERGE_IDENTITY).map((h) => h.rule)).toContain('parity');
+
+    await act(async () => setLocale('fr'));
+    expect(line()).toContain('dual.xml : 1 conservé, 1 doublon');
+    expect(sweep(container, MERGE_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('sensitivity: the exact English summary line is what the rule catches', () => {
+    // The line the deployed build shipped on the fr page, verbatim.
+    const host = document.createElement('div');
+    host.innerHTML = '<div>file2.xml: 5 kept, 2 duplicate</div>';
+    document.body.appendChild(host);
+    const rules = sweep(host, MERGE_IDENTITY).map((h) => h.rule);
+    expect(rules, 'the merge review’s English summary line passed the sweep').toContain('english');
   });
 });
 
