@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-12T12:25:52.257Z",
+  "at": "2026-10-12T14:34:39.362Z",
   "checks": [
     {
       "name": "ramp temp-band-1 (light) is byte-identical to the hardcoded literal",

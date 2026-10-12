@@ -139,7 +139,7 @@ function splitNote(
 function DecompositionCard({ split }: { split: ChargeDecomposition }) {
   const tone =
     split.status === 'split'
-      ? 'bg-emerald-50'
+      ? 'bg-good-soft'
       : split.status === 'rejected'
         ? 'bg-amber-50'
         : 'bg-inset';
@@ -232,7 +232,7 @@ function PeriodCard({
       ) : verdict === 'match' && delta !== null ? (
         <div
           data-testid="commodity-check"
-          className="mt-3 md:mt-4 bg-emerald-50 border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
+          className="mt-3 md:mt-4 bg-good-soft border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
         >
           {t('actualBill.checkOkA')}{' '}
           <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>,{' '}
@@ -401,7 +401,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
             aria-pressed={selected === 'all'}
             data-testid="actual-bill-all"
             className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
-              selected === 'all' ? 'bg-yellow-400' : 'bg-inset'
+              selected === 'all' ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
             }`}
           >
             {t('actualBill.allPeriods')}
@@ -414,7 +414,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               aria-pressed={selected === r.summary.startDate}
               data-testid={`actual-bill-pick-${r.summary.startDate}`}
               className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
-                selected === r.summary.startDate ? 'bg-yellow-400' : 'bg-inset'
+                selected === r.summary.startDate ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
               }`}
             >
               {billPeriodLabel(r.summary.start, r.summary.duration).split(' – ')[0]}

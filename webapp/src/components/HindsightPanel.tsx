@@ -79,11 +79,21 @@ function MoveList({ period }: { period: HindsightPeriod }) {
   );
 }
 
+/**
+ * The "nothing claimed" / "not priced" reason chips (PlanChip's skipped and
+ * unknown, BehaviourChip's three) all ride `bg-track` — a THEMED surface — so
+ * their ink must be a themed step that clears AA on it: `--ink-3` measured
+ * 3.86:1 in light and 4.04:1 in dark on `--track` (10px, 4.5 floor), and
+ * `--ink-2` is 6.15 / 6.97. Fixed here under t_3e571ddb, whose dark walk
+ * asserts an EMPTY contrast ledger (the row could not be pinned, and the
+ * ledger may only shrink) — it is not part of the colour call, which never
+ * measured `--track`.
+ */
 function PlanChip({ period }: { period: HindsightPeriod }) {
   const { t } = useTranslation();
   if (period.planVerdict === 'skipped') {
     return (
-      <span className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-3 text-[9px] md:text-[10px] font-black">
+      <span className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black">
         {t('hindsight.planChipSkipped')}
       </span>
     );
@@ -92,7 +102,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-plan-chip"
-        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-3 text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black"
       >
         {t('hindsight.planChipUnknown')}
       </span>
@@ -151,7 +161,7 @@ function BehaviourChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-behaviour-chip"
-        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-3 text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black"
       >
         {t('hindsight.behaviourChipFlat')}
       </span>
@@ -161,7 +171,7 @@ function BehaviourChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-behaviour-chip"
-        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-3 text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black"
       >
         {t('hindsight.behaviourChipNothing')}
       </span>
@@ -170,7 +180,7 @@ function BehaviourChip({ period }: { period: HindsightPeriod }) {
   return (
     <span
       data-testid="hindsight-behaviour-chip"
-      className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-3 text-[9px] md:text-[10px] font-black"
+      className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black"
     >
       {t('hindsight.behaviourChipUnknown')}
     </span>

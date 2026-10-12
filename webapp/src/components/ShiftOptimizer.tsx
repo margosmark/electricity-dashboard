@@ -143,7 +143,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
   return (
     <div
       className={`border-2 md:border-4 border-edge rounded-lg md:rounded-xl p-3 md:p-4 ${
-        rank === 0 ? 'bg-yellow-400' : 'bg-card'
+        rank === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 font-black uppercase">
@@ -153,7 +153,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           <EffortChip effort={option.effort} />
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          <span className="text-[10px] md:text-xs text-ink-2">
+          <span className={`text-[10px] md:text-xs ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
             {fmtCents(option.destRateCents)}{t('efficiency.perKwh')}
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
@@ -163,7 +163,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           </span>
         </div>
       </div>
-      <p className="text-[9px] md:text-[11px] font-bold text-ink-2 mt-1.5 md:mt-2">
+      <p className={`text-[9px] md:text-[11px] font-bold mt-1.5 md:mt-2 ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
         {option.assumption}
       </p>
     </div>
@@ -262,12 +262,12 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
           <span
             key={o.target}
             className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border-2 border-edge rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-black uppercase ${
-              i === 0 ? 'bg-yellow-400' : 'bg-card'
+              i === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'
             }`}
           >
             {TARGET_ICON[o.target]}
             <span>{o.label}</span>
-            <span className="text-ink-2">{fmtCents(o.destRateCents)}</span>
+            <span className={i === 0 ? 'text-accent-ink' : 'text-ink-2'}>{fmtCents(o.destRateCents)}</span>
             <ArrowRight size={9} strokeWidth={4} className="hidden sm:block" />
             <span className="italic">{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
             <EffortChip effort={o.effort} />
@@ -312,7 +312,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
         </span>
       </div>
       <p className="text-[10px] md:text-[12px] font-bold mt-2 md:mt-3">{headline.assumption}</p>
-      <div className="text-[9px] md:text-[11px] font-bold text-ink-2 mt-1 md:mt-2">
+      <div className="text-[9px] md:text-[11px] font-bold text-accent-ink mt-1 md:mt-2">
         {t('shift.supportingNote')}
       </div>
     </div>

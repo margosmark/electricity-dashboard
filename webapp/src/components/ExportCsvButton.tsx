@@ -48,7 +48,7 @@ export function ExportCsvButton({ rows, className = '', printHidden = false }: P
         'border-2 md:border-4 border-edge bg-card text-ink font-black uppercase ' +
         'text-[8px] md:text-[10px] whitespace-nowrap ' +
         'shadow-hard-2 md:shadow-hard-4 ' +
-        'hover:bg-yellow-400 active:translate-y-0.5 active:shadow-none transition-all ' +
+        'hover:bg-yellow-400 hover:text-accent-ink active:translate-y-0.5 active:shadow-none transition-all ' +
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card ' +
         className
       }
