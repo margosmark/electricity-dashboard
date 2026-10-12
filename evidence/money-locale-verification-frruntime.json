@@ -1,0 +1,222 @@
+{
+  "base": "http://127.0.0.1:3100/",
+  "fixture": "usage-summary-open-tail.xml",
+  "locales": {
+    "en": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 6,
+        "textLength": 1873
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 1,
+        "textLength": 3009
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 211,
+        "textLength": 25565
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 145,
+        "textLength": 9808
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 363,
+      "untranslated": []
+    },
+    "fr": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 12,
+        "textLength": 2550
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 2,
+        "textLength": 3503
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [
+          "Ontario Electricity Rebate",
+          "Billing Period - Current Read Date",
+          "Billing Period - Previous Read Date"
+        ],
+        "moneyRenders": 418,
+        "textLength": 31745
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 286,
+        "textLength": 12475
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 718,
+      "untranslated": [
+        "plans: Ontario Electricity Rebate",
+        "plans: Billing Period - Current Read Date",
+        "plans: Billing Period - Previous Read Date"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "en/overview painted real content",
+      "ok": true,
+      "detail": "1873 chars"
+    },
+    {
+      "name": "en/usage painted real content",
+      "ok": true,
+      "detail": "3009 chars"
+    },
+    {
+      "name": "en/plans painted real content",
+      "ok": true,
+      "detail": "25565 chars"
+    },
+    {
+      "name": "en/money painted real content",
+      "ok": true,
+      "detail": "9808 chars"
+    },
+    {
+      "name": "en: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "363 money strings"
+    },
+    {
+      "name": "en: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 doubled units (kWh kWh / \u00a2 \u00a2 / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 fr-comma decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr/overview painted real content",
+      "ok": true,
+      "detail": "2550 chars"
+    },
+    {
+      "name": "fr/usage painted real content",
+      "ok": true,
+      "detail": "3503 chars"
+    },
+    {
+      "name": "fr/plans painted real content",
+      "ok": true,
+      "detail": "31745 chars"
+    },
+    {
+      "name": "fr/money painted real content",
+      "ok": true,
+      "detail": "12475 chars"
+    },
+    {
+      "name": "fr: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "718 money strings"
+    },
+    {
+      "name": "fr: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 doubled units (kWh kWh / \u00a2 \u00a2 / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 en-dot decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 money strings with $ in front of the number",
+      "ok": true,
+      "detail": "none"
+    }
+  ],
+  "passed": 17,
+  "failed": 0,
+  "context": {
+    "task": "t_5e0926f1",
+    "merged_main": "7dbf7aa (#83)",
+    "what": "qa's own money-locale sweep (evidence/money-locale-verify.cjs) against a local production build of merged main, uploading the committed three-bill open-tail fixture through the real UI",
+    "before_after": {
+      "english_nodes_on_fr_page_at_dd28c61": 22,
+      "english_nodes_on_fr_page_at_7dbf7aa": 3,
+      "remaining_3": "the fixture's own bill-line notes printed verbatim by the \"every line item as the utility wrote it\" panel: Ontario Electricity Rebate / Billing Period - Current Read Date / Billing Period - Previous Read Date (3 occurrences each in tests/fixtures/usage-summary-open-tail.xml, rendered from item.note) \u2014 data, not chrome (I18N.md canonical list)"
+    },
+    "gate": "src/i18n/fr-runtime.test.tsx (cold + flip + sensitivity, planted-failure probes) ; src/i18n/locale-deps.test.ts + scripts/i18n-locale-deps.mjs"
+  }
+}
