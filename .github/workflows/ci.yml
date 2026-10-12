@@ -79,7 +79,12 @@ jobs:
       - name: Account gate (feature OFF — the public app is unchanged)
         run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3100 --expect-disabled
       - name: Boot the same image as the account server
-        run: docker run -d --rm -p 3101:3000 --name energy-account-smoke -e ACCT_ENABLED=true -e ACCT_DB_PATH=/data/accounts.db energy-smoke
+        # /data exists in production only because compose bind-mounts it onto
+        # the account-server; the bare CI container has no such directory and
+        # `nextjs` (uid 1001) cannot mkdir under /, so SQLite fails every
+        # write and the ON gate dies 13/32. The tmpfs is this runner's
+        # equivalent of that bind mount: same path, real file, writable.
+        run: docker run -d --rm -p 3101:3000 --name energy-account-smoke --tmpfs /data:rw,mode=1777 -e ACCT_ENABLED=true -e ACCT_DB_PATH=/data/accounts.db energy-smoke
       - name: Account gate (feature ON — register → sync → second device → logout)
         run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3101
       - name: Playwright smoke (upload flow, Shift Optimizer, PWA offline)
