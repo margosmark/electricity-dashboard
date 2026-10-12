@@ -134,7 +134,11 @@ export function parseOpenMeteoHourly(payload: unknown): HourlyTemps | null {
 export function mergeHourlyTemps(pieces: HourlyTemps[]): HourlyTemps | null {
   const live = pieces.filter((p) => p.values.length > 0);
   if (live.length === 0) return null;
+  // `live` holds one piece per 183-day fetch chunk of the requested span, i.e.
+  // the span's own years — two figures, and every piece costs an API call.
+  // eslint-disable-next-line no-restricted-syntax -- one piece per 183-day fetch chunk
   const startHour = Math.min(...live.map((p) => p.startHour));
+  // eslint-disable-next-line no-restricted-syntax -- one piece per 183-day fetch chunk
   const endHour = Math.max(...live.map((p) => p.startHour + p.values.length - 1));
   const values: (number | null)[] = new Array<number | null>(endHour - startHour + 1).fill(null);
   // Later pieces win on overlap: they were fetched for this span, the others

@@ -402,7 +402,11 @@ export function scanPeriodBlocks(rows: ProcessedPoint[], plan: PlanType): Period
     const endHour = run[run.length - 1].hour + 1;
     const readings = run.flatMap((c) => c.readings);
     const kwh = readings.reduce((acc, r) => acc + r.usage_kwh, 0);
+    // `run` is consecutive HOURS of one weekday (it resets on any gap, weekday
+    // change or shape change) — at most 24 entries by construction.
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const weeksSeen = Math.min(...run.map((c) => c.byWeek.size));
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const consistencyCv = Math.max(...run.map((c) => c.cv));
     const onPeak = run.reduce((acc, c) => acc + c.onPeak, 0);
     const midPeak = run.reduce((acc, c) => acc + c.midPeak, 0);
