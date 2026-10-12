@@ -28,46 +28,66 @@ writing its screenshots leaves `git status` clean — no more
 
 ## Where the pixels live
 
-1. **Branch `evidence-assets`** — every screenshot ever committed, at its
-   original path, one archive commit plus one commit per later wave:
+**Release asset `evidence-screenshots-2026-10-11`** — every screenshot, 197
+files (the original 182 plus the 15 dark-mode-wave shots folded in during
+the history prune) zipped with a `MANIFEST.sha256`, stored outside the git
+object store entirely (release assets don't count against repo size and
+survive branch rewrites):
 
-   ```sh
-   git show evidence-assets:evidence/wave-t-desktop-plans.png > /tmp/out.png
-   # or browse: https://github.com/margosmark/electricity-dashboard/blob/evidence-assets/evidence/…
-   ```
+```sh
+gh release download evidence-screenshots-2026-10-11 -p evidence-screenshots.zip
+unzip evidence-screenshots.zip -d evidence-screenshots
+(cd evidence-screenshots && sha256sum -c MANIFEST.sha256)
+```
 
-2. **Release asset `evidence-screenshots-2026-10-11`** — the same 182 files
-   zipped with a `MANIFEST.sha256`, stored outside the git object store
-   entirely (release assets don't count against repo size and survive any
-   branch rewrite).
+The `evidence-assets` branch that used to hold the same pixels was dropped
+in the history prune below — the zip is the store, and it was verified
+complete (197/197 against the manifest) against the pre-prune branch before
+the branch went away.
 
 ## Archiving a new wave's screenshots
 
 The verify harnesses still write PNGs into `evidence/`; they are simply
-ignored by `main` now. To archive them after a wave lands:
+ignored by `main` now. Never commit them — fold them into the release zip
+from the working tree:
 
 ```sh
-git worktree add ../evidence-assets-wt evidence-assets   # once
-cp evidence/<wave>*.png evidence/<wave-dir>/*.jpg ../evidence-assets-wt/evidence/ 2>/dev/null
-cd ../evidence-assets-wt
-git add evidence && git commit -m "evidence: <wave> screenshots" && git push origin evidence-assets
+gh release download evidence-screenshots-2026-10-11 -p evidence-screenshots.zip
+unzip -q evidence-screenshots.zip -d evidence-screenshots
+cp evidence/<wave>*.png evidence-screenshots/evidence/          # new shots in
+(cd evidence-screenshots \
+  && find evidence -type f \( -name '*.png' -o -name '*.jpg' \) | LC_ALL=C sort \
+     | xargs sha256sum > MANIFEST.sha256 \
+  && rm -f ../evidence-screenshots.zip && zip -qr ../evidence-screenshots.zip evidence MANIFEST.sha256)
+gh release upload evidence-screenshots-2026-10-11 evidence-screenshots.zip --clobber
 ```
 
-and, when a batch is worth a durable external copy, refresh the release zip:
+When a batch deserves its own immutable copy instead, cut a dated release
+(`gh release create evidence-screenshots-<date> evidence-screenshots.zip`)
+and note the new `MANIFEST.sha256` in this file.
 
-```sh
-cd ../evidence-assets-wt && zip -r /tmp/evidence-screenshots.zip evidence -i '*.png' '*.jpg'
-gh release upload evidence-screenshots-2026-10-11 /tmp/evidence-screenshots.zip --clobber
-```
+## History prune (run 2026-10-11, card t_a66aa790)
 
-## History prune (not yet run)
+Executed as a coordinated force-push while the board was quiet (Mark's go:
+the card's 19:56 unblock of the two-conditions block):
 
-Stripping the already-committed 98.8 MB out of `main`'s history is a
-**force-push rewrite** of every branch, and on 2026-10-11 sibling cards had
-live worktrees mid-task (dark-mode, truth-in-ui, list_dark) — a rewrite
-would have stranded them on unrelated histories. The runbook (mirror clone,
-`git filter-repo` on `evidence/**.png|jpg` + the `electricit2024-now.xml`
-real-meter blob from the initial commit, coordinated force-push of all refs)
-is on card t_1f93f985's follow-up; run it only while the board is quiet.
-Note the images branch must be dropped at the same time for the GitHub repo
-size to actually fall — the release zip is what keeps that lossless.
+- Mirror clone + `git filter-repo --invert-paths` stripped
+  `evidence/**/*.png|jpg` and the `electricit2024-now.xml` real-meter
+  export from **every** ref — local branches included (each sibling
+  worktree was removed first and re-added from the rewritten history, so
+  no branch sits on unrelated histories).
+- All 50 branch/tag refs force-pushed; `main` 635f148 → 7ba18c9 (identical
+  trees — only history SHAs moved).
+- Blob bytes the repo has ever held: **135.6 MB → 26.2 MB** in a fresh
+  clone (−81%); `.git` in the shared checkout 114 MB → 3.6 MB.
+- The `evidence-assets` branch was dropped at the same time; before it
+  went, its 15 post-release dark-mode shots were folded into the release
+  zip (now 197/197 verified against `MANIFEST.sha256`, re-download
+  byte-identical).
+- Gate re-run green on a fresh clone of the rewritten history: vitest
+  1231 passed | 6 skipped (1237), eslint + tsc + `next build` clean.
+- Caveat: GitHub's hidden `refs/pull/N/head` refs for the 65 merged PRs
+  still pin the pre-rewrite commits (the API answers `refs/pull/* is
+  read-only`), so the GitHub repo-size metric falls only after GitHub-side
+  GC touches them — watch `.size`, open a support ticket if it sticks.
+  Open PR #28 re-synced to the rewritten branch automatically.
