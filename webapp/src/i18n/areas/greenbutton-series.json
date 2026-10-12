@@ -1,0 +1,12 @@
+{
+  "en": {
+    "gbseries.count": "{count} reading series",
+    "gbseries.none": "no billable readings — this point's data could not be priced",
+    "gbseries.reasons": "Why some of this point was left out:"
+  },
+  "fr": {
+    "gbseries.count": "{count} séries de relevés",
+    "gbseries.none": "aucun relevé facturable — les données de ce point n'ont pas pu être évaluées",
+    "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :"
+  }
+}
