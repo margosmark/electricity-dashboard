@@ -1,0 +1,27 @@
+test_baseline_matches (__main__.ReconciliationAdversarialTests.test_baseline_matches) ... ok
+test_draft_version_not_assumed_published (__main__.ReconciliationAdversarialTests.test_draft_version_not_assumed_published) ... ok
+test_duplicate_resource_rejected (__main__.ReconciliationAdversarialTests.test_duplicate_resource_rejected) ... ok
+test_foreign_namespace_not_collapsed (__main__.ReconciliationAdversarialTests.test_foreign_namespace_not_collapsed) ... ok
+test_missing_complex_type_rejected (__main__.ReconciliationAdversarialTests.test_missing_complex_type_rejected) ... ok
+test_missing_field_rejected (__main__.ReconciliationAdversarialTests.test_missing_field_rejected) ... ok
+test_missing_resource_rejected (__main__.ReconciliationAdversarialTests.test_missing_resource_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.231s
+
+OK
+{
+  "audited_code_commit": "988ea57a7cc283f7edac7da350fc3931635662c1",
+  "schemas": 7,
+  "global_rows": 171,
+  "complex_type_rows": 216,
+  "field_rows": 1055,
+  "function_blocks": 62,
+  "java_active": 46,
+  "java_deprecated": 14,
+  "supported_features": 12,
+  "mapped_test_titles": 22,
+  "fixture_references": 14,
+  "proposed_acceptance_tests": 13,
+  "result": "PASS: inventory reconciliation; NOT standards certification"
+}

@@ -1,0 +1,327 @@
+{
+  "checked": "2026-10-12",
+  "current_page": {
+    "url": "https://www.greenbuttonalliance.org/function-blocks",
+    "sha256": "cb1de30ff6315ef7a6a347be3057b0b8e8284425ca6a928978d4c23e7b31a8c0",
+    "retrieval": "web_extract cleaned markdown; curl returned WAF text and was not used",
+    "entries": [
+      {
+        "id": 1,
+        "title": "FB_01] Usage Data CommonMANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb01"
+      },
+      {
+        "id": 2,
+        "title": "FB_02] Usage Data Download My DataDMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb02"
+      },
+      {
+        "id": 3,
+        "title": "FB_03] Usage Data Connect My DataCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb03"
+      },
+      {
+        "id": 4,
+        "title": "FB_04] Interval MeteringMANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb04"
+      },
+      {
+        "id": 5,
+        "title": "FB_05] Electricity Interval Metering",
+        "url": "https://www.greenbuttonalliance.org/fb05"
+      },
+      {
+        "id": 6,
+        "title": "FB_06] Demand Electricity Metering",
+        "url": "https://www.greenbuttonalliance.org/fb06"
+      },
+      {
+        "id": 7,
+        "title": "FB_07] Net Electricity Metering",
+        "url": "https://www.greenbuttonalliance.org/fb07"
+      },
+      {
+        "id": 8,
+        "title": "FB_08] Forward and Reverse Electricity Metering",
+        "url": "https://www.greenbuttonalliance.org/fb08"
+      },
+      {
+        "id": 9,
+        "title": "FB_09] Register Values Electricity Metering",
+        "url": "https://www.greenbuttonalliance.org/fb09"
+      },
+      {
+        "id": 10,
+        "title": "FB_10] Natural Gas Interval Metering",
+        "url": "https://www.greenbuttonalliance.org/fb10"
+      },
+      {
+        "id": 11,
+        "title": "FB_11] Water Interval Metering",
+        "url": "https://www.greenbuttonalliance.org/fb11"
+      },
+      {
+        "id": 12,
+        "title": "FB_12] Cost of Interval Data",
+        "url": "https://www.greenbuttonalliance.org/fb12"
+      },
+      {
+        "id": 13,
+        "title": "FB_13] Energy Usage Security and Privacy ClassCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb13"
+      },
+      {
+        "id": 15,
+        "title": "FB_15] Usage Summary",
+        "url": "https://www.greenbuttonalliance.org/fb15"
+      },
+      {
+        "id": 16,
+        "title": "FB_16] Usage Summary with Cost",
+        "url": "https://www.greenbuttonalliance.org/fb16"
+      },
+      {
+        "id": 17,
+        "title": "FB_17] Electricity Power Quality Summary",
+        "url": "https://www.greenbuttonalliance.org/fb17"
+      },
+      {
+        "id": 27,
+        "title": "FB_27] Usage Summary with Demands and Previous Day Attributes",
+        "url": "https://www.greenbuttonalliance.org/fb27"
+      },
+      {
+        "id": 28,
+        "title": "FB_28] Usage Summary Costs for Current Billing Period",
+        "url": "https://www.greenbuttonalliance.org/fb28"
+      },
+      {
+        "id": 29,
+        "title": "FB_29] Temperature Interval Metering",
+        "url": "https://www.greenbuttonalliance.org/fb29"
+      },
+      {
+        "id": 30,
+        "title": "FB_30] Usage Data Common User ExperienceDMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb30"
+      },
+      {
+        "id": 31,
+        "title": "FB_31] Usage Data Authorization and Authentication w/o Pre-Negotiated ScopeCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb31"
+      },
+      {
+        "id": 34,
+        "title": "FB_34] SFTP for Usage Data Bulk",
+        "url": "https://www.greenbuttonalliance.org/fb34"
+      },
+      {
+        "id": 35,
+        "title": "FB_35] REST for Usage Data Bulk",
+        "url": "https://www.greenbuttonalliance.org/fb35"
+      },
+      {
+        "id": 37,
+        "title": "FB_37] Usage Data Query ParametersCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb37"
+      },
+      {
+        "id": 39,
+        "title": "FB_39] Usage Data PUSH ModelCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb39"
+      },
+      {
+        "id": 40,
+        "title": "FB_40] Usage Data Offline Authorization",
+        "url": "https://www.greenbuttonalliance.org/fb40"
+      },
+      {
+        "id": 41,
+        "title": "FB_41] Manage ApplicationInformation Resource",
+        "url": "https://www.greenbuttonalliance.org/fb41"
+      },
+      {
+        "id": 44,
+        "title": "FB_44] Manage Authorization Resource",
+        "url": "https://www.greenbuttonalliance.org/fb44"
+      },
+      {
+        "id": 51,
+        "title": "FB_51] Retail Customer CommonMANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb51"
+      },
+      {
+        "id": 52,
+        "title": "FB_52] Retail Customer Download My DataDMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb52"
+      },
+      {
+        "id": 53,
+        "title": "FB_53] Retail Customer Connect My DataCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb53"
+      },
+      {
+        "id": 54,
+        "title": "FB_54] Retail Customer Basic Information",
+        "url": "https://www.greenbuttonalliance.org/fb54"
+      },
+      {
+        "id": 55,
+        "title": "FB_55] Retail Customer Demographic Information",
+        "url": "https://www.greenbuttonalliance.org/fb55"
+      },
+      {
+        "id": 56,
+        "title": "FB_56] Retail Customer Billing Information",
+        "url": "https://www.greenbuttonalliance.org/fb56"
+      },
+      {
+        "id": 57,
+        "title": "FB_57] Retail Customer Account-Agreement Information",
+        "url": "https://www.greenbuttonalliance.org/fb57"
+      },
+      {
+        "id": 58,
+        "title": "FB_58] Retail Customer Service-Location Information",
+        "url": "https://www.greenbuttonalliance.org/fb58"
+      },
+      {
+        "id": 59,
+        "title": "FB_59] Retail Customer Service-Supplier Information",
+        "url": "https://www.greenbuttonalliance.org/fb59"
+      },
+      {
+        "id": 60,
+        "title": "FB_60] Retail Customer Meter Information",
+        "url": "https://www.greenbuttonalliance.org/fb60"
+      },
+      {
+        "id": 61,
+        "title": "FB_61] Retail Customer End-Device Information",
+        "url": "https://www.greenbuttonalliance.org/fb61"
+      },
+      {
+        "id": 62,
+        "title": "FB_62] Retail Customer Program-Date-ID-Mappings Information",
+        "url": "https://www.greenbuttonalliance.org/fb62"
+      },
+      {
+        "id": 63,
+        "title": "FB_63] Retail Customer Common User ExperienceDMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb63"
+      },
+      {
+        "id": 64,
+        "title": "FB_64] Retail Customer Security and Privacy ClassCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb64"
+      },
+      {
+        "id": 65,
+        "title": "FB_65] Retail Customer Authorization and Authentication w/o Pre-Negotiated ScopeCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb65"
+      },
+      {
+        "id": 66,
+        "title": "FB_66] SFTP for Retail Customer Bulk",
+        "url": "https://www.greenbuttonalliance.org/fb66"
+      },
+      {
+        "id": 67,
+        "title": "FB_67] REST for Retail Customer Bulk",
+        "url": "https://www.greenbuttonalliance.org/fb67"
+      },
+      {
+        "id": 69,
+        "title": "FB_69] Retail Customer PUSH ModelCMD-MANDATORY",
+        "url": "https://www.greenbuttonalliance.org/fb69"
+      },
+      {
+        "id": 70,
+        "title": "FB_70] Retail Customer Offline Authorization",
+        "url": "https://www.greenbuttonalliance.org/fb70"
+      }
+    ]
+  },
+  "java": {
+    "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+    "sha256": "935c31b8a0723acc2d188312b6a3e8fce942c9bde62fb78aee41c0e53d1cf72b"
+  },
+  "legacy": {
+    "url": "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md",
+    "sha256": "28b177dc007c0de4a61dc5f0db5344788e7832aac6b8c75688932060e38dd087",
+    "entries": [
+      {
+        "id": 3,
+        "title": "Core Green Button Connect My Data"
+      },
+      {
+        "id": 13,
+        "title": "Security and Privacy classes"
+      },
+      {
+        "id": 14,
+        "title": "Authorization and Authentication (OAuth)"
+      },
+      {
+        "id": 19,
+        "title": "Partial update data"
+      },
+      {
+        "id": 31,
+        "title": "Core Rest Services"
+      },
+      {
+        "id": 32,
+        "title": "Resource Level REST"
+      },
+      {
+        "id": 33,
+        "title": "Management REST Interfaces"
+      },
+      {
+        "id": 34,
+        "title": "SFTP for Bulk"
+      },
+      {
+        "id": 35,
+        "title": "REST for Bulk"
+      },
+      {
+        "id": 36,
+        "title": "Third Party (Client) Dynamic Registration"
+      },
+      {
+        "id": 37,
+        "title": "Query Parameters"
+      },
+      {
+        "id": 38,
+        "title": "On Demand Requests"
+      },
+      {
+        "id": 39,
+        "title": "PUSH model"
+      },
+      {
+        "id": 40,
+        "title": "Offline Authorization"
+      },
+      {
+        "id": 41,
+        "title": "Manage  Authorization Resource"
+      },
+      {
+        "id": 42,
+        "title": "Third Party Core REST Services"
+      },
+      {
+        "id": 43,
+        "title": "Third Party Management REST Services"
+      },
+      {
+        "id": 44,
+        "title": "Manage ApplicationInformation Resource"
+      }
+    ]
+  }
+}

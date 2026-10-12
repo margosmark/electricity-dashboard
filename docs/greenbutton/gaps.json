@@ -1,0 +1,184 @@
+[
+  {
+    "id": "G00",
+    "phase": "P0",
+    "title": "Normative edition and profile lock",
+    "impact": "Latest NAESB retail publication is 4.1 (2026-05-15); full REQ.21 and authoritative new schemas are gated. Mirror 4.1 customer says Published Pending and root version 4.0. Unverified normative differences cannot be called complete.",
+    "acceptance_test": "edition-pin-reviewed",
+    "fixture": "standards-delta-review",
+    "source": "NAESB retail index; public ESPI landing; mirror headers",
+    "criteria": "Review legally obtained full MBPs and exact dated XSDs; record SHA256, minor corrections and third-party PICS; no purchases/signing in this task.",
+    "source_urls": [
+      "https://www.naesb.org/retail_standards.asp",
+      "https://www.naesb.org/espi_standards.asp"
+    ]
+  },
+  {
+    "id": "G01",
+    "phase": "P1",
+    "title": "Typed quantity and unit gate",
+    "impact": "Browser labels every nonnegative IntervalReading as kWh; ignores uom, commodity, kind, accumulationBehaviour and flowDirection. Python instead assumes W and integrates guessed/default duration. Arbitrary power/reactive/register/gas/water may silently be billed as electricity.",
+    "acceptance_test": "typed-quantities",
+    "fixture": "quantity-matrix",
+    "source": "espi.xsd ReadingType/IntervalReading/ServiceCategory enumerations",
+    "criteria": "For each enum combination accept dimensional conversion only with documented semantics: Wh energy versus W average power times own duration; demand stays power; var/varh/VA/VAh stay distinct; gas/water/temperature never kWh or OEB rates. Registers need deltas/reset/rollover rules; reverse/export/net remain separate, not clamped consumption. Explicit diagnostics for all unhandled combinations, missing metadata, extreme multiplier, unsafe integers and lexical junk.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G02",
+    "phase": "P1",
+    "title": "Atom identities and graph",
+    "impact": "Regex href suffix matching is not ID/self/up/related graph resolution. Same suffix under two origins collides; MeterReading-only ReadingType links can lose per-channel scale; namespace stripping can interpret foreign elements.",
+    "acceptance_test": "atom-resource-graph",
+    "fixture": "graph-adversarial",
+    "source": "RFC4287/RFC3986; espi.xsd IdentifiedObject/MeterReading/UsagePoint",
+    "criteria": "Index canonical self URIs and atom IDs; respect xml:base and link relation; join UsagePoint→MeterReading→ReadingType→IntervalBlock independent of order; diagnose missing/duplicate/conflicting refs and same suffix different authorities. Keep data provenance; never fetch arbitrary imported links; any CMD fetch must be consented, origin-allowlisted and SSRF-safe.",
+    "source_urls": [
+      "https://www.rfc-editor.org/rfc/rfc4287",
+      "https://www.rfc-editor.org/rfc/rfc3986",
+      "https://green-button.github.io/developers/"
+    ]
+  },
+  {
+    "id": "G03",
+    "phase": "P1",
+    "title": "Durations and per-meter clocks",
+    "impact": "DataPoint drops duration; inferred cadence is not interval occupancy. Browser ignores ReadingType.intervalLength and IntervalBlock.interval. Single LocalTimeParameters selected document-wide.",
+    "acceptance_test": "interval-duration-dst",
+    "fixture": "duration-dst",
+    "source": "espi.xsd DateTimeInterval/TimeConfiguration",
+    "criteria": "Own timePeriod duration wins; ReadingType intervalLength fallback with explicit provenance; block.interval describes block extent NOT a per-reading duration fallback. Retain UTC start/end, split billing/rate boundaries by interval overlap; missing/gap/duplicate/overlap/mixed-cadence incomplete windows stay incomplete. Resolve clocks per meter and test 23/25-hour days, fixed offset and southern-hemisphere rules; no guessing from browser zone.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G04",
+    "phase": "P1",
+    "title": "Quality, accumulation and channel qualifiers",
+    "impact": "ReadingQuality/defaultQuality, consumptionTier, tou, cpp, phase, dataQualifier and timeAttribute discarded; estimated or cumulative values look measured and independent.",
+    "acceptance_test": "reading-quality-channel",
+    "fixture": "quality-channel",
+    "source": "espi.xsd ReadingQuality/ReadingType/IntervalReading",
+    "criteria": "Preserve quality code including unknown values; distinguish measured/estimated/substituted with schema-backed policies; never remove quality silently. Preserve tariff/phase/channel qualifiers to prevent double counting parallel register/TOU streams; each accumulation kind either typed implementation with tests or diagnostic.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G05",
+    "phase": "P2",
+    "title": "Complete summaries and itemisation",
+    "impact": "Both summary names parse subset; demands/current/previous-day/current-period consumption, statusTimeStamp, quality, commodity, tariffProfile/readCycle/riders/source missing. LineItem rounding/dateTime/itemPeriod omitted; measurement timestamp omitted.",
+    "acceptance_test": "summary-all-fields",
+    "fixture": "summary-complete",
+    "source": "espi.xsd UsageSummary/ElectricPowerUsageSummary/LineItem/SummaryMeasurement; GBA FB15",
+    "criteria": "Preserve every field with units/currency/raw scale; fees/negative credits/unknown notes retained without speculative itemKind meaning. Never infer utility-language patterns from synthetics. No cross-meter/cross-currency merging; unknown currency label is unknown, no currency conversion. Deprecated ElectricPowerUsageSummary remains explicit compatibility path. Non-electric summaries cannot enter Ontario tariff model.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd",
+      "https://www.greenbuttonalliance.org/fb15"
+    ]
+  },
+  {
+    "id": "G06",
+    "phase": "P3",
+    "title": "Power quality and auxiliary typed resources",
+    "impact": "ElectricPowerQualitySummary, ServiceStatus, ProgramIdMappings, node refs and auxiliary types ignored.",
+    "acceptance_test": "auxiliary-resource-roundtrip",
+    "fixture": "auxiliary-all-resources",
+    "source": "espi.xsd global elements and complex types",
+    "criteria": "Parse+preserve distinct typed objects (no new dashboard inferred) or return explicit resource diagnostics for each pinned class/field. Power quality remains power-quality units, not kWh; retain measurement protocol/summaryInterval.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G07",
+    "phase": "P1",
+    "title": "Unknown extensions and safe reporting",
+    "impact": "Output retains only groups/summaries/one clock. Unsupported resources/extensions vanish; diagnostics describe lack of readings, not ignored data.",
+    "acceptance_test": "unknown-extension-report",
+    "fixture": "extensions-safe",
+    "source": "RFC4287 foreign markup; espi.xsd Object; parseDiagnostic.ts",
+    "criteria": "Return known/unknown/unsupported counts and QName-aware diagnostics. Preserve safe opaque foreign fields with size/depth limits client-side, never execute markup/PI/DTD or follow URLs. Redact secrets/PII from exports/logs; unsolicited customer data needs opt-in quarantine/drop diagnostic, NOT blanket preservation.",
+    "source_urls": [
+      "https://www.rfc-editor.org/rfc/rfc4287",
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G08",
+    "phase": "P2",
+    "title": "CMD capabilities and least-privilege scope",
+    "impact": "ApplicationInformation is env-config, not resource ingestion. Scope opaque string; no FB/IntervalDuration/BlockDuration/HistoryLength capability negotiation. Authorization only pointer parsed; Subscription is URI aggregate, not schema entity.",
+    "acceptance_test": "cmd-capabilities-scope",
+    "fixture": "cmd-capabilities",
+    "source": "GBA function-blocks; pinned FunctionBlock.java; Authorization/ApplicationInformation schema; OAuth RFC6749",
+    "criteria": "Negotiate only consumed, consented electricity usage capabilities, record granted/requested delta. No automatic PII/gas/water scopes for completeness. Parse authorised/published periods/status/expiry and allowlisted pointers; ApplicationInformation safe metadata only, never store client_secret in client dataset. Third-party scope UI distinct from custodian authorization server.",
+    "source_urls": [
+      "https://www.greenbuttonalliance.org/function-blocks",
+      "https://www.rfc-editor.org/rfc/rfc6749",
+      "https://green-button.github.io/espi/authorization_scope/"
+    ]
+  },
+  {
+    "id": "G09",
+    "phase": "P2",
+    "title": "Pagination, batch and async completion",
+    "impact": "One stream fetch; Atom next ignored; BatchList only URL count/change marker; 202 classified without Location/Retry-After continuation or per-item errors.",
+    "acceptance_test": "cmd-pagination-batch-async",
+    "fixture": "cmd-transfer",
+    "source": "developer API batch docs; espi.xsd BatchListType/BatchItemInfo; espi.ts",
+    "criteria": "Bounded same-origin next-page traversal with cycle/count/byte/time limits and exact dedupe; partial page failure stays partial. Validate authorised BatchItemInfo resources/status; robust idempotent notification→GET. Bounded 202 continuation/backoff supports documented completion mechanism; never trust arbitrary notification URL as authenticated fetch destination; no SFTP absent explicit integration decision.",
+    "source_urls": [
+      "https://greenbuttonalliance.github.io/OpenESPI-GreenButton-API-Documentation/API/",
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+    ]
+  },
+  {
+    "id": "G10",
+    "phase": "P2",
+    "title": "Remote revoke, rotation concurrency and transport",
+    "impact": "Local disconnect deletes token file but does not revoke at custodian. Existing rotation test is serial; full provider concurrency/TLS policy not proved.",
+    "acceptance_test": "cmd-revoke-concurrent",
+    "fixture": "cmd-lifecycle",
+    "source": "OAuth RFC6749/RFC7009; GBA certification TLS1.3 note; sync.ts",
+    "criteria": "Serialize refresh per grant, atomically persist rotated tokens; one-time-token concurrent request/restart tests. Handle revocation notification/status/invalid_grant; remote revocation only with documented consented provider endpoint; local disconnect honest about scope. Verify TLS1.3 capability/policy and certificate checks locally, no claim from generic fetch.",
+    "source_urls": [
+      "https://www.rfc-editor.org/rfc/rfc6749",
+      "https://www.rfc-editor.org/rfc/rfc7009",
+      "https://www.greenbuttonalliance.org/certification"
+    ]
+  },
+  {
+    "id": "G11",
+    "phase": "P3",
+    "title": "Retail customer schema / PII isolation",
+    "impact": "All customer-namespace classes unsupported, except namespace-erasing parser may mistakenly treat customer LocalTimeParameters/UsagePoint as energy names. Statement bill-image refs unsupported.",
+    "acceptance_test": "customer-isolation-inventory",
+    "fixture": "customer-all-resources",
+    "source": "customer.xsd resources and namespace annotation; GBA FB51–70",
+    "criteria": "Explicit namespace-aware unsupported diagnostics by default. If a later separately approved service needs PII, minimal opt-in scope, separate typed feed/storage boundary, TTL/delete/export/redaction tests. Test each customer global/complex class, Statement/StatementRef/bill-image reference without network download or PII in logs. Inventory NOT an instruction to collect data.",
+    "source_urls": [
+      "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/customer.xsd",
+      "https://www.greenbuttonalliance.org/function-blocks"
+    ]
+  },
+  {
+    "id": "G12",
+    "phase": "P4",
+    "title": "Administration/offline/deprecated interfaces",
+    "impact": "No dynamic registration/SFTP/offline authorization/admin REST implementation; historic FB labels conflict with current GBA/Java.",
+    "acceptance_test": "profile-role-exclusions",
+    "fixture": "profile-role",
+    "source": "GBA catalog; pinned legacy connect_function_blocks.md; FunctionBlock.java",
+    "criteria": "Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence.",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md",
+      "https://www.greenbuttonalliance.org/function-blocks"
+    ]
+  }
+]

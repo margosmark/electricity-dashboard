@@ -1,0 +1,32 @@
+[
+  {
+    "url": "https://www.naesb.org/retail_standards.asp",
+    "checked": "2026-10-12",
+    "retrieved_sha256": "b8b3aeb67a95107a3e14c21f97b5a3e80c42a1abebf2e342e99bd98f79e4e069",
+    "note": "Retrieval receipt for mutable official public page; full HTML not redistributed."
+  },
+  {
+    "url": "https://www.naesb.org/espi_standards.asp",
+    "checked": "2026-10-12",
+    "retrieved_sha256": "996b53d59a640ab324e01e7f1de92f23c9e8eb87554f8092ff14c9af96bfaf25",
+    "note": "Retrieval receipt for mutable official public page; full HTML not redistributed."
+  },
+  {
+    "url": "https://www.naesb.org/termsofuse_form.asp?doc=espi_v4.xsd",
+    "checked": "2026-10-12",
+    "retrieved_sha256": "91c29351e747f38a6c7f0d0926fa6e4a04c72917c80244f28ceb7c0c8cb50ab4",
+    "note": "Retrieval receipt for mutable official public page; full HTML not redistributed."
+  },
+  {
+    "url": "https://www.greenbuttonalliance.org/function-blocks",
+    "checked": "2026-10-12",
+    "retrieved_sha256": "cb1de30ff6315ef7a6a347be3057b0b8e8284425ca6a928978d4c23e7b31a8c0",
+    "note": "Retrieval receipt for mutable official public page; full HTML not redistributed."
+  },
+  {
+    "url": "https://www.greenbuttonalliance.org/cmd-function-blocks",
+    "checked": "2026-10-12",
+    "retrieved_sha256": "42bb47849696fe25798ba0672d461d3bea2dceed39430e71bde5e73ceef8c7e8",
+    "note": "Retrieval receipt for mutable official public page; full HTML not redistributed."
+  }
+]

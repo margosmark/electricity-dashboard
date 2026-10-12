@@ -1,0 +1,2 @@
+# Exact public mirror bytes: do not normalize schema line endings/whitespace.
+*.xsd -text -whitespace
