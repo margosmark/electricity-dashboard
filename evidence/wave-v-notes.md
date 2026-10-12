@@ -53,7 +53,7 @@ each, both viewports, both exports) — the deployed run is the record in
 (807,118 bytes). Copy them somewhere writable, point `WAVE_V_XML_LONG` / `WAVE_V_XML_SHORT` at the
 copies, and delete the copies when done.
 
-## What the browser harness checks (all 112, in the JSON)
+## What the browser harness checks (all 112 at the `054d60f` record, 120 from t_97f4c904 on)
 
 `evidence/wave-v-verify.cjs` reads the PAINTED DOM only — it shares no code with
 `lib/hindsight.ts`, so agreement between the two is evidence, not a tautology.
@@ -70,6 +70,11 @@ copies, and delete the copies when done.
   billed under, and never prints a negative "would have saved";
 - an unaudited bill carries its reason and no chip; a file with nothing countable
   says so instead of printing a number;
+- **the headline's own sub-line agrees with the headline** (t_97f4c904): a
+  negative figure never sits above a "cost you $0.00 more" clause (the old
+  `Math.max(0, planMiss)` clamp), and the sub-line names the alternatives'
+  difference at that figure's own magnitude — "would have cost you $251.89
+  more" under −$251.89;
 - no raw key, `undefined`, `NaN` or `{placeholder}` leaks into the panel;
 - summer bills, winter bills and the four bills that cross Nov 1 are each
   labelled, and the detected TOU/Tiered timeline reaches the panel;
@@ -158,3 +163,49 @@ figures.
 
 QA's one cosmetic flag — the `headlineNote` sub-line printing `$0.00 more` beside
 the negative headline — is untouched by this merge and is left to its own card.
+
+## t_97f4c904 — the sub-line may not contradict the headline
+
+The flag above, fixed. `HindsightPanel.tsx` interpolated the subtitle through
+`Math.max(0, planMiss)`, so on a net SAVING — which is what **both** of Mark's
+exports are — the clamp decided the copy and the panel printed
+"…cost you **$0.00 more**…" under the headline "THE ALTERNATIVES WOULD HAVE COST
+MORE −$251.89". The clamp is gone: the figure's own sign picks the sentence, and
+the saving one interpolates the unclamped magnitude.
+
+| | en | fr |
+| --- | --- | --- |
+| net loss (`planMiss > 0`) | `hindsight.headlineNote` — unchanged | unchanged |
+| net saving (`planMiss < 0`) | `hindsight.headlineNoteSaved` = "The alternatives would have cost you {plan} more on the very same readings." | "Les autres tarifs vous auraient coûté {plan} de plus, sur exactement les mêmes relevés." |
+
+The sub-line now carries `data-testid="hindsight-headline-note"`.
+
+**Control vs fix — the same harness, the same two exports, 1440 + 390 px:**
+
+| build | harness | painted sub-line (2-year / 3-month) |
+| --- | --- | --- |
+| DEPLOYED `054d60f` (pre-fix, still served while this was written) | **112/120**, 8 failed — 2 per run, all four runs | "…cost you **$0.00 more** than the cheapest of the other two…" / same |
+| local build of this change (`next start` on `127.0.0.1:3939`) | **120/120**, 0 failed | "The alternatives would have cost you **$251.89 more** on the very same readings." / "$33.19 more" |
+
+The failing control run is the defect QA flagged, read verbatim out of the
+painted DOM by the new check
+(`evidence/wave-v-verification-control.json`, not tracked — the deployed record is
+re-run after the deploy).
+
+`HindsightPanel.test.tsx` pins the same rule at the component: the net-negative
+fixture (`peakHouse` — a Tiered bill whose readings only ever run at 08:00, so the
+plan the household was on WAS the cheapest), the unchanged loss wording on a
+net-positive fixture, and the French sentence composed from the catalog. Swapping
+only the copy logic back to the clamped `headlineNote` (testid kept) turns exactly
+the two saving pins red and reproduces the shipped sentence byte for byte
+("Staying on the plan you were on cost you **$0.00 more** than the cheapest of the
+other two, on the very same readings.").
+
+| gate (working tree, `3111cbd` + this change) | result |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | clean / clean |
+| `npm run test` | **1643 passed \| 6 skipped** (101 files passed, 2 skipped) — +3 pins |
+| `npm run build` (`GIT_SHA=3111cbd`) | ok |
+| `node scripts/i18n-merge.mjs --check` | up to date, **1257** keys (+1: `hindsight.headlineNoteSaved`, en + fr) |
+| `.venv/bin/pytest tests/` / `ops/dmd/tests` | 41 passed / 19 passed, 1 skipped |
+| `node evidence/wave-v-verify.cjs` (local build, both exports, 1440 + 390 px) | **120/120** (`wave-v-verification-local.json`) |

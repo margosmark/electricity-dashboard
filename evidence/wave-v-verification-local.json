@@ -2,19 +2,19 @@
   "base": "http://127.0.0.1:3939/",
   "deployedCommit": null,
   "long": {
-    "path": "long.xml",
+    "path": "LONG.xml",
     "sha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
     "bytes": 6424909
   },
   "short": {
-    "path": "short.xml",
+    "path": "SHORT.xml",
     "sha256": "6a3f0e14040d825ee4123f6d3e7b134e7eb99831e26196a582fea676de4d6e28",
     "bytes": 807118
   },
-  "ranAt": "2026-10-12T19:34:55.403Z",
+  "ranAt": "2026-10-12T22:04:08.323Z",
   "scope": "plan comparison only — the same metered readings repriced; no behaviour counterfactual",
-  "total": 112,
-  "passed": 112,
+  "total": 120,
+  "passed": 120,
   "failed": 0,
   "checks": [
     {
@@ -51,6 +51,16 @@
       "name": "desktop-long: a negative figure is labelled as the alternatives costing more",
       "ok": true,
       "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
+    },
+    {
+      "name": "desktop-long: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
+      "ok": true,
+      "detail": "plan=−$251.89 headline=\"The alternatives would have cost more−$251.89The alternatives would have cost you $251.89 more on the very same readings.One lever only: the plan. Nothing on th\""
+    },
+    {
+      "name": "desktop-long: the sub-line states the headline's own magnitude in its own direction",
+      "ok": true,
+      "detail": "plan=−$251.89 clause=\"would have cost you $251.89 more\""
     },
     {
       "name": "desktop-long: the HINDSIGHT figure agrees with the switch track record above it",
@@ -203,6 +213,16 @@
       "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
     },
     {
+      "name": "desktop-short: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
+      "ok": true,
+      "detail": "plan=−$33.19 headline=\"The alternatives would have cost more−$33.19The alternatives would have cost you $33.19 more on the very same readings.One lever only: the plan. Nothing on this\""
+    },
+    {
+      "name": "desktop-short: the sub-line states the headline's own magnitude in its own direction",
+      "ok": true,
+      "detail": "plan=−$33.19 clause=\"would have cost you $33.19 more\""
+    },
+    {
       "name": "desktop-short: the HINDSIGHT figure agrees with the switch track record above it",
       "ok": true,
       "detail": "track record=$33.19 hindsight=−$33.19"
@@ -326,6 +346,16 @@
       "name": "mobile-long: a negative figure is labelled as the alternatives costing more",
       "ok": true,
       "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
+    },
+    {
+      "name": "mobile-long: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
+      "ok": true,
+      "detail": "plan=−$251.89 headline=\"The alternatives would have cost more−$251.89The alternatives would have cost you $251.89 more on the very same readings.One lever only: the plan. Nothing on th\""
+    },
+    {
+      "name": "mobile-long: the sub-line states the headline's own magnitude in its own direction",
+      "ok": true,
+      "detail": "plan=−$251.89 clause=\"would have cost you $251.89 more\""
     },
     {
       "name": "mobile-long: the HINDSIGHT figure agrees with the switch track record above it",
@@ -476,6 +506,16 @@
       "name": "mobile-short: a negative figure is labelled as the alternatives costing more",
       "ok": true,
       "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
+    },
+    {
+      "name": "mobile-short: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
+      "ok": true,
+      "detail": "plan=−$33.19 headline=\"The alternatives would have cost more−$33.19The alternatives would have cost you $33.19 more on the very same readings.One lever only: the plan. Nothing on this\""
+    },
+    {
+      "name": "mobile-short: the sub-line states the headline's own magnitude in its own direction",
+      "ok": true,
+      "detail": "plan=−$33.19 clause=\"would have cost you $33.19 more\""
     },
     {
       "name": "mobile-short: the HINDSIGHT figure agrees with the switch track record above it",

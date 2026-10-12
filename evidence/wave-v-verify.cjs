@@ -11,6 +11,10 @@
  *     chips are not expected to sum to it);
  *   • the surface is plan-only: no behaviour chip, no move list, no second
  *     headline and no hypothetical-usage wording anywhere in the panel;
+ *   • the headline's own SUB-LINE may not contradict it: a net saving says the
+ *     alternatives would have cost that much more, at the figure's own
+ *     magnitude — never a clamped "$0.00 more" under a negative figure
+ *     (t_97f4c904, where `Math.max(0, planMiss)` decided the copy);
  *   • seasonal rates are really per-period: the 2-year file carries summer
  *     bills, winter bills and bills that cross Nov 1, and the straddling ones
  *     say so;
@@ -186,6 +190,7 @@ async function readPanel(page) {
     }));
     return {
       planTotal: txt('[data-testid="hindsight-plan-total"]'),
+      headlineText: txt('[data-testid="hindsight-headline"]'),
       behaviourTotal: txt('[data-testid="hindsight-behaviour-total"]'),
       total: txt('[data-testid="hindsight-total"]'),
       lever: txt('[data-testid="hindsight-lever"]'),
@@ -240,6 +245,33 @@ async function auditExport({ browser, file, tag, viewport, expectPeriods, full =
       `${tag}: a negative figure is labelled as the alternatives costing more`,
       /alternatives would have cost more/i.test(flat(before.text)),
       flat(before.text).slice(0, 120),
+    );
+  }
+
+  // --- the sub-line may not contradict the headline it sits under ----------
+  // The subtitle is the sentence that explains the figure, and it used to be
+  // interpolated through `Math.max(0, planMiss)`: on a net SAVING the panel
+  // painted "cost you $0.00 more" under the headline "the alternatives would
+  // have cost more" (t_97f4c904). Read the painted headline BLOCK — no
+  // testid of its own is required, so the same check runs against a build that
+  // predates the fix — and hold the two clauses together.
+  if (plan !== null) {
+    const head = before.headlineText;
+    const clamped = plan < 0 ? /\$\s?0\.00\s+more/i.exec(head ?? '') : null;
+    check(
+      `${tag}: the headline's sub-line never claims "$0.00 more" beside a negative figure`,
+      head !== null && clamped === null,
+      `plan=${before.planTotal} headline="${(flat(head) ?? '').slice(0, 160)}"`,
+    );
+    const sentence =
+      plan < 0
+        ? /would have cost you [−-]?\$[\d,]+\.\d{2} more/i.exec(head ?? '')
+        : /cost you [−-]?\$[\d,]+\.\d{2} more/i.exec(head ?? '');
+    const clauseAmount = sentence === null ? null : Math.abs(oneMoney(sentence[0]) ?? NaN);
+    check(
+      `${tag}: the sub-line states the headline's own magnitude in its own direction`,
+      sentence !== null && clauseAmount !== null && near(clauseAmount, Math.abs(plan), 0.02),
+      `plan=${before.planTotal} clause="${sentence === null ? 'none' : sentence[0]}"`,
     );
   }
 

@@ -580,6 +580,7 @@
   "hindsight.eyebrow": "Mêmes relevés, recalculés · chaque période close",
   "hindsight.headlineEmpty": "Rien d'auditable pour l'instant — ce fichier contient {total} périodes, et une période exige un type de tarif connu ainsi que des relevés couvrant {coverage} % de sa durée avant de pouvoir chiffrer ses tarifs.",
   "hindsight.headlineNote": "Rester sur le tarif en vigueur vous a coûté {plan} de plus que le moins cher des deux autres, sur exactement les mêmes relevés.",
+  "hindsight.headlineNoteSaved": "Les autres tarifs vous auraient coûté {plan} de plus, sur exactement les mêmes relevés.",
   "hindsight.legendMeta": "{periods} périodes · {plan} comptées dans le total · {kwh} kWh de relevés à l'intérieur.",
   "hindsight.legendPlanSide": "Les solutions tarifaires et le contrôle de modèle à 1 $ proviennent du bilan de changements de tarif ci-dessus — ce panneau lit ces chiffres, il ne les recalcule pas.",
   "hindsight.legendScope": "Chaque chiffre compare ici les mêmes relevés, aux mêmes dates et dans les mêmes quantités, recalculés selon le tarif horaire, le tarif par paliers et le tarif ultra-bas de nuit, avec la grille en vigueur le jour de chaque relevé. Rien dans ce panneau ne modélise un changement du moment ou de la quantité de votre consommation.",
