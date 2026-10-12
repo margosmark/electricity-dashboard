@@ -208,4 +208,88 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
       `${failures.length}/${total} USAGE-header checks FAILED — the cost block is being clipped again:\n${failures.join('\n')}`,
     ).toEqual([]);
   });
+
+  /**
+   * The worst-case content the sweep above does NOT render (t_c3ed7004 Part C).
+   *
+   * The fix's acceptance names the row `TOTAL SELECTION COST (TOU)` +
+   * `$2,131.93`, because that is the content the clip was measured on (38px
+   * @1440 → 358px @1024). The Mark-shaped seed renders a much smaller
+   * selection cost at HEAD ($8.63), so at 1440 and 1383 the row has slack —
+   * which makes the counterfactual above GREEN on widths where the defect was
+   * actually reported: measured on the pre-fix DOM, the row overflows 0px at
+   * $8.63 and 38px at $2,131.93 at both of those widths. Two of the five sweep
+   * rows were therefore furniture.
+   *
+   * This is the same sweep, same helpers, same seed — with the row's own worst
+   * case written into it, and it requires the pre-fix counterfactual to bite at
+   * EVERY swept width rather than at "at least one".
+   */
+  test('the header row holds the worst-case cost string at every swept width', async ({ page }) => {
+    test.setTimeout(240_000);
+    await seedMarkShaped(page);
+    await page.getByTestId('tab-usage').click();
+    await page.getByTestId('chart-header-row').waitFor({ timeout: 30_000 });
+
+    const WIDE = '$2,131.93';
+
+    const failures: string[] = [];
+    const brokenAt: string[] = [];
+    const brokenWidths: string[] = [];
+    let total = 0;
+
+    for (const vp of CHART_HEADER_SWEEP) {
+      const label = `${vp.width}x${vp.height}`;
+      await page.setViewportSize(vp);
+      // Re-assert every iteration: a re-render on resize restores the seeded
+      // number, and the measurement after it would silently be the slack case.
+      await page.evaluate((wide: string) => {
+        const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
+        if (num) num.textContent = wide;
+      }, WIDE);
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      );
+
+      const m = await page.evaluate(measureChartHeaderGeometry);
+      expect(m.error, `the header row is measurable at ${label}`).toBeUndefined();
+      expect(m.cost?.text ?? '', `the row renders the worst case at ${label}`).toContain(WIDE);
+      const checks = chartHeaderChecks(label, m);
+      total += checks.length;
+      for (const c of checks) {
+        if (!c.ok) failures.push(`${c.name} — ${c.detail}`);
+        console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name} — ${c.detail}`);
+      }
+    }
+
+    for (const vp of CHART_HEADER_SWEEP) {
+      const label = `${vp.width}x${vp.height} worst-case pre-fix`;
+      await page.setViewportSize(vp);
+      await page.evaluate((wide: string) => {
+        document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
+        document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
+        const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
+        if (num) num.textContent = wide;
+      }, WIDE);
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      );
+      const pre = chartHeaderChecks(label, await page.evaluate(measureChartHeaderGeometry));
+      let brokeHere = false;
+      for (const c of pre) {
+        console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name} — ${c.detail}`);
+        if (!c.ok) { brokeHere = true; brokenAt.push(`${label}: ${c.name}`); }
+      }
+      if (brokeHere) brokenWidths.push(label);
+    }
+
+    expect(
+      failures,
+      `${failures.length}/${total} USAGE-header checks FAILED at the worst-case cost string:\n${failures.join('\n')}`,
+    ).toEqual([]);
+    expect(
+      brokenWidths,
+      `the counterfactual must reproduce the clip at EVERY swept width with ${WIDE}; it only broke at ${brokenWidths.length}/${CHART_HEADER_SWEEP.length}:\n${brokenAt.join('\n')}`,
+    ).toHaveLength(CHART_HEADER_SWEEP.length);
+  });
 });
