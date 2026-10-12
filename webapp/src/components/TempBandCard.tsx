@@ -45,8 +45,24 @@ const PAD = { top: 26, right: 12, bottom: 0, left: 44 };
 const BASELINE = 150;
 const SHARE_TOP = 166;
 const SHARE_MAX_H = 22;
-/** Cold bins are blue, hot bins red — the axis reads as a thermometer. */
-const BAR_FILL = ['#1d4ed8', '#2563eb', '#3b82f6', '#f59e0b', '#f97316', '#ef4444', '#b91c1c'];
+/** Cold bins are blue, hot bins red — the axis reads as a thermometer.
+ *
+ * One token per stop, not a literal list: the ramp is the card's AXIS, and on
+ * the dark card blue-700 / red-700 measured 2.66:1 / 2.76:1 — under the 3:1
+ * non-text floor. The tokens carry a lifted dark variant that keeps the hue
+ * direction and the step weight (see the `--temp-band-*` note in
+ * globals.css); LIGHT resolves to the byte-identical literals this replaced.
+ * The `¢/kWh` label inside each bar is painted in `--card` ink, which is the
+ * same seven ratios, so the dark ramp is also its AA floor. */
+const BAR_FILL = [
+  'var(--temp-band-1)',
+  'var(--temp-band-2)',
+  'var(--temp-band-3)',
+  'var(--temp-band-4)',
+  'var(--temp-band-5)',
+  'var(--temp-band-6)',
+  'var(--temp-band-7)',
+];
 
 /**
  * Wave U — the axis tick under each bar is prose ("-10 to 5", "over 30"),

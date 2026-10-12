@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { seedMarkShaped } from './mark-seed';
 
 /**
  * Mark's four mobile defects (t_fcbba376, built in t_c58f1459) — the
@@ -25,101 +26,14 @@ const VIEWPORTS = [
 ];
 
 /**
- * Seed 24 UsageSummary bills into localStorage. Runs in the page, so it must
- * be self-contained: no closures over Node values.
- *
- * Bills are anchored 24 months back from LAST month, so the fixture stays
- * "24 closed bills + an open current month" whenever the suite runs.
+ * The seed moved to mark-seed.ts: theme-contrast.spec.ts needs the SAME
+ * dashboard shape (its walk was passing over a page BillProjectionBanner
+ * never rendered on), and two copies of a fixture is two fixtures. Behaviour
+ * is unchanged — 24 bills, readings carried into the current month, the
+ * projection gate open — so every measurement below still starts from the
+ * page the spec screenshots were taken against.
  */
-function seedBills() {
-  const round2 = (n: number) => Math.round(n * 100) / 100;
-  const ymd = (ts: number) => new Date(ts * 1000).toISOString().slice(0, 10);
-  const meas = (v: number) => ({ scaled: round2(v), value: round2(v), powerOfTenMultiplier: 0, uom: 72 });
-  const item = (note: string, amount: number | null, measurement?: ReturnType<typeof meas> | null) => ({
-    note,
-    amount,
-    rawAmount: amount === null ? null : Math.round(amount * 10000),
-    itemKind: null,
-    unitCost: null,
-    measurement: measurement || null,
-  });
-
-  const now = new Date();
-  const bills = [];
-  for (let i = 0; i < 24; i++) {
-    // 24 monthly bills ending last month.
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1 - (23 - i), 1));
-    const y = end.getUTCFullYear();
-    const m = end.getUTCMonth();
-    const start = Date.UTC(y, m, 1) / 1000;
-    const duration = 28 * 86400;
-    const summer = m >= 4 && m <= 9;
-    const kwh = round2((summer ? 1250 : 880) + 120 * Math.sin(i * 1.7));
-    const rate = round2(8.5 + 2.2 * Math.sin(i * 0.9) + (summer ? 1.1 : 0));
-    const commodity = round2((kwh * rate) / 100);
-    const delivery = round2(36 + 0.0252 * kwh);
-    const regulatory = round2(45.15);
-    const total = round2(commodity + delivery + regulatory);
-    const tax = round2(total * 0.13);
-    bills.push({
-      source: 'UsageSummary',
-      start,
-      duration,
-      startDate: ymd(start),
-      endDate: ymd(start + duration),
-      days: 28,
-      billLastPeriod: duration,
-      billToDate: 0,
-      costAdditionalLastPeriod: 0,
-      currency: 124,
-      consumption: meas(kwh),
-      items: [
-        item('Total Electricity Charges', total, null),
-        item('Electricity Commodity', commodity, null),
-        item('Delivery', delivery, null),
-        item('Regulatory Charges', regulatory, null),
-        item('HST', tax, null),
-        item('Off Peak Usage', null, meas(round2(kwh * 0.55))),
-        item('Mid Peak Usage', null, meas(round2(kwh * 0.2))),
-        item('On Peak Usage', null, meas(round2(kwh * 0.25))),
-      ],
-    });
-  }
-  localStorage.setItem('usage_summaries', JSON.stringify(bills));
-
-  // Carry the example-data readings into the current month so the projection
-  // banner has a month to project (day-of-month gate opens after day 5).
-  const payload = JSON.parse(localStorage.getItem('energy_data_v2') || 'null');
-  if (payload && Array.isArray(payload.points) && payload.points.length > 0) {
-    let ts = payload.points[payload.points.length - 1].timestamp;
-    const target = Math.floor(Date.now() / 1000);
-    let guard = 0;
-    while (ts < target && guard++ < 500) {
-      ts += 6 * 3600;
-      payload.points.push({ timestamp: ts, usage_kwh: 0.28 + 0.18 * Math.sin(ts / 9000) });
-    }
-    localStorage.setItem('energy_data_v2', JSON.stringify(payload));
-  }
-  return { bills: bills.length, points: payload?.points?.length ?? 0 };
-}
-
-/** Land, take the example dataset, overlay the 24-bill fixture, reload. */
-async function seedAndReload(page: Page) {
-  await page.goto('/');
-  await page.getByTestId('try-example-data').click();
-  await page.getByTestId('totals-strip').waitFor({ timeout: 60_000 });
-  const seeded = await page.evaluate(seedBills);
-  expect(seeded.bills, 'fixture bills written').toBe(24);
-  expect(seeded.points, 'readings carried into the current month').toBeGreaterThan(8760);
-
-  await page.reload();
-  await page.getByTestId('totals-strip').waitFor({ timeout: 60_000 });
-  await page.getByTestId('efficiency-chart').waitFor({ timeout: 60_000 });
-  await page.getByTestId('bill-projection').waitFor({ timeout: 60_000 });
-  // The compensated size is measured by a ResizeObserver on the svg; give it
-  // a frame to land before anything reads a bounding box.
-  await page.waitForTimeout(500);
-}
+const seedAndReload = seedMarkShaped;
 
 /** D2 — clearance between the selected pill's hard blue shadow and its neighbour. */
 async function measureD2(page: Page) {

@@ -1,0 +1,343 @@
+{
+  "at": "2026-10-12T12:25:52.257Z",
+  "checks": [
+    {
+      "name": "ramp temp-band-1 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#1d4ed8 vs #1d4ed8"
+    },
+    {
+      "name": "ramp temp-band-2 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#2563eb vs #2563eb"
+    },
+    {
+      "name": "ramp temp-band-3 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#3b82f6 vs #3b82f6"
+    },
+    {
+      "name": "ramp temp-band-4 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#f59e0b vs #f59e0b"
+    },
+    {
+      "name": "ramp temp-band-5 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#f97316 vs #f97316"
+    },
+    {
+      "name": "ramp temp-band-6 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#ef4444 vs #ef4444"
+    },
+    {
+      "name": "ramp temp-band-7 (light) is byte-identical to the hardcoded literal",
+      "ok": true,
+      "detail": "#b91c1c vs #b91c1c"
+    },
+    {
+      "name": "ramp step weight (light) keeps its arc",
+      "ok": true,
+      "detail": "luminance 0.11 / 0.15 / 0.24 / 0.44 / 0.32 / 0.23 / 0.11 — peak at stop 4 (expected 4)"
+    },
+    {
+      "name": "ramp temp-band-1 (dark) on the dark card",
+      "ok": true,
+      "detail": "#3b82f6 on #0f172a = 4.85:1 (graphics floor 3:1, in-bar label 4.5:1; was 2.66:1)"
+    },
+    {
+      "name": "ramp temp-band-2 (dark) on the dark card",
+      "ok": true,
+      "detail": "#60a5fa on #0f172a = 7.02:1 (graphics floor 3:1, in-bar label 4.5:1; was 3.45:1)"
+    },
+    {
+      "name": "ramp temp-band-3 (dark) on the dark card",
+      "ok": true,
+      "detail": "#93c5fd on #0f172a = 9.9:1 (graphics floor 3:1, in-bar label 4.5:1; was 4.85:1)"
+    },
+    {
+      "name": "ramp temp-band-4 (dark) on the dark card",
+      "ok": true,
+      "detail": "#fbbf24 on #0f172a = 10.69:1 (graphics floor 3:1, in-bar label 4.5:1; was 8.31:1)"
+    },
+    {
+      "name": "ramp temp-band-5 (dark) on the dark card",
+      "ok": true,
+      "detail": "#fb923c on #0f172a = 7.89:1 (graphics floor 3:1, in-bar label 4.5:1; was 6.37:1)"
+    },
+    {
+      "name": "ramp temp-band-6 (dark) on the dark card",
+      "ok": true,
+      "detail": "#f87171 on #0f172a = 6.45:1 (graphics floor 3:1, in-bar label 4.5:1; was 4.74:1)"
+    },
+    {
+      "name": "ramp temp-band-7 (dark) on the dark card",
+      "ok": true,
+      "detail": "#ef4444 on #0f172a = 4.74:1 (graphics floor 3:1, in-bar label 4.5:1; was 2.76:1)"
+    },
+    {
+      "name": "ramp step weight (dark) keeps its arc",
+      "ok": true,
+      "detail": "luminance 0.24 / 0.36 / 0.53 / 0.58 / 0.41 / 0.33 / 0.23 — peak at stop 4 (expected 4)"
+    },
+    {
+      "name": "EfficiencyCard --bad (light) on --card",
+      "ok": true,
+      "detail": "#b91c1c on #ffffff = 6.47:1"
+    },
+    {
+      "name": "EfficiencyCard --bad (light) on --season-winter",
+      "ok": true,
+      "detail": "#b91c1c on #e2e8f0 = 5.25:1"
+    },
+    {
+      "name": "EfficiencyCard --bad (light) on --season-summer",
+      "ok": true,
+      "detail": "#b91c1c on #fef3c7 = 5.81:1"
+    },
+    {
+      "name": "EfficiencyCard --info (light) on --card",
+      "ok": true,
+      "detail": "#1d4ed8 on #ffffff = 6.7:1"
+    },
+    {
+      "name": "EfficiencyCard --info (light) on --season-winter",
+      "ok": true,
+      "detail": "#1d4ed8 on #e2e8f0 = 5.44:1"
+    },
+    {
+      "name": "EfficiencyCard --info (light) on --season-summer",
+      "ok": true,
+      "detail": "#1d4ed8 on #fef3c7 = 6.02:1"
+    },
+    {
+      "name": "EfficiencyCard --bad (dark) on --card",
+      "ok": true,
+      "detail": "#f87171 on #0f172a = 6.45:1"
+    },
+    {
+      "name": "EfficiencyCard --bad (dark) on --season-winter",
+      "ok": true,
+      "detail": "#f87171 on #1e293b = 5.29:1"
+    },
+    {
+      "name": "EfficiencyCard --bad (dark) on --season-summer",
+      "ok": true,
+      "detail": "#f87171 on color-mix(in srgb, #f59e0b 14%, var(--card)) = 5.13:1"
+    },
+    {
+      "name": "EfficiencyCard --info (dark) on --card",
+      "ok": true,
+      "detail": "#60a5fa on #0f172a = 7.02:1"
+    },
+    {
+      "name": "EfficiencyCard --info (dark) on --season-winter",
+      "ok": true,
+      "detail": "#60a5fa on #1e293b = 5.75:1"
+    },
+    {
+      "name": "EfficiencyCard --info (dark) on --season-summer",
+      "ok": true,
+      "detail": "#60a5fa on color-mix(in srgb, #f59e0b 14%, var(--card)) = 5.58:1"
+    },
+    {
+      "name": "projection boxes --ink on --card (light)",
+      "ok": true,
+      "detail": "#000000 on #ffffff = 21:1"
+    },
+    {
+      "name": "projection caption --accent-ink on emerald-400 (light)",
+      "ok": true,
+      "detail": "#000000 on #34d399 = 10.92:1"
+    },
+    {
+      "name": "projection boxes --ink on --card (dark)",
+      "ok": true,
+      "detail": "#f8fafc on #0f172a = 17.06:1"
+    },
+    {
+      "name": "projection caption --accent-ink on emerald-400 (dark)",
+      "ok": true,
+      "detail": "#000000 on #34d399 = 10.92:1"
+    },
+    {
+      "name": "@media print declares temp-band-1",
+      "ok": true,
+      "detail": "#1d4ed8 vs light literal #1d4ed8"
+    },
+    {
+      "name": "@media print declares temp-band-2",
+      "ok": true,
+      "detail": "#2563eb vs light literal #2563eb"
+    },
+    {
+      "name": "@media print declares temp-band-3",
+      "ok": true,
+      "detail": "#3b82f6 vs light literal #3b82f6"
+    },
+    {
+      "name": "@media print declares temp-band-4",
+      "ok": true,
+      "detail": "#f59e0b vs light literal #f59e0b"
+    },
+    {
+      "name": "@media print declares temp-band-5",
+      "ok": true,
+      "detail": "#f97316 vs light literal #f97316"
+    },
+    {
+      "name": "@media print declares temp-band-6",
+      "ok": true,
+      "detail": "#ef4444 vs light literal #ef4444"
+    },
+    {
+      "name": "@media print declares temp-band-7",
+      "ok": true,
+      "detail": "#b91c1c vs light literal #b91c1c"
+    }
+  ],
+  "notes": [
+    {
+      "name": "ramp temp-band-1 (light) measures 6.7:1 on white",
+      "detail": "#1d4ed8 on #ffffff = 6.7:1"
+    },
+    {
+      "name": "ramp temp-band-2 (light) measures 5.17:1 on white",
+      "detail": "#2563eb on #ffffff = 5.17:1"
+    },
+    {
+      "name": "ramp temp-band-3 (light) measures 3.68:1 on white",
+      "detail": "#3b82f6 on #ffffff = 3.68:1"
+    },
+    {
+      "name": "ramp temp-band-4 (light) measures 2.15:1 on white",
+      "detail": "#f59e0b on #ffffff = 2.15:1"
+    },
+    {
+      "name": "ramp temp-band-5 (light) measures 2.8:1 on white",
+      "detail": "#f97316 on #ffffff = 2.8:1"
+    },
+    {
+      "name": "ramp temp-band-6 (light) measures 3.76:1 on white",
+      "detail": "#ef4444 on #ffffff = 3.76:1"
+    },
+    {
+      "name": "ramp temp-band-7 (light) measures 6.47:1 on white",
+      "detail": "#b91c1c on #ffffff = 6.47:1"
+    },
+    {
+      "name": "PRE-EXISTING (light, untouched): light ramp steps under the 3:1 graphics floor",
+      "detail": "temp-band-4 #f59e0b = 2.15:1 on white · temp-band-5 #f97316 = 2.8:1 on white — dark-mode-only card; needs a light-side decision (Mark sign-off), filed as a follow-up"
+    },
+    {
+      "name": "projection caption BEFORE (--ink-2 on emerald-400, light) — the defect",
+      "detail": "#475569 on #34d399 = 3.94:1 (now 10.92:1)"
+    },
+    {
+      "name": "projection boxes BEFORE (inherited --accent-ink on --card, light) — the defect",
+      "detail": "#000000 on #ffffff = 21:1 (now 21:1)"
+    },
+    {
+      "name": "projection caption BEFORE (--ink-2 on emerald-400, dark) — the defect",
+      "detail": "#cbd5e1 on #34d399 = 1.29:1 (now 10.92:1)"
+    },
+    {
+      "name": "projection boxes BEFORE (inherited --accent-ink on --card, dark) — the defect",
+      "detail": "#000000 on #0f172a = 1.18:1 (now 17.06:1)"
+    }
+  ],
+  "failures": [],
+  "ramp": [
+    {
+      "token": "temp-band-1",
+      "light": "#1d4ed8",
+      "dark": "#3b82f6",
+      "darkBefore": "#1d4ed8",
+      "lightRatioOnWhite": 6.7,
+      "darkBeforeRatio": 2.66,
+      "darkRatio": 4.85
+    },
+    {
+      "token": "temp-band-2",
+      "light": "#2563eb",
+      "dark": "#60a5fa",
+      "darkBefore": "#2563eb",
+      "lightRatioOnWhite": 5.17,
+      "darkBeforeRatio": 3.45,
+      "darkRatio": 7.02
+    },
+    {
+      "token": "temp-band-3",
+      "light": "#3b82f6",
+      "dark": "#93c5fd",
+      "darkBefore": "#3b82f6",
+      "lightRatioOnWhite": 3.68,
+      "darkBeforeRatio": 4.85,
+      "darkRatio": 9.9
+    },
+    {
+      "token": "temp-band-4",
+      "light": "#f59e0b",
+      "dark": "#fbbf24",
+      "darkBefore": "#f59e0b",
+      "lightRatioOnWhite": 2.15,
+      "darkBeforeRatio": 8.31,
+      "darkRatio": 10.69
+    },
+    {
+      "token": "temp-band-5",
+      "light": "#f97316",
+      "dark": "#fb923c",
+      "darkBefore": "#f97316",
+      "lightRatioOnWhite": 2.8,
+      "darkBeforeRatio": 6.37,
+      "darkRatio": 7.89
+    },
+    {
+      "token": "temp-band-6",
+      "light": "#ef4444",
+      "dark": "#f87171",
+      "darkBefore": "#ef4444",
+      "lightRatioOnWhite": 3.76,
+      "darkBeforeRatio": 4.74,
+      "darkRatio": 6.45
+    },
+    {
+      "token": "temp-band-7",
+      "light": "#b91c1c",
+      "dark": "#ef4444",
+      "darkBefore": "#b91c1c",
+      "lightRatioOnWhite": 6.47,
+      "darkBeforeRatio": 2.76,
+      "darkRatio": 4.74
+    }
+  ],
+  "efficiencyCard": {
+    "dark": {
+      "bad": {
+        "onCard": 6.45,
+        "onWinterBand": 5.29,
+        "onSummerBand": 5.13
+      },
+      "info": {
+        "onCard": 7.02,
+        "onWinterBand": 5.75,
+        "onSummerBand": 5.58
+      }
+    },
+    "light": {
+      "bad": {
+        "onCard": 6.47,
+        "onWinterBand": 5.25,
+        "onSummerBand": 5.81
+      },
+      "info": {
+        "onCard": 6.7,
+        "onWinterBand": 5.44,
+        "onSummerBand": 6.02
+      }
+    }
+  },
+  "printRampLight": true
+}

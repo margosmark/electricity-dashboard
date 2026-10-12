@@ -243,14 +243,19 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   { token: 'accent-orange', on: ['inv'], min: 4.5 },
   { token: 'accent-emerald', on: ['inv'], min: 4.5 },
   // Verdict colours on the receipt card, and the anomalies heading on its
-  // slab. Both flip per theme and both were measured in the spec.
+  // slab. Both flip per theme and both were measured in the spec. EfficiencyCard
+  // paints BOTH tokens as chart ink over its winter/summer season bands, and
+  // the rate tick is 4.5:1 TEXT on whichever band it crosses — so the bands are
+  // surfaces here, not decoration. Dark lifts them to 5.29:1 (bad) / 5.75:1
+  // (info) on winter and 5.13:1 / 5.58:1 on summer; LIGHT clears 4.5:1 on
+  // both (5.25/5.44 winter, 5.81/6.02 summer) since the light bands are pale.
   { token: 'good', on: ['card', 'good-soft'], min: 4.5 },
-  { token: 'bad', on: ['card', 'bad-soft'], min: 4.5 },
+  { token: 'bad', on: ['card', 'bad-soft', 'season-winter', 'season-summer'], min: 4.5 },
   // The ALERT family — coloured text that is not a verdict (the export
   // button, import warnings, TOU/ULO rate labels, status lines). Every one
   // of these was a Tailwind hue pinned to the light theme; the row asserts
   // the pairing that actually paints, on the card AND on its own soft slab.
-  { token: 'info', on: ['card', 'info-soft'], min: 4.5 },
+  { token: 'info', on: ['card', 'info-soft', 'season-winter', 'season-summer'], min: 4.5 },
   { token: 'warn', on: ['card', 'warn-soft'], min: 4.5 },
   { token: 'ulo', on: ['card'], min: 4.5 },
   // The two PILL pairs: their background is a slab of its own, so the ink
@@ -285,6 +290,35 @@ const NON_TEXT_ON_SURFACE: { token: string; on: string[]; min: number }[] = [
 ];
 
 const THEMES: Theme[] = ['light', 'dark'];
+
+/**
+ * TempBandCard's cold→hot thermometer ramp: the one chart in the app whose
+ * colour carries MEANING rather than identity, so it can neither be
+ * redeclared direction-stable (the heatmap's trick) nor left alone (the two
+ * ends are near the card's own luminance: 2.66:1 and 2.76:1 on dark).
+ *
+ * The budget is therefore two-sided:
+ *   - LIGHT must be BYTE-IDENTICAL to the literals the component used to
+ *     hardcode — the fix is a dark-mode fix and must cost light nothing.
+ *   - DARK must clear 3:1 as GRAPHICS on the card, and 4.5:1 because the
+ *     `¢/kWh` label sits INSIDE its own bar in --card ink, so each fill is
+ *     also a text background. Same seven numbers either way.
+ * Step ORDER is asserted too: the ramp is the card's axis, so a stop out of
+ * luminance order would read as the wrong temperature, not as a colour tweak.
+ */
+const TEMP_RAMP_LIGHT_LITERALS = [
+  '#1d4ed8', // blue-700
+  '#2563eb', // blue-600
+  '#3b82f6', // blue-500
+  '#f59e0b', // amber-500
+  '#f97316', // orange-500
+  '#ef4444', // red-500
+  '#b91c1c', // red-700
+];
+const TEMP_RAMP = TEMP_RAMP_LIGHT_LITERALS.map((_, i) => `temp-band-${i + 1}`);
+/** The step-weight arc: it rises to the amber stop (4) and falls to the deep
+ *  red end, in BOTH themes. Peaks at the same index or the "thermometer" lies. */
+const RAMP_PEAK_INDEX = 3;
 
 describe('dark mode — the a11y contrast budget (spec §2)', () => {
   it('declares every token in both theme blocks', () => {
@@ -323,6 +357,41 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
           ratio,
           `--${token} (${theme}) on --${surface}: ${ratio.toFixed(2)}:1`,
         ).toBeGreaterThanOrEqual(min);
+      }
+    }
+  });
+
+  it('keeps the thermometer ramp byte-identical in LIGHT (zero light cost)', () => {
+    TEMP_RAMP.forEach((token, i) => {
+      expect(
+        declared(token, 'light'),
+        `--${token} (light) must be the literal TempBandCard hardcoded`,
+      ).toBe(TEMP_RAMP_LIGHT_LITERALS[i]);
+    });
+  });
+
+  it('lifts every thermometer stop clear of the dark card (3:1 graphics, 4.5:1 for the in-bar label)', () => {
+    for (const token of TEMP_RAMP) {
+      const ratio = contrast(declared(token, 'dark'), declared('card', 'dark'), 'dark');
+      expect(
+        ratio,
+        `--${token} on --card (dark): ${ratio.toFixed(2)}:1 — the ¢/kWh label rides this fill in --card ink`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('keeps the ramp step weight: the same luminance arc and peak stop in both themes', () => {
+    for (const theme of THEMES) {
+      const lums = TEMP_RAMP.map((t) => luminance(rgba(declared(t, theme), theme)));
+      for (let i = 1; i <= RAMP_PEAK_INDEX; i++) {
+        expect(lums[i], `${theme} stop ${i + 1} must be brighter than stop ${i}`).toBeGreaterThan(
+          lums[i - 1],
+        );
+      }
+      for (let i = RAMP_PEAK_INDEX + 1; i < lums.length; i++) {
+        expect(lums[i], `${theme} stop ${i + 1} must be darker than stop ${i}`).toBeLessThan(
+          lums[i - 1],
+        );
       }
     }
   });
