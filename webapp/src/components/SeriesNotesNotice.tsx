@@ -8,10 +8,11 @@
  * single-UsagePoint file NEVER renders the picker, so the user was left
  * looking at a smaller kWh total with nothing on screen to explain it.
  *
- * Presentation only, and deliberately dumb: it prints `SeriesNote.detail`
- * VERBATIM (the same sentences the picker and the diagnostics panels show)
- * and hands the dismiss click back to the caller. Dismissing clears this row;
- * the readings and the notes themselves are not its business.
+ * Presentation only, and deliberately dumb: it prints each note through
+ * `seriesNoteText()` — the same sentences the picker and the diagnostics panels
+ * show, in the reader's own language — and hands the dismiss click back to the
+ * caller. Dismissing clears this row; the readings and the notes themselves are
+ * not its business.
  */
 
 "use client";
@@ -19,6 +20,7 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type { SeriesNote } from '@/lib/greenbutton/series';
 import { useTranslation } from '@/i18n';
+import { seriesNoteText } from '@/i18n/seriesNote';
 
 export function SeriesNotesNotice({
   notes,
@@ -54,7 +56,7 @@ export function SeriesNotesNotice({
         >
           {notes.map((note, i) => (
             <li key={`${note.code}-${i}`} data-testid="series-note-detail">
-              {note.detail}
+              {seriesNoteText(note, t)}
             </li>
           ))}
         </ul>

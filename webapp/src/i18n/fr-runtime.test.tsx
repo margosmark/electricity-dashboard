@@ -44,8 +44,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Dashboard from '@/components/Dashboard';
+import SeriesNotesNotice from '@/components/SeriesNotesNotice';
 import { fmtDate, getLocale, setLocale } from '@/i18n';
 import { parseGreenButtonFeed } from '@/lib/energy';
+import { UnitMultiplierKind, UnitSymbolKind } from '@/lib/greenbutton/espiUnits';
 import { ENERGY_KEY_V2, BILLING_DAY_KEY } from '@/lib/storage';
 import { USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY } from '@/hooks/useDashboard';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
@@ -112,6 +114,15 @@ const CANONICAL_WORDS = new Set([
   // The active-plan chip and the switch timeline legend print the plan CODE,
   // which is the id the file, the storage and the classifier all use.
   ...['tier', 'oeb', 'c', 'h', 'mo', 'yr', 'an', 'kwh/mo', 'kwh/an'],
+  // …and the ESPI vocabulary the ingestion prints INSIDE its own sentences: the
+  // unit symbol and multiplier name `uomName()`/`multiplierName()` read off the
+  // ReadingType ("VArh (uom 73)", "k (10^3)"), plus the schema's `uom` field
+  // name. Imported from the module that prints them, so this cannot drift into
+  // an exemption for English prose — a unit is a canonical glyph, a sentence is
+  // not (t_12d39853).
+  ...Object.values(UnitSymbolKind).flatMap((s) => words(String(s))),
+  ...Object.values(UnitMultiplierKind).flatMap((s) => words(String(s))),
+  'uom',
 ]);
 
 /**
@@ -130,7 +141,10 @@ for (const summary of FEED.summaries) {
 }
 
 /** Words a French page may print because they are data or canonical codes. */
-const exemptWord = (w: string) => CANONICAL_WORDS.has(w.toLowerCase()) || DATA_VOCAB.has(w.toLowerCase());
+const exemptWord = (w: string, extra?: ReadonlySet<string>) =>
+  CANONICAL_WORDS.has(w.toLowerCase()) ||
+  DATA_VOCAB.has(w.toLowerCase()) ||
+  (extra?.has(w.toLowerCase()) ?? false);
 
 /* -------------------------------------------------------------------------- *
  * The detector
@@ -166,7 +180,7 @@ export function textNodes(root: HTMLElement): Node[] {
 }
 
 /** The three rules, applied to whatever is mounted. */
-export function sweep(frRoot: HTMLElement): Hit[] {
+export function sweep(frRoot: HTMLElement, extraVocab?: ReadonlySet<string>): Hit[] {
   const hits: Hit[] = [];
   for (const { where, text } of textNodes(frRoot)) {
     // The utility's own line name, printed verbatim: data, not chrome.
@@ -184,7 +198,9 @@ export function sweep(frRoot: HTMLElement): Hit[] {
       hits.push({ rule: 'raw-key', text, detail: `${where}: t() fell through to the key` });
       continue;
     }
-    const english = words(text).filter((w) => w.length >= 3 && englishOnly(w) && !exemptWord(w));
+    const english = words(text).filter(
+      (w) => w.length >= 3 && englishOnly(w) && !exemptWord(w, extraVocab),
+    );
     if (english.length > 0) {
       hits.push({ rule: 'english', text, detail: `${where}: English-only word(s) ${[...new Set(english)].join(', ')}` });
     }
@@ -319,6 +335,159 @@ describe('the fr-CA page the fixture paints', () => {
     // see it, or the French runs above were passing for the wrong reason.
     expect(parity.size).toBeGreaterThan(30);
   }, 120_000);
+});
+
+/* -------------------------------------------------------------------------- *
+ * The refusal notice — the surface #91 added, and the one that shipped an
+ * English sentence inside French chrome (t_12d39853).
+ *
+ * The notice paints `SeriesNote`s the PARSER composes in English. The dashboard
+ * sweep above never reaches it: the notice only exists after an import commits,
+ * and the fixture is seeded straight into storage. These tests mount the same
+ * component with the notes a real parse produces, so the class cannot come back
+ * through the sibling sentences either.
+ * -------------------------------------------------------------------------- */
+
+type RtSpec = { uom?: number | null; mult?: number; commodity?: number; fd?: number | null; kind?: number; ab?: number };
+
+function noticeRt(spec: RtSpec): string {
+  const el = (n: string, v: number) => `<espi:${n}>${v}</espi:${n}>`;
+  return `<espi:ReadingType>${[
+    spec.uom === null ? '' : el('uom', spec.uom ?? 72),
+    el('powerOfTenMultiplier', spec.mult ?? 0),
+    el('accumulationBehaviour', spec.ab ?? 4),
+    el('commodity', spec.commodity ?? 1),
+    spec.fd === null ? '' : el('flowDirection', spec.fd ?? 1),
+    el('kind', spec.kind ?? 12),
+    el('intervalLength', 3600),
+  ].join('')}</espi:ReadingType>`;
+}
+
+function noticeEntry(self: string, body: string, related: string[] = []): string {
+  return `<entry><link rel="self" href="${self}"/>${related
+    .map((h) => `<link rel="related" href="${h}"/>`)
+    .join('')}<content>${body}</content></entry>`;
+}
+
+function noticeBlock(start: number, value: number | string): string {
+  return `<espi:IntervalBlock><espi:interval><espi:duration>3600</espi:duration><espi:start>${start}</espi:start></espi:interval><espi:IntervalReading><espi:timePeriod><espi:duration>3600</espi:duration><espi:start>${start}</espi:start></espi:timePeriod><espi:value>${value}</espi:value></espi:IntervalReading></espi:IntervalBlock>`;
+}
+
+const NT = 1790000000;
+
+function noticePoint(up: string, mr: string, rtId: string, spec: RtSpec, value: number, related = true): string[] {
+  return [
+    noticeEntry(`/ReadingType/${rtId}`, noticeRt(spec)),
+    noticeEntry(`/UsagePoint/${up}/MeterReading/${mr}`, '<espi:MeterReading/>', related ? [`/ReadingType/${rtId}`] : []),
+    noticeEntry(`/UsagePoint/${up}/MeterReading/${mr}/IntervalBlock/ib`, noticeBlock(NT, value)),
+  ];
+}
+
+function noticeDoc(parts: (string | string[])[]): string {
+  return `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">${parts
+    .flat()
+    .join('')}</feed>`;
+}
+
+/** One document per sentence the ingestion can put in the notice. */
+const NOTICE_DOCS: Record<string, string> = {
+  unsupportedReactive: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-varh', { uom: 73, mult: 3 }, 4000)]),
+  unsupportedGas: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-gas', { commodity: 7 }, 1000)]),
+  unsupportedRegister: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-reg', { ab: 1 }, 1000)]),
+  unsupportedReverse: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-rev', { fd: 19 }, 1000)]),
+  convertedPower: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-pw', { uom: 38, kind: 37 }, 1000)]),
+  refusedReading: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-neg', {}, -5)]),
+  assumedDirection: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-nofd', { fd: null }, 1000)]),
+  unlinkedReadingType: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-lone', {}, 1000, false)]),
+  legacyNoUom: noticeDoc([noticePoint('up-B', 'mr-B1', 'rt-none', { uom: null }, 1000)]),
+  combinedSeries: noticeDoc([
+    noticePoint('up-B', 'mr-B1', 'rt-cons', {}, 1500),
+    noticePoint('up-B', 'mr-B2', 'rt-c2', { mult: 3 }, 1000),
+  ]),
+  ambiguousInline: noticeDoc([
+    noticeEntry(
+      '/UsagePoint/up-X/MeterReading/mr-X/IntervalBlock/ib',
+      `${noticeRt({ uom: 72 })}${noticeRt({ uom: 73 })}${noticeBlock(NT, 1000)}`,
+    ),
+  ]),
+};
+
+/** Every note a real parse puts on the screen — the fixture's own, plus each sibling. */
+const NOTICE_NOTES = [
+  ...FEED.notes,
+  ...Object.values(NOTICE_DOCS).flatMap((xml) => parseGreenButtonFeed(xml).notes),
+];
+
+/**
+ * The FILE'S OWN series identity, read out of the documents this sweep paints
+ * (`up-B · mr-B1 · Wh (uom 72)`) — the same rule as the bill line notes above,
+ * and it applies to THIS sweep only.
+ *
+ * A meter id, a ReadingType id and the unit the file declared are the file's
+ * data: a French sentence may quote them verbatim, exactly as the
+ * "every line item as the utility wrote it" panel does. The sentence AROUND
+ * them is chrome, and stays subject to all three rules — which is why this
+ * vocabulary is passed in per-sweep rather than added to the global sets, and
+ * why the identity is read from the parse instead of hand-listed.
+ */
+function identityVocab(docs: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const xml of docs) {
+    for (const g of parseGreenButtonFeed(xml).groups) {
+      for (const s of g.series) for (const w of words(s.label)) out.add(w.toLowerCase());
+    }
+  }
+  return out;
+}
+
+const NOTICE_IDENTITY = identityVocab([XML, ...Object.values(NOTICE_DOCS)]);
+
+/**
+ * Mount the notice alone. No `I18nProvider`: it restores the STORED locale in
+ * an effect, and this file's `seed()` pins that to `en` for the dashboard — so
+ * these tests drive `setLocale` directly, exactly as the sweeps above do.
+ */
+const paintNotice = (notes: typeof NOTICE_NOTES) =>
+  render(<SeriesNotesNotice notes={notes} onDismiss={() => {}} />);
+
+describe('the refusal notice on the French page', () => {
+  it('cold: every refusal the parser can word is painted in French', () => {
+    setLocale('fr');
+    const { container } = paintNotice(NOTICE_NOTES);
+
+    // The notice is really on the page (one bullet per refusal), and it carries
+    // the sentence the deployed build shipped in English.
+    const bullets = screen.getAllByTestId('series-note-detail').map((n) => n.textContent ?? '');
+    expect(bullets.length).toBe(NOTICE_NOTES.length);
+    expect(bullets.length).toBeGreaterThanOrEqual(12);
+    expect(bullets.some((b) => b.startsWith('Aucun ReadingType ne décrivait'))).toBe(true);
+
+    expect(sweep(container, NOTICE_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('flip: the toggle re-paints the notice, it does not keep the English it started with', async () => {
+    setLocale('en');
+    const { container } = paintNotice(NOTICE_NOTES);
+    const english = screen.getAllByTestId('series-note-detail').map((n) => n.textContent ?? '');
+    // The English page IS the catalog rendered — the detector has to see it.
+    expect(sweep(container, NOTICE_IDENTITY).map((h) => h.rule)).toContain('parity');
+
+    await act(async () => setLocale('fr'));
+    const french = screen.getAllByTestId('series-note-detail').map((n) => n.textContent ?? '');
+    expect(french).not.toEqual(english);
+    expect(sweep(container, NOTICE_IDENTITY)).toEqual([]);
+  }, 60_000);
+
+  it('sensitivity: the ENGLISH detail this card was filed about is what the rule catches', () => {
+    // The exact sentence qa found painted on the live fr page (7fadf53). Nothing
+    // about the identity exemption may let it through: the sentence is chrome.
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<li>No ReadingType described 2856 reading(s), so they were read as watt-hours scaled by the document-wide multiplier — the legacy compatibility path. The timestamps are exact; the unit is an assumption, not a declaration.</li>';
+    document.body.appendChild(host);
+    const hits = sweep(host, NOTICE_IDENTITY);
+    expect(hits.map((h) => h.rule)).toContain('english');
+  });
 });
 
 describe('the sweep itself (planted failures)', () => {
