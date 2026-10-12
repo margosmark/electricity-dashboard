@@ -58,18 +58,49 @@ describe("x-gb-process proxy", () => {
     expect(csp).toContain("script-src 'self'");
   });
 
-  it("omits upgrade-insecure-requests off https so local http dev still works", () => {
-    // No request (as the x-gb-process test calls it) means "not a known
-    // origin" — treated as secure, the production shape.
-    expect(proxy().headers.get("Content-Security-Policy")).toContain("upgrade-insecure-requests");
+  it("ships upgrade-insecure-requests ONLY for an inventoried https origin", () => {
+    const cspFor = (url: string) =>
+      proxy(new NextRequest(url)).headers.get("Content-Security-Policy");
 
-    const httpReq = new NextRequest("http://localhost:3939/");
-    expect(proxy(httpReq).headers.get("Content-Security-Policy")).not.toContain(
+    // The inventory (OPERATIONS.md §Public URL — the one origin whose TLS is
+    // handed over).
+    expect(cspFor("https://electricity.markarslan.ca/")).toContain(
       "upgrade-insecure-requests",
     );
 
-    const httpsReq = new NextRequest("https://electricity.markarslan.ca/");
-    expect(proxy(httpsReq).headers.get("Content-Security-Policy")).toContain(
+    // Everything else gets the policy WITHOUT the directive: the LAN surface
+    // this shipped broken, localhost, and a bare no-request call.
+    for (const url of [
+      "http://10.10.11.110:3939/",
+      "http://localhost:3939/",
+      "http://127.0.0.1:3939/",
+    ]) {
+      expect(cspFor(url), url).not.toContain("upgrade-insecure-requests");
+    }
+    expect(proxy().headers.get("Content-Security-Policy")).not.toContain(
+      "upgrade-insecure-requests",
+    );
+  });
+
+  it("REGRESSION: decides by host, never by the request URL's scheme (the :3939 outage)", () => {
+    // 7ee0375 read the scheme off `request.url`. Behind edge-router nginx that
+    // is ALWAYS https — it sets X-Forwarded-Proto for the whole deployment and
+    // cannot distinguish a request forwarded from the public TLS edge from a
+    // direct plaintext LAN hit — so a plaintext visitor received
+    // `upgrade-insecure-requests`, the browser rewrote all 15 subresources to
+    // https://10.10.11.110:3939/ (nothing listens there), and the app rendered
+    // ZERO interactive elements with hydration never running. An
+    // uninventoried host must therefore stay upgrade-free EVEN when the URL
+    // says https, which is exactly the shape the outage arrived in.
+    const httpsShapedLanHit = new NextRequest("https://10.10.11.110:3939/");
+    expect(proxy(httpsShapedLanHit).headers.get("Content-Security-Policy")).not.toContain(
+      "upgrade-insecure-requests",
+    );
+
+    // ...and the inventoried origin keeps it even when the URL says http,
+    // because the Host is the signal we trust.
+    const inventoried = new NextRequest("http://electricity.markarslan.ca/");
+    expect(proxy(inventoried).headers.get("Content-Security-Policy")).toContain(
       "upgrade-insecure-requests",
     );
   });
