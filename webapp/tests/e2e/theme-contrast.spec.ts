@@ -265,38 +265,20 @@ const fmt = (rows: Finding[]) =>
   rows.map((r) => `${r.ratio}:1 (need ${r.need}) ${r.px}px ${r.color} on ${r.bg} "${r.text}" — ${r.cls}`).join('\n');
 
 /**
- * The ledger is keyed by (panel, colours) — see `ledgerKeyOf` below. The old
- * pair-only key is gone on purpose: it let the same colours pass anywhere on
- * the page once they had been pinned in one card.
- */
-
-/**
- * THE PINNED DEBT LEDGER (t_fbf590fa).
+ * THE PINNED DEBT LEDGER — now EMPTY, in both themes (t_fbf590fa → t_3e571ddb).
  *
  * Seeding the walk with the Mark-shaped dashboard — the fix for the gate hole
- * where a data-gated card was never in the DOM — immediately exposed this: 52
- * painted pairings under AA in dark and 10 in light, on the fixed light-soft
- * slabs (`bg-yellow-400`'s #fdc700, the amber-200 note strip, emerald-50,
- * blue-50, yellow-50) that do NOT flip with the theme while their ink does.
+ * where a data-gated card was never in the DOM — exposed 52 painted pairings
+ * under AA in dark and 10 in light, on the fixed light-soft slabs
+ * (`bg-yellow-400`'s #fdc700, the amber-200 note strip, emerald-50, blue-50,
+ * yellow-50) that do NOT flip with the theme while their ink does. They were
+ * PINNED by (foreground, background) pair, not by count, so the hole stayed
+ * closed, a NEW pairing still failed the gate, and the debt was enumerated in
+ * the repo.
  *
- * Those are NOT this card's defects: the card is the thermometer ramp plus
- * three named pairings, and every one of the 62 is a slab that predates it
- * (the same page measured them before this diff). Fixing them changes LIGHT
- * too (the light leg of the ledger is `--ink-3` at 3.0–4.4:1 on the same
- * slabs), so it needs its own colour call and Mark's sign-off — filed as a
- * follow-up card, assigned to @designer, rather than half-fixed here.
- *
- * They are therefore PINNED, by (foreground, background) pair and not by
- * count, so that:
- *   - the hole stays closed (the walk renders the whole Mark-shaped app),
- *   - a NEW pairing on top of them still fails this gate, and
- *   - the debt is enumerated in the repo instead of living in a comment.
- * The ledger may only SHRINK: when a pair is fixed, delete its row. A row that
- * stops matching is not an error (the seed's numbers move month to month), so
- * the check is one-sided on purpose.
- *
- * THE DARK LEDGER IS NOW EMPTY (t_3e571ddb). @designer's colour call on
- * t_3ccf52af answered all 13 dark pairs at once, and this diff applied it:
+ * @designer's colour call on t_3ccf52af answered all 20 pairs, and t_3e571ddb
+ * applied it in two phases:
+ *   Phase 1 (dark-only, light byte-identical, merged as #73):
  *   - the fixed accent slab (`bg-yellow-400`) and the verdict chips
  *     (`bg-emerald-400` / `bg-red-400`) pin their own ink (`text-accent-ink`,
  *     #000 both themes) instead of inheriting a themed one;
@@ -304,58 +286,26 @@ const fmt = (rows: Finding[]) =>
  *     (`--warn-strip`, `--good-soft`, `--good-soft-2`, `--info-soft`), their
  *     LIGHT values byte-identical to the literals they replaced;
  *   - the year-over-year hues became `--data-year-1..4`, where only year-1
- *     lifts in dark (3.45 → 4.85:1).
- * The DARK walk below therefore asserts ZERO painted pairings under AA — no
- * ledger, no carve-out. LIGHT is not there yet: its seven pairs are the light
- * leg of the same call (L1–L4), which changes LIGHT rendering and is gated on
- * Mark's sign-off, so LIGHT_PINNED_DEBT still stands (and still may only
- * shrink).
- */
-/**
- * The ledger below keeps t_fbf590fa's rows, and adds the PANEL each one was
- * measured in. The reasoning above (why they are pinned, why they may only
- * shrink, why fixing them moves LIGHT) is unchanged.
- */
-const LIGHT_PINNED_DEBT = [
-  // The LIGHT leg of the same colour call. Five pairs left: L1 (--ink-3/--ink-4
-  // darkened) and L3 (legend text to --ink-2) release them, and both change
-  // LIGHT rendering, so they wait on Mark's sign-off.
-  // (The seventh row — `--ink-3` on the fixed `#fdc700` accent slab at
-  // 3.02:1 — was released by family A/L2 in Phase 1: every ink step on that
-  // slab is now text-accent-ink, #000 in both themes, 13.35:1.)
-  { panel: 'ev-scenario', color: 'rgb(100, 116, 139)', bg: 'rgb(208, 250, 229)' }, // --ink-3 on emerald-100
-  { panel: 'bill-accrual', color: 'rgb(100, 116, 139)', bg: 'rgb(239, 246, 255)' }, // --ink-3 on blue-50
-  { panel: 'totals-strip', color: 'rgb(100, 116, 139)', bg: 'rgb(241, 245, 249)' }, // --ink-3 on slate-100
-  { panel: 'actual-bill', color: 'rgb(148, 163, 184)', bg: 'rgb(236, 253, 245)' }, // --ink-4 on emerald-50
-  { panel: 'money-deltas', color: 'rgb(148, 163, 184)', bg: 'rgb(254, 252, 232)' }, // --ink-4 on yellow-50
-  { panel: 'trend-panel', color: 'rgb(249, 115, 22)', bg: 'rgb(255, 255, 255)' }, // recharts legend orange-500
-];
-
-/**
- * The ledger key is (panels, colours) — NOT just the colours.
+ *     lifts in dark (3.45 → 4.85:1);
+ *   - the `bg-track text-ink-3` HindsightPanel chips that Wave V left under AA
+ *     moved to `--ink-2` (the ledger may not grow, so the walk's own verdict
+ *     decided that one).
+ *   Phase 2 (the light leg, L1–L4): `--ink-3`/`--ink-4` darken in LIGHT
+ *   (#64748b → #59677a, #94a3b8 → #5f6d80, the AA-safe fallback the card
+ *   names), the year-over-year legend text decouples from the series hue to
+ *   `--ink-2`, the thermometer's in-bar `¢/kWh` label pairs per stop, and the
+ *   fixed `bg-green-600` connect button pins `--accent-ink` (its literal white
+ *   measured 3.22:1).
  *
- * That is the one thing this file adds to t_fbf590fa's ledger, and it can only
- * tighten the gate: the same foreground on the same background, showing up in
- * a panel where it was never measured, is a new pairing and fails. It also
- * means the failure message says which card owes the debt, instead of "some
- * ink is under AA somewhere".
+ * BOTH walks below therefore assert ZERO painted pairings under AA — no
+ * ledger, no carve-out, no pinned capture. The floor holds on its own.
+ *
+ * #81 re-keyed the ledger by (panel, colours) before it was released: the same
+ * colours showing up in a panel where they were never measured is a NEW
+ * pairing, and the old pair-only key let them pass. With the ledger empty that
+ * key survives as the walk's ATTRIBUTION — every finding, every coverage count
+ * and every log line names the panel it was measured in.
  */
-const ledgerKeyOf = (r: { panel: string; color: string; bg: string }) =>
-  `${r.panel}|${r.color}|${r.bg}`;
-
-const pinnedKeys = (ledger: { panel: string; color: string; bg: string }[]) =>
-  new Set(ledger.map(ledgerKeyOf));
-
-/** One log line per pinned pair that is still on the page — the debt, visible. */
-const logPinned = (rows: Finding[], keys: Set<string>) => {
-  const hit = rows.filter((r) => keys.has(ledgerKeyOf(r)));
-  if (hit.length) {
-    const worst = hit.reduce((a, b) => (a.ratio < b.ratio ? a : b));
-    console.log(
-      `pinned pre-existing debt: ${hit.length} pairing(s) under AA across ${new Set(hit.map(ledgerKeyOf)).size} (panel,fg,bg) triple(s); worst ${worst.ratio}:1 (${worst.color} on ${worst.bg} in ${worst.panel})`,
-    );
-  }
-};
 
 /* ==========================================================================
  * THE PER-PANEL BUDGET (both themes)
@@ -518,7 +468,7 @@ test.describe('dark mode contrast walk (spec §2 #10)', () => {
     ).toEqual([]);
   });
 
-  test('LIGHT: the only pairings under AA are the pinned ones (ink-4 + slab debt)', async ({
+  test('LIGHT: nothing paints under AA on any of the four tabs — the ledger is empty', async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -534,45 +484,14 @@ test.describe('dark mode contrast walk (spec §2 #10)', () => {
 
     const rows = walk.findings;
 
-    // `--ink-4` is slate-400 in LIGHT: 2.56:1 on the card at 8–10px, across
-    // 56 micro-label sites. Dark mode did not create it and this card does
-    // not fix it (spec §2 #4 scopes it out and recommends its own card) —
-    // but it IS pinned here, so the defect can only ever be this one, and a
-    // new light-mode pairing has to clear AA instead of hiding behind it.
-    //
-    // This one allowance is deliberately PANEL-AGNOSTIC, unlike the ledger:
-    // it is a defect of a TOKEN (`--ink-4` on a card or the page), measured in
-    // a dozen different panels, and pinning it per panel would mean carrying
-    // ~17 rows of the same token. It is capped by the ratio floor below, which
-    // is what stops it from quietly getting worse.
-    const ink4 = rows.filter(
-      (r) => r.color === 'rgb(148, 163, 184)' && (r.bg === 'rgb(255, 255, 255)' || r.bg === 'rgb(248, 250, 252)'),
-    );
-    const keys = pinnedKeys(LIGHT_PINNED_DEBT);
-    logPinned(rows, keys);
-
-    const unexpected = rows.filter((r) => !ink4.includes(r) && !keys.has(ledgerKeyOf(r)));
+    // No cap and no carve-out any more. The light leg (L1–L4) released the
+    // last six ledger rows AND the `--ink-4`-on-card exception: L1 darkens the
+    // two muted ink steps so the micro-label set clears AA like everything
+    // else (there is no "it was always like that" row left to hide behind).
     expect(
-      unexpected,
-      `LIGHT mode painted ${unexpected.length} NEW (panel, fg, bg) pairing(s) under AA — the ledger is per panel, so "the same colours somewhere else" is a new pairing:\n${fmtByPanel(unexpected)}`,
+      rows,
+      `light mode painted ${rows.length} pairing(s) under AA — the ledger is empty (t_3e571ddb Phase 2 released the last six rows and the ink-4 carve-out):\n${fmtByPanel(rows)}`,
     ).toEqual([]);
-    // The ink-4 set is capped by TOKEN, not by count: the worst of it is
-    // pinned at the number the spec measured (2.45:1 on the page) so it can
-    // neither quietly widen nor quietly get "fixed" downwards in dark.
-    expect(
-      Math.min(...ink4.map((r) => r.ratio)),
-      'the ink-4 defect must not get WORSE than the 2.45:1 the spec measured',
-    ).toBeGreaterThanOrEqual(2.4);
-
-    // The budget, panel by panel — in the run log, so the debt is a set of
-    // named allowances and not one aggregate number.
-    const perPanel = Object.entries(byPanel(rows))
-      .map(([panel, rs]) => {
-        const pinned = rs.filter((r) => ink4.includes(r) || keys.has(ledgerKeyOf(r))).length;
-        return `${panel}: ${rs.length} under AA (${pinned} pinned)`;
-      })
-      .join('\n  ');
-    console.log(`LIGHT budget by panel:\n  ${perPanel}`);
   });
 });
 
@@ -660,6 +579,12 @@ test.describe('BillProjectionBanner dark-mode pairings (t_fbf590fa addendum 1)',
  * is painted on, and the LIGHT test pins the seven rendered pixels to the
  * literals the component used to hardcode — the dark fix must cost light
  * exactly nothing.
+ *
+ * L4 (t_3e571ddb Phase 2) extends it to the `¢/kWh` label INSIDE each bar: an
+ * SVG `fill` is not a computed `color`, so the text walk above cannot see that
+ * pairing at all. The probe now reads the label's own painted fill and measures
+ * it against the bar it sits inside, in BOTH themes — the one pairing whose
+ * background is the data mark itself.
  */
 function rampProbe() {
   const lum = ([r, g, b]: number[]) => {
@@ -704,18 +629,41 @@ function rampProbe() {
     return parse(getComputedStyle(document.body).backgroundColor) ?? [255, 255, 255, 1];
   };
   const rgb = (c: number[]) => `rgb(${c.slice(0, 3).map(Math.round).join(', ')})`;
+  const ratioOf = (a: number[], b: number[]) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return +((hi + 0.05) / (lo + 0.05)).toFixed(2);
+  };
 
   return [...document.querySelectorAll('[data-testid="temp-band-bar"]')].map((el) => {
     const fill = parse(getComputedStyle(el).fill);
     const bg = bgOf(el);
-    if (!fill) return { band: el.getAttribute('data-band'), rgb: 'none', bg: rgb(bg), ratio: 0, hours: 0, h: 0 };
+    const band = el.getAttribute('data-band');
+    // L4 (t_3e571ddb Phase 2): the ¢/kWh label sits INSIDE its own bar, so its
+    // background IS the fill. Measured against the fill, not the card.
+    const cents = document.querySelector(
+      `[data-testid="temp-band-cents"][data-band="${band}"]`,
+    );
+    const labFill = cents ? parse(getComputedStyle(cents).fill) : null;
+    if (!fill)
+      return {
+        band,
+        rgb: 'none',
+        bg: rgb(bg),
+        ratio: 0,
+        labRgb: 'none',
+        labRatio: 0,
+        hours: 0,
+        h: 0,
+      };
     const [hi, lo] = [lum(over(fill, bg)), lum(bg)].sort((x, y) => y - x);
     const r = el.getBoundingClientRect();
     return {
-      band: el.getAttribute('data-band'),
+      band,
       rgb: rgb(fill),
       bg: rgb(bg),
       ratio: +((hi + 0.05) / (lo + 0.05)).toFixed(2),
+      labRgb: labFill ? rgb(labFill) : 'none',
+      labRatio: labFill ? ratioOf(labFill, fill) : 0,
       hours: Number(el.getAttribute('data-hours')),
       h: +r.height.toFixed(1),
     };
@@ -742,7 +690,7 @@ test.describe('thermometer ramp (TempBandCard, t_fbf590fa)', () => {
     ).toBe(7);
 
     const fmt = (b: (typeof bars)[number]) =>
-      `${b.band} ${b.rgb} on ${b.bg} = ${b.ratio}:1 (${b.hours}h)`;
+      `${b.band} ${b.rgb} on ${b.bg} = ${b.ratio}:1 (${b.hours}h) · label ${b.labRgb} = ${b.labRatio}:1`;
     const under = live.filter((b) => b.ratio < 4.5);
     expect(
       under,
@@ -752,9 +700,21 @@ test.describe('thermometer ramp (TempBandCard, t_fbf590fa)', () => {
     ).toEqual([]);
     // 3:1 is the graphics floor; the label is why this asserts 4.5:1.
     for (const b of live) expect(b.ratio, fmt(b)).toBeGreaterThanOrEqual(4.5);
+    // L4 (t_3e571ddb Phase 2): the ¢/kWh label's ink is measured against the
+    // bar it sits INSIDE, not against the card — that pairing is invisible to
+    // the text walk (an SVG fill is not a computed `color`).
+    const dim = live.filter((b) => b.labRatio < 4.5);
+    expect(
+      dim,
+      `${dim.length}/7 in-bar ¢/kWh labels under AA against their own fill:\n${dim
+        .map(fmt)
+        .join('\n')}\n--- all seven ---\n${live.map(fmt).join('\n')}`,
+    ).toEqual([]);
   });
 
-  test('LIGHT: the rendered fills are the seven literals the ramp replaced', async ({ page }) => {
+  test('LIGHT: the rendered fills are the seven literals the ramp replaced — and its in-bar label pairs per stop', async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
     await loadFixture(page, 'light');
     await seedMarkShapedWithTemps(page);
@@ -773,5 +733,30 @@ test.describe('thermometer ramp (TempBandCard, t_fbf590fa)', () => {
       'rgb(239, 68, 68)', // #ef4444 red-500
       'rgb(185, 28, 28)', // #b91c1c red-700
     ]);
+    // L4: white on the three dark stops, black on the four light ones — every
+    // in-bar ¢/kWh label clears AA against the fill it sits on. This is the
+    // light half of the pairing that was 2.15:1 (amber) before the fix; the
+    // FILLS above stay byte-identical, only the ink follows the stop.
+    const fmt = (b: (typeof bars)[number]) =>
+      `${b.band} ${b.labRgb} on ${b.rgb} = ${b.labRatio}:1`;
+    expect(
+      bars.map((b) => b.labRgb),
+      'the per-stop label pairing is white/white/black/black/black/black/white',
+    ).toEqual([
+      'rgb(255, 255, 255)',
+      'rgb(255, 255, 255)',
+      'rgb(0, 0, 0)',
+      'rgb(0, 0, 0)',
+      'rgb(0, 0, 0)',
+      'rgb(0, 0, 0)',
+      'rgb(255, 255, 255)',
+    ]);
+    const dim = bars.filter((b) => b.labRatio < 4.5);
+    expect(
+      dim,
+      `${dim.length}/7 in-bar ¢/kWh labels under AA against their own fill:\n${bars
+        .map(fmt)
+        .join('\n')}`,
+    ).toEqual([]);
   });
 });

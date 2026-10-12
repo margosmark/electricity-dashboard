@@ -115,7 +115,15 @@ export default function YearOverYearPanel({
                     background: 'var(--card)', color: 'var(--ink)',
                   }}
                 />
-                <Legend wrapperStyle={{ fontWeight: 900, fontSize: 12 }} />
+                {/* L3 (t_3e571ddb Phase 2): the legend LABEL is prose, not a
+                    data mark — it must not wear the series hue (light orange
+                    on white measured 2.80:1). The SWATCH keeps the hue, so
+                    the colour→series mapping is untouched; only the text
+                    moves to --ink-2 (light 7.58:1, dark 12.02:1). */}
+                <Legend
+                  wrapperStyle={{ fontWeight: 900, fontSize: 12 }}
+                  formatter={(value) => <span style={{ color: 'var(--ink-2)' }}>{value}</span>}
+                />
                 {trend.series.map((s, i) => (
                   <Bar
                     key={s.year}
