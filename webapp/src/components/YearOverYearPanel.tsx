@@ -46,7 +46,10 @@ export default function YearOverYearPanel({
   processedData: ProcessedPoint[];
 }) {
   const { t, locale } = useTranslation();
-  const trend = useMemo(() => buildYearOverYear(processedData), [processedData]);
+  // `locale` (not just `t`): the trend lib labels its months with the same
+  // locale-aware helper the headers below use.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const trend = useMemo(() => buildYearOverYear(processedData), [processedData, locale]);
   // Wave U — the 12 month headers come from the same locale-aware helper
   // the trend lib uses, so the axis and the delta row can never disagree.
   // Pass `locale` explicitly so the memo genuinely re-runs on a switch.

@@ -9,7 +9,7 @@
 "use client";
 
 /* Wave U — upload/connect copy translates; hooks read the module locale. */
-import { t } from "@/i18n";
+import { t, useTranslation } from "@/i18n";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
@@ -262,6 +262,11 @@ export type StorageNotice = { kind: StorageNoticeKind; detail: string };
  */
 export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const { onBackupApplied } = options;
+  // Wave U rule: the billing axis is built by a lib function that writes its
+  // labels with the module `t()` at call time, so this hook has to re-derive
+  // it when the language changes — a module-function `t` has a stable
+  // identity and would never do that as a dep. `locale` moves.
+  const { locale } = useTranslation();
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -368,7 +373,11 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const axis = useMemo(
     () => buildBillingAxis({ summaries: billFeed.summaries, rows: rawData, billingDay }),
-    [billFeed.summaries, rawData, billingDay],
+    // buildBillingAxis writes every period label and axis note in the active
+    // language (t() reads the module singleton at call time), so this memo —
+    // and the whole money tab built on it — must re-derive on a toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [billFeed.summaries, rawData, billingDay, locale],
   );
 
   /**

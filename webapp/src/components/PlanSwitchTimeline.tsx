@@ -49,9 +49,11 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
   const [timeline] = usePlanTimeline();
   const report = useMemo(
     () => buildSwitchReport(summaries, allData, timeline),
-    [summaries, allData, timeline],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, timeline, t],
   );
-  const model: SwitchTimeline = useMemo(() => buildSwitchTimeline(report), [report]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const model: SwitchTimeline = useMemo(() => buildSwitchTimeline(report), [report, t]);
 
   // Left edge of each segment, as a share of the whole bar. A fold, not a
   // running variable: this runs during render, and mutating a captured

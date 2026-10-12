@@ -147,7 +147,8 @@ export function TrueBillEstimate({
       credit: totals.credit,
       payable: totals.payable,
     };
-  }, [derived, allData, plan, charges]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  }, [derived, allData, plan, charges, t]);
 
   if (windowData.length === 0) return null;
 

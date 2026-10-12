@@ -38,7 +38,8 @@ export default function HourCostHistogram({
   plan: PlanId;
 }) {
   const { t } = useTranslation();
-  const profile = useMemo(() => hourCostProfile(rows, plan), [rows, plan]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const profile = useMemo(() => hourCostProfile(rows, plan), [rows, plan, t]);
 
   return (
     <div

@@ -1114,11 +1114,23 @@ export function planOverlay(
     periods: summaries.length,
     chargesSource: charges.xmlSource ? 'bill' : 'typed',
     rebateRate,
+    // Wave U: the modelling notes are read by a person, so they come from the
+    // catalog at call time like every other sentence in the panel.
     assumptions: [
-      `Modelled over ${coveredPeriods.length} fully-covered billing period${coveredPeriods.length === 1 ? '' : 's'} (${fmtNumber(days)} days, ${fmtNumber(totalKwh)} kWh of your own readings).`,
-      `The lines plot the PER-PERIOD average of those totals (total ÷ ${coveredPeriods.length}), because the bars are per period; the totals are in the key underneath.`,
-      `Delivery, regulatory and HST priced at your bill's own rates${charges.xmlSource ? ` (${charges.xmlSource.label})` : ' (the ones in Settings)'}; the observed rebate (${fmtPercent((rebateRate ?? 0) * 100, 1)} of the subtotal) is applied the same way the bill applies it.`,
-      'Delivery and regulatory are assumed to follow the same $/kWh + fixed model under every plan — that is a modelling assumption, not the utility’s tariff.',
+      t('moneyViz.assumeCovered', {
+        count: coveredPeriods.length,
+        periods: fmtNumber(coveredPeriods.length),
+        days: fmtNumber(days),
+        kwh: fmtNumber(totalKwh),
+      }),
+      t('moneyViz.assumePerPeriod', { periods: fmtNumber(coveredPeriods.length) }),
+      t('moneyViz.assumePriced', {
+        source: charges.xmlSource
+          ? ` (${charges.xmlSource.label})`
+          : t('moneyViz.assumePricedSettings'),
+        rebate: fmtPercent((rebateRate ?? 0) * 100, 1),
+      }),
+      t('moneyViz.assumeModel'),
     ],
   };
 }

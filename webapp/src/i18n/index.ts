@@ -125,8 +125,21 @@ function selectKey(locale: Locale, key: string, params?: Record<string, string |
  * is visible in the UI instead of silently blank, and I18N.md's review pass
  * is what catches those).
  */
+/**
+ * A catalog can define only the plural pair (`x_one` / `x_other`). A caller
+ * that passes no `count` used to fall through to the RAW KEY on screen
+ * (`accrual.measuredLine`, `wf.daysNote`) — untranslated in BOTH locales and
+ * invisible to the static gate, which only checks that some `en.json` key
+ * exists. Fall back to `_other`: the countable default in both locales.
+ */
+function withPluralBase(locale: Locale, key: string): string {
+  if (key in CATALOGS[locale] || key in CATALOGS.en) return key;
+  const other = `${key}_other`;
+  return other in CATALOGS[locale] || other in CATALOGS.en ? other : key;
+}
+
 export function t(key: string, params?: Record<string, string | number>): string {
-  const resolved = selectKey(currentLocale, key, params);
+  const resolved = withPluralBase(currentLocale, selectKey(currentLocale, key, params));
   const template = CATALOGS[currentLocale][resolved] ?? CATALOGS.en[resolved] ?? resolved;
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
@@ -377,6 +390,27 @@ export const FR_PERIOD_LABEL: Record<string, string> = {
   'Weekend Off-Peak': 'Période creuse (fin de semaine)',
   'Ultra-Low Overnight': 'Période basse de nuit',
 };
+
+/** Canonical 3-letter English day codes → the locale's own short form. */
+export const FR_DAY_LABEL: Record<string, string> = {
+  Sun: 'dim.',
+  Mon: 'lun.',
+  Tue: 'mar.',
+  Wed: 'mer.',
+  Thu: 'jeu.',
+  Fri: 'ven.',
+  Sat: 'sam.',
+};
+
+/**
+ * The day-code view of the canonical `DAY_LABELS` (`Sun`…`Sat`, which stay the
+ * data keys for storage, data-* hooks and classifier input). Same rule as
+ * `planLabel` / `periodLabel`: the constant is canonical, the display layer
+ * asks for this.
+ */
+export function dayLabel(short: string, locale: Locale = currentLocale): string {
+  return locale === 'fr' ? (FR_DAY_LABEL[short] ?? short) : short;
+}
 
 /**
  * Translate a canonical rate-period name ("Off-Peak" → "Période creuse").

@@ -53,7 +53,10 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
   const [timeline] = usePlanTimeline();
   const annotations = useMemo(
     () => planAnnotations(summaries, timeline),
-    [summaries, timeline],
+    // Plan names and the timeline captions come from the catalog at call
+    // time, so the switch has to recompute them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, timeline, t],
   );
 
   // Charges the overlay models with: whatever the user has typed wins, and
@@ -71,7 +74,10 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
   // a period is.
   const axis = useMemo(
     () => buildBillingAxis({ summaries, rows: allData }),
-    [summaries, allData],
+    // buildBillingAxis writes every period label and note in the active
+    // language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, t],
   );
   const stacks = useMemo(() => buildAxisStacks(axis, allData, plan), [axis, allData, plan]);
   const openStack = useMemo(
@@ -95,10 +101,12 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
     };
   }, [openStack, plan]);
   const ledger = useEstimateLedger(claim, summaries);
-  const deltaTable = useMemo(() => periodDeltaRows(stacks), [stacks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const deltaTable = useMemo(() => periodDeltaRows(stacks), [stacks, t]);
   const overlay = useMemo(
     () => planOverlay(summaries, allData, charges),
-    [summaries, allData, charges],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, charges, t],
   );
 
   const hasBill = summaries.length > 0;
