@@ -214,13 +214,14 @@ back to the in-code production default silently.
 No real credential, no production write, and no Oakville request beyond the
 unauthenticated probes below were part of building this runbook:
 
-- `--check` and `--rehearse` end to end against the mock custodian, including
-  the real-target contract in the loop gate (31/31 checks, 0 skipped) and the
-  `.env` write path against a throwaway file;
-- `--check` with placeholder inputs → refused (`BLOCK`, exit 2);
-- `--check` with `--qa-gate-dir` over the QA-owned harnesses → both reported
-  `BLOCK` with their pin sites, which is the intended verdict until QA
-  re-points them;
-- `--compose-ref origin/main` to render the compose file this change ships;
-- the containerised topology gate on the deploy host, to prove the loop
-  gate's default (mock) path is unchanged.
+Measured on the merged main (`ccdbff1`), 2026-10-12:
+
+| Run | Result |
+| --- | --- |
+| `--check --host hermescomputer` (no credentials) | live probes against Oakville's real endpoints (authorize → 302 to `/login`, token → 401 JSON, the shape the QA pre-flight measured), compose render PASS on every credential key, split + `configured:false` baseline re-read from the running containers; **exit 2** (`BLOCK`ed on the credentials, on purpose) |
+| `--check` with placeholder inputs | refused before anything else — `BLOCK GB_CLIENT_ID … placeholder`, **exit 2** |
+| `--check --qa-gate-dir` over the QA-owned harnesses | both `BLOCK`ed with their pin sites (`qa-gate-edge.mjs` 3, `qa-gate-browser.mjs` 4) — the intended verdict until QA re-points them |
+| `--rehearse --host hermescomputer --compose-ref origin/main --loop-gate` | **8 steps, 0 failed, 0 blocked, exit 0**; the atomic `.env` write exercised against a throwaway file; the loop gate's **real-target** path **31/31 checks, 0 skipped** |
+| `e2e-greenbutton-topology.sh` on the deploy host, from a detached worktree of the merged main | **102/102** — the loop gate's default mock path inside it **29/29**, unchanged by the new target contract |
+| `e2e-greenbutton-browser.sh` (full build + suite) | connect-flow spec **ran and passed**; Playwright 43 passed / 2 failed, both in `theme-contrast.spec.ts`'s DARK and LIGHT walks — they paint the Green Button chip at **white on `rgb(0,166,62)`, 3.22:1** for 10px text, which is a pre-existing red on main's now-empty contrast ledger whenever the shim is configured (filed against the slab/ink colour card). This change touches no `webapp/src`, so it cannot have introduced it |
+| local battery on the merged base | `tsc --noEmit` OK · vitest **1429 passed / 6 skipped** · `next build` OK · pytest **41 + 19 passed** (1 skipped) |
