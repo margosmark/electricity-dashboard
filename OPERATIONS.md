@@ -71,7 +71,7 @@ committed.
 | Green Button live | `curl -fs https://electricity.markarslan.ca/greenbutton/status \| jq .configured` → `true` once `GB_CLIENT_ID`/`GB_CLIENT_SECRET` are set |
 | Token file | `sudo ls -l .greenbutton/` → `tokens.json`, owner uid 1001, mode `600` (absent until the first authorisation) |
 | Account API **on** | `curl -sS -D- https://electricity.markarslan.ca/account/session` → `200` `{"enabled":true,…}` with `x-gb-process: account` (must pair with `X-Edge-Location: account`) |
-| Account API **off** | same URL → `404` with `x-gb-process: app` — indistinguishable from "no such route" |
+| Account API **off** | same URL → `404` with `x-gb-process: app` — indistinguishable from "no such route", for **every** method: `curl -sS -o /dev/null -w '%{http_code}' -X GET https://electricity.markarslan.ca/account/login` → `404` (not `405`) and `-X OPTIONS` → `404` (not `204`) |
 | Internal fan-out is unreachable | `curl -sS -o /dev/null -w '%{http_code}' https://electricity.markarslan.ca/account/internal/notify` → `403` (denied at the edge; it exists only on the compose network) |
 
 ## Data model (user-visible)
