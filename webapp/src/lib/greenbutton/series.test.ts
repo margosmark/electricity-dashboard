@@ -729,6 +729,43 @@ describe('UTC identity through DST transitions', () => {
 });
 
 /* ==========================================================================
+ * Document scale — a feed whose entries sit under ONE parent element
+ * ========================================================================== */
+
+describe('document scale — a custodian-sized feed is traversed entry by entry', () => {
+  /**
+   * 130 000 sibling `<entry>` elements under a single `<feed>`: 2.47 MB, and
+   * the shape every real Atom export has (all entries under one parent, not
+   * spread over nested nodes). The regression this pins: `collectEntries` used
+   * `entries.push(...asArray(k))`, which passes the array as CALL ARGUMENTS and
+   * so throws `RangeError: Maximum call stack size exceeded` from 125 487
+   * entries / 2 384 287 bytes up. Base `c531ecc` parsed 250 000 / 4.75 MB.
+   *
+   * Each entry carries one IntervalReading with no timePeriod, i.e. exactly one
+   * reading that must be counted as unparsable. That count is the proof the
+   * whole array was walked: a traversal that stopped at the stack limit, or
+   * silently skipped entries, cannot reach N.
+   */
+  const N = 130_000;
+  const siblingEntry =
+    '<entry><content><espi:IntervalReading><espi:value>1</espi:value></espi:IntervalReading></content></entry>\n';
+
+  it(`${N} sibling entries parse and every entry is accounted for`, () => {
+    const xml =
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">\n' +
+      siblingEntry.repeat(N) +
+      '</feed>';
+    // Comfortably past the measured failure size (2 384 287 bytes).
+    expect(xml.length).toBeGreaterThan(2_384_287);
+
+    const { series } = parse(xml);
+    const unparsable = series.reduce((sum, s) => sum + s.dropped.unparsable, 0);
+    expect(unparsable).toBe(N);
+  }, 120_000);
+});
+
+/* ==========================================================================
  * classifySeries — direct unit pins
  * ========================================================================== */
 

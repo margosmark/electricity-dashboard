@@ -211,7 +211,11 @@ function collectEntries(node: unknown): Record<string, unknown>[] {
     }
     const objAny = obj as Record<string, unknown>;
     for (const k in objAny) {
-      if (k === 'entry') entries.push(...asArray(objAny[k]));
+      // Append ONE at a time. `entries.push(...asArray(k))` passes the array as
+      // call arguments, and a single parent element holding a whole feed's
+      // entries — the normal Atom shape — overflows the stack at ~125 487
+      // siblings (2.38 MB): `RangeError: Maximum call stack size exceeded`.
+      if (k === 'entry') for (const e of asArray(objAny[k])) entries.push(e);
       else if (typeof objAny[k] === 'object') stack.push(objAny[k]);
     }
   }
