@@ -10,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:theme": "bash scripts/e2e-theme-regression.sh",
     "lighthouse": "lhci autorun",
     "test:watch": "vitest",
     "prepare": "husky"
