@@ -82,6 +82,8 @@ describe('no HTML-injection sinks anywhere in the app source', () => {
             label: `UsagePoint ${hostile.slice(0, 8)}`,
             blocks: 1,
             readings: [{ timestamp: 1704067200, usage_kwh: 1 }],
+            series: [],
+            notes: [],
           },
         ]}
         onChoose={() => {}}

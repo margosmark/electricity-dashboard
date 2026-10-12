@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseGreenButtonUsagePoints, combineUsagePointGroups } from './energy';
+import { parseGreenButtonFeed, parseGreenButtonUsagePoints, combineUsagePointGroups } from './energy';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const read = (name: string) => fs.readFileSync(path.join(FIXTURES, name), 'utf8');
@@ -38,7 +38,13 @@ const FIXTURES_UNDER_TEST: Fixture[] = [
     utility: 'Hydro One (real DMD export, no espi: prefix, powerOfTenMultiplier -3)',
     groups: 1,
     groupIdPrefix: 'J2648788',
-    readings: 48,
+    // 24, not the 48 this fixture used to produce. The document's fourth
+    // ReadingType is "Weather (kelvin)" (uom 6) whose IntervalReadings carry a
+    // timePeriod and NO <value> at all; the old parser turned those into 24
+    // zero-kWh readings and mixed them into the household's consumption. They
+    // are now refused as a non-energy series and reported (see the dedicated
+    // test below), so only the three energy series' 24 readings load.
+    readings: 24,
     firstTs: 1765170000,
     firstKwh: 3.9546,
   },
@@ -124,6 +130,24 @@ describe.each(FIXTURES_UNDER_TEST)('$utility', (fx) => {
 });
 
 /* ------------------------------------------------------------------------ */
+
+describe('Hydro One weather series is refused, not priced as consumption', () => {
+  it('reports the kelvin series as unsupported and keeps its values out of the total', () => {
+    const feed = parseGreenButtonFeed(read('utility-hydro-one.xml'));
+    const group = feed.groups[0];
+    const weather = group.series.find((s) => s.meta.uom === 6);
+    expect(weather, 'the export carries a "Weather (kelvin)" ReadingType (uom 6)').toBeDefined();
+    expect(weather?.status).toBe('other-quantity');
+    // 24 interval readings with a timePeriod and NO <value>: not 24 zero-kWh
+    // hours for the household, which is what the old merged parser produced.
+    expect(weather?.dropped.unparsable).toBe(24);
+    expect(weather?.readings.every((r) => r.kwh === null)).toBe(true);
+    expect(group.readings).toHaveLength(24);
+    expect(group.readings.every((r) => r.usage_kwh > 0)).toBe(true);
+    expect(group.notes.some((n) => n.code === 'unsupported-series')).toBe(true);
+    expect(group.notes.some((n) => n.code === 'combined-series')).toBe(true);
+  });
+});
 
 describe('genuine Alectra IntervalReading fragment', () => {
   it('loads its single reading (documented limitation: a fragment has no feed)', () => {

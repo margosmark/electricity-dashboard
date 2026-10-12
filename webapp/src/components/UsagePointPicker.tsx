@@ -83,7 +83,9 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-base md:text-2xl">{group.label}</span>
-                  <span className="text-xl md:text-3xl italic">{fmtKwh(stats.kwh)}</span>
+                  <span className="text-xl md:text-3xl italic">
+                    {stats.count === 0 ? '—' : fmtKwh(stats.kwh)}
+                  </span>
                 </div>
                 <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-ink-3 group-hover:text-accent-ink flex flex-wrap gap-x-4 gap-y-1 normal-case">
                   <span>{group.id || t('picker.noId')}</span>
@@ -91,6 +93,31 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                   <span>
                     {stats.from} → {stats.to}
                   </span>
+                </div>
+                {/*
+                 * Series distinction. A UsagePoint can carry several
+                 * ReadingTypes — consumption, exported energy, a register, a
+                 * power or gas series — and only the consumption ones are in
+                 * `readings`. Saying how many there are, and why the rest were
+                 * left out, is the difference between a smaller number and a
+                 * smaller number the user can trust.
+                 */}
+                <div
+                  data-testid={`usage-point-series-${group.id || 'unidentified'}`}
+                  className="mt-2 md:mt-3 text-[8px] md:text-[10px] text-ink-3 group-hover:text-accent-ink normal-case space-y-1"
+                >
+                  {stats.count === 0 && group.series.length > 0 ? (
+                    <p className="font-black uppercase">{t('gbseries.none')}</p>
+                  ) : null}
+                  <p>{t('gbseries.count', { count: group.series.length })}</p>
+                  {group.notes.length > 0 ? (
+                    <ul className="space-y-1">
+                      <li className="font-black uppercase">{t('gbseries.reasons')}</li>
+                      {group.notes.map((note, i) => (
+                        <li key={`${note.code}-${i}`}>{note.detail}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               </button>
             );

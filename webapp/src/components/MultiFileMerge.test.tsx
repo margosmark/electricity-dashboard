@@ -14,7 +14,7 @@ function range(from: number, to: number, kwh = 1): DataPoint[] {
 }
 
 function group(label: string, readings: DataPoint[], id = label): UsagePointGroup {
-  return { id, label, readings, blocks: 1 };
+  return { id, label, readings, blocks: 1, series: [], notes: [] };
 }
 
 /** The component is controlled — this is the state it would sit in on screen. */

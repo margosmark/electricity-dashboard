@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { parseReadingSeries, type ReadingSeries, type SeriesNote } from './greenbutton/series';
 import { isOntarioHoliday } from './ontarioHolidays';
 import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
@@ -14,6 +15,24 @@ import {
 } from 'date-fns';
 
 export type DataPoint = { timestamp: number; usage_kwh: number };
+
+/**
+ * The ReadingType-aware ingestion surface (see lib/greenbutton/series.ts).
+ * Re-exported here because every caller already imports the parser from this
+ * module, and a second import site would be a second way to reach it.
+ */
+export {
+  parseReadingSeries,
+  classifySeries,
+  billableSeries,
+} from './greenbutton/series';
+export type {
+  ReadingSeries,
+  SeriesReading,
+  SeriesStatus,
+  SeriesMetadata,
+  SeriesNote,
+} from './greenbutton/series';
 
 export type RateSet = {
   effectiveDate: string;
@@ -360,182 +379,28 @@ export type UsagePointGroup = {
   id: string;
   /** Short human label for the picker. */
   label: string;
+  /**
+   * CONSUMED electricity only: every supported active-energy series of this
+   * point, in kWh. Never a sum across incompatible series — exported energy,
+   * reactive data, another commodity and register readings are on `series`
+   * instead, not here.
+   */
   readings: DataPoint[];
   /** Number of IntervalBlock elements the readings came from. */
   blocks: number;
+  /**
+   * Every ReadingType series this point carried, billable or not, in first-seen
+   * order. A picker or diagnostics panel reads this to show WHY some of the
+   * meter's data is missing; nothing prices an unsupported series.
+   */
+  series: ReadingSeries[];
+  /** The reasons attached to this point's series (empty when all were clean). */
+  notes: SeriesNote[];
 };
 
 function asArray<T>(v: T | T[] | undefined | null): T[] {
   if (v === undefined || v === null) return [];
   return Array.isArray(v) ? v : [v];
-}
-
-/**
- * First `powerOfTenMultiplier` inside `node`, depth-first. Raw scan — used
- * only for values already known to sit under a ReadingType.
- */
-function findMultiplierIn(node: unknown): number | null {
-  const stack: unknown[] = [node];
-  while (stack.length > 0) {
-    const obj = stack.pop();
-    if (!obj || typeof obj !== 'object') continue;
-    if (Array.isArray(obj)) {
-      obj.forEach((i) => stack.push(i));
-      continue;
-    }
-    const objAny = obj as Record<string, unknown>;
-    const raw = objAny.powerOfTenMultiplier;
-    if (raw !== undefined && raw !== null && raw !== '') {
-      const n = Number(Array.isArray(raw) ? raw[0] : raw);
-      if (Number.isFinite(n)) return n;
-    }
-    for (const k in objAny) {
-      if (typeof objAny[k] === 'object') stack.push(objAny[k]);
-    }
-  }
-  return null;
-}
-
-/**
- * The multiplier that scales IntervalReading values: the one declared on a
- * **ReadingType**, and nothing else.
- *
- * Summary blocks carry their own `powerOfTenMultiplier` too — Oakville Hydro's
- * export stamps `-6` on `<measurement>` entries inside
- * ElectricPowerUsageSummary. Applying THAT to interval readings would turn a
- * 3.5 kWh hour into 0.0000035 kWh, so only ReadingType scalers are honoured.
- */
-function findReadingTypeMultiplier(node: unknown): number | null {
-  const stack: unknown[] = [node];
-  while (stack.length > 0) {
-    const obj = stack.pop();
-    if (!obj || typeof obj !== 'object') continue;
-    if (Array.isArray(obj)) {
-      obj.forEach((i) => stack.push(i));
-      continue;
-    }
-    const objAny = obj as Record<string, unknown>;
-    if (objAny.ReadingType !== undefined && objAny.ReadingType !== null) {
-      for (const rt of asArray<Record<string, unknown>>(objAny.ReadingType as Record<string, unknown>)) {
-        const m = findMultiplierIn(rt);
-        if (m !== null) return m;
-      }
-    }
-    for (const k in objAny) {
-      if (k !== 'ReadingType' && typeof objAny[k] === 'object') stack.push(objAny[k]);
-    }
-  }
-  return null;
-}
-
-/** Resource id from the first href containing `/<resource>/<id>` (e.g. ReadingType/3). */
-function pickHrefId(entry: Record<string, unknown>, resource: string): string | null {
-  const links = asArray<Record<string, unknown>>(entry.link as Record<string, unknown>);
-  const re = new RegExp(`/${resource}/([^/?#\"']+)`);
-  for (const l of links) {
-    const href = String((l && l['@_href']) || '');
-    const m = href.match(re);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-/**
- * Scale a raw IntervalReading value to kWh.
- *
- * ESPI stores `value` as an integer in the ReadingType's unit scaled by
- * 10^powerOfTenMultiplier — and the multiplier lives on a SEPARATE
- * ReadingType entry, linked by href, not inside the IntervalBlock. Getting
- * this wrong is a silent 1000x error: Hydro One exports
- * `powerOfTenMultiplier -3` with Wh values, so ignoring it turns a 3.95 kWh
- * hour into 3954 kWh.
- *
- * Resolution order (each step is exercised by utilitySamples.test.ts):
- *   1. a ReadingType linked from this entry (href → exponent map)
- *   2. an inline multiplier inside the entry itself
- *   3. a single distinct exponent used everywhere in the document
- *   4. no scaling (multiplier 0)
- */
-function scaleReadingValue(raw: number, multiplier: number): number {
-  if (!Number.isFinite(raw) || raw < 0) return Number.NaN;
-  if (!Number.isFinite(multiplier) || multiplier === 0) return raw / 1000;
-  return (raw * 10 ** multiplier) / 1000;
-}
-
-/** Depth-first collection of every IntervalReading below `node`, sorted later. */
-function collectReadings(node: unknown, skipKeys: string[] = [], multiplier = 0): DataPoint[] {
-  const readings: DataPoint[] = [];
-  const stack: unknown[] = [node];
-  while (stack.length > 0) {
-    const obj = stack.pop();
-    if (!obj || typeof obj !== 'object') continue;
-    if (Array.isArray(obj)) {
-      obj.forEach((i) => stack.push(i));
-    } else {
-      const objAny = obj as Record<string, unknown>;
-      if (objAny.IntervalReading) {
-        const arr = asArray<Record<string, unknown>>(objAny.IntervalReading as Record<string, unknown>);
-        arr.forEach((ir) => {
-          const timePeriod = ir.timePeriod as Record<string, unknown> | undefined;
-          const s = parseInt(String(timePeriod?.start ?? '0'), 10);
-          const v = parseInt(String(ir.value ?? '0'), 10);
-          // Untrusted input: a value that is not a number (markup, an object,
-          // a unit suffix) must not become NaN and poison every total it
-          // touches — drop that one reading instead of trusting it.
-          const kwh = scaleReadingValue(v, multiplier);
-          if (s > 0 && Number.isFinite(kwh) && kwh >= 0) readings.push({ timestamp: s, usage_kwh: kwh });
-        });
-      }
-      for (const k in objAny) {
-        if (k !== 'IntervalReading' && !skipKeys.includes(k) && typeof objAny[k] === 'object') stack.push(objAny[k]);
-      }
-    }
-  }
-  return readings;
-}
-
-/** Every <entry> anywhere in the parsed document (feeds nest them differently). */
-function collectEntries(node: unknown): Record<string, unknown>[] {
-  const entries: Record<string, unknown>[] = [];
-  const stack: unknown[] = [node];
-  while (stack.length > 0) {
-    const obj = stack.pop();
-    if (!obj || typeof obj !== 'object') continue;
-    if (Array.isArray(obj)) {
-      obj.forEach((i) => stack.push(i));
-    } else {
-      const objAny = obj as Record<string, unknown>;
-      for (const k in objAny) {
-        if (k === 'entry') asArray<Record<string, unknown>>(objAny.entry as Record<string, unknown>).forEach((e) => entries.push(e));
-        else if (typeof objAny[k] === 'object') stack.push(objAny[k]);
-      }
-    }
-  }
-  return entries;
-}
-
-/**
- * UsagePoint id that owns `entry`.
- *
- * Href shapes seen in ESPI 1.x feeds:
- *   rel="self"    .../UsagePoint/<up>                                  (UsagePoint entry)
- *   rel="self"    .../UsagePoint/<up>/MeterReading/<mr>/IntervalBlock/<ib>
- *   rel="up"      .../UsagePoint                                       (no id — the feed)
- *   rel="related" .../UsagePoint/<up>                                  (may be another point)
- * so `self` wins, then `up`, then any other href that names a point.
- */
-function pickUsagePointId(entry: Record<string, unknown>): string | null {
-  const links = asArray<Record<string, unknown>>(entry.link as Record<string, unknown>);
-  const relRank = (rel: string) => (rel === 'self' ? 0 : rel === 'up' ? 1 : 2);
-  const ordered = links
-    .map((l) => ({ href: String((l && l['@_href']) || ''), rel: String((l && l['@_rel']) || '') }))
-    .filter((l) => l.href.includes('/UsagePoint/'))
-    .sort((a, b) => relRank(a.rel) - relRank(b.rel));
-  for (const l of ordered) {
-    const m = l.href.match(/\/UsagePoint\/([^/?#"']+)/);
-    if (m) return m[1];
-  }
-  return null;
 }
 
 /** What one parse of one Green Button document produces. */
@@ -546,6 +411,12 @@ export type GreenButtonFeed = {
   summaries: UsageSummary[];
   /** The feed's own clock rules, when the file carries LocalTimeParameters. */
   localTime: LocalTimeParams | null;
+  /**
+   * Every refusal, dropped reading and unit assumption the ingestion made —
+   * including notes that belong to no single group. Empty means the document
+   * was fully understood.
+   */
+  notes: SeriesNote[];
 };
 
 /**
@@ -555,10 +426,18 @@ export type GreenButtonFeed = {
  * parses, so parsing it twice would double an 800 KB document's cost for no
  * reason — the whole feed comes out of a single `XMLParser.parse`.
  *
- * Readings: a document is grouped per UsagePoint, and one that never
- * identifies a UsagePoint (plain fixtures, single-meter exports without
- * links) collapses into exactly one group with id '' — the historical
- * behaviour. Returns empty groups when the document carries no readings.
+ * Readings now come from {@link parseReadingSeries}, which resolves the
+ * UsagePoint → MeterReading → ReadingType → IntervalBlock graph and keeps each
+ * series apart. A group therefore carries every series found for its
+ * UsagePoint — including the ones that are NOT consumption (exported energy,
+ * reactive data, another commodity, a register) — together with the notes
+ * explaining why anything was left out. `readings` holds consumed electricity
+ * only; it is never a sum across incompatible series.
+ *
+ * Documents that identify neither a UsagePoint nor a ReadingType (plain
+ * fixtures, fragments) collapse into exactly one group with id '' — the
+ * historical behaviour — on an explicit legacy compatibility path that says so
+ * in `notes`. Returns empty groups when the document carries no readings.
  */
 export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   const parser = new XMLParser({
@@ -568,54 +447,87 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   });
   const parsed = parser.parse(xmlText) as Record<string, unknown>;
 
+  const { series, notes } = parseReadingSeries(parsed);
+
   const groups = new Map<string, UsagePointGroup>();
   const ensure = (id: string): UsagePointGroup => {
     let g = groups.get(id);
     if (!g) {
-      g = { id, label: id ? `UsagePoint ${id.slice(0, 8)}` : 'Meter', readings: [], blocks: 0 };
+      g = {
+        id,
+        label: id ? `UsagePoint ${id.slice(0, 8)}` : 'Meter',
+        readings: [],
+        blocks: 0,
+        series: [],
+        notes: [],
+      };
       groups.set(id, g);
     }
     return g;
   };
 
-  const entries = collectEntries(parsed);
-
-  // ReadingType exponents declared in this document, keyed by resource id
-  // (the multiplier lives on its own entry, linked by href). Plus every
-  // exponent seen anywhere, for the single-value fallback.
-  const multipliersById = new Map<string, number>();
-  const declared = new Set<number>();
-  for (const entry of entries) {
-    const mult = findReadingTypeMultiplier(entry);
-    if (mult === null) continue;
-    declared.add(mult);
-    const rtId = pickHrefId(entry, 'ReadingType');
-    if (rtId !== null) multipliersById.set(rtId, mult);
-  }
-  const singleDeclared = declared.size === 1 ? [...declared][0] : null;
-
-  const multiplierFor = (entry: Record<string, unknown>): number => {
-    const rtId = pickHrefId(entry, 'ReadingType');
-    if (rtId !== null && multipliersById.has(rtId)) return multipliersById.get(rtId)!;
-    const inline = findReadingTypeMultiplier(entry);
-    if (inline !== null) return inline;
-    if (singleDeclared !== null) return singleDeclared;
-    return 0;
-  };
-
-  for (const entry of entries) {
-    const readings = collectReadings(entry, [], multiplierFor(entry));
-    if (readings.length === 0) continue;
-    const id = pickUsagePointId(entry) || '';
+  const groupOfSeriesKey = new Map<string, string>();
+  for (const s of series) {
+    const id = s.usagePointId ?? '';
+    groupOfSeriesKey.set(s.key, id);
     const g = ensure(id);
-    g.readings.push(...readings);
-    g.blocks += countIntervalBlocks(entry);
+    g.series.push(s);
+    g.blocks += s.blocks;
   }
 
-  // Readings that sit outside any <entry> (non-Atom fixtures) still belong to
-  // one unnamed meter, exactly as the pre-grouping parser treated them.
-  const orphans = collectReadings(parsed, ['entry'], singleDeclared ?? 0);
-  if (orphans.length > 0) ensure('').readings.push(...orphans);
+  // ONLY billable consumption joins the group's reading stream. An exported,
+  // reactive, gas, water or register series stays on `series` with its reason
+  // attached, so it can never be priced as consumption by accident.
+  //
+  // A point that publishes BOTH per-interval energy and interval-average power
+  // states the same consumption twice: the power series is converted and
+  // preserved, but only the declared energy series is priced, because adding
+  // both would double the household's usage.
+  for (const g of groups.values()) {
+    const energy = g.series.filter((s) => s.status === 'supported');
+    const power = g.series.filter((s) => s.status === 'power-converted');
+    const priced = energy.length > 0 ? energy : power;
+    if (energy.length > 0 && power.length > 0) {
+      g.notes.push({
+        code: 'combined-series',
+        detail: `UsagePoint ${g.id || '(unidentified)'} publishes both per-interval energy (${energy
+          .map((s) => s.label)
+          .join(', ')}) and interval-average power (${power.map((s) => s.label).join(', ')}). They describe the same consumption, so only the energy series was priced; the power series is preserved unconverted-to-total on the point.`,
+      });
+    }
+    for (const s of priced) {
+      for (const r of s.readings) {
+        if (r.kwh === null) continue;
+        g.readings.push({ timestamp: r.timestamp, usage_kwh: r.kwh });
+      }
+    }
+  }
+
+  // Notes are attached to the group that owns the series they describe. A
+  // document-wide note (no seriesKey) is NOT given a group of its own: an
+  // empty extra "meter" in the picker would be a lie.
+  for (const n of notes) {
+    if (!n.seriesKey) continue;
+    const id = groupOfSeriesKey.get(n.seriesKey);
+    if (id === undefined) continue;
+    groups.get(id)?.notes.push(n);
+  }
+
+  // More than one billable series under one point means THIS app is combining
+  // them into one stream. That is the historical single-meter UX, so it stays —
+  // but it is said out loud, and each series remains separately identifiable on
+  // the group, instead of a picker row quietly looking like one series.
+  for (const g of groups.values()) {
+    const billable = g.series.filter((s) => s.status === 'supported' || s.status === 'power-converted');
+    if (billable.length > 1) {
+      g.notes.push({
+        code: 'combined-series',
+        detail: `UsagePoint ${g.id || '(unidentified)'} carries ${billable.length} separate consumption series (${billable
+          .map((s) => s.label)
+          .join(', ')}). Their readings are combined in this group; every series is listed separately on the point so a picker or diagnostics panel can tell them apart.`,
+      });
+    }
+  }
 
   const out = Array.from(groups.values());
   for (const g of out) g.readings.sort((a, b) => a.timestamp - b.timestamp);
@@ -630,40 +542,11 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     groups: out,
     summaries: parseUsageSummaryNodes(parsed),
     localTime: parseLocalTimeNode(parsed),
+    notes,
   };
 }
-
-/**
- * Parse a Green Button document into per-UsagePoint groups.
- * Returns [] when the document carries no readings at all.
- * Documents that never identify a UsagePoint (plain fixtures, single-meter
- * exports without links) collapse into exactly one group with id '' — the
- * historical behavior.
- *
- * Callers that also want the bills or the feed's clock use
- * {@link parseGreenButtonFeed} instead, so the document is parsed once.
- */
 export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
   return parseGreenButtonFeed(xmlText).groups;
-}
-
-function countIntervalBlocks(node: unknown): number {
-  let n = 0;
-  const stack: unknown[] = [node];
-  while (stack.length > 0) {
-    const obj = stack.pop();
-    if (!obj || typeof obj !== 'object') continue;
-    if (Array.isArray(obj)) {
-      obj.forEach((i) => stack.push(i));
-    } else {
-      const objAny = obj as Record<string, unknown>;
-      if (objAny.IntervalBlock) n += asArray(objAny.IntervalBlock).length;
-      for (const k in objAny) {
-        if (k !== 'IntervalBlock' && typeof objAny[k] === 'object') stack.push(objAny[k]);
-      }
-    }
-  }
-  return n;
 }
 
 /**
