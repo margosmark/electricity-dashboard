@@ -16,9 +16,19 @@
 # the server it is pointed at is not configured: a gate that can silently
 # skip is not a gate.
 #
+# RE-POINTING: GB_E2E_TARGET=real drives a custodian that is not the mock and
+# inlines nothing — see the loop gate's header for the contract. Because the
+# connect spec walks the authorize round trip IN A BROWSER, a real target also
+# needs a grant that can be completed: with GB_E2E_ACCOUNT=0 (Oakville before
+# Mark authorises, where /oauth/authorize answers /login) the run is REFUSED
+# rather than reported red for a step nobody can perform unattended. That leg
+# belongs to the QA card (t_5c16338b), after his account is connected.
+#
 # Usage: webapp/scripts/e2e-greenbutton-browser.sh   (from anywhere; it cds)
 #   GB_E2E_SKIP_BUILD=1   reuse the existing .next (faster inner loop)
 #   PORT / MOCK_PORT      override the defaults (3941 / 8099)
+#   GB_E2E_EXTERNAL=1     drive an already-running stack at BASE (no build, no
+#                         launch) — the only useful shape for a real target
 
 set -uo pipefail
 
@@ -28,13 +38,44 @@ cd "$WEBAPP"
 
 PORT="${PORT:-3941}"
 MOCK_PORT="${MOCK_PORT:-8099}"
-BASE="http://localhost:$PORT"
+BASE="${BASE:-http://localhost:$PORT}"
 MOCK="http://localhost:$MOCK_PORT"
 WORK="$(mktemp -d)"
 JAR="$WORK/cookies.txt"
-TOKEN_FILE="$WORK/tokens.json"
+TOKEN_FILE="${TOKEN_FILE:-$WORK/tokens.json}"
+TARGET="${GB_E2E_TARGET:-mock}"
+ACCOUNT="${GB_E2E_ACCOUNT:-1}"
+EXTERNAL="${GB_E2E_EXTERNAL:-}"
 PASS=0
 FAIL=0
+
+# --- re-point input gate ----------------------------------------------------
+if [ "$TARGET" = "real" ]; then
+  MISSING=""
+  for v in GB_CLIENT_ID GB_CLIENT_SECRET GB_AUTHORIZE_URL GB_TOKEN_URL; do
+    if [ -z "${!v:-}" ]; then MISSING="$MISSING $v"; fi
+  done
+  if [ -n "$MISSING" ]; then
+    echo "ERROR: GB_E2E_TARGET=real but unset:$MISSING" >&2
+    exit 1
+  fi
+  if [ "$ACCOUNT" != "1" ]; then
+    cat >&2 <<'EOF'
+ERROR: the browser gate walks the authorize round trip in a real browser, so a
+       real target (GB_E2E_TARGET=real) with GB_E2E_ACCOUNT=0 cannot complete:
+       an anonymous GET of the real /oauth/authorize answers /login and there
+       is no unattended path back with ?code=. Refusing to report a red for a
+       step nobody can perform — connect the customer account first, then run
+       this gate (QA card t_5c16338b owns that leg).
+EOF
+    exit 1
+  fi
+  if [ -n "$EXTERNAL" ]; then
+    echo "== external real target: driving the running stack at $BASE =="
+  else
+    echo "== real target: launching a local stack against $GB_AUTHORIZE_URL =="
+  fi
+fi
 
 port_pid() {
   ss -ltnpH "sport = :$1" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1
@@ -64,41 +105,63 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ -z "$(port_pid "$PORT")" ]; then :; else
-  if curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
-    echo "ERROR: something already answers on $PORT (a previous run did not clean up)." >&2
-    echo "       free it first:  pkill -f 'next[ ]start -p $PORT'" >&2
-    exit 1
+if [ -z "$EXTERNAL" ]; then
+  if [ -z "$(port_pid "$PORT")" ]; then :; else
+    if curl -fsS --max-time 2 "$BASE/greenbutton/status" >/dev/null 2>&1; then
+      echo "ERROR: something already answers on $PORT (a previous run did not clean up)." >&2
+      echo "       free it first:  pkill -f 'next[ ]start -p $PORT'" >&2
+      exit 1
+    fi
   fi
 fi
 
 # A stale build would gate yesterday's code, so build unless told otherwise.
-if [ -z "${GB_E2E_SKIP_BUILD:-}" ]; then
+if [ -z "${GB_E2E_SKIP_BUILD:-}" ] && [ -z "$EXTERNAL" ]; then
   echo "== npm run build =="
   if ! npm run build >"$WORK/build.log" 2>&1; then
     echo "build failed:" >&2; tail -40 "$WORK/build.log" >&2; exit 1
   fi
 fi
-if [ ! -f .next/BUILD_ID ]; then
+if [ -z "$EXTERNAL" ] && [ ! -f .next/BUILD_ID ]; then
   echo "ERROR: no production build at $WEBAPP/.next — run \`npm run build\` first." >&2
   exit 1
 fi
 
-echo "== starting mock custodian on $MOCK_PORT =="
-setsid node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
-MOCK_PID=$!
+if [ -z "$EXTERNAL" ]; then
+  if [ "$TARGET" = "mock" ]; then
+    echo "== starting mock custodian on $MOCK_PORT =="
+    setsid node scripts/mock-custodian.mjs --port "$MOCK_PORT" >"$WORK/mock.log" 2>&1 &
+    MOCK_PID=$!
 
-echo "== starting next start on $PORT (configured shim, mock custodian) =="
-GB_AUTHORIZE_URL="$MOCK/oauth/authorize" \
-GB_TOKEN_URL="$MOCK/oauth/token" \
-GB_CLIENT_ID="mock-client-id" \
-GB_CLIENT_SECRET="mock-client-secret" \
-GB_REDIRECT_URI="$BASE/greenbutton/callback" \
-GB_PUBLIC_ORIGIN="$BASE" \
-GB_TOKEN_FILE="$TOKEN_FILE" \
-GB_SCOPE="FB=1_3_4_5" \
-setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
-APP_PID=$!
+    echo "== starting next start on $PORT (configured shim, mock custodian) =="
+    GB_AUTHORIZE_URL="$MOCK/oauth/authorize" \
+    GB_TOKEN_URL="$MOCK/oauth/token" \
+    GB_CLIENT_ID="mock-client-id" \
+    GB_CLIENT_SECRET="mock-client-secret" \
+    GB_REDIRECT_URI="$BASE/greenbutton/callback" \
+    GB_PUBLIC_ORIGIN="$BASE" \
+    GB_TOKEN_FILE="$TOKEN_FILE" \
+    GB_SCOPE="FB=1_3_4_5" \
+    setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
+    APP_PID=$!
+  else
+    # Real target, locally built stack: the caller's GB_* pass through
+    # untouched. Only the loop-back addresses belong to this script.
+    GB_AUTHORIZE_URL="$GB_AUTHORIZE_URL" \
+    GB_TOKEN_URL="$GB_TOKEN_URL" \
+    GB_CLIENT_ID="$GB_CLIENT_ID" \
+    GB_CLIENT_SECRET="$GB_CLIENT_SECRET" \
+    GB_SCOPE="${GB_SCOPE:-FB=1_3_4_5}" \
+    GB_NOTIFY_TOKEN="${GB_NOTIFY_TOKEN:-}" \
+    GB_REDIRECT_URI="${GB_REDIRECT_URI:-$BASE/greenbutton/callback}" \
+    GB_PUBLIC_ORIGIN="${GB_PUBLIC_ORIGIN:-$BASE}" \
+    GB_TOKEN_FILE="$TOKEN_FILE" \
+    setsid npx next start -p "$PORT" >"$WORK/app.log" 2>&1 &
+    APP_PID=$!
+  fi
+else
+  echo "== external mode: the stack at $BASE is already running =="
+fi
 
 for _ in $(seq 1 90); do
   curl -fsS "$BASE/greenbutton/status" >/dev/null 2>&1 && break
@@ -114,7 +177,11 @@ case "$STATUS" in *"$BASE/greenbutton/callback"*) check "redirect_uri is this st
 
 echo
 echo "== playwright suite against the configured stack =="
-SMOKE_BASE_URL="$BASE" GB_E2E_REQUIRED=1 npx playwright test 2>&1 | tee "$WORK/pw.log"
+# GB_CLIENT_SECRET rides along so the spec's storage scan matches the secret
+# THIS run holds instead of the mock literal (a re-pointed run would otherwise
+# scan for a string that is not there — see the spec's TOKEN_PATTERNS).
+SMOKE_BASE_URL="$BASE" GB_E2E_REQUIRED=1 GB_CLIENT_SECRET="${GB_CLIENT_SECRET:-mock-client-secret}" \
+  npx playwright test 2>&1 | tee "$WORK/pw.log"
 PW_STATUS=${PIPESTATUS[0]}
 check "playwright suite green (exit $PW_STATUS)" "$PW_STATUS"
 
