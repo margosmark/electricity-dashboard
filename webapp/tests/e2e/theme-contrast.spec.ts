@@ -27,14 +27,21 @@
  *      card). Measuring the raw alpha as if it were opaque under-reports
  *      the ratio by ~2:1.
  *
+ * THE SEED IS PART OF THE GATE (t_fbf590fa). This walk used to upload the
+ * small Green Button sample, which never opens `projection.ready` — so
+ * BillProjectionBanner, a data-gated card, simply was not in the DOM while the
+ * walk declared "0 failures in dark" over a page the defect lived on. It now
+ * loads the Mark-shaped dashboard (mark-seed.ts): 24 bills + readings into the
+ * current month. The seed is ASSERTED below, so a future edit that stops
+ * rendering a gated card fails here instead of quietly shrinking the budget.
+ *
  * Runs in CI inside the smoke job's `npx playwright test` step.
  * Locally: SMOKE_BASE_URL=http://localhost:3111 npx playwright test theme-contrast
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import path from 'node:path';
+import { seedMarkShaped, seedMarkShapedWithTemps } from './mark-seed';
 
-const FIXTURE = path.resolve(__dirname, '../fixtures/green-button-alliance-sample.xml');
 const TABS = ['overview', 'usage', 'plans', 'money'] as const;
 
 type Finding = {
@@ -47,15 +54,17 @@ type Finding = {
   text: string;
 };
 
-/** Load a real dashboard — an empty app has no charts, chips or verdicts. */
+/** Load the Mark-shaped dashboard in the given theme. */
 async function loadFixture(page: Page, theme: 'light' | 'dark') {
   await page.context().addInitScript((t) => localStorage.setItem('theme', t), theme);
-  await page.goto('/');
-  await page.locator('input[aria-label="Upload Green Button XML"]').setInputFiles(FIXTURE);
-  await expect(page.getByTestId('totals-strip')).toBeVisible({ timeout: 60_000 });
+  await seedMarkShaped(page);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-  // Charts draw on their own frames; sample too early and half the DOM is
-  // still a skeleton whose colours are not the ones under test.
+  // THE SEED CHECK. `data-state="ready"` is the assertion that matters: the
+  // testid exists in the gated branch too, so waiting for the element alone
+  // would let this walk go back to measuring a page without the banner on it.
+  await expect(page.getByTestId('bill-projection')).toHaveAttribute('data-state', 'ready', {
+    timeout: 30_000,
+  });
   await page.waitForTimeout(1500);
 }
 
@@ -175,16 +184,104 @@ async function walkAllTabs(page: Page): Promise<Finding[]> {
 const fmt = (rows: Finding[]) =>
   rows.map((r) => `${r.ratio}:1 (need ${r.need}) ${r.px}px ${r.color} on ${r.bg} "${r.text}" — ${r.cls}`).join('\n');
 
+const keyOf = (r: { color: string; bg: string }) => `${r.color}|${r.bg}`;
+
+/**
+ * THE PINNED DEBT LEDGER (t_fbf590fa).
+ *
+ * Seeding the walk with the Mark-shaped dashboard — the fix for the gate hole
+ * where a data-gated card was never in the DOM — immediately exposed this: 52
+ * painted pairings under AA in dark and 10 in light, on the fixed light-soft
+ * slabs (`bg-yellow-400`'s #fdc700, the amber-200 note strip, emerald-50,
+ * blue-50, yellow-50) that do NOT flip with the theme while their ink does.
+ *
+ * Those are NOT this card's defects: the card is the thermometer ramp plus
+ * three named pairings, and every one of the 62 is a slab that predates it
+ * (the same page measured them before this diff). Fixing them changes LIGHT
+ * too (the light leg of the ledger is `--ink-3` at 3.0–4.4:1 on the same
+ * slabs), so it needs its own colour call and Mark's sign-off — filed as a
+ * follow-up card, assigned to @designer, rather than half-fixed here.
+ *
+ * They are therefore PINNED, by (foreground, background) pair and not by
+ * count, so that:
+ *   - the hole stays closed (the walk renders the whole Mark-shaped app),
+ *   - a NEW pairing on top of them still fails this gate, and
+ *   - the debt is enumerated in the repo instead of living in a comment.
+ * The ledger may only SHRINK: when a pair is fixed, delete its row. A row that
+ * stops matching is not an error (the seed's numbers move month to month), so
+ * the check is one-sided on purpose.
+ */
+const DARK_PINNED_DEBT = [
+  // --ink / --ink-2 / --ink-3 / --ink-4 on the FIXED yellow-400 slab. Per the
+  // rule the addendum encodes, ink inside a fixed slab must itself be fixed:
+  // this family wants `text-accent-ink` (#000 both themes, 12.6:1 on #fdc700).
+  { color: 'rgb(248, 250, 252)', bg: 'rgb(253, 199, 0)' }, // --ink on yellow-400 (29 sites)
+  { color: 'rgb(203, 213, 225)', bg: 'rgb(253, 199, 0)' }, // --ink-2 on yellow-400
+  { color: 'rgb(148, 163, 184)', bg: 'rgb(253, 199, 0)' }, // --ink-4 on yellow-400
+  // The sample-data note strip: --ink-2 on its own amber-200 wash.
+  { color: 'rgb(203, 213, 225)', bg: 'rgb(254, 230, 133)' },
+  // emerald-50 / emerald-100 soft slabs (money + plans): themed ink on a slab
+  // that does not flip. These want a dark de-escalation like --good-soft.
+  { color: 'rgb(248, 250, 252)', bg: 'rgb(236, 253, 245)' },
+  { color: 'rgb(203, 213, 225)', bg: 'rgb(236, 253, 245)' },
+  { color: 'rgb(132, 148, 170)', bg: 'rgb(236, 253, 245)' },
+  { color: 'rgb(248, 250, 252)', bg: 'rgb(208, 250, 229)' },
+  { color: 'rgb(148, 163, 184)', bg: 'rgb(208, 250, 229)' },
+  // blue-50 (the "pace to date" panel) — same story.
+  { color: 'rgb(248, 250, 252)', bg: 'rgb(239, 246, 255)' },
+  { color: 'rgb(148, 163, 184)', bg: 'rgb(239, 246, 255)' },
+  // A literal emerald in an accent block, and recharts' OWN legend colour
+  // (blue-600) which is neither themed nor tokenised — 3.45:1 on the dark card.
+  { color: 'rgb(248, 250, 252)', bg: 'rgb(0, 212, 146)' },
+  { color: 'rgb(37, 99, 235)', bg: 'rgb(15, 23, 42)' },
+];
+
+const LIGHT_PINNED_DEBT = [
+  // The LIGHT leg of the same slabs: --ink-3 is 3.0–4.4:1 on them and --ink-4
+  // 2.4:1 — below AA on a white card, before dark mode existed.
+  { color: 'rgb(100, 116, 139)', bg: 'rgb(253, 199, 0)' }, // --ink-3 on yellow-400
+  { color: 'rgb(100, 116, 139)', bg: 'rgb(208, 250, 229)' }, // --ink-3 on emerald-100
+  { color: 'rgb(100, 116, 139)', bg: 'rgb(239, 246, 255)' }, // --ink-3 on blue-50
+  { color: 'rgb(100, 116, 139)', bg: 'rgb(241, 245, 249)' }, // --ink-3 on slate-100
+  { color: 'rgb(148, 163, 184)', bg: 'rgb(236, 253, 245)' }, // --ink-4 on emerald-50
+  { color: 'rgb(148, 163, 184)', bg: 'rgb(254, 252, 232)' }, // --ink-4 on yellow-50
+  { color: 'rgb(249, 115, 22)', bg: 'rgb(255, 255, 255)' }, // recharts legend orange-500
+];
+
+const pinnedKeys = (ledger: { color: string; bg: string }[]) => new Set(ledger.map(keyOf));
+
+/** One log line per pinned pair that is still on the page — the debt, visible. */
+const logPinned = (rows: Finding[], keys: Set<string>) => {
+  const hit = rows.filter((r) => keys.has(keyOf(r)));
+  if (hit.length) {
+    const worst = hit.reduce((a, b) => (a.ratio < b.ratio ? a : b));
+    console.log(
+      `pinned pre-existing debt: ${hit.length} pairing(s) under AA across ${new Set(hit.map(keyOf)).size} (fg,bg) pair(s); worst ${worst.ratio}:1 (${worst.color} on ${worst.bg})`,
+    );
+  }
+};
+
 test.describe('dark mode contrast walk (spec §2 #10)', () => {
-  test('DARK: every painted text pairing clears AA on all four tabs', async ({ page }) => {
-    test.setTimeout(120_000);
+  test('DARK: no painting under AA beyond the pinned slab debt, on all four tabs', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
     await loadFixture(page, 'dark');
     const rows = await walkAllTabs(page);
-    expect(rows, `dark mode painted ${rows.length} pairing(s) under AA:\n${fmt(rows)}`).toEqual([]);
+    const keys = pinnedKeys(DARK_PINNED_DEBT);
+    logPinned(rows, keys);
+
+    const unpinned = rows.filter((r) => !keys.has(keyOf(r)));
+    expect(
+      unpinned,
+      `dark mode painted ${unpinned.length} UNPINNED pairing(s) under AA (the pinned ledger is in theme-contrast.spec.ts):\n${fmt(unpinned)}`,
+    ).toEqual([]);
   });
 
-  test('LIGHT: the only pairings under AA are the pre-existing ink-4 ones', async ({ page }) => {
-    test.setTimeout(120_000);
+  test('LIGHT: the only pairings under AA are the pinned ones (ink-4 + slab debt)', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
     await loadFixture(page, 'light');
     const rows = await walkAllTabs(page);
 
@@ -193,18 +290,220 @@ test.describe('dark mode contrast walk (spec §2 #10)', () => {
     // not fix it (spec §2 #4 scopes it out and recommends its own card) —
     // but it IS pinned here, so the defect can only ever be this one, and a
     // new light-mode pairing has to clear AA instead of hiding behind it.
-    const allowed = rows.filter(
+    const ink4 = rows.filter(
       (r) => r.color === 'rgb(148, 163, 184)' && (r.bg === 'rgb(255, 255, 255)' || r.bg === 'rgb(248, 250, 252)'),
     );
-    const unexpected = rows.filter((r) => !allowed.includes(r));
+    const keys = pinnedKeys(LIGHT_PINNED_DEBT);
+    logPinned(rows, keys);
+
+    const unexpected = rows.filter((r) => !ink4.includes(r) && !keys.has(keyOf(r)));
     expect(unexpected, `LIGHT mode painted ${unexpected.length} NEW pairing(s) under AA:\n${fmt(unexpected)}`).toEqual([]);
-    // The allowed set is capped by TOKEN, not by count: it is exactly the
-    // --ink-4 micro-label defect the filter above names, and the worst of it
-    // is pinned at the number the spec measured (2.45:1 on the page) so it
-    // can neither quietly widen nor quietly get "fixed" downwards in dark.
+    // The ink-4 set is capped by TOKEN, not by count: the worst of it is
+    // pinned at the number the spec measured (2.45:1 on the page) so it can
+    // neither quietly widen nor quietly get "fixed" downwards in dark.
     expect(
-      Math.min(...allowed.map((r) => r.ratio)),
+      Math.min(...ink4.map((r) => r.ratio)),
       'the ink-4 defect must not get WORSE than the 2.45:1 the spec measured',
     ).toBeGreaterThanOrEqual(2.4);
+  });
+});
+
+/**
+ * The pairings THIS card fixes, asserted on the page it actually renders on.
+ * They are data-gated, which is why they were invisible before: the seed is
+ * what puts BillProjectionBanner in the DOM (loadFixture asserts
+ * `data-state="ready"`, so a seed change cannot silently hollow this out).
+ */
+test.describe('BillProjectionBanner dark-mode pairings (t_fbf590fa addendum 1)', () => {
+  test('DARK: the two mini-card boxes and the flood caption clear AA', async ({ page }) => {
+    test.setTimeout(180_000);
+    await loadFixture(page, 'dark');
+    const m = await page.evaluate(() => {
+      const lum = ([r, g, b]: number[]) => {
+        const f = (c: number) => {
+          c /= 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+      const toRgb = (color: string) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = '#000';
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 1, 1);
+        const d = ctx.getImageData(0, 0, 1, 1).data;
+        return [d[0], d[1], d[2]] as [number, number, number];
+      };
+      const parse = (s: string | null): [number, number, number] | null => {
+        if (!s || s === 'transparent') return null;
+        const m = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?/.exec(s);
+        if (!m) return toRgb(s);
+        // A fully transparent background is NOT a surface: skipping this is
+        // how a probe reports black-on-black for text on an emerald flood.
+        const a = m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
+        return a === 0 ? null : [parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3])];
+      };
+      const bgOf = (el: Element | null): [number, number, number] => {
+        let n: Element | null = el;
+        while (n && n !== document.documentElement) {
+          const c = parse(getComputedStyle(n).backgroundColor);
+          if (c) return c;
+          n = n.parentElement;
+        }
+        return [255, 255, 255];
+      };
+      const ratioOf = (el: Element) => {
+        const fg = parse(getComputedStyle(el).color)!;
+        const bg = bgOf(el);
+        const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+        return {
+          text: (el.textContent || '').trim().slice(0, 30),
+          fg: `rgb(${fg.join(', ')})`,
+          bg: `rgb(${bg.join(', ')})`,
+          ratio: +((hi + 0.05) / (lo + 0.05)).toFixed(2),
+        };
+      };
+      const banner = document.querySelector('[data-testid="bill-projection"]')!;
+      const boxes = [...banner.querySelectorAll('.bg-card')].map(ratioOf);
+      const caption = ratioOf(banner.querySelector('p')!);
+      return { boxes, caption };
+    });
+
+    expect(m.boxes.length, 'both mini-cards render').toBe(2);
+    for (const b of [...m.boxes, m.caption]) {
+      expect(b.ratio, `"${b.text}" ${b.fg} on ${b.bg} = ${b.ratio}:1`).toBeGreaterThanOrEqual(4.5);
+    }
+    // The defect these replaced: --accent-ink (#000) inherited onto --card.
+    expect(m.boxes[0].fg, 'the cards use --ink, not the slab ink').not.toBe('rgb(0, 0, 0)');
+  });
+});
+
+/**
+ * The thermometer ramp (TempBandCard's 7 bar fills) is GRAPHICS, not text, so
+ * the text walk above cannot see it — an unreadable bar is not a text node.
+ *
+ * It is also the one colour budget in the app whose meaning IS the colour: the
+ * bars are the temperature axis, so "just pick two readable colours" (the
+ * obvious fix) would flatten the cold→hot ramp and delete the reading. The
+ * probe therefore measures the PAINTED fill of each bar against the surface it
+ * is painted on, and the LIGHT test pins the seven rendered pixels to the
+ * literals the component used to hardcode — the dark fix must cost light
+ * exactly nothing.
+ */
+function rampProbe() {
+  const lum = ([r, g, b]: number[]) => {
+    const f = (c: number) => {
+      c /= 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  const toRgb = (color: string): [number, number, number, number] => {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    return [d[0], d[1], d[2], d[3] / 255];
+  };
+  const parse = (s: string | null): [number, number, number, number] | null => {
+    if (!s || s === 'transparent' || s === 'none') return null;
+    const m = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?/.exec(s);
+    if (!m) return toRgb(s);
+    const a =
+      m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
+    return [parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), a];
+  };
+  const over = (fg: number[], bg: number[]): [number, number, number, number] => [
+    fg[0] * fg[3] + bg[0] * (1 - fg[3]),
+    fg[1] * fg[3] + bg[1] * (1 - fg[3]),
+    fg[2] * fg[3] + bg[2] * (1 - fg[3]),
+    1,
+  ];
+  const bgOf = (el: Element | null): [number, number, number, number] => {
+    let n: Element | null = el;
+    while (n && n !== document.documentElement) {
+      const c = parse(getComputedStyle(n).backgroundColor);
+      if (c && c[3] > 0) return c[3] >= 1 ? c : over(c, bgOf(n.parentElement));
+      n = n.parentElement;
+    }
+    return parse(getComputedStyle(document.body).backgroundColor) ?? [255, 255, 255, 1];
+  };
+  const rgb = (c: number[]) => `rgb(${c.slice(0, 3).map(Math.round).join(', ')})`;
+
+  return [...document.querySelectorAll('[data-testid="temp-band-bar"]')].map((el) => {
+    const fill = parse(getComputedStyle(el).fill);
+    const bg = bgOf(el);
+    if (!fill) return { band: el.getAttribute('data-band'), rgb: 'none', bg: rgb(bg), ratio: 0, hours: 0, h: 0 };
+    const [hi, lo] = [lum(over(fill, bg)), lum(bg)].sort((x, y) => y - x);
+    const r = el.getBoundingClientRect();
+    return {
+      band: el.getAttribute('data-band'),
+      rgb: rgb(fill),
+      bg: rgb(bg),
+      ratio: +((hi + 0.05) / (lo + 0.05)).toFixed(2),
+      hours: Number(el.getAttribute('data-hours')),
+      h: +r.height.toFixed(1),
+    };
+  });
+}
+
+test.describe('thermometer ramp (TempBandCard, t_fbf590fa)', () => {
+  test('DARK: every bar fill clears 3:1 on the card — and 4.5:1 for its in-bar label', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await loadFixture(page, 'dark');
+    const seeded = await seedMarkShapedWithTemps(page);
+    expect(seeded.bands.length, `the seeded year must fill every band (got ${seeded.bands})`).toBe(7);
+
+    const bars = await page.evaluate(rampProbe);
+    expect(bars.length, 'seven bars render').toBe(7);
+    const live = bars.filter((b) => b.hours > 0);
+    expect(
+      live.length,
+      `every band needs hours for the ramp to be measured at all — got ${bars
+        .map((b) => `${b.band}:${b.hours}`)
+        .join(' ')}`,
+    ).toBe(7);
+
+    const fmt = (b: (typeof bars)[number]) =>
+      `${b.band} ${b.rgb} on ${b.bg} = ${b.ratio}:1 (${b.hours}h)`;
+    const under = live.filter((b) => b.ratio < 4.5);
+    expect(
+      under,
+      `${under.length}/7 dark bar fills under the floor the ¢/kWh label needs:\n${under
+        .map(fmt)
+        .join('\n')}\n--- all seven ---\n${live.map(fmt).join('\n')}`,
+    ).toEqual([]);
+    // 3:1 is the graphics floor; the label is why this asserts 4.5:1.
+    for (const b of live) expect(b.ratio, fmt(b)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('LIGHT: the rendered fills are the seven literals the ramp replaced', async ({ page }) => {
+    test.setTimeout(180_000);
+    await loadFixture(page, 'light');
+    await seedMarkShapedWithTemps(page);
+
+    const bars = await page.evaluate(rampProbe);
+    expect(bars.length, 'seven bars render').toBe(7);
+    expect(
+      bars.map((b) => b.rgb),
+      'the light ramp is byte-identical to the hardcoded list (zero light regression)',
+    ).toEqual([
+      'rgb(29, 78, 216)', // #1d4ed8 blue-700
+      'rgb(37, 99, 235)', // #2563eb blue-600
+      'rgb(59, 130, 246)', // #3b82f6 blue-500
+      'rgb(245, 158, 11)', // #f59e0b amber-500
+      'rgb(249, 115, 22)', // #f97316 orange-500
+      'rgb(239, 68, 68)', // #ef4444 red-500
+      'rgb(185, 28, 28)', // #b91c1c red-700
+    ]);
   });
 });

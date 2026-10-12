@@ -133,10 +133,18 @@ export default function ChartView({
 
   return (
     <div className="space-y-6 md:space-y-10" data-testid="chart-view">
-      {/* Main Graph */}
-      <div className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-hard-8 md:shadow-hard-16 border-4 border-edge overflow-hidden relative z-10 text-ink font-black uppercase">
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-ink font-black">
-          <div className="flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
+      {/* Main Graph. The three testids are the geometry gate's handles
+          (toolbar-layout.spec.ts measures the header row at 1440/1383/1280/
+          1152/1024 — the row's overflow and the cost block's right edge). */}
+      <div data-testid="chart-card" className="bg-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[3rem] shadow-hard-8 md:shadow-hard-16 border-4 border-edge overflow-hidden relative z-10 text-ink font-black uppercase">
+        <div data-testid="chart-header-row" className="flex flex-col lg:flex-row justify-between items-center mb-6 md:mb-12 gap-4 md:gap-6 text-ink font-black">
+          {/* `min-w-0` is what gives the h2's `truncate` a shrink floor: without
+              it the group keeps its full intrinsic width at every viewport, the
+              trailing cost block absorbs the whole flex deficit and the card's
+              `overflow-hidden` hard-cuts the number (38px @1440 → 358px @1024,
+              no ellipsis, no scrollbar). The title yields instead — it already
+              truncates. */}
+          <div data-testid="chart-title-group" className="min-w-0 flex items-center gap-3 md:gap-6 w-full lg:w-auto justify-between lg:justify-start">
             {zoomLevel !== 'monthly' && <button type="button" aria-label={t('chart.backAria')} onClick={goBack} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-2 md:p-4 bg-card border-2 md:border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-2 md:shadow-hard-4 hover:bg-inv hover:text-inv-ink active:bg-inv active:text-inv-ink transition-all"><ArrowLeft size={20} className="md:w-8 md:h-8" strokeWidth={4} /></button>}
             <div className="flex items-center gap-2 md:gap-4">
               <button type="button" aria-label={t('chart.prevAria')} onClick={() => navigatePeriod('prev')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none"><ChevronLeft size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
@@ -147,7 +155,9 @@ export default function ChartView({
           <div className="no-print flex bg-hover p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-edge text-ink" role="group" aria-label={t('chart.zoomAria')}>
              {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-inv text-inv-ink' : 'text-ink-2'}`}>{t(`chart.zoom.${l}`)}</button>)}
           </div>
-          <div className="text-center lg:text-right text-ink font-black">
+          {/* `shrink-0`: the number is the one thing on this row that must never
+              clip, so the deficit has to come out of the title group above. */}
+          <div data-testid="chart-cost-block" className="shrink-0 text-center lg:text-right text-ink font-black">
              <div className="text-[8px] md:text-[10px]">{t('chart.selectionCost', { plan: userPlan })}</div>
               <div className="text-2xl md:text-5xl italic mt-1 md:mt-2 font-black">{fmtMoney(selectionCost)}</div>
           </div>

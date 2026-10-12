@@ -257,6 +257,104 @@ function toolbarChecks(label, m, band) {
   ];
 }
 
+/**
+ * The USAGE card's header-row widths (t_fbf590fa addendum 2): the widths the
+ * designer reproduced the clip at, plus the two the desktop evidence covered.
+ * 1383 is the width the defect was first seen at; 1152 and 1024 are where the
+ * deficit is largest (the title is still untruncated, so the cost block takes
+ * the whole loss).
+ */
+const CHART_HEADER_SWEEP = [
+  { width: 1440, height: 900 },
+  { width: 1383, height: 900 },
+  { width: 1280, height: 800 },
+  { width: 1152, height: 800 },
+  { width: 1024, height: 700 },
+];
+
+/**
+ * In-page geometry of the USAGE card's header row: the title group, the zoom
+ * switcher and the trailing cost block.
+ *
+ * The bug this measures: the title group had no shrink floor, so it kept its
+ * full intrinsic width at EVERY viewport; the cost block (no `shrink-0`)
+ * absorbed the entire deficit and the card's `overflow-hidden` hard-cut the
+ * number — no ellipsis, no scrollbar, just a missing "-13.93". `scrollWidth`
+ * on an `overflow: visible` flex row reports the children's real extent, so
+ * `scrollW > clientW` IS the clip, and the cost block's right edge vs the
+ * card's content edge says the same thing about the one element that must
+ * never clip.
+ *
+ * Runs in the page (see header): no closures over budgets or helpers.
+ */
+function measureChartHeaderGeometry() {
+  const card = document.querySelector('[data-testid="chart-card"]');
+  const row = document.querySelector('[data-testid="chart-header-row"]');
+  const title = document.querySelector('[data-testid="chart-title-group"]');
+  const cost = document.querySelector('[data-testid="chart-cost-block"]');
+  if (!card || !row || !title || !cost) {
+    return { error: 'chart header row not found (is the USAGE tab open?)' };
+  }
+  const cs = getComputedStyle(card);
+  const cardRect = card.getBoundingClientRect();
+  const innerRight =
+    cardRect.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+  const rowRect = row.getBoundingClientRect();
+  const tRect = title.getBoundingClientRect();
+  const cRect = cost.getBoundingClientRect();
+  return {
+    card: { x: cardRect.left, w: cardRect.width, innerRight },
+    row: { w: rowRect.width, clientW: row.clientWidth, scrollW: row.scrollWidth },
+    title: { w: tRect.width, scrollW: title.scrollWidth, text: (title.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60) },
+    cost: {
+      right: cRect.right,
+      w: cRect.width,
+      scrollW: cost.scrollWidth,
+      clientW: cost.clientWidth,
+      text: (cost.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60),
+    },
+  };
+}
+
+const r1 = (n) => Math.round(n);
+
+/**
+ * Turn one header measurement into the gate's checks.
+ *
+ * @param {string} label  viewport label, e.g. `1383x900`
+ * @param {object} m      result of measureChartHeaderGeometry()
+ */
+function chartHeaderChecks(label, m) {
+  if (m.error || !m.row) {
+    return [{ name: `${label}: chart header measurable`, ok: false, detail: String(m.error) }];
+  }
+  const rowOverflow = m.row.scrollW - m.row.clientW;
+  const clip = m.cost.right - m.card.innerRight;
+  const costOverflow = m.cost.scrollW - m.cost.clientW;
+  return [
+    {
+      name: `${label}: chart header row does not overflow`,
+      ok: rowOverflow <= 1,
+      detail: `row ${r1(m.row.w)}px, content ${r1(m.row.scrollW)}px, overflow ${r1(rowOverflow)}px`,
+    },
+    {
+      name: `${label}: cost block ends inside the card (clip 0px)`,
+      ok: clip <= 1,
+      detail: `cost right ${r1(m.cost.right)} vs content edge ${r1(m.card.innerRight)} → clip ${r1(clip)}px`,
+    },
+    {
+      name: `${label}: cost block is not internally clipped`,
+      ok: costOverflow <= 1,
+      detail: `"${m.cost.text}" — ${r1(m.cost.w)}px wide, overflow ${r1(costOverflow)}px`,
+    },
+    {
+      name: `${label}: the title group still has width`,
+      ok: m.title.w >= 24,
+      detail: `"${m.title.text}" at ${r1(m.title.w)}px`,
+    },
+  ];
+}
+
 /** One-line moving number for a log or an evidence file. */
 function layoutSummary(m) {
   if (m.error) return m.error;
@@ -271,8 +369,11 @@ module.exports = {
   TOOLBAR_BUDGETS,
   MOBILE_BELOW,
   VIEWPORT_SWEEP,
+  CHART_HEADER_SWEEP,
   bandFor,
   measureToolbarGeometry,
+  measureChartHeaderGeometry,
   toolbarChecks,
+  chartHeaderChecks,
   layoutSummary,
 };

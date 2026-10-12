@@ -47,7 +47,12 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
         </div>
       </div>
 
-      <div className="bg-card border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
+      {/* A mini-card's ink follows its OWN surface (--card flips with the
+          theme), not the slab it sits in. Inheriting the slab's
+          `text-accent-ink` painted #000 on #0f172a in dark — 1.18:1. LIGHT is
+          byte-identical: --ink and --accent-ink are both #000 there; dark is
+          #f8fafc on #0f172a = 17.06:1. */}
+      <div className="bg-card text-ink border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
         <div className="text-[8px] md:text-[10px]">{t('projection.monthToDate')}</div>
         <div className="text-lg md:text-2xl italic">
           {fmtMoney(projection.monthToDateCost)}
@@ -57,14 +62,21 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
         </div>
       </div>
 
-      <div className="bg-card border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
+      <div className="bg-card text-ink border-2 md:border-4 border-edge rounded-lg md:rounded-xl px-3 md:px-4 py-2">
         <div className="text-[8px] md:text-[10px]">{t('projection.daysMeasured')}</div>
         <div className="text-lg md:text-2xl italic">
           {projection.monthDaysCovered}/{projection.daysInMonth}
         </div>
       </div>
 
-      <p className="text-[8px] md:text-[11px] font-bold text-ink-2 normal-case basis-full md:basis-auto max-w-2xl">
+      {/* The caption rides the emerald FLOOD, which is a fixed slab (emerald-400
+          is the same pixel in both themes) — so its ink is fixed too, the same
+          rule BestChoiceBanner already follows. `text-ink-2` was 1.31:1 in dark
+          and 3.91:1 in light (never passing): black-on-flood is 10.83:1 in both.
+          The 8px size stays the hierarchy signal, not a colour. NOTE: this is a
+          LIGHT restyle (slate-600 → black) and is called out for Mark's sign-off
+          in the merge summary. */}
+      <p className="text-[8px] md:text-[11px] font-bold text-accent-ink normal-case basis-full md:basis-auto max-w-2xl">
         {projection.caption}
       </p>
     </div>
