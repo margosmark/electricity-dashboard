@@ -25,7 +25,11 @@ The forward-looking **What-If / EV** cards (`ShiftOptimizer`, `EvScenarioCard`,
 `lib/touShift.ts`, `lib/evScenario.ts`) are untouched and remain separately
 labelled; no number they print is merged into Hindsight.
 
-## The numbers on Mark's real files (local build, `112/112` checks)
+## The numbers on Mark's real files
+
+Byte-identical on the local build and on the **deployed** stack (`112/112` checks
+each, both viewports, both exports) — the deployed run is the record in
+`evidence/wave-v-verification.json`.
 
 | | 2-year export (24 bills) | 3-month export (3 bills) |
 | --- | --- | --- |
@@ -80,11 +84,13 @@ copies, and delete the copies when done.
 Screenshots (not tracked — see `ASSETS.md`): `wave-v-{desktop,mobile}-{long,short}.png`
 (full page), `-panel.png` (the panel), `-headline.png` (the headline figure).
 
-`evidence/wave-v-verification.json` is the SUPERSEDED `9dcd1cd` record: it was
-written against the pre-correction surface (two levers, move lists) and is kept
-only as history. The live record for this change is
-`evidence/wave-v-verification-local.json` (local build, both exports, both
-viewports). The deployed re-run follows QA — see below.
+`evidence/wave-v-verification.json` is the **DEPLOYED** record: the same harness
+run against `http://10.10.11.110:3939/`, `112/112`, `failed: 0`,
+`ranAt 2026-10-12T21:51:19.661Z`, and it carries the two pins that make it
+attributable — `"base": "http://10.10.11.110:3939/"` and
+`"deployedCommit": "054d60fb335e63b0d7d29b081d30f16ec0e29760"`. The local-build
+record is `evidence/wave-v-verification-local.json`. The pre-correction `9dcd1cd`
+record (two levers, move lists) is history only.
 
 ## Gates run before the push
 
@@ -100,6 +106,19 @@ viewports). The deployed re-run follows QA — see below.
 | `node evidence/wave-v-verify.cjs` (local build :3939, both real exports, 1440 + 390 px) | **112/112** |
 | CI | skipped by convention — Actions billing dead; the local battery is the gate |
 
+Those are the numbers at the rebased head `3051c7f`. `main` moved a second time
+(`695a839`, PR #99) between the rebase and the squash, so the merged commit was
+re-gated on its own tree before the deploy:
+
+| gate (at the merged commit `054d60f`) | result |
+| --- | --- |
+| `npm run lint` / `npm run typecheck` | clean / clean |
+| `npm run test` | **1640 passed \| 6 skipped** (101 files passed, 2 skipped) |
+| `npm run build` (`GIT_SHA=054d60f…`) | ok — the stamped tree is what the image builds |
+| `node scripts/i18n-merge.mjs --check` | up to date, **1256** keys (1229 + 23 from #98/#97 + 4 from #99) |
+| `.venv/bin/pytest tests/` / `ops/dmd/tests` | 41 passed / 19 passed, 1 skipped |
+| `node evidence/wave-v-verify.cjs` (local build :3939) | **112/112** |
+
 ## Re-running
 
 ```bash
@@ -109,12 +128,33 @@ WAVE_V_XML_SHORT=/path/to/3-month-export.xml TZ=America/Toronto \
   WAVE_V_BASE_URL=http://127.0.0.1:3939/ WAVE_V_SUFFIX=-local \
   node evidence/wave-v-verify.cjs
 
-# the deployed stack (after QA gates the merge and the deploy):
-WAVE_V_XML_LONG=… WAVE_V_XML_SHORT=… TZ=America/Toronto node evidence/wave-v-verify.cjs
+# the deployed stack (no WAVE_V_SUFFIX: it writes the -unsuffixed deployed record):
+WAVE_V_XML_LONG=… WAVE_V_XML_SHORT=… TZ=America/Toronto \
+  WAVE_V_DEPLOY=$(curl -s http://10.10.11.110:3939/api/version | grep -o '[0-9a-f]\{40\}') \
+  node evidence/wave-v-verify.cjs
 ```
 
 ## Deploy status
 
-Not deployed by this change: the QA task (`t_fdc11c3f`) gates both the merge and
-the deploy, so `10.10.11.110` still serves the pre-correction build and nothing
-here claims otherwise.
+Merged and deployed. PR #93 was rebased onto `origin/main` (`f22e3ef` → `567702e`)
+and re-gated, then squash-merged; `main` had moved again to `695a839` by the time
+it landed, so the merge commit itself was re-gated (table above) and only then
+deployed.
+
+| | |
+| --- | --- |
+| merged commit = deployed SHA | `054d60fb335e63b0d7d29b081d30f16ec0e29760` |
+| deploy | `ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'` → `DEPLOY_OK at 054d60f`, `DEPLOY_SHA=054d60f…` |
+| served identity | `GET http://10.10.11.110:3939/api/version` → `{"sha":"054d60fb335e63b0d7d29b081d30f16ec0e29760","buildId":"BvEgAjcF6a2v9XfLgSZkp"}` |
+| deployed browser re-run | `WAVE_V_XML_LONG=… WAVE_V_XML_SHORT=… TZ=America/Toronto node evidence/wave-v-verify.cjs` → **112/112**, 0 failures, both exports at 1440 px and 390 px |
+| builder pruned after the build | `ssh hermescomputer 'docker builder prune -af'` → 1.441 GB reclaimed (the vfs store keeps every layer) |
+| export copies | copied from the `pm` document cache to a scratch dir, used, **deleted**; sha256 verified against the pins before use (`e292de50…` long, `6a3f0e14…` short); neither ever entered the repo |
+
+The deployed numbers reproduce the local ones exactly: 2-year file `−$251.89`
+(24 rows, 22 priced / 2 skipped, 13 TOU · 11 Tiered, 12 summer · 12 winter ·
+4 straddling, worst Sep 25 – Oct 27 at $7.60 on a $234.11 bill), 3-month file
+`−$33.19` (3 rows, 1 priced / 2 skipped), and both viewports print identical
+figures.
+
+QA's one cosmetic flag — the `headlineNote` sub-line printing `$0.00 more` beside
+the negative headline — is untouched by this merge and is left to its own card.
