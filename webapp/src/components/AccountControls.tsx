@@ -21,6 +21,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Bell, BellOff, CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
 import { useAccount, type AccountStatus } from "@/hooks/useAccount";
+import { useTranslation } from "@/i18n";
 
 const TOGGLE_CLASS =
   "min-h-11 min-w-11 inline-flex items-center justify-center " +
@@ -46,6 +47,7 @@ type Props = {
 
 export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
   const account = useAccount({ onDataApplied });
+  const { t } = useTranslation();
   const { status, busy, message, prompt, recoveryCode } = account;
 
   const [open, setOpen] = useState(defaultOpen);
@@ -136,8 +138,8 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
       <button
         type="button"
         data-testid="account-toggle"
-        title="Account & sync"
-        aria-label="Account and sync"
+        title={t('account.toggleTitle')}
+        aria-label={t('account.toggleAria')}
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={busy}
@@ -154,17 +156,17 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
         <div
           data-testid="account-drawer"
           role="dialog"
-          aria-label="Account and sync"
+          aria-label={t('account.toggleAria')}
           data-account-state={signedIn ? "signed_in" : status.authed ? "locked" : "signed_out"}
           className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[260] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">
-              {signedIn ? "Your account" : status.authed ? "Sync locked" : "Sign in"}
+              {signedIn ? t('account.headingSignedIn') : status.authed ? t('account.headingLocked') : t('account.headingSignedOut')}
             </div>
             <button
               type="button"
-              aria-label="Close account drawer"
+              aria-label={t('account.drawerCloseAria')}
               onClick={() => setOpen(false)}
               className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
             >
@@ -173,9 +175,11 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           </div>
 
           <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-600 font-black mb-4 normal-case">
-            Your readings are encrypted in this browser before they are uploaded. The server stores a blob it
-            cannot open — it knows <em>that</em> you have data and <em>when</em> it changed, not what is in it,
-            and not your password.
+            {t('account.privacyIntro')}{" "}
+            <em>{t('account.privacyThat')}</em>{" "}
+            {t('account.privacyYouHave')}{" "}
+            <em>{t('account.privacyWhen')}</em>{" "}
+            {t('account.privacyRest')}
           </p>
 
           {/* ---------------- explicit prompts (never auto-answered) --------- */}
@@ -184,9 +188,8 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               data-testid="account-migrate-prompt"
               className="mb-4 p-3 rounded-lg border-4 border-black bg-yellow-100 text-[10px] leading-relaxed normal-case"
             >
-              <div className="uppercase font-black mb-2">Back up this device?</div>
-              This browser has data and your new account has none. Upload it so your phone and desktop see the
-              same dashboard?
+              <div className="uppercase font-black mb-2">{t('account.migrateTitle')}</div>
+              {t('account.migrateBody')}
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
@@ -195,7 +198,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   onClick={() => void account.acceptUpload()}
                   className={BUTTON_CLASS + " bg-emerald-300 flex-1"}
                 >
-                  <CloudUpload size={14} strokeWidth={4} /> Back it up
+                  <CloudUpload size={14} strokeWidth={4} /> {t('account.migrateAccept')}
                 </button>
                 <button
                   type="button"
@@ -203,7 +206,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   onClick={account.declineUpload}
                   className={BUTTON_CLASS + " bg-white flex-1"}
                 >
-                  Not now
+                  {t('account.migrateDecline')}
                 </button>
               </div>
             </div>
@@ -214,9 +217,8 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               data-testid="account-conflict-prompt"
               className="mb-4 p-3 rounded-lg border-4 border-black bg-orange-100 text-[10px] leading-relaxed normal-case"
             >
-              <div className="uppercase font-black mb-2">Two devices changed this data</div>
-              The account is at revision {prompt.serverRev} and this browser has changes too. Pick which copy
-              wins — nothing is overwritten until you do.
+              <div className="uppercase font-black mb-2">{t('account.conflictTitle')}</div>
+              {t('account.conflictBody', { rev: prompt.serverRev })}
               <div className="flex gap-2 mt-3">
                 <button
                   type="button"
@@ -225,7 +227,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   onClick={() => void account.keepThisDevice()}
                   className={BUTTON_CLASS + " bg-emerald-300 flex-1"}
                 >
-                  This device
+                  {t('account.conflictKeepLocal')}
                 </button>
                 <button
                   type="button"
@@ -234,7 +236,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   onClick={() => void account.useServerCopy()}
                   className={BUTTON_CLASS + " bg-white flex-1"}
                 >
-                  Account copy
+                  {t('account.conflictUseServer')}
                 </button>
               </div>
             </div>
@@ -245,23 +247,21 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               data-testid="account-recovery-code"
               className="mb-4 p-3 rounded-lg border-4 border-black bg-purple-100 text-[10px] leading-relaxed normal-case"
             >
-              <div className="uppercase font-black mb-2">Save this recovery code</div>
+              <div className="uppercase font-black mb-2">{t('account.recoveryTitle')}</div>
               <div
                 data-testid="account-recovery-code-value"
                 className="font-mono text-[13px] tracking-widest my-2 select-all"
               >
                 {recoveryCode}
               </div>
-              There is no e-mail reset on this server. If you forget your password this code lets you set a new
-              one — but the copy stored on the server was encrypted with the old password and cannot be read
-              afterwards, so keep this browser&apos;s data until you have re-synced.
+              {t('account.recoveryBody')}
               <button
                 type="button"
                 data-testid="account-recovery-dismiss"
                 onClick={account.dismissRecoveryCode}
                 className={BUTTON_CLASS + " bg-white w-full mt-2"}
               >
-                I have saved it
+                {t('account.recoverySaved')}
               </button>
             </div>
           )}
@@ -273,9 +273,11 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 {status.email}
               </div>
               <div className="text-[9px] text-slate-500 normal-case" data-testid="account-sync-status">
-                Account revision {status.serverRev}
-                {status.updatedAt ? ` · last change ${new Date(status.updatedAt).toLocaleString()}` : ""}
-                {status.hasBlob ? "" : " · nothing backed up yet"}
+                {t('account.syncStatusRevision')} {status.serverRev}
+                {status.updatedAt
+                  ? t('account.syncStatusLastChange', { when: new Date(status.updatedAt).toLocaleString() })
+                  : ""}
+                {status.hasBlob ? "" : t('account.syncStatusNoBlob')}
               </div>
 
               <button
@@ -285,7 +287,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 onClick={() => void account.syncNow()}
                 className={BUTTON_CLASS + " bg-yellow-400"}
               >
-                <CloudUpload size={14} strokeWidth={4} /> Back up now
+                <CloudUpload size={14} strokeWidth={4} /> {t('account.syncNow')}
               </button>
 
               <NotificationSettings account={account} status={status} />
@@ -297,7 +299,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 onClick={() => void account.signOut()}
                 className={BUTTON_CLASS + " bg-white"}
               >
-                <LogOut size={14} strokeWidth={4} /> Sign out
+                <LogOut size={14} strokeWidth={4} /> {t('account.signOut')}
               </button>
             </div>
           )}
@@ -307,13 +309,13 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
             <>
               {status.authed && (
                 <div className="mb-3 p-2 border-4 border-black bg-slate-100 text-[10px] normal-case">
-                  This device is signed in but has no encryption key — enter your password to unlock it.
+                  {t('account.lockedHelp')}
                 </div>
               )}
               <form onSubmit={submitAuth} className="flex flex-col gap-3" data-testid="account-auth-form">
                 <div>
                   <label className={FIELD_LABEL} htmlFor="acct-email">
-                    E-mail
+                    {t('account.emailLabel')}
                   </label>
                   <input
                     id="acct-email"
@@ -328,7 +330,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 </div>
                 <div>
                   <label className={FIELD_LABEL} htmlFor="acct-password">
-                    Password
+                    {t('account.passwordLabel')}
                   </label>
                   <input
                     id="acct-password"
@@ -348,7 +350,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   disabled={busy}
                   className={BUTTON_CLASS + " bg-purple-300"}
                 >
-                  {tab === "signup" ? "Create account" : status.authed ? "Unlock" : "Sign in"}
+                  {tab === "signup" ? t('account.createAccount') : status.authed ? t('account.unlock') : t('account.signIn')}
                 </button>
                 <div className="flex justify-between text-[9px] normal-case">
                   <button
@@ -357,7 +359,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                     onClick={() => setTab(tab === "signup" ? "signin" : "signup")}
                     className="underline font-bold"
                   >
-                    {tab === "signup" ? "Have an account? Sign in" : "No account? Create one"}
+                    {tab === "signup" ? t('account.haveAccount') : t('account.noAccount')}
                   </button>
                   <button
                     type="button"
@@ -365,7 +367,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                     onClick={() => setTab("recover")}
                     className="underline font-bold"
                   >
-                    Forgot password?
+                    {t('account.forgotPassword')}
                   </button>
                 </div>
               </form>
@@ -377,7 +379,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
             <form onSubmit={submitRecover} className="flex flex-col gap-3 mt-3" data-testid="account-recover-form">
               <div>
                 <label className={FIELD_LABEL} htmlFor="rec-email">
-                  E-mail
+                  {t('account.emailLabel')}
                 </label>
                 <input
                   id="rec-email"
@@ -391,7 +393,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               </div>
               <div>
                 <label className={FIELD_LABEL} htmlFor="rec-code">
-                  Recovery code
+                  {t('account.recoveryCodeLabel')}
                 </label>
                 <input
                   id="rec-code"
@@ -406,7 +408,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               </div>
               <div>
                 <label className={FIELD_LABEL} htmlFor="rec-password">
-                  New password
+                  {t('account.newPasswordLabel')}
                 </label>
                 <input
                   id="rec-password"
@@ -421,11 +423,10 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 />
               </div>
               <p className="text-[9px] text-slate-600 normal-case">
-                The stored copy was encrypted with the old password and will be removed — this recovers your
-                account, not your data. Re-sync from a device that still has it.
+                {t('account.recoverWarn')}
               </p>
               <button type="submit" disabled={busy} className={BUTTON_CLASS + " bg-purple-300"}>
-                <KeyRound size={14} strokeWidth={4} /> Set new password
+                <KeyRound size={14} strokeWidth={4} /> {t('account.setPassword')}
               </button>
             </form>
           )}
@@ -453,23 +454,14 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
  * panel can only ever show values the server accepted.
  * -------------------------------------------------------------------------- */
 
-const TOPIC_LABELS: Record<string, string> = {
-  plan_change: "A cheaper plan appears for your usage",
-  oeb_rates: "New Ontario rates are published",
-  data_available: "Your utility posted new data",
-  anomaly: "An unusually expensive day is detected",
-};
-
-const MIN_INTERVAL_TEXT: Record<string, string> = {
-  plan_change: "at most once a day",
-  oeb_rates: "at most once a week",
-  data_available: "at most once a day",
-  anomaly: "at most once a day",
-};
+/** The topics in the order the panel lists them. The words live in the i18n
+ *  catalog (`account.topic.*` / `account.interval.*`), so they translate. */
+const TOPIC_ORDER = ["plan_change", "oeb_rates", "data_available", "anomaly"] as const;
 
 type AccountApi = ReturnType<typeof useAccount>;
 
 function NotificationSettings({ account, status }: { account: AccountApi; status: AccountStatus }) {
+  const { t } = useTranslation();
   const prefs = status.prefs;
   const [cap, setCap] = useState(prefs?.dailyCap ?? 3);
   const [quiet, setQuiet] = useState(
@@ -523,7 +515,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
       >
         <span className="flex items-center gap-2">
           {subscribed ? <Bell size={14} strokeWidth={4} /> : <BellOff size={14} strokeWidth={4} />}
-          Notifications {subscribed ? "on" : "off"}
+          {subscribed ? t('account.notificationsOn') : t('account.notificationsOff')}
         </span>
         <span aria-hidden>{expanded ? "−" : "+"}</span>
       </button>
@@ -532,7 +524,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
         <div className="mt-3 flex flex-col gap-3">
           {!status.pushConfigured && (
             <div className="text-[9px] text-slate-600 normal-case">
-              This server has no VAPID keys yet, so notifications cannot be delivered.
+              {t('account.pushUnconfigured')}
             </div>
           )}
           <div className="flex gap-2">
@@ -545,15 +537,15 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
               }
               className={BUTTON_CLASS + (subscribed ? " bg-white" : " bg-emerald-300") + " flex-1"}
             >
-              {subscribed ? "Turn off" : "Turn on"}
+              {subscribed ? t('account.notifyTurnOff') : t('account.notifyTurnOn')}
             </button>
           </div>
 
           {prefs && (
             <>
               <fieldset>
-                <legend className="text-[9px] font-black uppercase mb-1">Tell me about</legend>
-                {Object.keys(TOPIC_LABELS).map((topic) => (
+                <legend className="text-[9px] font-black uppercase mb-1">{t('account.tellMeAbout')}</legend>
+                {TOPIC_ORDER.map((topic) => (
                   <label key={topic} className="flex items-start gap-2 text-[9px] normal-case py-1 cursor-pointer">
                     <input
                       type="checkbox"
@@ -563,8 +555,8 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
                       className="mt-0.5 h-4 w-4 accent-purple-600"
                     />
                     <span>
-                      {TOPIC_LABELS[topic]}
-                      <span className="block text-slate-500">{MIN_INTERVAL_TEXT[topic]}</span>
+                      {t(`account.topic.${topic}`)}
+                      <span className="block text-slate-500">{t(`account.interval.${topic}`)}</span>
                     </span>
                   </label>
                 ))}
@@ -572,7 +564,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-[9px]">
-                  <span className="block font-black uppercase mb-1">Per day (max)</span>
+                  <span className="block font-black uppercase mb-1">{t('account.perDayMax')}</span>
                   <input
                     type="number"
                     min={0}
@@ -585,7 +577,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
                   />
                 </label>
                 <label className="text-[9px]">
-                  <span className="block font-black uppercase mb-1">Quiet</span>
+                  <span className="block font-black uppercase mb-1">{t('account.quiet')}</span>
                   <input
                     type="text"
                     data-testid="account-quiet-hours"
@@ -594,7 +586,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
                     onBlur={commitLimits}
                     className={INPUT_CLASS}
                     pattern="\d{1,2}:\d{2}-\d{1,2}:\d{2}"
-                    title="HH:MM-HH:MM"
+                    title={t('account.quietFormat')}
                   />
                 </label>
               </div>

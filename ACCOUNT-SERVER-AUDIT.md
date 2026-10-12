@@ -8,6 +8,16 @@ Audited: **2026-10-07 (EDT)** against `origin/main` `b290721`, the three Wave N
 branches, and the live deployment on `.110` / `electricity.markarslan.ca`.
 Card: `t_95f5ffbe`.
 
+> **UPDATE 2026-10-11 (t_0db3808c): PR #28 is MERGED.** Wave N's code now
+> lives on `main` — the "zero account code on `main`" measurements in §1 below
+> are the record of what was true when this audit was written, not a claim
+> about today's tree. What did **not** change is the deployment: `ACCT_ENABLED`
+> is still unset, so `/account/*` answers **404** on
+> `electricity.markarslan.ca` and the site behaves exactly as it did before
+> the merge. Going live is a separate, explicit decision (untracked `.env`
+> with `ACCT_ENABLED=true` + `VAPID_*`), per §6's merge-order rule: this file
+> stays the place where the *state* is written down.
+
 ---
 
 ## TL;DR

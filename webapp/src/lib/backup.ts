@@ -261,6 +261,8 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
       }
       planTimeline.push(candidate);
     }
+  }
+
   // v2 fields: present ⇒ validated, absent ⇒ left absent (a v1 document
   // legitimately has no opinion about the selected plan).
   let selectedPlan: string | undefined;

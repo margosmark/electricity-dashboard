@@ -12,7 +12,7 @@
  * no test can ever touch a real database.
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -86,6 +86,8 @@ beforeEach(() => {
 
 afterEach(() => {
   resetAccountServices();
+  // A test that pins the clock (quiet hours are wall-clock) must not leak it.
+  vi.useRealTimers();
 });
 
 /* ------------------------------------------------------------------------ */
@@ -512,6 +514,10 @@ describe("internal notify", () => {
   });
 
   it("404s with a WRONG token, and 200s with the right one", async () => {
+    // Quiet hours are wall-clock, so this assertion is pinned to a time
+    // outside every default quiet window (noon local): run at 23:00 the same
+    // request is suppressed as `quiet_hours` and the test reads as a defect.
+    vi.useFakeTimers({ now: new Date("2026-06-15T12:00:00-04:00"), toFake: ["Date"] });
     // A real account, so the fan-out has somebody to be suppressed FOR —
     // "no subscriptions" is only meaningful when a subscriber could exist.
     await register("fanout@example.com");

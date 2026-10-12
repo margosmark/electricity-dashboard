@@ -117,7 +117,9 @@ describe("applyDocument", () => {
     const doc = readLocalDocument()!;
     const { written } = applyDocument(doc);
     expect(written.sort()).toEqual(
-      ["billing_day", "energy_data", "energy_data_is_example", "extra_charges", PLAN_STORAGE_KEY].sort(),
+      // `plan_timeline` is Wave P's field: it rides the same document, so a
+      // device pull restores the plan periods as well (rebase onto main).
+      ["billing_day", "energy_data", "energy_data_is_example", "extra_charges", "plan_timeline", PLAN_STORAGE_KEY].sort(),
     );
   });
 });
