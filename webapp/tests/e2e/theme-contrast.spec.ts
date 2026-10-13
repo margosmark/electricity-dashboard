@@ -496,6 +496,75 @@ test.describe('dark mode contrast walk (spec §2 #10)', () => {
 });
 
 /**
+ * THE EXAMPLE-LEDGER STATE — the app's own synthetic year ("TRY WITH EXAMPLE
+ * DATA"), which is what a first-time visitor sees, and the one state NO walk
+ * measured.
+ *
+ * The two walks above run on the Mark-shaped seed and on an empty ledger
+ * (125d9f5). A QA sweep reported 1.18–1.44:1 `color: rgb(0, 0, 0)` pairings on
+ * THIS state, and no in-repo measurement could confirm or deny it, because the
+ * state was not in the gate. Three independent measurements now say it is
+ * clean — this repo's seeded gate (32 panels / 3220 nodes / 0 under AA on the
+ * deployed build), and an ad-hoc canvas-normalised walk of the example ledger
+ * (1038 dark + 823 light nodes / 0) — and a canary proved that instrument
+ * reports exactly 1.18:1 for a real black-on-slate, so it WOULD catch one.
+ *
+ * That disagreement is settled by a gate, not by prose: if the state does
+ * carry debt, these tests fail and print the offending pairs. If they pass,
+ * `rgb(0,0,0)`-on-a-dark-ancestor reports against this state are an artifact —
+ * `bgOf` reads `backgroundColor` only, so a slab painted by a gradient or a
+ * pseudo-element is invisible to it and it walks up to the card behind
+ * (reproduced: black on a yellow `linear-gradient` slab reports 1.04:1).
+ *
+ * The FLOORS are the point. A walk that measures nothing reports nothing, and
+ * this suite has twice shipped a clean budget over a page the defect lived on,
+ * so a positive node count is asserted alongside the zero.
+ */
+const EXAMPLE_LEDGER_TOTAL_FLOOR = 600;
+
+/** Load the app's OWN example ledger — never the Mark-shaped seed. */
+async function loadExampleLedger(page: Page, theme: 'light' | 'dark') {
+  await page.context().addInitScript((t) => localStorage.setItem('theme', t), theme);
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await page.getByRole('button', { name: /try with example data/i }).first().click();
+  // The app flags this state itself. Waiting on the flag (rather than on a
+  // heading the upload screen also has) is what keeps the walk from starting
+  // on the import page and reporting a clean empty shell.
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('energy_data_is_example')), {
+      timeout: 30_000,
+    })
+    .toBe('1');
+  await expect(page.getByTestId('tab-overview')).toBeVisible();
+  await page.waitForTimeout(1500);
+}
+
+test.describe('example-ledger contrast walk (the state no gate measured)', () => {
+  for (const theme of ['dark', 'light'] as const) {
+    test(`${theme.toUpperCase()}: the app's own example ledger clears AA on all four tabs`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000);
+      await loadExampleLedger(page, theme);
+      const walk = await walkAllTabs(page);
+      logBudget(`example-${theme}`, walk);
+
+      const total = Object.values(walk.measured).reduce((a, b) => a + b, 0);
+      expect(
+        total,
+        `the example-ledger ${theme} walk measured only ${total} text nodes — too few to be the populated dashboard, so its zero is not a verdict (per panel: ${JSON.stringify(walk.measured)})`,
+      ).toBeGreaterThanOrEqual(EXAMPLE_LEDGER_TOTAL_FLOOR);
+
+      expect(
+        walk.findings,
+        `the example ledger painted ${walk.findings.length} pairing(s) under AA in ${theme}:\n${fmtByPanel(walk.findings)}`,
+      ).toEqual([]);
+    });
+  }
+});
+
+/**
  * The pairings THIS card fixes, asserted on the page it actually renders on.
  * They are data-gated, which is why they were invisible before: the seed is
  * what puts BillProjectionBanner in the DOM (loadFixture asserts
