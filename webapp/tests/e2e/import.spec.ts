@@ -199,6 +199,60 @@ test.describe('/import', () => {
     expect(await storedReadings(page)).toEqual([]);
   });
 
+  test('a refused document leaves EVERY stored key byte-identical (real browser)', async ({ page }) => {
+    // The jsdom suite (src/app/import/ImportPageAtomicity.test.tsx) asserts the
+    // whole-store snapshot; this is the same claim on the real engine, where
+    // File/TextDecoder/fast-xml-parser are the shipped implementations rather
+    // than jsdom's. The profile is seeded with every key an import can reach —
+    // readings, a bill list, the feed clock and the provenance flag — so a
+    // SECOND write of a refused import (a flag cleared, a bill list replaced)
+    // cannot hide behind "the rows are unchanged".
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'energy_data_v2',
+        JSON.stringify({ version: 2, uploadedAt: new Date(0).toISOString(), source: 'e2e-seed', points: [
+          { timestamp: Date.UTC(2020, 0, 1, 5) / 1000, usage_kwh: 4.25 },
+        ] }),
+      );
+      localStorage.setItem('usage_summaries', JSON.stringify([
+        { source: 'UsageSummary', start: 1577836800, duration: 2678400, startDate: '2020-01-01', endDate: '2020-01-31', days: 31, billLastPeriod: 4100, billToDate: 4100, costAdditionalLastPeriod: null, currency: 124, consumption: null, items: [] },
+      ]));
+      localStorage.setItem('local_time_parameters', JSON.stringify({ tzOffset: -18000, dstOffset: 3600, dstStartRule: '360E2000', dstEndRule: 'B40E2000' }));
+      localStorage.setItem('energy_data_is_example', '1');
+      localStorage.setItem('account_sync_rev', '7');
+    });
+    const snapshot = () =>
+      page.evaluate(() =>
+        Object.keys(localStorage)
+          .sort()
+          .map((k) => `${k} = ${localStorage.getItem(k)}`)
+          .join('\n'),
+      );
+
+    await page.goto('/import');
+    // Taken HERE, after any boot-time migration on /import has run: the
+    // assertion below is about what the REFUSED payload does, not about boot.
+    const before = await snapshot();
+    expect(before).toContain('usage_summaries');
+    expect(before).toContain('energy_data_is_example');
+
+    // A gas series (commodity 7) with a valid-looking interval block: the
+    // parser refuses it, so the document yields no billable reading.
+    await page.getByTestId('import-paste').fill(
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">\n' +
+        '<entry><link rel="self" href="/ReadingType/rt-gas"/><content><espi:ReadingType><espi:uom>72</espi:uom><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:accumulationBehaviour>4</espi:accumulationBehaviour><espi:commodity>7</espi:commodity><espi:flowDirection>1</espi:flowDirection><espi:kind>12</espi:kind></espi:ReadingType></content></entry>\n' +
+        '<entry><link rel="self" href="/UsagePoint/up-gas/MeterReading/mr-1"/><link rel="related" href="/ReadingType/rt-gas"/><content><espi:MeterReading/></content></entry>\n' +
+        '<entry><link rel="self" href="/UsagePoint/up-gas/MeterReading/mr-1/IntervalBlock/ib-1"/><content><espi:IntervalBlock><espi:interval><espi:duration>3600</espi:duration><espi:start>1788523200</espi:start></espi:interval><espi:IntervalReading><espi:timePeriod><espi:duration>3600</espi:duration><espi:start>1788523200</espi:start></espi:timePeriod><espi:value>1500</espi:value></espi:IntervalReading></espi:IntervalBlock></content></entry>\n' +
+        '</feed>',
+    );
+    await page.getByTestId('import-load').click();
+    await expect(page.getByTestId('import-error')).toBeVisible();
+
+    expect(await snapshot(), 'a refused document moved persisted state').toBe(before);
+  });
+
   test('a legacy (v1) profile survives a failed import — the migration path the seeds used to cover by accident', async ({ page }) => {
     // seedStorage() writes the v2 payload because that is what the assertions
     // here read. That left the v1 -> v2 migration exercised only by accident:
