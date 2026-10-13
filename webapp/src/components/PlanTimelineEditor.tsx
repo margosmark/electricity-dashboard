@@ -5,7 +5,9 @@
  *
  *  • the DETECTED strip — every billing period in the imported file, the plan
  *    its own charge lines fingerprint (or an honest "unknown" with the lines
- *    we did recognize), plus the utility's verbatim notes as evidence;
+ *    we did recognize), plus the utility's line names as evidence — shown in
+ *    the reader's language with the file's own wording kept on the node
+ *    (`billNoteText`, t_0a96fd14);
  *  • YOUR ENTRIES — "I was on {plan} from {date} to {date}" for the periods
  *    no export can speak for (wording we don't recognize, ranges outside the
  *    file). Stored next to `billing_day`, so a backup carries them too.
@@ -21,6 +23,7 @@ import { useMemo, useState } from 'react';
 
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import { planLabel, useTranslation } from '@/i18n';
+import { billNoteText } from '@/i18n/billNote';
 import {
   PLAN_TYPES,
   assignPeriodPlan,
@@ -142,12 +145,24 @@ export function PlanTimelineEditor({ summaries }: Props) {
               </div>
 
               {detection.evidence.length > 0 && (
+                /* The utility's own line names, shown in the READER'S language
+                   (`billNoteText`, t_0a96fd14) — the same rule as "Your actual
+                   bill": the panel owns the LABEL, and the file's own wording
+                   stays on the node (`data-bill-evidence` + tooltip) so the
+                   fingerprint can still be checked against the bill. A name
+                   the catalog does not cover prints verbatim. */
                 <div
                   data-testid="plan-timeline-evidence"
+                  data-bill-evidence={detection.evidence.join(' · ')}
+                  title={
+                    detection.evidence.every((note) => billNoteText(note, t) === note)
+                      ? undefined
+                      : detection.evidence.join(' · ')
+                  }
                   className="mt-1 text-[9px] md:text-[10px] text-ink-3 font-bold normal-case"
                 >
                   {t('timeline.evidence')}{' '}
-                  {detection.evidence.slice(0, 3).join(' · ')}
+                  {detection.evidence.slice(0, 3).map((note) => billNoteText(note, t)).join(' · ')}
                   {detection.evidence.length > 3 ? ` · ${t('timeline.evidenceMore', { count: detection.evidence.length - 3 })}` : ''}
                 </div>
               )}

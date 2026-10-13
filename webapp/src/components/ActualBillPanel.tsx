@@ -4,7 +4,9 @@
  * The feed already carries a full itemized bill per billing period; this
  * puts it next to what we estimated for the same period:
  *
- *   • every line item, note verbatim, in the utility's own order;
+ *   • every line item, in the utility's own order, with the line names shown
+ *     in the reader's language (`billNoteText`) and the file's own wording kept
+ *     on the node (`data-bill-note` + tooltip);
  *   • the commodity cross-check — "Off/Mid/On Peak-Summer" are exactly kWh ×
  *     the OEB rate we price with, so a covered period must land within a
  *     dollar, and when it does not we say the rate assumptions are off
@@ -39,11 +41,16 @@ import {
   type ProcessedPoint,
   type UsageSummary,
 } from '@/lib/energy';
-// Wave U — the receipt translates; the utility's own line notes (item.note)
-// stay verbatim, because they ARE the file's data.
+// Wave U — the receipt translates. The utility's line NOTES (item.note) stay
+// canonical inside `BillLineItem` (classification and every check read them
+// raw); what the panel PRINTS is the localized view of them via `billNoteText`
+// (t_0a96fd14), with the file's own wording kept on the node as data
+// (`data-bill-note`) and as the hover tooltip. An unrecognised name prints
+// verbatim — never a guess and never a raw key.
 // `t` (module-level) is used by the pure label helpers above the components;
 // `useTranslation` subscribes the components to locale switches.
 import { fmtCents, fmtKwh, fmtMoney, fmtNumberAuto, fmtPercent, t, useTranslation } from '@/i18n';
+import { billNoteText } from '@/i18n/billNote';
 
 type Props = {
   /** Bill periods parsed out of the file (Wave L parser). */
@@ -288,6 +295,11 @@ function PeriodCard({
           const cls = classifyBillLine(item);
           const note = splitNote(item, cls, periodKwh, split, taxBase);
           const measured = measurementLabel(item);
+          // The printed line name: the localized view of the utility's own
+          // wording, or that wording itself when this app has no translation
+          // for it. Classification above and the measurement below always read
+          // the RAW note — only the label the reader sees is translated.
+          const lineName = billNoteText(item.note, t);
           const strong = cls === 'total' || cls === 'commodity' || cls === 'delivery';
           return (
             <li
@@ -300,7 +312,17 @@ function PeriodCard({
               }`}
             >
               <span className="min-w-0">
-                <span className="uppercase break-words">{item.note}</span>
+                {/* The label is the app's localized view; the utility's own
+                    wording rides on the node itself (`data-bill-note`, and the
+                    tooltip whenever it differs), so "as the utility wrote it"
+                    stays checkable in the DOM and on hover. */}
+                <span
+                  className="uppercase break-words"
+                  data-bill-note={item.note}
+                  title={lineName === item.note ? undefined : item.note}
+                >
+                  {lineName}
+                </span>
                 {note ? (
                   <span className="block text-[9px] md:text-[10px] text-ink-4 normal-case font-bold">
                     {note}
