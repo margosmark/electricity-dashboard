@@ -12,6 +12,7 @@
  */
 
 import { XMLValidator } from 'fast-xml-parser';
+import { inspectDocument } from './greenbutton/limits';
 /* Wave U — the diagnostics are shown in the upload modal, so they translate.
  * Lib code reads the module locale at call time (see I18N.md). */
 import { t } from '@/i18n';
@@ -85,6 +86,22 @@ export function diagnoseGreenButtonDocument(xmlText: string, parsedReadings?: nu
       headline: t('diag.entityHeadline'),
       detail: t('diag.entityDetail'),
       hints: [t('diag.entityHint1'), t('diag.entityHint2')],
+    };
+  }
+
+  // The document budget comes before validation, because a document this app
+  // will not parse deserves its real reason: XMLValidator happily validates a
+  // 200 000-level depth bomb, and the old path then reported "No Green Button
+  // data found in this file" for it. Checking the budget first also means a
+  // 50 MB upload is never walked twice. The copy comes from greenbutton/limits
+  // so the same refusal reads identically here and at the parse site.
+  const { refusal } = inspectDocument(text);
+  if (refusal) {
+    return {
+      ok: false,
+      headline: refusal.headline,
+      detail: refusal.detail,
+      hints: refusal.hints,
     };
   }
 

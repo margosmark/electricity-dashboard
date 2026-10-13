@@ -6,6 +6,14 @@ import {
   type SeriesReading,
 } from './greenbutton/series';
 import { isOntarioHoliday } from './ontarioHolidays';
+import {
+  MAX_DOCUMENT_DEPTH,
+  assertBillDollars,
+  assertBillMeasurement,
+  assertDocumentBudget,
+  assertUnitPrice,
+  isClockOffset,
+} from './greenbutton/limits';
 import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
@@ -719,9 +727,22 @@ function duplicateResolutionNote(
  * in `notes`. Returns empty groups when the document carries no readings.
  */
 export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
+  // The document budget comes FIRST: an over-budget document (`>` 32 MiB, `>`
+  // 200 000 entries, `>` 500 000 readings, `>` 64 levels deep) is refused
+  // before the parser is handed the text, so no object tree — and no partial
+  // reading, bill or note — can exist for it. Nothing is written by a refusal:
+  // every caller catches it and shows a diagnostic (see greenbutton/limits.ts
+  // for the measurements behind each number).
+  assertDocumentBudget(xmlText);
+
   const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
+    // Belt and braces behind the budget scan: the scan is a raw-text estimate,
+    // this is the parser's own ceiling. It is stated here rather than left to
+    // fast-xml-parser's default (100) so the app's bound is the app's, and the
+    // refusal the user reads is this app's sentence.
+    maxNestedTags: MAX_DOCUMENT_DEPTH,
     isArray: (n) => ['IntervalReading', 'entry', 'IntervalBlock'].includes(n),
   });
   const parsed = parser.parse(xmlText) as Record<string, unknown>;
@@ -2061,9 +2082,19 @@ function billNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Raw ESPI money (hundred-thousandths) → dollars; null stays null. */
-function scaleMoney(raw: number | null): number | null {
-  return raw === null ? null : raw / BILL_AMOUNT_SCALE;
+/**
+ * Raw ESPI money (hundred-thousandths) → dollars, bounded.
+ *
+ * `what` names the element for the refusal sentence: this is the bill half of
+ * the same rule `series.ts` applies to one interval's kWh (see
+ * greenbutton/limits.ts) — a finite figure that no bill can hold is refused
+ * rather than scaled into every derived total.
+ */
+function billMoney(what: string, raw: number | null): number | null {
+  if (raw === null) return null;
+  const dollars = raw / BILL_AMOUNT_SCALE;
+  assertBillDollars(what, dollars);
+  return dollars;
 }
 
 function billText(v: unknown): string | null {
@@ -2101,7 +2132,7 @@ function collectBillNodes(
   return out;
 }
 
-function parseMeasurement(raw: unknown): BillMeasurement | null {
+function parseMeasurement(raw: unknown, what: string): BillMeasurement | null {
   const node = asArray<Record<string, unknown>>(
     (raw as Record<string, unknown> | undefined) ?? {},
   )[0];
@@ -2109,11 +2140,16 @@ function parseMeasurement(raw: unknown): BillMeasurement | null {
   const value = billNum(node.value);
   if (value === null) return null;
   const powerOfTenMultiplier = billNum(node.powerOfTenMultiplier) ?? 0;
+  const scaled = value * 10 ** powerOfTenMultiplier;
+  // A quantity `value × 10^multiplier` that overflows is not a quantity. Left
+  // alone it reaches `usage_summaries` as `Infinity`, which JSON.stringify
+  // writes as `null` — a silent lie about a bill — so it refuses the file.
+  assertBillMeasurement(what, scaled);
   return {
     value,
     powerOfTenMultiplier,
     uom: billNum(node.uom),
-    scaled: value * 10 ** powerOfTenMultiplier,
+    scaled,
   };
 }
 
@@ -2122,15 +2158,19 @@ function parseLineItem(raw: unknown): BillLineItem | null {
   const o = raw as Record<string, unknown>;
   const rawAmount = billNum(o.amount);
   const note = billText(o.note) ?? '';
-  const measurement = parseMeasurement(o.measurement);
+  const measurement = parseMeasurement(o.measurement, 'measurement');
   if (rawAmount === null && !note && measurement === null) return null;
   const rawUnitCost = billNum(o.unitCost);
+  const amount = rawAmount === null ? null : rawAmount / BILL_AMOUNT_SCALE;
+  if (amount !== null) assertBillDollars('amount', amount);
+  const unitCost = rawUnitCost === null ? null : rawUnitCost / BILL_AMOUNT_SCALE;
+  if (unitCost !== null) assertUnitPrice('unitCost', unitCost);
   return {
     note,
     rawAmount,
-    amount: rawAmount === null ? null : rawAmount / BILL_AMOUNT_SCALE,
+    amount,
     itemKind: billNum(o.itemKind),
-    unitCost: rawUnitCost === null ? null : rawUnitCost / BILL_AMOUNT_SCALE,
+    unitCost,
     measurement,
   };
 }
@@ -2153,7 +2193,10 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     )
       .map(parseLineItem)
       .filter((i): i is BillLineItem => i !== null);
-    const consumption = parseMeasurement(node.overallConsumptionLastPeriod);
+    const consumption = parseMeasurement(
+      node.overallConsumptionLastPeriod,
+      'overallConsumptionLastPeriod',
+    );
     out.push({
       source: name as UsageSummary['source'],
       start,
@@ -2161,10 +2204,14 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
       startDate: utcDayKey(start),
       endDate: utcDayKey(start + duration),
       days: Math.round((duration / 86400) * 10) / 10,
-      // the same hundred-thousandths scale as the line items
-      billLastPeriod: scaleMoney(billNum(node.billLastPeriod)),
-      billToDate: scaleMoney(billNum(node.billToDate)),
-      costAdditionalLastPeriod: scaleMoney(billNum(node.costAdditionalLastPeriod)),
+      // the same hundred-thousandths scale as the line items, and bounded:
+      // a figure past MAX_BILL_DOLLARS refuses the file (limits.ts)
+      billLastPeriod: billMoney('billLastPeriod', billNum(node.billLastPeriod)),
+      billToDate: billMoney('billToDate', billNum(node.billToDate)),
+      costAdditionalLastPeriod: billMoney(
+        'costAdditionalLastPeriod',
+        billNum(node.costAdditionalLastPeriod),
+      ),
       currency: billNum(node.currency),
       consumption,
       items,
@@ -2176,15 +2223,22 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
 /**
  * The first LocalTimeParameters in an already-parsed document, or null.
  * A block without tzOffset describes no clock, so it is ignored rather than
- * guessed at.
+ * guessed at — and so is one whose offset cannot be a zone: `1e308` seconds
+ * east of UTC is a finite number, so nothing but a bound catches it, and date
+ * maths built on it produces instants no calendar can render. The clock is
+ * optional metadata with a documented fallback (the device's own zone), so an
+ * impossible one is DROPPED, not fatal: the readings in the same file still
+ * import (see greenbutton/limits.ts#isClockOffset).
  */
 export function parseLocalTimeNode(parsed: unknown): LocalTimeParams | null {
   for (const { node } of collectBillNodes(parsed, new Set(['LocalTimeParameters']))) {
     const tzOffset = billNum(node.tzOffset);
-    if (tzOffset === null) continue;
+    if (tzOffset === null || !isClockOffset(tzOffset)) continue;
+    const dstOffset = billNum(node.dstOffset);
+    if (dstOffset !== null && !isClockOffset(dstOffset)) continue;
     return {
       tzOffset,
-      dstOffset: billNum(node.dstOffset),
+      dstOffset,
       dstStartRule: billText(node.dstStartRule)?.toUpperCase() ?? null,
       dstEndRule: billText(node.dstEndRule)?.toUpperCase() ?? null,
     };
