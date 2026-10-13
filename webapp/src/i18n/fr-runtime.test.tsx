@@ -21,11 +21,12 @@
  *      (`4h in the same slot 5/5 weeks, flat across every hour (±3%)`) are
  *      caught by vocabulary: a word that appears in the English catalog and
  *      NEVER in the French one is English-only. Words that belong to the
- *      utility's own data (bill line names, meter-read notes) and to canonical
- *      codes (plan ids, units) are exempt — they are the untranslated *source*
- *      of translated surfaces (I18N.md's "deliberately NOT translated" list),
- *      and the fixture's own notes are read out of the file, so the exemption
- *      cannot silently grow.
+ * utility's own data (bill line names, meter-read notes) and to canonical
+ * codes (plan ids, units) are exempt — but a bill line name the CATALOG now
+ * carries a localized view of is NOT exempt: the panel renders it through
+ * `billNoteText`, so it must paint French like any other label (t_0a96fd14).
+ * The fixture's own notes are read out of the file, so the exemption cannot
+ * silently grow.
  *
  * BOTH user paths are walked, because they fail differently:
  *
@@ -55,6 +56,7 @@ import { USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY } from '@/hooks/useDashboard';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
 import en from './en.json';
 import fr from './fr.json';
+import { billNoteKey } from './billNote';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const XML = fs.readFileSync(path.join(FIXTURES, 'usage-summary-open-tail.xml'), 'utf8');
@@ -130,8 +132,8 @@ const CANONICAL_WORDS = new Set([
 /**
  * The utility's own vocabulary, read out of the fixture: every `<note>` on
  * every bill line, plus the meter-read labels. These are the file's data —
- * "Every line item as the utility wrote it" — and the coverage gate's own
- * canonical-data rule (I18N.md).
+ * and the coverage gate's own canonical-data rule (I18N.md) — for as long as
+ * the app has no localized view of them.
  */
 const DATA_VOCAB = new Set<string>();
 const DATA_NOTES = new Set<string>();
@@ -162,6 +164,22 @@ for (const [key, value] of Object.entries(en as Record<string, string>)) {
   const t = tidy(value);
   if (!EN_BY_VALUE.has(t)) EN_BY_VALUE.set(t, []);
   EN_BY_VALUE.get(t)!.push(key);
+  // A value that interpolates something (a `{placeholder}`, a number) never
+  // equals the node it paints, so the template is indexed in its MASKED form
+  // too — the same trick `evidence/money-locale-verify.cjs` uses to recognise
+  // a sentence that is still English on a French page. Without it a row like
+  // the H.S.T. line (whose name carries the utility's registration number)
+  // could keep painting English under a French catalog and stay invisible.
+  const m = maskValues(t);
+  if (m !== t) {
+    if (!EN_BY_VALUE.has(m)) EN_BY_VALUE.set(m, []);
+    EN_BY_VALUE.get(m)!.push(key);
+  }
+}
+
+/** Digits and `{placeholders}` → `#`, so a painted string matches its template. */
+function maskValues(s: string): string {
+  return s.replace(/\{\w+\}/g, '#').replace(/\d[\d.,\u00a0\u202f]*/g, '#');
 }
 
 const CATALOG_KEYS = new Set(Object.keys(en as Record<string, string>));
@@ -185,9 +203,12 @@ export function textNodes(root: HTMLElement): Node[] {
 export function sweep(frRoot: HTMLElement, extraVocab?: ReadonlySet<string>): Hit[] {
   const hits: Hit[] = [];
   for (const { where, text } of textNodes(frRoot)) {
-    // The utility's own line name, printed verbatim: data, not chrome.
-    if (DATA_NOTES.has(text)) continue;
-    const key = EN_BY_VALUE.get(text);
+    // The utility's own line name, printed verbatim: data, not chrome — but
+    // ONLY while this app has no localized view of it. A name the display layer
+    // translates (`billNoteText`, t_0a96fd14) must paint the translation, so
+    // the exemption cannot quietly cover a row the panel forgot to translate.
+    if (DATA_NOTES.has(text) && billNoteKey(text) === null) continue;
+    const key = EN_BY_VALUE.get(text) ?? EN_BY_VALUE.get(maskValues(text));
     if (key) {
       hits.push({
         rule: 'parity',
@@ -496,7 +517,14 @@ describe('the refusal notice on the French page', () => {
       '<li>No ReadingType described 2856 reading(s), so they were read as watt-hours scaled by the document-wide multiplier — the legacy compatibility path. The timestamps are exact; the unit is an assumption, not a declaration.</li>';
     document.body.appendChild(host);
     const hits = sweep(host, NOTICE_IDENTITY);
-    expect(hits.map((h) => h.rule)).toContain('english');
+    // Caught as PARITY, not by vocabulary: since t_0a96fd14 the parity index
+    // also carries each English value's MASKED template (this sentence
+    // interpolates `2856`, so it is a template, not a literal catalog value),
+    // which lets the sweep name the key the page should have painted. Either
+    // rule failing the node is the point — the vocabulary rule keeps its own
+    // planted sentence in the 'planted failures' block below.
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.map((h) => h.rule)).toContain('parity');
   });
 });
 
@@ -737,10 +765,20 @@ describe('the sweep itself (planted failures)', () => {
     expect(sweep(mount('<li>4h in the same slot 5/5 weeks, flat across every hour (±3%)</li>')).map((h) => h.rule)).toContain('english');
   });
 
-  it('does not flag French, canonical codes or the file’s own data', () => {
+  it('does not flag French, canonical codes or a line name the catalog has no view of', () => {
     expect(sweep(mount('<p>Nécessite de passer à la grille ULO et de déplacer la charge entre 23 h et 7 h.</p>'))).toEqual([]);
     expect(sweep(mount('<span>ULO · TOU · TIERED · kWh · 1 365,03 $</span>'))).toEqual([]);
-    // The utility's own line names, read verbatim from the fixture.
+    // A line name this app has no catalog view of prints verbatim and stays
+    // exempt (the fallback half of `billNoteText`): the words are the
+    // utility's own vocabulary, read out of the fixture.
+    expect(sweep(mount('<table><tr><td>Meter Read Date</td></tr></table>'))).toEqual([]);
+  });
+
+  it('flags a line name the catalog HAS a view of — the exemption’s boundary', () => {
+    // Exactly the shape the row above is excused for, but these notes ARE in
+    // the catalog now, so a French page printing them verbatim is a panel that
+    // forgot `billNoteText` (t_0a96fd14). Pinned so the data exemption cannot
+    // quietly widen back over a translatable label.
     expect(
       sweep(
         mount(
@@ -749,7 +787,7 @@ describe('the sweep itself (planted failures)', () => {
             '<tr><td>Distribution Loss Factor</td></tr>' +
             '<tr><td>Current Meter Read</td></tr></table>',
         ),
-      ),
-    ).toEqual([]);
+      ).map((h) => h.rule),
+    ).toEqual(['parity', 'parity', 'parity', 'parity']);
   });
 });
