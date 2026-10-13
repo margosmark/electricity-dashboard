@@ -41,6 +41,7 @@ import {
   planImport,
   type ImportPlan,
 } from '@/lib/importPlan';
+import { isGreenButtonRefusal } from '@/lib/greenbutton/limits';
 // The readings live under the versioned key; storage.ts owns the read, the
 // legacy-key migration and the write (the dashboard reads exactly this).
 import { loadEnergyData, saveEnergyData } from '@/lib/storage';
@@ -153,6 +154,15 @@ function ImportFlow() {
         }
         reviewOrImport(parsed[0].readings);
       } catch (e) {
+        // A refusal is not a mystery: it names the number it judged (see
+        // greenbutton/limits.ts), so it is shown as itself. The raw-text
+        // diagnostic below stays the fallback for everything else — a
+        // refusal over a poisoned bill figure would otherwise be reported as
+        // "produced no readable rows", which names the wrong problem.
+        if (isGreenButtonRefusal(e)) {
+          setIssue({ ok: false, headline: e.headline, detail: e.detail, hints: e.hints });
+          return;
+        }
         const diag = diagnoseGreenButtonDocument(text, 0);
         setIssue(
           diag.ok

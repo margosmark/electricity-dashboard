@@ -331,3 +331,64 @@ describe('the classifier itself is unchanged on a wall clock', () => {
     expect(categorizeULOAt({ hour: 10, dow: 1, year: 2026, month: 8, day: 10 })).toBe('Mid-Peak');
   });
 });
+
+/* --------------------------------------------------- a hostile clock face - */
+
+/**
+ * `<tzOffset>` is attacker-controlled and was unbounded: `1e308` seconds east
+ * of UTC is a FINITE number, so `billNum`'s finiteness check passed it and the
+ * feed's own clock became an instant no calendar can render (the same class as
+ * the out-of-range `<start>` that crashed the UsagePoint picker, on the clock
+ * side). The clock is optional metadata with a documented fallback, so an
+ * impossible offset DROPS the block — the readings in the same file still
+ * import, and nothing poisoned is handed to `resolveZone` or persisted with
+ * the bills (t_2961ce14).
+ */
+describe('a LocalTimeParameters block that cannot be a clock', () => {
+  const withClock = (clock: string, readings = true) =>
+    `<?xml version="1.0"?>
+      <feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">
+        <entry><content><espi:LocalTimeParameters>${clock}</espi:LocalTimeParameters></content></entry>${
+          readings
+            ? '<entry><content><espi:IntervalBlock><espi:interval><espi:duration>3600</espi:duration><espi:start>1704067200</espi:start></espi:interval><espi:IntervalReading><espi:timePeriod><espi:start>1704067200</espi:start></espi:timePeriod><espi:value>1500</espi:value></espi:IntervalReading></espi:IntervalBlock></content></entry>'
+            : ''
+        }
+      </feed>`;
+
+  it('drops an out-of-range tzOffset instead of building a zone from it', () => {
+    for (const bad of ['1e308', '999999999999', '-999999999999']) {
+      const { localTime, groups } = parseGreenButtonFeed(
+        withClock(`<espi:tzOffset>${bad}</espi:tzOffset>`),
+      );
+      expect(localTime, `tzOffset=${bad}`).toBeNull();
+      // …and the file's readings are unaffected: the clock is not the data.
+      expect(groups.reduce((n, g) => n + g.readings.length, 0), `tzOffset=${bad}`).toBe(1);
+    }
+  });
+
+  it('drops a block whose DST offset is out of range, keeping the ones that are not', () => {
+    const bad = parseGreenButtonFeed(
+      withClock('<espi:tzOffset>-18000</espi:tzOffset><espi:dstOffset>1e308</espi:dstOffset>'),
+    );
+    expect(bad.localTime).toBeNull();
+
+    const good = parseGreenButtonFeed(
+      withClock('<espi:tzOffset>-18000</espi:tzOffset><espi:dstOffset>3600</espi:dstOffset>'),
+    );
+    expect(good.localTime).toEqual({
+      tzOffset: -18000,
+      dstOffset: 3600,
+      dstStartRule: null,
+      dstEndRule: null,
+    });
+  });
+
+  it('still reads a zone-sized offset, at the edge of what a zone can be', () => {
+    const { localTime } = parseGreenButtonFeed(
+      withClock('<espi:tzOffset>50400</espi:tzOffset><espi:dstOffset>-43200</espi:dstOffset>'),
+    );
+    expect(localTime?.tzOffset).toBe(50400);
+    expect(localTime?.dstOffset).toBe(-43200);
+    expect(resolveZone(localTime!)!.offsetAt(Date.UTC(2026, 6, 1) / 1000)).toBe(50400);
+  });
+});

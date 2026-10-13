@@ -33,6 +33,9 @@ import {
 // The ingestion's own refusals, in the shape the notice renders verbatim
 // (t_880370e6 — presentation only; nothing here changes what was priced).
 import type { SeriesNote } from "@/lib/greenbutton/series";
+// A document-level refusal names the number it judged (greenbutton/limits.ts),
+// so its sentence is shown as-is instead of a generic "unparseable".
+import { isGreenButtonRefusal } from "@/lib/greenbutton/limits";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
   EXAMPLE_DATA_KEY,
@@ -611,8 +614,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     let feed: GreenButtonFeed;
     try {
       feed = parseGreenButtonFeed(xml);
-    } catch {
-      return { ok: false, code: "unparseable" };
+    } catch (e) {
+      // A refusal (over budget, or a bill figure no bill can hold) carries its
+      // own translated sentence — the toolbar shows that instead of guessing.
+      return isGreenButtonRefusal(e)
+        ? { ok: false, code: "unparseable", detail: e.detail }
+        : { ok: false, code: "unparseable" };
     }
     const groups = feed.groups;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
@@ -940,7 +947,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
                       added: outcome.added ?? 0,
                     }),
               }
-            : { tone: "error", text: describeGbError(outcome.code).detail },
+            : { tone: "error", text: outcome.detail ?? describeGbError(outcome.code).detail },
         );
       }
 
@@ -1041,6 +1048,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           try {
             feed = parseGreenButtonFeed(text);
           } catch (e) {
+            // A document-level refusal already carries its own headline,
+            // reason and hints (greenbutton/limits.ts) — showing it as itself
+            // is the one thing better than explaining the raw text.
+            if (isGreenButtonRefusal(e)) {
+              reject({
+                ok: false,
+                headline: e.headline,
+                detail: e.detail,
+                hints: e.hints,
+              } satisfies ParseDiagnostic);
+              return;
+            }
             // Security refusals (external entities) and malformed markup land
             // here: explain the document instead of repeating the exception.
             const diag = diagnoseGreenButtonDocument(text, 0);

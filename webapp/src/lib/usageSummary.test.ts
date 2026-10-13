@@ -41,6 +41,11 @@ import {
   type RateSet,
   type UsageSummary,
 } from './energy';
+import {
+  MAX_BILL_DOLLARS,
+  MAX_BILL_MEASUREMENT,
+  isGreenButtonRefusal,
+} from './greenbutton/limits';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
 const read = (name: string) => fs.readFileSync(path.join(FIXTURES, name), 'utf8');
@@ -545,5 +550,114 @@ describe('chargeDecomposition', () => {
     const bad = chargeDecomposition(withDeliveryBumped(1, 1.5), [], 'delivery')!;
     expect(bad.status).toBe('rejected');
     expect(deliverySplit(withDeliveryBumped(1, 1.5))!.mode).toBe('blended');
+  });
+});
+
+/* ==========================================================================
+ * A hostile bill figure — the money half of the reading magnitude bound
+ * ==========================================================================
+ *
+ * `series.ts` bounds what one INTERVAL may hold (MAX_INTERVAL_KWH). The bill
+ * figures were the other way into a total, and they were unbounded:
+ * `<billLastPeriod>1e308</billLastPeriod>` arrives as a FINITE 1e303 dollars,
+ * passes `billNum`'s finiteness check, is persisted into `usage_summaries` and
+ * feeds every derived money figure (the charge fit, the bill list, Hindsight).
+ * Each refusal below names the element and the number, so the diagnostic can
+ * say what happened instead of "could not read this file" (t_2961ce14).
+ */
+
+describe('a bill figure no document can hold', () => {
+  const PERIOD =
+    '<espi:billingPeriod><espi:start>1704067200</espi:start><espi:duration>2678400</espi:duration></espi:billingPeriod>';
+  const summary = (fields: string) =>
+    `<?xml version="1.0"?><feed><entry><content><espi:UsageSummary>${PERIOD}${fields}</espi:UsageSummary></content></entry></feed>`;
+  const item = (fields: string) =>
+    `<espi:costAdditionalDetailLastPeriod><espi:note>Delivery</espi:note>${fields}</espi:costAdditionalDetailLastPeriod>`;
+
+  function refused(xml: string): { message: string; measured: number | null } {
+    try {
+      parseUsageSummaries(xml);
+      throw new Error('nothing was refused');
+    } catch (e) {
+      if (!isGreenButtonRefusal(e)) throw e;
+      return { message: e.message, measured: e.measured };
+    }
+  }
+
+  const HOSTILE = '1e308';
+
+  it('refuses every money element the app persists, naming it in the sentence', () => {
+    const cases: [string, string, RegExp][] = [
+      ['billLastPeriod', summary(`<espi:billLastPeriod>${HOSTILE}</espi:billLastPeriod>`), /billLastPeriod/],
+      ['billToDate', summary(`<espi:billToDate>${HOSTILE}</espi:billToDate>`), /billToDate/],
+      [
+        'costAdditionalLastPeriod',
+        summary(`<espi:costAdditionalLastPeriod>${HOSTILE}</espi:costAdditionalLastPeriod>`),
+        /costAdditionalLastPeriod/,
+      ],
+      ['a line item amount', summary(item(`<espi:amount>${HOSTILE}</espi:amount>`)), /amount/],
+      ['a line item unit price', summary(item(`<espi:unitCost>${HOSTILE}</espi:unitCost>`)), /unitCost/],
+    ];
+    for (const [what, xml, names] of cases) {
+      const refusal = refused(xml);
+      expect(refusal.message, what).toMatch(names);
+      expect(refusal.message, what).toMatch(/no bill can hold/);
+      expect(refusal.message, what).toMatch(/Nothing from this file was imported/);
+      expect(refusal.measured, what).toBe(1e303);
+    }
+  });
+
+  it('refuses a line item unit price past what a unit can cost', () => {
+    // $1,000/kWh is not a price: the unit-cost ceiling is separate from the
+    // money ceiling, and 1e6 dollars of amount never reaches it.
+    const refusal = refused(summary(item('<espi:unitCost>100000000000</espi:unitCost>')));
+    expect(refusal.message).toMatch(/unitCost/);
+    expect(refusal.measured).toBe(1_000_000);
+  });
+
+  it('refuses a bill quantity that scales past what a meter can read', () => {
+    const big = `<espi:overallConsumptionLastPeriod><espi:value>${HOSTILE}</espi:value><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:uom>72</espi:uom></espi:overallConsumptionLastPeriod>`;
+    const refusal = refused(summary(big));
+    expect(refusal.message).toMatch(/no meter can have read/);
+    expect(refusal.measured).toBe(1e308);
+
+    // `value × 10^multiplier` with an absurd multiplier is Infinity, which
+    // JSON.stringify would have written as `null` — a silent lie about a bill.
+    const overflow = `<espi:overallConsumptionLastPeriod><espi:value>${HOSTILE}</espi:value><espi:powerOfTenMultiplier>${HOSTILE}</espi:powerOfTenMultiplier></espi:overallConsumptionLastPeriod>`;
+    expect(refused(summary(overflow)).message).toMatch(/no meter can have read/);
+  });
+
+  it('keeps the whole dollar range a real bill lives in — the ceiling itself included', () => {
+    // $1,000,000 exactly is the last figure that lands; one hundred-thousandth
+    // of a dollar past it does not.
+    const max = parseUsageSummaries(summary(`<espi:billLastPeriod>${1e11}</espi:billLastPeriod>`));
+    expect(max[0].billLastPeriod).toBe(1_000_000);
+    expect(max[0].billLastPeriod).toBe(MAX_BILL_DOLLARS);
+
+    const over = refused(summary(`<espi:billLastPeriod>${1e11 + 1}</espi:billLastPeriod>`));
+    expect(over.measured).toBeCloseTo(1_000_000.00001, 5);
+  });
+
+  it('still parses the audited three-period bill, credits and all', () => {
+    // The control: a real bill has negative lines (the rebate is −$116.90) and
+    // must keep parsing — the bound is on magnitude, not on sign.
+    const audited = parseUsageSummaries(OAKVILLE);
+    expect(audited).toHaveLength(3);
+    const negative = audited.flatMap((s) => s.items).filter((i) => (i.amount ?? 0) < 0);
+    expect(negative.length).toBeGreaterThan(0);
+    for (const s of audited) {
+      expect(Math.abs(s.billLastPeriod ?? 0)).toBeLessThan(MAX_BILL_DOLLARS);
+      for (const i of s.items) expect(Math.abs(i.amount ?? 0)).toBeLessThan(MAX_BILL_DOLLARS);
+    }
+  });
+
+  it('bounds a measurement that scales past any reading, and keeps a real one', () => {
+    const real = parseUsageSummaries(
+      summary(
+        '<espi:overallConsumptionLastPeriod><espi:value>1200</espi:value><espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:uom>72</espi:uom></espi:overallConsumptionLastPeriod>',
+      ),
+    );
+    expect(real[0].consumption?.scaled).toBe(1200);
+    expect(real[0].consumption?.scaled).toBeLessThan(MAX_BILL_MEASUREMENT);
   });
 });
