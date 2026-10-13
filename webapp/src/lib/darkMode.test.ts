@@ -483,3 +483,58 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     expect(printBlock).toMatch(/\[data-theme='dark'\]/);
   });
 });
+
+
+describe('dark ledger slabs — fixed slabs pin their ink, pastels get theme tokens (fix a06d70d)', () => {
+  it('declares the pastel slab tokens in BOTH themes, dark mixed over the live card', () => {
+    // a06d70d replaced raw `bg-amber-200`-style slabs with theme tokens: the
+    // light block keeps the solid pastel, the dark block mixes the hue over
+    // the card so the slab reads as a slab and not a light patch. One shared
+    // value in both themes IS the defect (light slab on a dark card).
+    for (const name of ['--warn-strip', '--good-soft-2']) {
+      expect(LIGHT_BLOCK, `light must declare ${name}`).toContain(name + ':');
+      expect(DARK_BLOCK, `dark must declare ${name}`).toContain(name + ':');
+    }
+    const darkWarn = /--warn-strip:\s*([^;]+);/.exec(DARK_BLOCK)?.[1] ?? '';
+    expect(darkWarn, 'the dark slab must mix over the card, not repeat the light hex').toContain('color-mix');
+  });
+
+  it('gives every fixed-palette slab a token ink, so emerald/yellow buttons stay readable', () => {
+    // The other half of the same fix: a FIXED (non-theme) background ignores
+    // the theme, so its text colour must be pinned explicitly —
+    // `text-accent-ink` is the token chosen for those slabs. Walks the source
+    // tree (same method as money-contract): a new component that pairs a
+    // fixed slab with default ink fails here, not in a contrast walk nobody
+    // runs on its ledger row.
+    const SRC = path.join(WEBAPP, 'src');
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);
+      }
+    };
+    walk(SRC);
+    // Grandfathered BEFORE this pin (outside a06d70d's 13-row scope): three
+    // buttons whose ink is carried by their own container/button class, and
+    // the heatmap's data cell, whose label styling comes from the cell rules.
+    // Listed so the rule still catches every NEW fixed-slab line.
+    const GRANDFATHERED = new Set([
+      'components/AppErrorBoundary.tsx',
+      'components/BackupControls.tsx',
+      'components/AccountControls.tsx',
+      'lib/heatmapSplit.ts',
+    ]);
+    const offenders = files
+      .filter((file) =>
+        fs
+          .readFileSync(file, 'utf8')
+          .split('\n')
+          .some((line) => /bg-(emerald|yellow)-400/.test(line) && !line.includes('text-accent-ink')),
+      )
+      .map((file) => path.relative(SRC, file))
+      .filter((rel) => !GRANDFATHERED.has(rel));
+    expect(offenders, 'fixed-slab lines missing their token ink').toEqual([]);
+  });
+});
