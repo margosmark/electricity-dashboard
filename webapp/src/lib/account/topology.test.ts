@@ -72,6 +72,25 @@ describe("the account topology gate provisions disposable storage", () => {
     expect(topologyScript).toContain('rm -rf "$TOKEN_DIR" "$ACCT_DIR"');
     expect(topologyScript).toContain("exit 1");
     expect(topologyScript).not.toMatch(/^chown 1001:1001 \"\$ACCT_DIR\"$/m);
+    expect(topologyScript).toContain('GB_TOPO_PORT="$PORT" GB_TOPO_MOCK_PORT="$MOCK_PORT"');
+    expect(topologyScript).toContain('GB_TOPO_APP_IMAGE="$IMAGE" GB_TOPO_ROUTER_IMAGE="$ROUTER_IMAGE"');
+  });
+
+  it("keeps the full closed-registration route sweep below the edge request rate", () => {
+    const smoke = fs.readFileSync(path.join(REPO_ROOT, "webapp", "tests", "e2e", "account_smoke.sh"), "utf8");
+    expect(smoke).toContain("sleep 1.1");
+    expect(smoke).toContain("MATRIX_PATHS");
+    expect(smoke).toContain("[signed out]");
+    expect(topologyScript).toContain("--expect-registration-closed");
+  });
+
+  it("probes real-edge body, rate-limit and non-vacuous account log redaction", () => {
+    expect(edge).toContain("limit_req_status 429;");
+    expect(topologyScript).toContain("head -c 6291457 /dev/zero");
+    expect(topologyScript).toContain('"$BODY_CODE" = 413');
+    expect(topologyScript).toContain('"$CODE" = 429');
+    expect(topologyScript).toContain("unique account canary request itself is present in router log");
+    expect(topologyScript).toContain("query/IP/cookie canary is absent from router log");
   });
 });
 

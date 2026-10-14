@@ -26,8 +26,8 @@
 # Those lifecycle fixtures live in webapp/src/lib/account/account.test.ts and
 # route-matrix.test.ts.
 #
-# Nothing in this script touches the live stack: the router binds 3940, the
-# mock 8099, and every container name is prefixed gb-topo-.
+# Nothing in this script touches the live stack: the router/mock use dedicated
+# configurable host ports, and every container name is prefixed gb-topo-.
 #
 # Usage: webapp/scripts/e2e-greenbutton-topology.sh   (from anywhere; it cds)
 
@@ -38,6 +38,7 @@ WEBAPP="$(cd "$HERE/.." && pwd)"
 REPO="$(cd "$WEBAPP/.." && pwd)"
 COMPOSE_FILE="$REPO/ops/edge/topology-test.compose.yml"
 PORT="${PORT:-3940}"
+MOCK_PORT="${GB_TOPO_MOCK_PORT:-8099}"
 BASE="http://localhost:$PORT"
 PASS=0
 FAIL=0
@@ -50,7 +51,7 @@ check() { # check <label> <condition-exit-status>
   fi
 }
 
-IMAGE="electricity-dashboard-energy-dashboard:latest"
+IMAGE="${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "ERROR: $IMAGE not built here. Run: docker compose build" >&2
   exit 1
@@ -58,7 +59,7 @@ fi
 
 # The router runs the BUILT edge-router image (ops/edge/Dockerfile), so the
 # gate exercises the nginx config that actually ships to production.
-ROUTER_IMAGE="electricity-dashboard-edge-router:latest"
+ROUTER_IMAGE="${GB_TOPO_ROUTER_IMAGE:-electricity-dashboard-edge-router:latest}"
 if ! docker image inspect "$ROUTER_IMAGE" >/dev/null 2>&1; then
   echo "ERROR: $ROUTER_IMAGE not built here. Run: docker compose build" >&2
   exit 1
@@ -91,7 +92,6 @@ fi
 # container (over the network) and the curl "browser" running on this host.
 HOST_IP="${GB_TOPO_HOST_IP:-$(hostname -I | awk '{print $1}')}"
 export GB_TOPO_TOKEN_DIR="$TOKEN_DIR"
-export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:8099"
 export GB_TOPO_ACCT_DIR="$ACCT_DIR"
 export GB_TOPO_REPO_DIR="$REPO"
 # The shipping default, stated explicitly rather than relied on as a compose
@@ -114,14 +114,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for p in "$PORT" 8099; do
+for p in "$PORT" "$MOCK_PORT"; do
   if ss -ltnH "sport = :$p" | grep -q .; then
     echo "ERROR: host port $p is already in use — free it first." >&2
     exit 1
   fi
 done
 
-echo "== bringing up the topology stack (router:$PORT mock:8099) =="
+echo "== bringing up the topology stack (router:$PORT mock:$MOCK_PORT) =="
+export GB_TOPO_PORT="$PORT" GB_TOPO_MOCK_PORT="$MOCK_PORT"
+export GB_TOPO_APP_IMAGE="$IMAGE" GB_TOPO_ROUTER_IMAGE="$ROUTER_IMAGE"
+export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:$MOCK_PORT"
+export GB_TOPO_PUBLIC_ORIGIN="http://localhost:$PORT"
 if ! docker compose -p gb-topo -f "$COMPOSE_FILE" up -d; then
   echo "ERROR: compose up failed" >&2
   FAIL=$((FAIL + 1)); exit 1
@@ -320,7 +324,7 @@ LOOP_LOG="$(mktemp)"
 # The token file inside the shim container is uid 1001 / mode 0600 by
 # design, so the gate reads it THROUGH the container rather than through a
 # permission it is in the middle of asserting.
-GB_E2E_EXTERNAL=1 PORT="$PORT" TOKEN_FILE="$TOKEN_DIR/tokens.json" \
+GB_E2E_EXTERNAL=1 PORT="$PORT" MOCK_PORT="$MOCK_PORT" TOKEN_FILE="$TOKEN_DIR/tokens.json" \
   GB_E2E_TOKEN_READ_CMD="docker exec gb-topo-shim cat /var/lib/greenbutton/tokens.json" \
   "$HERE/e2e-greenbutton-loop.sh" 2>&1 | tee "$LOOP_LOG"
 LOOP_STATUS=${PIPESTATUS[0]}
@@ -333,6 +337,61 @@ if [ "$LOOP_STATUS" -ne 0 ] && [ "$N_FAIL" -eq 0 ]; then
   FAIL=$((FAIL + 1))
 fi
 rm -f "$LOOP_LOG"
+
+echo
+echo "== public account edge size/rate/privacy controls =="
+# Exercise nginx's 6 MiB body cap with a unique marker. A 413 plus the edge
+# location header and absence of the account-process identity proves nginx
+# rejected it before the request reached the app container.
+BODY_FILE="$(mktemp)"
+BODY_CANARY="acct-body-$(date +%s)-$$"
+head -c 6291457 /dev/zero >"$BODY_FILE"
+BODY_CODE="$(curl -sS --max-time 15 -D /tmp/acct-edge.hdr -o /tmp/acct-edge.body \
+  -w '%{http_code}' -H 'content-type: application/octet-stream' \
+  --data-binary "@$BODY_FILE" "$BASE/account/session?body=$BODY_CANARY")"
+rm -f "$BODY_FILE"
+BODY_EDGE="$(grep -i '^x-edge-location:' /tmp/acct-edge.hdr | tr -d '\r' | awk '{print $2}')"
+BODY_APP="$(grep -i '^x-gb-process:' /tmp/acct-edge.hdr | tr -d '\r' | awk '{print $2}')"
+check "body >6 MiB rejected as 413 at account ingress" "$([ "$BODY_CODE" = 413 ] && echo 0 || echo 1)"
+check "oversized body response is edge-owned, not app-owned" \
+  "$([ "$BODY_EDGE" = account ] && [ "$BODY_APP" != account ] && echo 0 || echo 1)"
+
+# After the paced route sweep the bucket has recovered. More than the
+# configured burst in one instant must yield explicit client 429 responses,
+# never an upstream-looking 503.
+RATE_429=0
+RATE_503=0
+for _ in $(seq 1 25); do
+  CODE="$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "$BASE/account/session")"
+  [ "$CODE" = 429 ] && RATE_429=$((RATE_429 + 1))
+  [ "$CODE" = 503 ] && RATE_503=$((RATE_503 + 1))
+done
+check "rapid /account burst receives explicit 429 rate-limit response" \
+  "$([ "$RATE_429" -gt 0 ] && [ "$RATE_503" -eq 0 ] && echo 0 || echo 1)"
+
+# Put unique markers in a URI (to prove this exact request was logged), query,
+# spoofable forwarding header, and cookie. Only the path marker may appear in
+# the router's access log; all other values are secret-bearing canaries.
+LOG_TAG="acct-log-$(date +%s)-$$"
+QUERY_CANARY="query-$LOG_TAG"
+IP_CANARY="198.51.100.$(( $$ % 200 + 1 ))"
+COOKIE_CANARY="cookie-$LOG_TAG"
+curl -sS --max-time 5 -o /dev/null \
+  -H "X-Forwarded-For: $IP_CANARY" \
+  -H "Cookie: acct_session=$COOKIE_CANARY" \
+  "$BASE/account/$LOG_TAG?probe=$QUERY_CANARY" || true
+sleep 1
+ACCOUNT_LOG="$(docker logs gb-topo-router 2>&1)"
+case "$ACCOUNT_LOG" in
+  *"GET /account/$LOG_TAG"*) check "unique account canary request itself is present in router log" 0 ;;
+  *) check "unique account canary request itself is present in router log" 1 ;;
+esac
+for CANARY in "$QUERY_CANARY" "$IP_CANARY" "$COOKIE_CANARY"; do
+  case "$ACCOUNT_LOG" in
+    *"$CANARY"*) check "account query/IP/cookie canary is absent from router log" 1 ;;
+    *) check "account query/IP/cookie canary is absent from router log" 0 ;;
+  esac
+done
 
 echo
 echo "== OAuth credential material never reaches the edge log =="

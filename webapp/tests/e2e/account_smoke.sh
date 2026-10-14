@@ -241,6 +241,10 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
 
   for path in $MATRIX_PATHS; do
     for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
+      # nginx's public account limiter is 60r/m with burst=20. Pace the
+      # complete registration-closed matrix below that sustained rate rather
+      # than weakening the production edge control to make this gate pass.
+      sleep 1.1
       want=$(matrix_expect "$path" "$method")
       code=$(matrix_req - "$method" "$path") || code=000
       if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi

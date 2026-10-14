@@ -244,6 +244,7 @@ server {
     client_max_body_size 6m;
     proxy_request_buffering on;
     limit_req zone=acct_public burst=20 nodelay;
+    limit_req_status 429;
     limit_conn acct_conn 10;
     proxy_pass http://$gb_account;
     access_log /var/log/nginx/access.log acct_safe;

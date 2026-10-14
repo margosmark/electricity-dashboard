@@ -1,7 +1,7 @@
 # Containerised topology gate for the Green Button shim.
 #
 # Runs the SAME four-container shape production runs (router → shim | account |
-# app) against a mock data custodian, on host port 3940 so it can never touch
+# app) against a mock data custodian, on configurable isolated host ports so it can never touch
 # the live stack on 3939. Driven by webapp/scripts/e2e-greenbutton-topology.sh,
 # which also supplies GB_TOPO_TOKEN_DIR, GB_TOPO_ACCT_DIR, GB_TOPO_REPO_DIR,
 # GB_TOPO_ACCT_ENABLED and GB_TOPO_MOCK_ORIGIN.
@@ -35,7 +35,7 @@ services:
   # upstreams by service name at start-up, so the config is identical in
   # both stacks (container_name stays gb-topo-* to keep the two apart).
   energy-dashboard:
-    image: electricity-dashboard-energy-dashboard:latest
+    image: ${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}
     container_name: gb-topo-app
     restart: "no"
     expose:
@@ -43,14 +43,14 @@ services:
 
   # The shim: the only container with credentials and the token mount.
   greenbutton-shim:
-    image: electricity-dashboard-energy-dashboard:latest
+    image: ${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}
     container_name: gb-topo-shim
     restart: "no"
     expose:
       - "3000"
     environment:
-      GB_PUBLIC_ORIGIN: http://localhost:3940
-      GB_REDIRECT_URI: http://localhost:3940/greenbutton/callback
+      GB_PUBLIC_ORIGIN: ${GB_TOPO_PUBLIC_ORIGIN:-http://localhost:3940}
+      GB_REDIRECT_URI: ${GB_TOPO_PUBLIC_ORIGIN:-http://localhost:3940}/greenbutton/callback
       GB_AUTHORIZE_URL: ${GB_TOPO_MOCK_ORIGIN:?}/oauth/authorize
       GB_TOKEN_URL: ${GB_TOPO_MOCK_ORIGIN:?}/oauth/token
       GB_CLIENT_ID: mock-client-id
@@ -66,7 +66,7 @@ services:
   # KEY is production's (`account-server`) because the router resolves its
   # upstreams by service name; container_name stays gb-topo-*.
   account-server:
-    image: electricity-dashboard-energy-dashboard:latest
+    image: ${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}
     container_name: gb-topo-account
     restart: "no"
     expose:
@@ -80,7 +80,7 @@ services:
       ACCT_DB_PATH: /data/accounts.db
       # The origin this stack is reached on, so cookie flags match the surface
       # (…same reason GB_PUBLIC_ORIGIN above points at :3940).
-      ACCT_PUBLIC_ORIGIN: http://localhost:3940
+      ACCT_PUBLIC_ORIGIN: ${GB_TOPO_PUBLIC_ORIGIN:-http://localhost:3940}
     volumes:
       - ${GB_TOPO_ACCT_DIR:?}:/data
 
@@ -88,7 +88,7 @@ services:
   # shim container (via the host's LAN address) and the curl "browser" in the
   # e2e script can reach the same URLs.
   mock:
-    image: electricity-dashboard-energy-dashboard:latest
+    image: ${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}
     container_name: gb-topo-mock
     restart: "no"
     command:
@@ -101,14 +101,14 @@ services:
     volumes:
       - ../../webapp/scripts:/scripts:ro
     ports:
-      - "8099:8099"
+      - "${GB_TOPO_MOCK_PORT:-8099}:8099"
 
   router:
-    image: electricity-dashboard-edge-router:latest
+    image: ${GB_TOPO_ROUTER_IMAGE:-electricity-dashboard-edge-router:latest}
     container_name: gb-topo-router
     restart: "no"
     ports:
-      - "3940:80"
+      - "${GB_TOPO_PORT:-3940}:80"
     environment:
       XFP: http
     depends_on:
