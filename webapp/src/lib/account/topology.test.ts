@@ -29,6 +29,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const edge = fs.readFileSync(path.join(REPO_ROOT, "ops", "edge", "default.conf.template"), "utf8");
 const compose = fs.readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8");
+const topologyScript = fs.readFileSync(path.join(REPO_ROOT, "webapp", "scripts", "e2e-greenbutton-topology.sh"), "utf8");
 
 /**
  * Drop full-line comments before asserting.
@@ -62,6 +63,17 @@ function service(name: string): string {
   const next = rest.slice(1).search(/^ {2}[A-Za-z0-9_-]+:$/m);
   return stripComments(next === -1 ? rest : rest.slice(0, next + 1));
 }
+
+describe("the account topology gate provisions disposable storage", () => {
+  it("uses a root helper container rather than host chown, and stops/cleans on failure", () => {
+    expect(topologyScript).toMatch(/ACCT_DIR="\$\(mktemp -d\)"/);
+    expect(topologyScript).toContain("docker run --rm --user 0 --entrypoint sh");
+    expect(topologyScript).toContain("chown 1001:1001 /data && chmod 700 /data");
+    expect(topologyScript).toContain('rm -rf "$TOKEN_DIR" "$ACCT_DIR"');
+    expect(topologyScript).toContain("exit 1");
+    expect(topologyScript).not.toMatch(/^chown 1001:1001 \"\$ACCT_DIR\"$/m);
+  });
+});
 
 describe("the edge split for /account", () => {
   it("denies /account/internal outright — no upstream, no allow list", () => {

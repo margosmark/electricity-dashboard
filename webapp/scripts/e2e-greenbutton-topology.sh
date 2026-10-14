@@ -75,7 +75,17 @@ chmod 777 "$TOKEN_DIR"
 # registration flow touches no rows, and the temporary tree is deleted after.
 ACCT_DIR="$(mktemp -d)"
 chmod 700 "$ACCT_DIR"
-chown 1001:1001 "$ACCT_DIR"
+# The host operator is normally non-root, so host chown cannot assign uid
+# 1001. Use the already-built app image as a disposable root helper: the bind
+# mount is only this unique throwaway directory, and account-server still
+# enforces its uid/mode contract independently at startup.
+if ! docker run --rm --user 0 --entrypoint sh \
+  -v "$ACCT_DIR:/data" "$IMAGE" \
+  -c 'chown 1001:1001 /data && chmod 700 /data'; then
+  echo "ERROR: could not provision disposable account data directory as uid 1001" >&2
+  rm -rf "$TOKEN_DIR" "$ACCT_DIR"
+  exit 1
+fi
 
 # The mock has to be reachable from TWO places with ONE URL: the shim
 # container (over the network) and the curl "browser" running on this host.
