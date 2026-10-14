@@ -219,10 +219,13 @@ as HTML.
 8. Touched the account server — its routes, the E2EE blob, the push fan-out,
    `ACCT_*` / `VAPID_*`, or the `/account` locations in
    `ops/edge/default.conf.template`? → the live half of that contract is
-   `webapp/scripts/e2e-greenbutton-topology.sh` (§0d runs BOTH flag states and
-   the real register/login/sync matrix through the router) plus
-   `webapp/tests/e2e/account_smoke.sh` (both states, every path × every method
-   × {no cookie, live session, forged cookie}), the static half is
+   `webapp/scripts/e2e-greenbutton-topology.sh` (feature-off and
+   enabled-but-registration-closed router routes; it does not run authenticated
+   registration/login/sync) plus `webapp/tests/e2e/account_smoke.sh` (the
+   registration-closed session and method/path checks through the router).
+   Authenticated registration/login/sync lifecycle behavior is covered by
+   ephemeral tests in `webapp/src/lib/account/account.test.ts` and
+   `route-matrix.test.ts`; the static half is
    `webapp/src/lib/account/topology.test.ts`, and the route surface itself is
    pinned by `webapp/src/lib/account/route-matrix.test.ts` — which reads the
    route files off disk, so a NEW `/account/*` route fails the gate until its

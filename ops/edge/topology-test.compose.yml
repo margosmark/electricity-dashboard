@@ -23,7 +23,9 @@
 #   * account-server: ACCT_ENABLED is TOGGLED by the gate (GB_TOPO_ACCT_ENABLED,
 #     default false) rather than pinned, because both states are part of the
 #     contract: off is what ships, on is where the `account`↔`account` pairing
-#     and the real register/login/sync matrix are provable end to end. Its
+#     and enabled-but-registration-closed routes are probed end to end. The
+#     authenticated register/login/sync lifecycle is covered by ephemeral
+#     unit/integration tests, not this router topology gate. Its
 #     SQLite file goes to a throwaway dir (GB_TOPO_ACCT_DIR), never to the
 #     repo or to the live `.account/`.
 

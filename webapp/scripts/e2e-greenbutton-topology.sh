@@ -7,7 +7,7 @@
 #                             ├─ /account/*          → account-server  (verifiers, VAPID key)
 #                             └─ everything else     → energy-dashboard (no creds)
 #
-# It reuses the 29 checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
+# It reuses the checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
 # adds what only makes sense at the edge: which location the router matched
 # and which container actually answered, whether a credential-bearing query
 # string reaches the access log, the baseline security headers on a real
@@ -20,7 +20,11 @@
 # states, because "off" is what ships by default: off first (the public
 # surface unchanged), then with ACCT_ENABLED=true, where the pairing and the
 # closed, enumeration-safe registration surface (`tests/e2e/account_smoke.sh`)
-# run through the router — no account or mail delivery is created.
+# run through the router. The enabled leg only checks the signed-out session,
+# generic registration-pending responses and registration-closed route methods;
+# it does NOT exercise authenticated registration/login/sync lifecycle.
+# Those lifecycle fixtures live in webapp/src/lib/account/account.test.ts and
+# route-matrix.test.ts.
 #
 # Nothing in this script touches the live stack: the router binds 3940, the
 # mock 8099, and every container name is prefixed gb-topo-.
@@ -280,9 +284,10 @@ echo
 echo "== the closed-registration account surface through the REAL router =="
 # The public registration endpoint must remain generic and must never create
 # an account or issue a session before verified mailbox ownership. Authenticated
-# database/sync behavior is covered by ephemeral unit/integration fixtures.
+# database/sync behavior is covered by ephemeral fixtures in
+# src/lib/account/account.test.ts and route-matrix.test.ts.
 if ! command -v jq >/dev/null 2>&1; then
-  echo "ERROR: jq is required for the account matrix" >&2
+  echo "ERROR: jq is required for registration-closed account route checks" >&2
   FAIL=$((FAIL + 1))
 else
   ACCT_LOG="$(mktemp)"

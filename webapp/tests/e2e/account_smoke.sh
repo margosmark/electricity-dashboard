@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Wave N account gate — closed-by-default registration and HTTP routing checks.
+# Wave N account gate — registration-closed HTTP routing checks.
 #
 # Modes:
-#   account_smoke.sh <base_url>                         # expect enabled account-server, registration closed
+#   account_smoke.sh <base_url>                         # registration-closed checks
 #   account_smoke.sh <base_url> --expect-disabled       # app process answers 404 for every account route
 #   account_smoke.sh <base_url> --expect-registration-closed
 #
-# The enabled-mode integration here deliberately does not create accounts or
-# claim delivery: it proves enumeration-safe pending responses and the real
-# router surface. Authenticated DB/CAS/cascade behavior is covered by ephemeral
-# unit/integration fixtures in src/lib/account/*.test.ts.
+# The registration-closed mode deliberately does not create accounts or claim
+# delivery: it proves enumeration-safe pending responses and route behavior.
+# Authenticated registration/login/sync lifecycle behavior is covered by
+# ephemeral fixtures in src/lib/account/account.test.ts and route-matrix.test.ts.
 
 set -euo pipefail
 
@@ -31,12 +31,9 @@ check() { # check <label> <condition-exit-status>
   else FAIL=$((FAIL + 1)); printf '  FAIL  %s\n' "$1"; fi
 }
 
-# The matrix probe: an explicit `cookie:` header instead of a jar, so a client
-# can present a cookie it was never issued (the `forged` column) and no cell can
-# be satisfied by cookie state some earlier section left behind. Body-carrying
-# verbs send `{}` — deliberately invalid — so each cell asks WHICH GATE ANSWERED
-# (feature flag → origin → session → payload), not what the handler does with a
-# good payload. The happy paths are sections 1–8.
+# The route probe sends `{}` for body-carrying verbs. The closed-registration
+# branch below checks the signed-out route surface only; authenticated behavior
+# is not exercised by this HTTP smoke script.
 matrix_req() { # matrix_req <cookie|-> <method> <path>
   local cookie="$1" method="$2" path="$3" body="" hdr_args=()
   [ "$cookie" != "-" ] && hdr_args=(-H "cookie: $cookie")
@@ -88,12 +85,12 @@ forged_token() { printf '%s%s' "$(date +%s%N)" "$$" | sha256sum | cut -c1-48; }
 # ---------------------------------------------------------------------------
 # The surface
 #
-# ONE list, used by the guard, the disabled method sweep and the ON matrix — so
-# a path can never be probed in one mode and forgotten in the other.
+# ONE list, used by the guard, the disabled method sweep and the enabled,
+# registration-closed signed-out route sweep — so a path can never be probed in
+# one mode and forgotten.
 # `/account/internal/*` is excluded ON PURPOSE: it is denied at the edge with
 # 403 and never reaches an app container (the containerised topology gate owns
-# that leg). `/account/logout` is LAST because the ON matrix really does log
-# that session out; see section 9.
+# that leg).
 # ---------------------------------------------------------------------------
 MATRIX_PATHS="/account/login /account/notify /account/recover /account/register
               /account/session /account/sync /account/push/preferences
@@ -123,16 +120,13 @@ surface_guard() {
 }
 
 # ---------------------------------------------------------------------------
-# The expected answer for one ON-mode matrix cell.
-#
+# The expected answer for one enabled-but-registration-closed, signed-out route cell.
 # `HEAD` is answered by the route's `GET`; every verb a route does not export is
-# the shared `wrongMethod` stub (405, naming the method). The session-gated
-# routes answer 401 for BOTH the no-cookie and the forged-cookie column: a
-# cookie that resolves to no live row is not a session — one code, one message,
-# never an oracle that tells a prober whether a cookie was ever real.
+# the shared `wrongMethod` stub (405, naming the method). Session-gated routes
+# answer 401 in this signed-out sweep.
 # ---------------------------------------------------------------------------
-matrix_expect() { # matrix_expect <path> <method> <none|valid|forged>
-  local path="$1" method="$2" auth="$3" verbs eff
+matrix_expect() { # matrix_expect <path> <method>
+  local path="$1" method="$2" verbs eff
   case "$path" in
     /account/register|/account/login|/account/logout|/account/notify|/account/recover) verbs="POST" ;;
     /account/session) verbs="GET" ;;
@@ -150,15 +144,9 @@ matrix_expect() { # matrix_expect <path> <method> <none|valid|forged>
     "/account/register POST"|"/account/login POST"|"/account/recover POST") echo 400 ;;
     "/account/logout POST") echo 200 ;;
     "/account/session GET") echo 200 ;;
-    "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT")
-      if [ "$auth" = "valid" ]; then echo 200; else echo 401; fi ;;
-    "/account/sync PUT"|"/account/notify POST"|"/account/push/subscribe DELETE")
-      if [ "$auth" = "valid" ]; then echo 400; else echo 401; fi ;;
-    # No VAPID keys on a default deployment ⇒ push is inert (503). A deployment
-    # that DID configure push must still not answer 401/403/404 here, so the
-    # invalid-body answer is accepted too.
-    "/account/push/subscribe POST")
-      if [ "$auth" = "valid" ]; then echo "503|400"; else echo 401; fi ;;
+    "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT"|\
+    "/account/sync PUT"|"/account/notify POST"|"/account/push/subscribe DELETE"|\
+    "/account/push/subscribe POST") echo 401 ;;
     *) echo "UNKNOWN" ;;
   esac
 }
@@ -253,7 +241,7 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
 
   for path in $MATRIX_PATHS; do
     for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
-      want=$(matrix_expect "$path" "$method" none)
+      want=$(matrix_expect "$path" "$method")
       code=$(matrix_req - "$method" "$path") || code=000
       if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi
       check "${method} ${path} [signed out] → ${code} (want ${want})" "$ok"
@@ -270,186 +258,3 @@ fi
 
 echo "account gate (legacy authenticated fixture mode is unsupported; use --expect-registration-closed): ${BASE}" >&2
 exit 2
-
-echo "account gate (expecting the feature ON): ${BASE}"
-
-# --- 1. Signed-out session is honest and uncacheable ------------------------
-code=$(req - GET /account/session)
-check "GET /account/session → 200 when signed out" $([ "$code" = "200" ] && echo 0 || echo 1)
-check "session says enabled:true, authed:false" \
-  $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
-check "session is Cache-Control: no-store" \
-  $(grep -qi '^cache-control: no-store' /tmp/acct.hdr && echo 0 || echo 1)
-check "process identifies itself as account" \
-  $([ "$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
-check "no VAPID keys ⇒ pushConfigured:false (inert, not broken)" \
-  $([ "$(jget '.pushConfigured')" = "false" ] && echo 0 || echo 1)
-
-# --- 2. Register ------------------------------------------------------------
-PW='correct horse battery staple'
-code=$(req "$JAR" POST /account/register "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "POST /account/register → 201" $([ "$code" = "201" ] && echo 0 || echo 1)
-check "register signs the caller in (cookie set)" \
-  $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 0 || echo 1)
-check "acct_session is HttpOnly + SameSite=Lax + Path=/" \
-  $(grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'HttpOnly' \
-    && grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'SameSite=Lax' \
-    && grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'Path=/' \
-    && echo 0 || echo 1)
-# Secure only when the origin is https: a local http run cannot set it, and
-# the production origin (ACCT_PUBLIC_ORIGIN=https://…) must.
-if [[ "$BASE" == https://* ]]; then
-  check "acct_session is Secure (https origin)" \
-    $(grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'Secure' && echo 0 || echo 1)
-fi
-
-check "register returns the KDF salt the browser needs" \
-  $([ -n "$(jget '.kdfSalt')" ] && [ "$(jget '.kdfSalt')" != "null" ] && echo 0 || echo 1)
-check "no recovery code without data (issued iff a server copy exists)" \
-  $([ "$(jget '.recoveryCode')" = "null" ] && echo 0 || echo 1)
-check "no password material in any response body" \
-  $(grep -qF "$PW" /tmp/acct.body && echo 1 || echo 0)
-
-code=$(req - POST /account/register "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "duplicate e-mail → 409 email_taken" \
-  $([ "$code" = "409" ] && [ "$(jget '.error')" = "email_taken" ] && echo 0 || echo 1)
-
-code=$(req - POST /account/register '{"email":"smoke@example.com","password":"short"}')
-check "short password → 400 invalid_password" \
-  $([ "$code" = "400" ] && [ "$(jget '.error')" = "invalid_password" ] && echo 0 || echo 1)
-
-# --- 3. Login, right and wrong ---------------------------------------------
-code=$(req "$JAR2" POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "POST /account/login (second device) → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-check "login hands back the SAME kdf salt (the key is derivable there too)" \
-  $([ -n "$(jget '.kdfSalt')" ] && echo 0 || echo 1)
-SALT="$(jget '.kdfSalt')"
-
-code=$(req - POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"not the password\"}")
-check "wrong password → 401 invalid_credentials" \
-  $([ "$code" = "401" ] && [ "$(jget '.error')" = "invalid_credentials" ] && echo 0 || echo 1)
-code=$(req - POST /account/login '{"email":"nobody@example.com","password":"not the password"}')
-check "unknown address → the SAME 401 code (no account enumeration)" \
-  $([ "$code" = "401" ] && [ "$(jget '.error')" = "invalid_credentials" ] && echo 0 || echo 1)
-
-# --- 4. Sync: ciphertext in, ciphertext out ---------------------------------
-IV="$(printf 'wave-n-iv-12' | base64)"            # 12 bytes — GCM's IV size
-BLOB="$(printf '{"ciphertext":"not readable by the server"}' | base64)"
-
-code=$(req - PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "PUT /account/sync without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "PUT /account/sync → 200 with rev 1" \
-  $([ "$code" = "200" ] && [ "$(jget '.rev')" = "1" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" GET /account/sync)
-check "GET /account/sync returns the stored blob byte-for-byte" \
-  $([ "$code" = "200" ] && [ "$(jget '.iv')" = "$IV" ] && [ "$(jget '.data')" = "$BLOB" ] && echo 0 || echo 1)
-check "…and nothing that looks like a decrypted payload" \
-  $(grep -q 'billing_day\|energy_data\|"payload"' /tmp/acct.body && echo 1 || echo 0)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "stale baseRev → 409 carrying the current revision" \
-  $([ "$code" = "409" ] && [ "$(jget '.currentRev')" = "1" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"not-base64!!\",\"baseRev\":1}")
-check "non-base64 ciphertext → 400, never stored" \
-  $([ "$code" = "400" ] && echo 0 || echo 1)
-
-# --- 5. Multi-device: the second profile sees the same copy -----------------
-code=$(req "$JAR2" GET /account/sync)
-check "second device, after login, pulls the same revision" \
-  $([ "$code" = "200" ] && [ "$(jget '.rev')" = "1" ] && [ "$(jget '.data')" = "$BLOB" ] && echo 0 || echo 1)
-
-# --- 6. Preferences are the documented defaults -----------------------------
-code=$(req "$JAR" GET /account/push/preferences)
-check "push preferences → 200 defaults (4 topics, cap 3, quiet 22:00–07:00)" \
-  $([ "$code" = "200" ] && [ "$(jget '.prefs.dailyCap')" = "3" ] \
-    && [ "$(jget '.prefs.topics | length')" = "4" ] \
-    && [ "$(jget '.prefs.quietStart')" = "1320" ] \
-    && [ "$(jget '.prefs.quietEnd')" = "420" ] && echo 0 || echo 1)
-code=$(req - GET /account/push/preferences)
-check "push preferences without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-
-# --- 7. Notify fan-out is session-gated -------------------------------------
-code=$(req - POST /account/notify '{"topic":"plan_change","title":"x"}')
-check "POST /account/notify without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-# The topic split is part of the contract (SECURITY.md §5.11): a browser may
-# emit only the client-origin half of the trigger table, and it reaches only
-# its own account. Both halves are asserted here because a fan-out that
-# reaches the wrong account is invisible to every other check in this script.
-code=$(req "$JAR" POST /account/notify '{"topic":"anomaly","title":"Unusual usage"}')
-check "POST /account/notify (client-origin topic, own session) → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-code=$(req "$JAR" POST /account/notify '{"topic":"oeb_rates","title":"x"}')
-check "a browser may not claim a server-origin topic → 400 invalid_topic" \
-  $([ "$code" = "400" ] && [ "$(jget '.error')" = "invalid_topic" ] && echo 0 || echo 1)
-
-# --- 8. Logout invalidates the SESSION, not just the cookie -----------------
-code=$(req "$JAR" POST /account/logout)
-check "POST /account/logout → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-code=$(req "$JAR" GET /account/sync)
-check "the cookie it left behind no longer authenticates (401)" \
-  $([ "$code" = "401" ] && echo 0 || echo 1)
-code=$(req "$JAR2" GET /account/sync)
-check "the OTHER device's session survives this logout" \
-  $([ "$code" = "200" ] && echo 0 || echo 1)
-
-# --- 9. The matrix: every method × every auth state, over the real router ---
-#
-# Section 8 signed its cookie out on purpose, so the matrix mints its own
-# session. This is the LAST section because one of its cells really does log
-# that session out — POST /account/logout [valid] → 200 wasAuthenticated:true —
-# which is why /account/logout is last in MATRIX_PATHS.
-echo "== 9. the method × auth-state matrix (${BASE}) =="
-code=$(req "$JAR3" POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "the matrix's own session logs in → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-VALID="acct_session=$(cookie_from_jar "$JAR3")"
-FORGED="acct_session=$(forged_token)"
-check "the matrix holds a real acct_session cookie" \
-  $([ "$(cookie_from_jar "$JAR3")" != "" ] && echo 0 || echo 1)
-
-for path in $MATRIX_PATHS; do
-  for method in GET HEAD POST PUT PATCH DELETE OPTIONS; do
-    for auth in none valid forged; do
-      case "$auth" in
-        none) CK="-" ;;
-        valid) CK="$VALID" ;;
-        forged) CK="$FORGED" ;;
-      esac
-      want=$(matrix_expect "$path" "$method" "$auth")
-      code=$(matrix_req "$CK" "$method" "$path") || code=000
-      if [ "$want" = "UNKNOWN" ]; then
-        check "${method} ${path} [${auth}] — this cell has no expectation" 1
-        continue
-      fi
-      # `503|400` in the table means either is correct; the unquoted expansion
-      # splits it into the arguments `accepts` compares against.
-      if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi
-      check "${method} ${path} [${auth}] → ${code} (want ${want})" "$ok"
-      # The other tell of 2c8ca8d: a 405 (or an auto-OPTIONS 204) names the
-      # verbs this origin answers. On the OFF half nothing may carry `Allow`;
-      # on the ON half only the honest 405 may.
-      if [ "$code" != "405" ]; then
-        check "  …and it names no verbs (no Allow header)" \
-          $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
-      fi
-    done
-  done
-done
-
-# The internal fan-out is not the router's to answer, and there are two ways to
-# be refused: through the edge it is a flat `403` with no upstream at all (the
-# containerised topology gate runs this script through the router), and against
-# the container directly it is the token gate's own bare `404`. Both are
-# "unreachable"; what must NEVER happen is a 2xx — and, the cell this exists
-# for, a live SESSION must not stand in for the shared secret.
-code=$(matrix_req - POST /account/internal/notify) || code=000
-if accepts "$code" 403 404; then ok=0; else ok=1; fi
-check "POST /account/internal/notify → ${code} (403 at the edge, or 404 at the token gate — never 2xx)" "$ok"
-code=$(matrix_req "$VALID" POST /account/internal/notify) || code=000
-if accepts "$code" 403 404; then ok=0; else ok=1; fi
-check "…and a live session is NOT the internal token → ${code}" "$ok"
-
-echo "account gate: ${PASS} passed, ${FAIL} failed"
-[ "$FAIL" -eq 0 ] || exit 1
