@@ -76,6 +76,8 @@ chmod 777 "$TOKEN_DIR"
 # registration flow touches no rows, and the temporary tree is deleted after.
 ACCT_DIR="$(mktemp -d)"
 chmod 700 "$ACCT_DIR"
+HOST_UID="$(id -u)"
+HOST_GID="$(id -g)"
 # The host operator is normally non-root, so host chown cannot assign uid
 # 1001. Use the already-built app image as a disposable root helper: the bind
 # mount is only this unique throwaway directory, and account-server still
@@ -102,8 +104,19 @@ cleanup() {
   docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 gb-topo-iphold-3 >/dev/null 2>&1 || true
   if [ "$FAIL" -eq 0 ]; then
     docker compose -p gb-topo -f "$COMPOSE_FILE" down --remove-orphans >/dev/null 2>&1
-    rm -rf "$TOKEN_DIR" "$ACCT_DIR"
-    printf '\nTOPOLOGY OK — %d checks passed\n' "$PASS"
+    # account-server creates files in a uid-1001 mode-0700 bind mount. Give
+    # the invoking host user ownership back before removing the disposable dir.
+    if ! docker run --rm --user 0 --entrypoint sh -v "$ACCT_DIR:/data" "$IMAGE" \
+      -c "chown $HOST_UID:$HOST_GID /data && chmod 700 /data"; then
+      echo "ERROR: could not restore host ownership of the disposable account data dir" >&2
+      FAIL=$((FAIL + 1))
+    fi
+    if [ "$FAIL" -eq 0 ]; then
+      rm -rf "$TOKEN_DIR" "$ACCT_DIR"
+      printf '\nTOPOLOGY OK — %d checks passed\n' "$PASS"
+    else
+      printf '\nTOPOLOGY FAILED — %d passed, %d failed\n' "$PASS" "$FAIL"
+    fi
   else
     printf '\nTOPOLOGY FAILED — %d passed, %d failed\n' "$PASS" "$FAIL"
     printf '  token dir (kept for inspection): %s\n' "$TOKEN_DIR"

@@ -69,6 +69,7 @@ describe("the account topology gate provisions disposable storage", () => {
     expect(topologyScript).toMatch(/ACCT_DIR="\$\(mktemp -d\)"/);
     expect(topologyScript).toContain("docker run --rm --user 0 --entrypoint sh");
     expect(topologyScript).toContain("chown 1001:1001 /data && chmod 700 /data");
+    expect(topologyScript).toContain("chown $HOST_UID:$HOST_GID /data && chmod 700 /data");
     expect(topologyScript).toContain('rm -rf "$TOKEN_DIR" "$ACCT_DIR"');
     expect(topologyScript).toContain("exit 1");
     expect(topologyScript).not.toMatch(/^chown 1001:1001 \"\$ACCT_DIR\"$/m);
