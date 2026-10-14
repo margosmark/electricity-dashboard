@@ -11,8 +11,8 @@ import {
 } from './tabs';
 
 describe('tabs — the contract', () => {
-  it('has exactly the four sections the IA rework defines, overview first', () => {
-    expect(TAB_IDS).toEqual(['overview', 'usage', 'plans', 'money']);
+  it('has exactly the three decision surfaces, overview first', () => {
+    expect(TAB_IDS).toEqual(['overview', 'plans', 'money']);
     expect(DEFAULT_TAB).toBe('overview');
     expect(TABS.map((t) => t.id)).toEqual([...TAB_IDS]);
   });
@@ -46,7 +46,7 @@ describe('tabHash / tabFromHash', () => {
   });
 
   it('tolerates surrounding whitespace but nothing else', () => {
-    expect(tabFromHash(' #tab=usage ')).toBe('usage');
+    expect(tabFromHash(' #tab=plans ')).toBe('plans');
     expect(tabFromHash('#tab=usage=extra')).toBeNull();
   });
 });

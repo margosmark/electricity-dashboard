@@ -235,7 +235,7 @@ describe('Wave S 1 — the EFFICIENCY card', () => {
     expect(chip).toHaveTextContent('(your last 12 bills)');
 
     // The chip is green only because the USAGE half improved.
-    expect(chip.className).toContain('bg-emerald-400');
+    expect(chip.className).toContain('bg-good-slab');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveAttribute('data-direction', 'up');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveTextContent('+0.2¢/period');
     // Delivery gets its own line — reported, never credited with the verdict.

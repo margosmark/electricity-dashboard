@@ -114,6 +114,7 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
   return (
     <section
       data-testid="money-section"
+      data-decomposition-block="true"
       className="print-compact space-y-6 md:space-y-8"
       aria-labelledby="money-heading"
     >

@@ -12,7 +12,7 @@
  * to the shim's /greenbutton/start, and everything after that rides the
  * HttpOnly session cookie.
  *
- * INK (t_3e571ddb): the `bg-green-600` slab is a FIXED literal (#00a63e) that
+ * INK (t_3e571ddb): the `bg-good-slab-deep` slab is a FIXED literal (#00a63e) that
  * does not flip with the theme, so its ink is fixed too — `text-accent-ink`
  * (#000 both themes, 6.52:1). It previously carried `text-white`, which
  * measured 3.22:1 and went red on the theme-contrast walk the moment the
@@ -118,7 +118,7 @@ export function GreenButtonSync({
               disabled={syncing}
               title={lastSyncLine(status)}
               aria-label={t("gb.syncNowAria")}
-              className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-green-600 text-accent-ink font-black uppercase text-[10px] disabled:opacity-60"
+              className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-good-slab-deep text-accent-ink font-black uppercase text-[10px] disabled:opacity-60"
             >
               <RefreshCw size={14} strokeWidth={4} className={syncing ? "animate-spin" : ""} />
               <span className="hidden md:inline">
@@ -144,7 +144,7 @@ export function GreenButtonSync({
             type="button"
             data-testid="gb-connect"
             onClick={onConnect}
-            className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-edge rounded-xl md:rounded-2xl bg-green-600 text-accent-ink shadow-hard-blue-4 active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
+            className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-edge rounded-xl md:rounded-2xl bg-good-slab-deep text-accent-ink shadow-hard-blue-4 active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
           >
             <Link2 size={14} strokeWidth={4} />
             <span className="hidden md:inline">{t("gb.authorise")}</span>
@@ -194,7 +194,7 @@ export function GreenButtonSync({
               data-testid="gb-sync"
               onClick={onSync}
               disabled={syncing}
-              className="min-h-11 py-3 px-5 bg-green-600 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60"
+              className="min-h-11 py-3 px-5 bg-good-slab-deep text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60"
             >
               {syncing ? t("gb.syncing") : t("gb.syncNow")}
             </button>
@@ -221,7 +221,7 @@ export function GreenButtonSync({
             type="button"
             data-testid="gb-connect"
             onClick={onConnect}
-            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-green-600 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
+            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-good-slab-deep text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
           >
             {t("gb.authorise")}
           </button>

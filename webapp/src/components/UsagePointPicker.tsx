@@ -80,7 +80,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
             type="button"
             onClick={onCancel}
             aria-label={t('common.close')}
-            className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-edge rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-edge rounded-xl hover:bg-bad-slab-vivid hover:text-on-dark active:bg-bad-slab-strong transition-all"
           >
             <X size={18} strokeWidth={4} />
           </button>
@@ -99,7 +99,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                 type="button"
                 data-testid={`usage-point-${group.id || 'unidentified'}`}
                 onClick={() => onChoose(group.readings)}
-                className="group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-yellow-400 hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
+                className="group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-accent hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-base md:text-2xl">{usagePointLabel(group, t)}</span>
@@ -149,7 +149,7 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
             type="button"
             data-testid="usage-point-combine"
             onClick={() => onChoose(combined)}
-            className="min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 active:bg-blue-700 transition-colors"
+            className="min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs hover:bg-info-slab active:bg-info-slab-deep transition-colors"
           >
             <Combine size={16} strokeWidth={4} /> {t('picker.combine', { count: groups.length, readings: combined.length })}
           </button>

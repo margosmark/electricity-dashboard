@@ -188,7 +188,7 @@ function Chart({ report }: { report: TempBandReport }) {
               y={SHARE_TOP + SHARE_MAX_H - Math.max(1.5, (row.shareOfKwh / maxShare) * SHARE_MAX_H)}
               width={barW}
               height={Math.max(1.5, (row.shareOfKwh / maxShare) * SHARE_MAX_H)}
-              fill="#facc15"
+              fill="var(--chart-pace)"
               stroke="var(--ink)"
               strokeWidth={1.5}
               data-testid="temp-band-share"

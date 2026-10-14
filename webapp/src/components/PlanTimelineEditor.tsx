@@ -49,8 +49,8 @@ const ORIGIN_KEY: Record<PeriodPlan['origin'], string> = {
 };
 
 const ORIGIN_STYLE: Record<PeriodPlan['origin'], string> = {
-  detected: 'bg-yellow-400 text-accent-ink',
-  declared: 'bg-blue-200 text-accent-ink',
+  detected: 'bg-accent text-accent-ink',
+  declared: 'bg-info-slab-pale text-accent-ink',
   unknown: 'bg-track',
 };
 
@@ -199,7 +199,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
               if (add({ plan: 'TOU', from: day, to: day })) setError(null);
               else setError(t('timeline.errorAdd'));
             }}
-            className="min-h-11 px-4 md:px-6 py-2 bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-yellow-300 active:bg-accent-soft0 transition-colors"
+            className="min-h-11 px-4 md:px-6 py-2 bg-accent text-accent-ink border-2 border-edge rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-accent active:bg-accent-soft transition-colors"
           >
             {t('timeline.addEntry')}
           </button>
@@ -272,7 +272,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                     remove(e.id);
                     setError(null);
                   }}
-                  className="ml-auto min-h-11 min-w-11 px-3 border-2 border-edge rounded-lg bg-card hover:bg-red-100 active:bg-red-200 font-black text-xs uppercase"
+                  className="ml-auto min-h-11 min-w-11 px-3 border-2 border-edge rounded-lg bg-card hover:bg-err-bg active:bg-bad-soft font-black text-xs uppercase"
                 >
                   ✕
                 </button>

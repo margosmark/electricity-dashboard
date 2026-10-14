@@ -51,7 +51,7 @@ import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
 import OverviewPanel from '@/components/OverviewPanel';
-import UsagePanel from '@/components/UsagePanel';
+
 import PlansPanel from '@/components/PlansPanel';
 import MoneyPanel from '@/components/MoneyPanel';
 import { useTabs } from '@/hooks/useTabs';
@@ -80,7 +80,7 @@ const STORAGE_MESSAGE_KEYS: Record<StorageNotice['kind'], string> = {
 function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDismiss: () => void }) {
   const { t } = useTranslation();
   return (
-    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase">
+    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-bad-slab-strong text-on-dark p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase">
       <AlertTriangle size={20} strokeWidth={4} className="shrink-0 mt-1" />
       <div className="flex-1 min-w-[200px]">
         <div className="text-xs md:text-base">{t(STORAGE_MESSAGE_KEYS[notice.kind])}</div>
@@ -547,7 +547,7 @@ export default function Dashboard() {
              <p className="text-[10px] md:text-xs font-black uppercase text-ink-3 mb-3">{t('upload.modal.mergeHint')}</p>
              <div className="relative">
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label={t('upload.xml.aria')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-accent-soft' : 'border-edge bg-inset'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
+                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-accent bg-accent-soft' : 'border-edge bg-inset'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
              </div>
              {/* The other way in with no utility file at all: a JSON this app
                  exported before (full profile or readings only). */}
@@ -570,7 +570,7 @@ export default function Dashboard() {
              {/* Why the last upload loaded nothing: names what was missing,
                  instead of a bare "invalid XML" (Wave G item 4). */}
              {parseIssue && !parseIssue.ok && (
-               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-edge bg-red-50 rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
+               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-edge bg-bad-soft rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
                  <div className="text-sm md:text-lg font-black uppercase text-bad mb-2">{parseIssue.headline}</div>
                  <p className="text-[11px] md:text-sm font-bold text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
                  {parseIssue.hints.length > 0 && (
@@ -589,7 +589,7 @@ export default function Dashboard() {
                  data-testid="try-example-data"
                  onClick={() => { setParseIssue(null); void loadExampleData(); }}
                  disabled={parsing}
-                 className="flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
+                 className="flex-1 min-h-11 py-3 md:py-4 bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
                >
                  {parsing ? t('upload.tryExample.loading') : t('upload.tryExample.idle')}
                </button>
@@ -623,7 +623,7 @@ export default function Dashboard() {
             <p className="font-bold text-ink-2 text-xs md:text-sm mb-2">{t('reset.body', { count: resetKeys.length })} <em>{t('reset.browserOnly')}</em></p>
             <p className="font-black uppercase text-[10px] md:text-xs text-ink-3 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : t('reset.nothingStored')} — {t('reset.otherUntouched')}</p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button type="button" onClick={confirmReset} title={t('reset.confirmTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors">{t('reset.confirm')}</button>
+              <button type="button" onClick={confirmReset} title={t('reset.confirmTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-bad-slab-strong text-on-dark border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-bad-slab-deep active:translate-y-0.5 transition-colors">{t('reset.confirm')}</button>
               <button type="button" onClick={cancelResetConfirm} title={t('reset.cancelTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-hover border-2 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-track active:translate-y-0.5 transition-colors">{t('common.cancel')}</button>
             </div>
           </div>
@@ -701,11 +701,11 @@ export default function Dashboard() {
               ending in white space (it is alone on its line below ~940px, where
               it stretches across the whole row). */}
           <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
+            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>
+            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>
 
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>
+            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>
           </div>
         </div>
 
@@ -756,7 +756,7 @@ export default function Dashboard() {
               1280 (the very next breakpoint) back into a wrap, opening a
               45,936px² dead band 936px² over the gate. */}
           {floor && (
-          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
+          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-info-slab text-on-dark min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
             <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
             <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</div>
@@ -792,6 +792,13 @@ export default function Dashboard() {
           projection={projection}
           efficiency={efficiency}
           onOpenMoney={() => setActiveTab('money')}
+          usage={{
+            staleness, anomalies, heatmapData, processedData, temps,
+            zoomLevel, zoomTarget, goBack, navigatePeriod,
+            setZoomLevelAndClear, activeChartData, handleBarClick,
+            selectionCost, userPlan, startDate, filteredData,
+          }}
+          importReview={refusalNotes.length > 0 || Boolean(parseIssue)}
           fileStatus={
             <div className="no-print" data-testid="overview-file-status">
               <GreenButtonSync
@@ -809,26 +816,6 @@ export default function Dashboard() {
         />
       )}
 
-      {tab === 'usage' && (
-        <UsagePanel
-          staleness={staleness}
-          anomalies={anomalies}
-          heatmapData={heatmapData}
-          processedData={processedData}
-          temps={temps}
-          zoomLevel={zoomLevel}
-          zoomTarget={zoomTarget}
-          goBack={goBack}
-          navigatePeriod={navigatePeriod}
-          setZoomLevelAndClear={setZoomLevelAndClear}
-          activeChartData={activeChartData}
-          handleBarClick={handleBarClick}
-          selectionCost={selectionCost}
-          userPlan={userPlan}
-          startDate={startDate}
-          filteredData={filteredData}
-        />
-      )}
 
       {tab === 'plans' && (
         <PlansPanel
@@ -884,7 +871,7 @@ export default function Dashboard() {
                 <p className="text-xs md:text-sm">{t('floor.noWindow')}</p>
               )}
               <p className="text-[10px] md:text-sm">{t('legal.commodityOnly')}</p>
-              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4">{t('common.gotIt')}</button>
+              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-info-slab active:bg-info-slab-deep transition-colors mt-2 md:mt-4">{t('common.gotIt')}</button>
             </div>
           </div>
         </div>

@@ -162,7 +162,7 @@ export function BackupControls({ onExport, onImport, disabled = false }: Props) 
               data-testid="backup-export"
               onClick={handleExport}
               disabled={disabled}
-              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge bg-yellow-400 text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+              className="min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge bg-accent text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
             >
               <Download size={14} strokeWidth={4} /> {t('backup.exportJson')}
             </button>

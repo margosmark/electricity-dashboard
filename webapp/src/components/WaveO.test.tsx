@@ -118,7 +118,11 @@ describe('stacked composition', () => {
   it('switches to the 100% share view and back', async () => {
     const user = userEvent.setup();
     render(<MoneySection summaries={summaries} allData={allRows} plan="TOU" />);
-    await user.click(await screen.findByTestId('money-mode-share'));
+    const shareToggle = await screen.findByTestId('money-mode-share');
+    expect(shareToggle.tagName.toLowerCase()).toBe('button');
+    expect(shareToggle.className).toContain('seg');
+    expect(shareToggle.className).toContain('min-h-[44px]');
+    await user.click(shareToggle);
     expect(screen.getByTestId('money-mode-share')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('money-stacked')).toHaveTextContent(
       /before the rebate/i,

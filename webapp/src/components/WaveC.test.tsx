@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Dashboard from './Dashboard';
@@ -102,6 +102,7 @@ describe('RateStalenessBanner', () => {
   it('deep-links to the GitHub editor for the rates file', () => {
     render(<RateStalenessBanner result={staleResult} />);
     const link = screen.getByTestId('banner-edit-link');
+    expect(link).toHaveAccessibleName('Fix rate schedule');
     expect(link).toHaveAttribute('href', RATES_FILE_EDIT_URL);
     expect(RATES_FILE_EDIT_URL).toContain('webapp/src/app/api/rates/route.ts');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
@@ -223,8 +224,6 @@ describe('Dashboard integration', () => {
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    // Wave R: the banner now lives on Usage — go look where it would be.
-    screen.getByRole('tab', { name: 'Usage' }).click();
     await waitFor(() => {
       expect(screen.queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
     });
@@ -249,25 +248,30 @@ describe('Dashboard integration', () => {
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    // Wave R: rate staleness moved out of the global chrome into Usage.
-    screen.getByRole('tab', { name: 'Usage' }).click();
+    // Usage and insights, including rate health, stay in Overview.
     const banner = await screen.findByTestId('rate-staleness-banner', {}, { timeout: 5000 });
     expect(banner).toHaveTextContent('2026-11-01');
     expect(banner).toHaveTextContent('2025-11-01');
     expect(screen.getByTestId('banner-edit-link')).toHaveAttribute('href', RATES_FILE_EDIT_URL);
+    expect(screen.getByTestId('banner-edit-link')).toHaveAccessibleName('Fix rate schedule');
     // Sample impact computed from the 10 loaded days.
     await waitFor(() => {
       expect(screen.getByTestId('banner-impact')).toBeInTheDocument();
     });
+    const overview = screen.getByTestId('tab-panel-overview');
+    const usage = within(overview).getByTestId('overview-usage');
+    expect(usage).toContainElement(banner);
+    fireEvent.click(screen.getByRole('tab', { name: 'Money' }));
+    const moneyPanel = await screen.findByTestId('tab-panel-money');
+    expect(within(moneyPanel).queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
   });
 
-  it('renders the trend empty state on the Usage tab', async () => {
+  it('renders the trend empty state in the relocated Overview usage section', async () => {
     render(<Dashboard />);
     await waitFor(() => {
       expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
     });
-    screen.getByRole('tab', { name: 'Usage' }).click();
-    const usage = await screen.findByTestId('tab-panel-usage');
+    const usage = await screen.findByTestId('overview-usage');
     expect(usage).toBeInTheDocument();
     const trend = screen.getByTestId('trend-panel');
     expect(trend).toBeInTheDocument();

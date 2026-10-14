@@ -80,31 +80,39 @@ export default function MoneyPanel({
 
   return (
     <div id="panel-money" role="tabpanel" aria-labelledby="tab-money" className="space-y-6 md:space-y-10" data-testid="tab-panel-money">
-      {/* Accrue-as-you-go: where the open period is heading, right now. */}
-      <BillAccrualCurve
-        rows={allData}
-        plan={plan}
-        period={openPeriod}
-        projection={projection}
-        summaries={summaries}
-        billDate={billDate}
-      />
-
       {/* Wave O — the bill, itemized and compared. */}
-      <MoneySection summaries={summaries} allData={allData} plan={plan} />
+      <div data-testid="money-decomposition-slot">
+        <MoneySection summaries={summaries} allData={allData} plan={plan} />
+      </div>
+
+      {/* Accrue-as-you-go: where the open period is heading, right now. */}
+      <div data-testid="money-pace-slot">
+        <BillAccrualCurve
+          rows={allData}
+          plan={plan}
+          period={openPeriod}
+          projection={projection}
+          summaries={summaries}
+          billDate={billDate}
+        />
+      </div>
 
       {/* What your window would actually come to once the ride-alongs are on. */}
-      <TrueBillEstimate
-        plan={plan}
-        startDate={startDate}
-        endDate={endDate}
-        windowData={filteredData}
-        summaries={summaries}
-        allData={allData}
-      />
+      <div data-testid="money-true-bill-slot">
+        <TrueBillEstimate
+          plan={plan}
+          startDate={startDate}
+          endDate={endDate}
+          windowData={filteredData}
+          summaries={summaries}
+          allData={allData}
+        />
+      </div>
 
       {/* EV charging scenario — the household's own kWh, priced three ways. */}
-      <EvScenarioCard rows={allData} rates={rates} plan={plan} />
+      <div data-testid="money-ev-slot">
+        <EvScenarioCard rows={allData} rates={rates} plan={plan} />
+      </div>
     </div>
   );
 }

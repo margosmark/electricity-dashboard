@@ -62,8 +62,8 @@ test.describe('smoke', () => {
     await expect(projection).toBeVisible();
     await expect(projection).toHaveAttribute('data-state', /^(ready|gated)$/);
 
-    // Usage: the chart header.
-    await page.getByRole('tab', { name: 'Usage' }).click();
+    // Overview retains the chart and usage insights.
+    await page.getByRole('tab', { name: 'Overview' }).click();
     await expect(page.getByText('Monthly Overview')).toBeVisible();
 
     // Plans & Track Record: the plan card (Wave A's totals strip also says

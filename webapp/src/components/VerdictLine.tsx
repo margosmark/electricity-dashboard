@@ -17,7 +17,7 @@
 
 import { buildVerdict, type PlanCosts } from '@/lib/verdict';
 import { type PlanId } from '@/hooks/useSelectedPlan';
-import { fmtMoney, fmtMoney0, planLabel, useTranslation } from '@/i18n';
+import { fmtMoney0, useTranslation } from '@/i18n';
 
 export type VerdictLineProps = {
   comparison: PlanCosts | null;
@@ -29,37 +29,48 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
   const { t } = useTranslation();
   const verdict = buildVerdict(comparison, userPlan, days);
   if (!verdict) return null;
+  const deltaVsCheapest = verdict.currentCost - verdict.costs[verdict.best];
+  const worseVsCurrent = verdict.costs[verdict.worst] - verdict.currentCost;
+  const cheapestLabel = t(`planShort.${verdict.best}`);
 
   return (
     <p
       data-testid="verdict-line"
       data-best-plan={verdict.best}
       data-already-best={String(verdict.alreadyBest)}
-      className="bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4"
+      className="bg-accent border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4"
     >
       <span className="text-[8px] md:text-[10px] tracking-[0.2em] block text-accent-ink mb-1">
         {t('verdict.eyebrow')}
       </span>
+      <span className="text-base md:text-xl">
+        {t('verdict.planCost', {
+          current: fmtMoney0(verdict.currentCost),
+          baseline: fmtMoney0(verdict.costs[verdict.best]),
+          plan: cheapestLabel,
+        })}{' '}
+        {deltaVsCheapest > 0 ? (
+          <span data-testid="verdict-delta" className="text-accent-ink">▲{fmtMoney0(deltaVsCheapest)}</span>
+        ) : (
+          <span data-testid="verdict-delta">{fmtMoney0(0)}</span>
+        )}{' '}
+        {t('verdict.cheapestBaseline')}
+      </span>{' '}
+      {worseVsCurrent > 0.005 && (
+        <span className="text-accent-ink">{fmtMoney0(worseVsCurrent)} {t('verdict.worse')}</span>
+      )}{' '}
       {verdict.alreadyBest ? (
-        <>
-          <span className="text-base md:text-xl">{t('verdict.cheapest', { plan: planLabel(userPlan) })}</span>{' '}
-          <span className="font-bold normal-case text-[10px] md:text-xs">
-            {t('verdict.nothingToSwitch', { count: verdict.days, days: verdict.days })}
-          </span>
-        </>
+        <span className="font-bold normal-case text-[10px] md:text-xs">
+          {t('verdict.nothingToSwitch', { count: verdict.days, days: verdict.days })}
+        </span>
       ) : (
-        <>
-          <span className="text-base md:text-xl">
-            {t('verdict.wins', { plan: planLabel(verdict.best), amount: fmtMoney(verdict.delta), current: planLabel(userPlan) })}
-          </span>{' '}
-          <span className="font-bold normal-case text-[10px] md:text-xs">
-            {t('verdict.winsDetail', {
-              count: verdict.days,
-              days: verdict.days,
-              monthly: fmtMoney0(verdict.deltaPerMonth),
-            })}
-          </span>
-        </>
+        <span className="font-bold normal-case text-[10px] md:text-xs">
+          {t('verdict.winsDetail', {
+            count: verdict.days,
+            days: verdict.days,
+            monthly: fmtMoney0(verdict.deltaPerMonth),
+          })}
+        </span>
       )}
     </p>
   );

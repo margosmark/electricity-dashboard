@@ -35,6 +35,7 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
   if (!verdict) return null;
 
   return (
+    /* Shared accent fill/ink tokens keep the headline pairing identical in both themes. */
     <section
       data-testid="best-choice-banner"
       data-best-plan={verdict.best}
@@ -42,13 +43,7 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
       data-already-best={String(verdict.alreadyBest)}
       data-window-days={verdict.days}
       aria-labelledby="best-choice-heading"
-      /* Polarity flip (spec §3.5): the banner is the ONE surface allowed to be
-         maximum loud, and on a dark page the maximum is a YELLOW FLOOD, not a
-         black slab. The black/yellow pairing identity is preserved — the two
-         colours simply swap roles (was bg-black + border-yellow-400 + yellow
-         text; now bg-accent + black border + black text). Text on accent is
-         #000 at 13.7:1 in BOTH themes, so nothing here needs a dark variant. */
-      className="bg-accent text-[#000] p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-[#000] shadow-hard-12 md:shadow-hard-24 flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase"
+      className="bg-accent text-accent-ink p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-accent-ink shadow-hard-12 md:shadow-hard-24 flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase"
     >
       {/* Every word on the flood is BLACK — including the small window line,
           which used to be --ink-4 (slate-400): 2.2:1 on the yellow in light
@@ -59,16 +54,21 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
           light's 2.56:1 is the pre-existing micro-label defect the spec
           scoped out.) */}
       <div className="space-y-2 md:space-y-4 text-center lg:text-left">
-        <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-[#000] font-black">
+        <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-accent-ink font-black">
           {t('bestChoice.eyebrow')}
         </div>
         <h4 id="best-choice-heading" className="text-3xl md:text-5xl italic leading-tight">
           {t('bestChoice.headline')} <br />
-          <span className="text-4xl sm:text-6xl md:text-8xl text-[#000] not-italic block mt-1 md:mt-2 font-black">
+          <span className="text-4xl sm:text-6xl md:text-8xl text-accent-ink not-italic block mt-1 md:mt-2 font-black">
             {planLabel(verdict.best)}
           </span>
         </h4>
-        <p className="text-[9px] md:text-[11px] font-bold text-[#000] normal-case">
+        {!verdict.alreadyBest && (
+          <p data-testid="cheaper-alternative" className="text-base md:text-xl font-black text-accent-ink normal-case">
+            {t('bestChoice.cheaperAlternative', { plan: t(`planShort.${verdict.best}`) })}
+          </p>
+        )}
+        <p className="text-[9px] md:text-[11px] font-bold text-accent-ink normal-case">
           {t('bestChoice.window', { count: verdict.days, days: verdict.days })} · {t('legal.commodityShort')}
         </p>
       </div>

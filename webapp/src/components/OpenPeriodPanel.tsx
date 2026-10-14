@@ -70,7 +70,7 @@ export default function OpenPeriodPanel({
         {open && (
           <span
             data-testid="open-period-badge"
-            className="border-4 border-edge bg-yellow-400 text-accent-ink px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
+            className="border-4 border-edge bg-accent text-accent-ink px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
           >
             {t('openPeriod.badge')}
           </span>

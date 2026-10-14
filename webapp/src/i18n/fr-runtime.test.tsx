@@ -75,7 +75,7 @@ const RATES = {
 };
 
 /** Every tab, so the sweep covers every surface the app paints. */
-const TABS = ['overview', 'usage', 'plans', 'money'] as const;
+const TABS = ['overview', 'plans', 'money'] as const;
 
 /* -------------------------------------------------------------------------- *
  * The vocabulary

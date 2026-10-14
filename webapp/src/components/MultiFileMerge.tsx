@@ -136,7 +136,7 @@ export default function MultiFileMerge({
 
         <div
           data-testid="merge-summary"
-          className="mt-4 md:mt-6 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
+          className="mt-4 md:mt-6 bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
         >
           <div className="flex flex-wrap gap-4 md:gap-8">
             <div>
@@ -191,7 +191,7 @@ export default function MultiFileMerge({
             data-testid="merge-confirm"
             onClick={() => onConfirm(merged.readings)}
             disabled={!canConfirm}
-            className="flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+            className="flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-info-slab transition-colors"
           >
             <CheckCircle2 size={16} strokeWidth={4} /> {t('merge.importBtn')} {merged.mergedRows.toLocaleString()} {t('merge.rows', { count: merged.mergedRows })}
           </button>

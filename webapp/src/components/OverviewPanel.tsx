@@ -27,6 +27,8 @@ import BestChoiceBanner from '@/components/BestChoiceBanner';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
 import { daysBetweenDayKeys } from '@/lib/dateSpan';
+import UsagePanel, { type UsagePanelProps } from '@/components/UsagePanel';
+import { AlertTriangle } from 'lucide-react';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -47,6 +49,9 @@ export type OverviewPanelProps = {
   onOpenMoney: () => void;
   /** Green Button / file-status chip, wired by Dashboard. */
   fileStatus?: React.ReactNode;
+  /** Existing usage and insight tools, retained below the decision summary. */
+  usage: Omit<UsagePanelProps, 'embedded'>;
+  importReview: boolean;
 };
 
 export default function OverviewPanel({
@@ -61,6 +66,8 @@ export default function OverviewPanel({
   efficiency,
   onOpenMoney,
   fileStatus,
+  usage,
+  importReview,
 }: OverviewPanelProps) {
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
@@ -89,6 +96,16 @@ export default function OverviewPanel({
       {/* 1. THE ANSWER. First element, nothing above it but the tab strip. */}
       <BestChoiceBanner comparison={comparison} userPlan={userPlan} days={days} />
 
+      {importReview && (
+        <div role="alert" data-testid="overview-import-alert" className="bg-warn-soft border-4 border-edge rounded-xl p-4 md:p-6 flex flex-wrap items-center gap-3 text-ink">
+          <AlertTriangle aria-hidden size={20} className="text-warn shrink-0" />
+          <span className="flex-1 text-sm font-black normal-case">{t('overview.importReviewBody')}</span>
+          <a href="/import" data-testid="overview-review-imports" className="inline-flex min-h-11 items-center px-4 py-2 bg-inv text-inv-ink border-2 border-edge rounded-lg font-black uppercase text-xs hover:bg-hover">
+            {t('overview.reviewImports')}
+          </a>
+        </div>
+      )}
+
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
         <div className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap gap-4 md:gap-6 items-center text-ink" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
@@ -106,7 +123,7 @@ export default function OverviewPanel({
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
-              className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
+              className="bg-accent text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
             >
               <div className="text-[8px] md:text-[10px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -224,9 +241,9 @@ export default function OverviewPanel({
                    chips have always painted in light. */
                 className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-edge ${
                   p.id === totals.bestPlan
-                    ? 'bg-emerald-400 text-accent-ink'
+                    ? 'bg-good-slab text-accent-ink'
                     : p.id === totals.worstPlan
-                      ? 'bg-red-400 text-accent-ink'
+                      ? 'bg-bad-slab text-accent-ink'
                       : 'bg-hover'
                 }`}
               >
@@ -241,7 +258,7 @@ export default function OverviewPanel({
             ))}
           </div>
 
-          <div className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
+          <div className="bg-accent text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
             <div className="text-[8px] md:text-[10px]">{t('overview.bestVsWorst')}</div>
             <div className="text-lg md:text-2xl italic font-black">
               {money(totals.planDelta)}
@@ -249,7 +266,7 @@ export default function OverviewPanel({
                 {unit}
               </span>
             </div>
-            <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>
+            <div className="text-[8px] md:text-[10px]">{planLabel(totals.worstPlan)} − {planLabel(totals.bestPlan)}</div>
           </div>
 
           {/* Wave H item 5 — "why is the chart empty at the end?" answered
@@ -262,7 +279,7 @@ export default function OverviewPanel({
             data-stale={String(freshness?.stale ?? false)}
             className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-edge flex flex-col ${
               /* amber-300 is a fixed slab: same ink rule as the chips above. */
-              freshness?.stale ? 'bg-amber-300 text-accent-ink' : 'bg-hover'
+              freshness?.stale ? 'bg-warn-strip text-ink' : 'bg-hover'
             }`}
             title={
               freshness?.stale
@@ -275,7 +292,7 @@ export default function OverviewPanel({
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
-                freshness?.stale ? 'text-accent-ink' : 'text-ink-3'
+                freshness?.stale ? 'text-ink' : 'text-ink-3'
               }`}
             >
               {freshness?.stale
@@ -309,6 +326,8 @@ export default function OverviewPanel({
 
       {/* 5. What this month is going to cost. */}
       <BillProjectionBanner projection={projection} />
+      <p className="text-[9px] md:text-xs text-ink-3 font-black normal-case">{t('tab.usageOverviewNote')}</p>
+      <UsagePanel {...usage} embedded />
     </div>
   );
 }

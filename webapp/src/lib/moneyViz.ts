@@ -113,17 +113,17 @@ export const COST_SLICE_META: Record<
   CostSliceKey,
   { label: string; short: string; color: string; labelKey: string; shortKey: string }
 > = {
-  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
-  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
-  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
+  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: 'var(--chart-money-offpeak)', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
+  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: 'var(--chart-money-midpeak)', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
+  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: 'var(--chart-money-onpeak)', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
   tier1: { label: 'Tier 1', short: 'Tier 1', color: 'var(--data-tier1)', labelKey: 'rate.tier1', shortKey: 'rate.tier1' },
-  tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
-  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
-  delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },
-  regulatory: { label: 'Regulatory', short: 'Regulatory', color: '#A78BFA', labelKey: 'slice.regulatory', shortKey: 'slice.regulatory' },
-  other: { label: 'Other lines', short: 'Other', color: '#FB923C', labelKey: 'slice.other.label', shortKey: 'slice.other.short' },
-  tax: { label: 'HST', short: 'HST', color: '#F59E0B', labelKey: 'slice.tax', shortKey: 'slice.tax' },
-  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: '#059669', labelKey: 'slice.credit.label', shortKey: 'slice.credit.short' },
+  tier2: { label: 'Tier 2', short: 'Tier 2', color: 'var(--chart-money-tier2)', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
+  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: 'var(--chart-money-commodity)', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
+  delivery: { label: 'Delivery', short: 'Delivery', color: 'var(--chart-money-delivery)', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },
+  regulatory: { label: 'Regulatory', short: 'Regulatory', color: 'var(--chart-money-regulatory)', labelKey: 'slice.regulatory', shortKey: 'slice.regulatory' },
+  other: { label: 'Other lines', short: 'Other', color: 'var(--chart-money-other)', labelKey: 'slice.other.label', shortKey: 'slice.other.short' },
+  tax: { label: 'HST', short: 'HST', color: 'var(--chart-money-tax)', labelKey: 'slice.tax', shortKey: 'slice.tax' },
+  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: 'var(--chart-money-credit)', labelKey: 'slice.credit.label', shortKey: 'slice.credit.short' },
 };
 
 /**

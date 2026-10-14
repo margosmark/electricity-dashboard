@@ -23,6 +23,58 @@ import { type ZoomLevel } from '@/hooks/useDashboard';
 import { type ChartSegment } from '@/lib/season';
 import { fmtKwh, fmtMoney, useTranslation } from '@/i18n';
 
+type AccessibleBarProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  payload?: ChartDataItem;
+  onActivate?: (item: { key?: string } | null) => void;
+};
+
+export function AccessibleBar({
+  x = 0, y = 0, width = 0, height = 0, fill = 'currentColor', payload, onActivate,
+}: AccessibleBarProps) {
+  const { t } = useTranslation();
+  const activate = () => onActivate?.(payload ? { key: payload.key } : null);
+  return (
+    <g
+      tabIndex={0}
+      role="button"
+      aria-label={t('chart.barAria', { label: payload?.label ?? '', usage: fmtKwh(payload?.usage ?? 0, 2) })}
+      onClick={activate}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        activate();
+      }}
+    >
+      <rect x={x} y={y} width={width} height={height} fill={fill} />
+    </g>
+  );
+}
+
+/** A text equivalent for the interactive SVG: every plotted number is available without hover. */
+export function ChartDataTable({ data }: { data: ChartDataItem[] }) {
+  const { t } = useTranslation();
+  return (
+    <table className="sr-only" data-testid="chart-data-table">
+      <caption>{t('chart.dataTableCaption')}</caption>
+      <thead><tr><th>{t('chart.period')}</th><th>{t('chart.usage')}</th><th>{t('chart.planTou')}</th><th>{t('chart.planTiered')}</th><th>{t('chart.planUlo')}</th></tr></thead>
+      <tbody>{data.map((row) => (
+        <tr key={row.key}>
+          <th scope="row">{row.label}</th>
+          <td>{fmtKwh(row.usage, 2)}</td>
+          <td>{fmtMoney(row.costTOU)}</td>
+          <td>{fmtMoney(row.costTiered)}</td>
+          <td>{fmtMoney(row.costULO)}</td>
+        </tr>
+      ))}</tbody>
+    </table>
+  );
+}
+
 export type BarChartPanelProps = {
   data: ChartDataItem[];
   zoomLevel: ZoomLevel;
@@ -38,7 +90,9 @@ export default function BarChartPanel({
 }: BarChartPanelProps) {
   const { t } = useTranslation();
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <>
+      <ChartDataTable data={data} />
+      <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
         {/* Grid first: it must never out-shout the bars. A hard #000 line at
             10% was a near-black rule on light; on dark it disappears entirely,
@@ -53,7 +107,7 @@ export default function BarChartPanel({
               key={`season-${s.season}-${i}`}
               x1={s.fromLabel}
               x2={s.toLabel}
-              fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}
+              fill={s.season === 'winter' ? 'var(--chart-season-winter)' : 'var(--chart-season-summer)'}
               fillOpacity={0.07}
               stroke="none"
               label={{ value: s.season === 'winter' ? t('season.bandWinter') : t('season.bandSummer'), position: 'insideTop', fill: 'var(--ink-2)', fontSize: 10, fontWeight: 900 }}
@@ -75,17 +129,17 @@ export default function BarChartPanel({
         />
         <Bar
           dataKey="usage"
-          fill="#2563EB"
+          fill="var(--chart-usage-weekday)"
           /* The seam between stacked segments. Deliberately NOT the border
              token: on dark that would be a #cbd5e1 line between every pair of
              bars — a light grid drawn over the data. The bar's own stroke
              reads as a card-tone gap on dark and a black one on light. */
-          stroke="#000"
+          stroke="var(--edge)"
           strokeWidth={3}
           radius={0}
-          activeBar={{ fill: 'var(--data-active)' }}
-          onClick={(d) => onBarClick(d as { key?: string } | null)}
+          activeBar={{ fill: 'var(--plan-tou)', stroke: 'var(--ink-3)', strokeWidth: 1 }}
           className="cursor-pointer"
+          shape={(props: AccessibleBarProps) => <AccessibleBar {...props} onActivate={onBarClick} />}
         >
           {data.map((entry, index) => (
             <Cell
@@ -97,6 +151,7 @@ export default function BarChartPanel({
         </Bar>
         <Bar dataKey="costTOU" hide /> <Bar dataKey="costTiered" hide /> <Bar dataKey="costULO" hide />
       </BarChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+    </>
   );
 }

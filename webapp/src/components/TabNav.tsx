@@ -22,13 +22,13 @@
 'use client';
 
 import { useRef } from 'react';
-import { Banknote, Gauge, Scale, TrendingUp } from 'lucide-react';
+import { Banknote, Gauge, Scale } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
 import { useTranslation } from '@/i18n';
 
 const ICONS: Record<TabId, typeof Gauge> = {
   overview: Gauge,
-  usage: TrendingUp,
+
   plans: Scale,
   money: Banknote,
 };
@@ -116,6 +116,8 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               id={`tab-${tab.id}`}
               aria-controls={selected ? `panel-${tab.id}` : undefined}
               aria-selected={selected}
+              aria-current={selected ? 'page' : undefined}
+              data-go={tab.id}
               data-testid={`tab-${tab.id}`}
               data-active={String(selected)}
               tabIndex={selected ? 0 : -1}

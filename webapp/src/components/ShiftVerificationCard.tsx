@@ -15,11 +15,11 @@ import type { ShiftVerification, ShiftVerdict } from '@/lib/shiftVerification';
 import { fmtKwh, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
 
 const VERDICT_STYLE: Record<ShiftVerdict, { box: string; icon: ReactNode }> = {
-  improved: { box: 'bg-emerald-400 text-accent-ink', icon: <ArrowUpRight size={16} strokeWidth={4} /> },
-  worse: { box: 'bg-red-400 text-accent-ink', icon: <ArrowDownRight size={16} strokeWidth={4} /> },
-  diverged: { box: 'bg-orange-400', icon: <Scale size={16} strokeWidth={4} /> },
+  improved: { box: 'bg-good-slab text-accent-ink', icon: <ArrowUpRight size={16} strokeWidth={4} /> },
+  worse: { box: 'bg-bad-slab text-accent-ink', icon: <ArrowDownRight size={16} strokeWidth={4} /> },
+  diverged: { box: 'bg-warn-slab', icon: <Scale size={16} strokeWidth={4} /> },
   'no-change': { box: 'bg-track', icon: <Minus size={16} strokeWidth={4} /> },
-  'no-offpeak': { box: 'bg-blue-300', icon: <Scale size={16} strokeWidth={4} /> },
+  'no-offpeak': { box: 'bg-info-slab-soft', icon: <Scale size={16} strokeWidth={4} /> },
 };
 
 function WindowChip({
@@ -34,7 +34,7 @@ function WindowChip({
   const { t } = useTranslation();
   return (
     <div
-      className={`border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 ${accent ? 'bg-yellow-400 text-accent-ink' : 'bg-card'}`}
+      className={`border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 ${accent ? 'bg-accent text-accent-ink' : 'bg-card'}`}
     >
       <div className="text-[8px] md:text-[10px] font-black uppercase">{label}</div>
       <div className={`text-[10px] md:text-xs font-bold ${accent ? 'text-accent-ink' : 'text-ink-2'}`}>

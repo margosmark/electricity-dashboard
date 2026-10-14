@@ -35,7 +35,7 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
     <div
       data-testid="bill-projection"
       data-state="ready"
-      className="bg-emerald-400 border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-8 py-4 md:py-6 flex flex-wrap items-center gap-4 md:gap-8 text-accent-ink font-black uppercase"
+      className="bg-good-slab border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-8 py-4 md:py-6 flex flex-wrap items-center gap-4 md:gap-8 text-accent-ink font-black uppercase"
     >
       <div className="flex items-center gap-2 md:gap-3">
         <CalendarDays size={20} strokeWidth={4} />

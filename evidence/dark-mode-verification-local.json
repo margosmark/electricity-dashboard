@@ -1,0 +1,209 @@
+{
+  "base": "http://127.0.0.1:3112",
+  "at": "2026-10-14T18:55:06.487Z",
+  "checks": [
+    {
+      "name": "light 1440x900: <html data-theme> is \"light\"",
+      "ok": true,
+      "detail": "light"
+    },
+    {
+      "name": "light 1440x900: page paints --page (rgb(245, 246, 248))",
+      "ok": true,
+      "detail": "rgb(245, 246, 248) vs rgb(245, 246, 248)"
+    },
+    {
+      "name": "light 1440x900: card paints --card (rgb(255, 255, 255))",
+      "ok": true,
+      "detail": "rgb(255, 255, 255) vs rgb(255, 255, 255)"
+    },
+    {
+      "name": "light 1440x900: card border paints --edge (rgb(0, 0, 0))",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) vs rgb(0, 0, 0)"
+    },
+    {
+      "name": "light 1440x900: body ink paints --ink (rgb(0, 0, 0))",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) vs rgb(0, 0, 0)"
+    },
+    {
+      "name": "light 1440x900: hard shadow paint is \"rgb(0, 0, 0)\"",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) 3px 3px 0px 0px"
+    },
+    {
+      "name": "light 1440x900: accent yellow is UNCHANGED (rgb(250, 204, 21))",
+      "ok": true,
+      "detail": "meta theme-color=#facc15"
+    },
+    {
+      "name": "light 390x844: <html data-theme> is \"light\"",
+      "ok": true,
+      "detail": "light"
+    },
+    {
+      "name": "light 390x844: page paints --page (rgb(245, 246, 248))",
+      "ok": true,
+      "detail": "rgb(245, 246, 248) vs rgb(245, 246, 248)"
+    },
+    {
+      "name": "light 390x844: card paints --card (rgb(255, 255, 255))",
+      "ok": true,
+      "detail": "rgb(255, 255, 255) vs rgb(255, 255, 255)"
+    },
+    {
+      "name": "light 390x844: card border paints --edge (rgb(0, 0, 0))",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) vs rgb(0, 0, 0)"
+    },
+    {
+      "name": "light 390x844: body ink paints --ink (rgb(0, 0, 0))",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) vs rgb(0, 0, 0)"
+    },
+    {
+      "name": "light 390x844: hard shadow paint is \"rgb(0, 0, 0)\"",
+      "ok": true,
+      "detail": "rgb(0, 0, 0) 3px 3px 0px 0px"
+    },
+    {
+      "name": "light 390x844: accent yellow is UNCHANGED (rgb(250, 204, 21))",
+      "ok": true,
+      "detail": "meta theme-color=#facc15"
+    },
+    {
+      "name": "dark 1440x900: <html data-theme> is \"dark\"",
+      "ok": true,
+      "detail": "dark"
+    },
+    {
+      "name": "dark 1440x900: page paints --page (rgb(2, 6, 23))",
+      "ok": true,
+      "detail": "rgb(2, 6, 23) vs rgb(2, 6, 23)"
+    },
+    {
+      "name": "dark 1440x900: card paints --card (rgb(15, 23, 42))",
+      "ok": true,
+      "detail": "rgb(15, 23, 42) vs rgb(15, 23, 42)"
+    },
+    {
+      "name": "dark 1440x900: card border paints --edge (rgb(203, 213, 225))",
+      "ok": true,
+      "detail": "rgb(203, 213, 225) vs rgb(203, 213, 225)"
+    },
+    {
+      "name": "dark 1440x900: body ink paints --ink (rgb(248, 250, 252))",
+      "ok": true,
+      "detail": "rgb(248, 250, 252) vs rgb(248, 250, 252)"
+    },
+    {
+      "name": "dark 1440x900: hard shadow paint is \"rgba(255, 255, 255, 0.12)\"",
+      "ok": true,
+      "detail": "rgba(255, 255, 255, 0.12) 3px 3px 0px 0px"
+    },
+    {
+      "name": "dark 1440x900: accent yellow is UNCHANGED (rgb(250, 204, 21))",
+      "ok": true,
+      "detail": "meta theme-color=#020617"
+    },
+    {
+      "name": "dark 390x844: <html data-theme> is \"dark\"",
+      "ok": true,
+      "detail": "dark"
+    },
+    {
+      "name": "dark 390x844: page paints --page (rgb(2, 6, 23))",
+      "ok": true,
+      "detail": "rgb(2, 6, 23) vs rgb(2, 6, 23)"
+    },
+    {
+      "name": "dark 390x844: card paints --card (rgb(15, 23, 42))",
+      "ok": true,
+      "detail": "rgb(15, 23, 42) vs rgb(15, 23, 42)"
+    },
+    {
+      "name": "dark 390x844: card border paints --edge (rgb(203, 213, 225))",
+      "ok": true,
+      "detail": "rgb(203, 213, 225) vs rgb(203, 213, 225)"
+    },
+    {
+      "name": "dark 390x844: body ink paints --ink (rgb(248, 250, 252))",
+      "ok": true,
+      "detail": "rgb(248, 250, 252) vs rgb(248, 250, 252)"
+    },
+    {
+      "name": "dark 390x844: hard shadow paint is \"rgba(255, 255, 255, 0.12)\"",
+      "ok": true,
+      "detail": "rgba(255, 255, 255, 0.12) 3px 3px 0px 0px"
+    },
+    {
+      "name": "dark 390x844: accent yellow is UNCHANGED (rgb(250, 204, 21))",
+      "ok": true,
+      "detail": "meta theme-color=#020617"
+    },
+    {
+      "name": "print: screen is dark first",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "print: the page is paper, not the dark navy",
+      "ok": true,
+      "detail": "rgb(255, 255, 255)"
+    },
+    {
+      "name": "print: --card falls back to white",
+      "ok": true,
+      "detail": "rgb(255, 255, 255)"
+    },
+    {
+      "name": "print: borders are black again",
+      "ok": true,
+      "detail": "rgb(0, 0, 0)"
+    },
+    {
+      "name": "toggle: role=radiogroup with an accessible name",
+      "ok": true,
+      "detail": "Theme"
+    },
+    {
+      "name": "toggle: three radios",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "toggle: exactly one aria-checked",
+      "ok": true,
+      "detail": "1"
+    },
+    {
+      "name": "toggle: defaults to system with nothing stored",
+      "ok": true,
+      "detail": "system"
+    },
+    {
+      "name": "toggle: ArrowRight moves the selection",
+      "ok": true,
+      "detail": "system → light"
+    },
+    {
+      "name": "toggle: the choice is persisted to `theme`",
+      "ok": true,
+      "detail": "light"
+    },
+    {
+      "name": "toggle: the manual choice survives a reload",
+      "ok": true,
+      "detail": "light → light"
+    }
+  ],
+  "screenshots": [
+    "dark-mode-light-1440.png",
+    "dark-mode-light-390.png",
+    "dark-mode-dark-1440.png",
+    "dark-mode-dark-390.png",
+    "dark-mode-print-from-dark.png"
+  ],
+  "failed": 0
+}

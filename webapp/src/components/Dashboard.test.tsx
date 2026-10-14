@@ -52,10 +52,10 @@ describe('Dashboard', () => {
     expect(screen.getByText(/preparing optimizer/i)).toBeInTheDocument();
   });
 
-  it('renders the four-tab strip after loading, Overview selected', async () => {
+  it('renders the three-tab strip after loading, Overview selected', async () => {
     await renderLoaded();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Usage', 'Plans', 'Money']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Plans', 'Money']);
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
   });
@@ -72,8 +72,8 @@ describe('Dashboard', () => {
   it('renders zoom level buttons', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    // Wave R: the chart (and its zoom control) lives on the Usage tab.
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
+    // Usage analysis (and its zoom control) is retained inside Overview.
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(screen.getByText('monthly')).toBeInTheDocument();
     expect(screen.getByText('weekly')).toBeInTheDocument();
     expect(screen.getByText('daily')).toBeInTheDocument();
@@ -106,15 +106,14 @@ describe('Dashboard', () => {
     expect(screen.getByTitle('Reset Data')).toBeInTheDocument();
   });
 
-  it('shows the usage analysis on the Usage tab', async () => {
-    const user = userEvent.setup();
+  it('shows the usage analysis inside Overview', async () => {
     await renderLoaded();
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
     expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
     expect(screen.getByText(/Weekly Routine Heatmap/i)).toBeInTheDocument();
-    // ...and the Overview panel is gone rather than hidden underneath.
-    expect(screen.queryByTestId('tab-panel-overview')).not.toBeInTheDocument();
+    // The chart is embedded, not exposed as a fourth tab panel.
+    expect(screen.getByTestId('tab-panel-overview')).toContainElement(screen.getByTestId('overview-usage'));
+    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
   });
 
   it('shows always-on floor help modal', async () => {
@@ -287,13 +286,16 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
     expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('tab-panel-overview')).not.toBeInTheDocument();
-
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
+    expect(screen.getByTestId('tab-panel-plans')).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
     await user.click(screen.getByRole('tab', { name: 'Money' }));
     expect(screen.getByTestId('tab-panel-money')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
   });
 
   it('puts the best-choice banner first on Overview — the answer is not buried', async () => {

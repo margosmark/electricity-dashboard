@@ -85,7 +85,7 @@ export default function PlansPanel({
       {wfh && (
         <div
           data-testid="wfh-annotation"
-          className="bg-purple-200 border-2 md:border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-accent-ink font-black uppercase"
+          className="bg-violet-slab-pale border-2 md:border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-accent-ink font-black uppercase"
         >
           <span className="text-base md:text-2xl italic">{fmtPercent(wfh.share * 100)}</span>
           <span className="text-[10px] md:text-xs">{t('wfh.label')}</span>

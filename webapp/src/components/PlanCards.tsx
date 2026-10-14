@@ -162,7 +162,7 @@ export default function PlanCards({
             }}
             className={`bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-edge shadow-hard-6 md:shadow-hard-8 relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
           >
-            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-edge font-black text-[8px] md:text-[10px] uppercase text-accent-ink shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
+            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-accent px-3 md:px-6 py-1 rounded-full border-2 border-edge font-black text-[8px] md:text-[10px] uppercase text-accent-ink shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
             <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
             {/* The card's headline number used to stand alone: a 6xl dollar
                 figure with nothing saying whether it is a bill, a projection,

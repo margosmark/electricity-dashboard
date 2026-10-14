@@ -98,8 +98,8 @@ test.describe('full journey', () => {
     await expect(page.getByTestId('confidence-badge').first()).toBeVisible();
 
     // --- 5. Take the evidence away: a real CSV file lands on disk. -------
-    // The window's CSV belongs to the chart, so it exports from Usage.
-    await page.getByRole('tab', { name: 'Usage' }).click();
+    // The window's CSV belongs to the chart, now retained in Overview.
+    await page.getByRole('tab', { name: 'Overview' }).click();
     await expect(page.getByTestId('chart-view')).toBeVisible();
     const downloadPromise = page.waitForEvent('download', { timeout: 30_000 });
     await page.getByTestId('export-csv').first().click();
@@ -155,8 +155,8 @@ test.describe('full journey', () => {
     // would not be "the full experience".
     await expect(page.locator('input[type="date"]').first()).toHaveValue('2025-10-01');
     await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-09-30');
-    // Wave R: the chart lives on the Usage tab now.
-    await page.getByRole('tab', { name: 'Usage' }).click();
+    // The chart remains on the decision-first Overview.
+    await page.getByRole('tab', { name: 'Overview' }).click();
     // ...so the monthly chart has a year of tick labels, not one. Recharts
     // v3 parks tick labels in their own z-layer, so select on the group's
     // own class rather than assuming they sit under the axis <g>.

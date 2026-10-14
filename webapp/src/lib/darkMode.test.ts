@@ -232,6 +232,10 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // still asserted, because "the brand colour never changes" is exactly the
   // kind of assumption that quietly stops being true.
   { token: 'accent-ink', on: ['accent'], min: 4.5 },
+  // Fixed state/category slabs retain their hue in both themes; their ink is
+  // an explicit semantic pairing rather than an inherited page foreground.
+  { token: 'accent-ink', on: ['good-slab', 'good-slab-soft', 'good-slab-deep', 'bad-slab', 'bad-slab-vivid', 'info-slab-soft', 'info-slab-pale', 'warn-slab', 'violet-slab', 'violet-slab-soft', 'violet-slab-pale', 'sky-slab', 'sky-slab-pale'], min: 4.5 },
+  { token: 'on-dark', on: ['bad-slab-strong', 'bad-slab-deep', 'info-slab', 'info-slab-deep'], min: 4.5 },
   // The inverted chip's own text: 14.5:1 in dark on a light chip.
   { token: 'inv-ink', on: ['inv'], min: 4.5 },
   // The accent-as-text family on the inverted chip. This is the pairing the
@@ -336,6 +340,14 @@ const TEMP_RAMP_LABELS = TEMP_RAMP_LABEL_LIGHT_LITERALS.map((_, i) => `temp-band
 const RAMP_PEAK_INDEX = 3;
 
 describe('dark mode — the a11y contrast budget (spec §2)', () => {
+  it('pins semantic ink and accent-outline contrast from the live token blocks', () => {
+    expect(declared('ink-3', 'light').toLowerCase()).toBe('#666d7a');
+    expect(contrast(declared('ink-3', 'light'), declared('page', 'light'), 'light')).toBeCloseTo(4.81, 2);
+    expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
+    expect(contrast(declared('ink-3', 'dark'), declared('inset', 'dark'), 'dark')).toBeCloseTo(5.71, 2);
+    expect(contrast(declared('ink-3', 'light'), declared('plan-tou', 'light'), 'light')).toBeGreaterThanOrEqual(3.94);
+    expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
+  });
   it('declares every token in both theme blocks', () => {
     const tokens = [...TEXT_ON_SURFACE, ...NON_TEXT_ON_SURFACE].flatMap((r) => [
       ...r.on,

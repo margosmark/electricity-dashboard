@@ -1468,5 +1468,37 @@
       "source": "fill=\"#facc15\""
     }
   ],
+  "migration_report": {
+    "status": "migrated",
+    "verified_against_worktree": true,
+    "baseline_occurrences": 190,
+    "live_baseline_occurrences_remaining": 0,
+    "baseline_text_white_migrated_to": "text-on-dark",
+    "baseline_text_white_occurrences": 8,
+    "yellow_fill_migrated_to": "bg-accent",
+    "chart_svg_paint_migrated_to": "CSS custom properties in globals.css",
+    "comment_only_legacy_color_mentions": 11,
+    "exceptions": [],
+    "p4_decision": "deferred—not mapped to a safe current chart",
+    "p4_rationale": "Preserve EfficiencyCard's truthful dynamic all-in bill cents/kWh scale; do not force a 0–14¢ commodity-only domain or invent a rate-history chart without a real source/metric and dynamic-domain accessibility specification.",
+    "p4_mechanical_assertion": "not included in this candidate/QA gate",
+    "ink3_contrast_evidence": {
+      "light": {
+        "ink": "#666d7a",
+        "page": {"surface": "#f5f6f8", "ratio": 4.81},
+        "card": {"surface": "#ffffff", "ratio": 5.21},
+        "inset": {"surface": "#f8fafc", "ratio": 4.98},
+        "hover": {"surface": "#f1f5f9", "ratio": 4.75}
+      },
+      "dark": {
+        "ink": "#94a3b8",
+        "page": {"surface": "#020617", "ratio": 7.87},
+        "card": {"surface": "#0f172a", "ratio": 6.96},
+        "inset": {"surface": "#1e293b", "ratio": 5.71},
+        "hover": {"surface": "#263449", "ratio": 4.9}
+      },
+      "derived_from": "globals.css token declarations and WCAG relative-luminance formula"
+    }
+  },
   "exceptions": []
 }

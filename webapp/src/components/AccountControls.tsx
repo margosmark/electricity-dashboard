@@ -25,16 +25,16 @@ import { useTranslation } from "@/i18n";
 
 const TOGGLE_CLASS =
   "min-h-11 min-w-11 inline-flex items-center justify-center " +
-  "p-3 md:p-4 bg-white text-black border-4 border-black rounded-xl md:rounded-2xl " +
-  "shadow-[4px_4px_0px_0px_rgba(124,58,237,1)] hover:translate-y-1 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(124,58,237,1)] transition-all";
+  "p-3 md:p-4 bg-card text-ink border-4 border-edge rounded-xl md:rounded-2xl " +
+  "shadow-hard-violet-4 hover:translate-y-1 active:translate-y-0 active:shadow-hard-violet-2 transition-all";
 
 const BUTTON_CLASS =
-  "min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-black text-[11px] " +
-  "shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40";
+  "min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge text-[11px] " +
+  "shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40";
 
 const INPUT_CLASS =
-  "w-full min-h-11 px-3 py-2 rounded-lg border-4 border-black bg-white text-black text-[12px] font-bold normal-case " +
-  "focus:outline-none focus:ring-4 focus:ring-purple-300";
+  "w-full min-h-11 px-3 py-2 rounded-lg border-4 border-edge bg-card text-ink text-[12px] font-bold normal-case " +
+  "focus:outline-none focus:ring-4 focus:ring-ulo";
 
 const FIELD_LABEL = "block text-[10px] font-black uppercase mb-1";
 
@@ -158,7 +158,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           role="dialog"
           aria-label={t('account.toggleAria')}
           data-account-state={signedIn ? "signed_in" : status.authed ? "locked" : "signed_out"}
-          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[260] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-white border-4 border-black rounded-xl md:rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 md:p-5 text-black font-black uppercase"
+          className="absolute left-0 right-0 md:right-auto top-[calc(100%+8px)] z-[260] w-auto md:w-[360px] max-w-[calc(100vw-2rem)] bg-card border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 p-4 md:p-5 text-ink font-black uppercase"
         >
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="text-xs md:text-sm">
@@ -168,13 +168,13 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               type="button"
               aria-label={t('account.drawerCloseAria')}
               onClick={() => setOpen(false)}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-hover active:bg-track rounded"
             >
               <X size={16} strokeWidth={4} />
             </button>
           </div>
 
-          <p className="text-[9px] md:text-[10px] leading-relaxed text-slate-600 font-black mb-4 normal-case">
+          <p className="text-[9px] md:text-[10px] leading-relaxed text-ink-2 font-black mb-4 normal-case">
             {t('account.privacyIntro')}{" "}
             <em>{t('account.privacyThat')}</em>{" "}
             {t('account.privacyYouHave')}{" "}
@@ -186,7 +186,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           {prompt?.kind === "migrate" && (
             <div
               data-testid="account-migrate-prompt"
-              className="mb-4 p-3 rounded-lg border-4 border-black bg-yellow-100 text-[10px] leading-relaxed normal-case"
+              className="mb-4 p-3 rounded-lg border-4 border-edge bg-accent-soft text-[10px] leading-relaxed normal-case"
             >
               <div className="uppercase font-black mb-2">{t('account.migrateTitle')}</div>
               {t('account.migrateBody')}
@@ -196,7 +196,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   data-testid="account-upload-accept"
                   disabled={busy}
                   onClick={() => void account.acceptUpload()}
-                  className={BUTTON_CLASS + " bg-emerald-300 flex-1"}
+                  className={BUTTON_CLASS + " bg-good-slab-soft flex-1"}
                 >
                   <CloudUpload size={14} strokeWidth={4} /> {t('account.migrateAccept')}
                 </button>
@@ -204,7 +204,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   type="button"
                   data-testid="account-upload-decline"
                   onClick={account.declineUpload}
-                  className={BUTTON_CLASS + " bg-white flex-1"}
+                  className={BUTTON_CLASS + " bg-card flex-1"}
                 >
                   {t('account.migrateDecline')}
                 </button>
@@ -215,7 +215,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           {prompt?.kind === "conflict" && (
             <div
               data-testid="account-conflict-prompt"
-              className="mb-4 p-3 rounded-lg border-4 border-black bg-orange-100 text-[10px] leading-relaxed normal-case"
+              className="mb-4 p-3 rounded-lg border-4 border-edge bg-warn-soft text-[10px] leading-relaxed normal-case"
             >
               <div className="uppercase font-black mb-2">{t('account.conflictTitle')}</div>
               {t('account.conflictBody', { rev: prompt.serverRev })}
@@ -225,7 +225,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   data-testid="account-conflict-keep-local"
                   disabled={busy}
                   onClick={() => void account.keepThisDevice()}
-                  className={BUTTON_CLASS + " bg-emerald-300 flex-1"}
+                  className={BUTTON_CLASS + " bg-good-slab-soft flex-1"}
                 >
                   {t('account.conflictKeepLocal')}
                 </button>
@@ -234,7 +234,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   data-testid="account-conflict-use-server"
                   disabled={busy}
                   onClick={() => void account.useServerCopy()}
-                  className={BUTTON_CLASS + " bg-white flex-1"}
+                  className={BUTTON_CLASS + " bg-card flex-1"}
                 >
                   {t('account.conflictUseServer')}
                 </button>
@@ -245,7 +245,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           {recoveryCode && (
             <div
               data-testid="account-recovery-code"
-              className="mb-4 p-3 rounded-lg border-4 border-black bg-purple-100 text-[10px] leading-relaxed normal-case"
+              className="mb-4 p-3 rounded-lg border-4 border-edge bg-violet-slab-soft text-[10px] leading-relaxed normal-case"
             >
               <div className="uppercase font-black mb-2">{t('account.recoveryTitle')}</div>
               <div
@@ -259,7 +259,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 type="button"
                 data-testid="account-recovery-dismiss"
                 onClick={account.dismissRecoveryCode}
-                className={BUTTON_CLASS + " bg-white w-full mt-2"}
+                className={BUTTON_CLASS + " bg-card w-full mt-2"}
               >
                 {t('account.recoverySaved')}
               </button>
@@ -272,7 +272,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               <div className="text-[10px] break-all normal-case" data-testid="account-email">
                 {status.email}
               </div>
-              <div className="text-[9px] text-slate-500 normal-case" data-testid="account-sync-status">
+              <div className="text-[9px] text-ink-3 normal-case" data-testid="account-sync-status">
                 {t('account.syncStatusRevision')} {status.serverRev}
                 {status.updatedAt
                   ? t('account.syncStatusLastChange', { when: new Date(status.updatedAt).toLocaleString() })
@@ -285,7 +285,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 data-testid="account-sync-now"
                 disabled={busy}
                 onClick={() => void account.syncNow()}
-                className={BUTTON_CLASS + " bg-yellow-400"}
+                className={BUTTON_CLASS + " bg-accent"}
               >
                 <CloudUpload size={14} strokeWidth={4} /> {t('account.syncNow')}
               </button>
@@ -297,7 +297,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                 data-testid="account-signout"
                 disabled={busy}
                 onClick={() => void account.signOut()}
-                className={BUTTON_CLASS + " bg-white"}
+                className={BUTTON_CLASS + " bg-card"}
               >
                 <LogOut size={14} strokeWidth={4} /> {t('account.signOut')}
               </button>
@@ -308,7 +308,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
           {!signedIn && tab !== "recover" && (
             <>
               {status.authed && (
-                <div className="mb-3 p-2 border-4 border-black bg-slate-100 text-[10px] normal-case">
+                <div className="mb-3 p-2 border-4 border-edge bg-inset text-[10px] normal-case">
                   {t('account.lockedHelp')}
                 </div>
               )}
@@ -348,7 +348,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   type="submit"
                   data-testid={tab === "signup" ? "account-register" : "account-login"}
                   disabled={busy}
-                  className={BUTTON_CLASS + " bg-purple-300"}
+                  className={BUTTON_CLASS + " bg-violet-slab"}
                 >
                   {tab === "signup" ? t('account.createAccount') : status.authed ? t('account.unlock') : t('account.signIn')}
                 </button>
@@ -422,10 +422,10 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   className={INPUT_CLASS}
                 />
               </div>
-              <p className="text-[9px] text-slate-600 normal-case">
+              <p className="text-[9px] text-ink-2 normal-case">
                 {t('account.recoverWarn')}
               </p>
-              <button type="submit" disabled={busy} className={BUTTON_CLASS + " bg-purple-300"}>
+              <button type="submit" disabled={busy} className={BUTTON_CLASS + " bg-violet-slab"}>
                 <KeyRound size={14} strokeWidth={4} /> {t('account.setPassword')}
               </button>
             </form>
@@ -437,7 +437,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
               role={message.tone === "error" ? "alert" : "status"}
               className={
                 "mt-3 text-[9px] md:text-[10px] break-words normal-case font-bold " +
-                (message.tone === "error" ? "text-red-600" : "text-emerald-700")
+                (message.tone === "error" ? "text-bad" : "text-good")
               }
             >
               {message.text}
@@ -505,7 +505,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
   };
 
   return (
-    <div className="border-4 border-black rounded-lg p-3" data-testid="account-notifications">
+    <div className="border-4 border-edge rounded-lg p-3" data-testid="account-notifications">
       <button
         type="button"
         data-testid="account-notifications-toggle"
@@ -523,7 +523,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
       {expanded && (
         <div className="mt-3 flex flex-col gap-3">
           {!status.pushConfigured && (
-            <div className="text-[9px] text-slate-600 normal-case">
+            <div className="text-[9px] text-ink-2 normal-case">
               {t('account.pushUnconfigured')}
             </div>
           )}
@@ -535,7 +535,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
               onClick={() =>
                 void (subscribed ? account.disableNotifications() : account.enableNotifications())
               }
-              className={BUTTON_CLASS + (subscribed ? " bg-white" : " bg-emerald-300") + " flex-1"}
+              className={BUTTON_CLASS + (subscribed ? " bg-card" : " bg-good-slab-soft") + " flex-1"}
             >
               {subscribed ? t('account.notifyTurnOff') : t('account.notifyTurnOn')}
             </button>
@@ -556,7 +556,7 @@ function NotificationSettings({ account, status }: { account: AccountApi; status
                     />
                     <span>
                       {t(`account.topic.${topic}`)}
-                      <span className="block text-slate-500">{t(`account.interval.${topic}`)}</span>
+                      <span className="block text-ink-3">{t(`account.interval.${topic}`)}</span>
                     </span>
                   </label>
                 ))}

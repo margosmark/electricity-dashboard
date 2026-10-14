@@ -55,6 +55,8 @@ export type UsagePanelProps = ChartViewProps & {
   processedData: ProcessedPoint[];
   /** The dashboard's one Open-Meteo fetch (Wave T). */
   temps: HourlyTempsState;
+  /** Rendered as a section inside the Overview tab after relocation. */
+  embedded?: boolean;
 };
 
 /**
@@ -76,6 +78,7 @@ export default function UsagePanel({
   heatmapData,
   processedData,
   temps,
+  embedded = false,
   ...chart
 }: UsagePanelProps) {
   const bandReport = useMemo(
@@ -87,7 +90,7 @@ export default function UsagePanel({
   const { t, locale } = useTranslation();
   const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
   return (
-    <div id="panel-usage" role="tabpanel" aria-labelledby="tab-usage" className="space-y-6 md:space-y-10" data-testid="tab-panel-usage">
+    <div id={embedded ? 'overview-usage' : 'panel-usage'} role={embedded ? undefined : 'tabpanel'} aria-labelledby={embedded ? undefined : 'tab-usage'} className="space-y-6 md:space-y-10" data-testid="overview-usage">
       {/* Are the rates this chart prices with still the current ones? */}
       <RateStalenessBanner result={staleness} />
 
