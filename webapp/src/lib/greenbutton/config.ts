@@ -15,7 +15,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { isAccountProcess } from "@/lib/account/config";
+import { isAccountProcess } from "@/lib/account/process";
 
 export type TokenAuthStyle = "basic" | "body";
 

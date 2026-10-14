@@ -67,7 +67,9 @@ describe("the edge split for /account", () => {
   it("denies /account/internal outright — no upstream, no allow list", () => {
     const internal = locationBlock("/account/internal");
     expect(internal).toContain("deny all");
-    // A denied request must never reach a container: no proxy_pass at all,
+    expect(internal).toContain("access_log /var/log/nginx/access.log acct_safe;");
+    expect(internal).toContain("error_log /var/log/nginx/error.log crit;");
+    // A denied request must never reach a container: no `proxy_pass` at all,
     // and no `allow` list keyed on an address docker egress would fake.
     expect(internal).not.toContain("proxy_pass");
     expect(internal).not.toMatch(/^\s*allow\s/m);
@@ -77,8 +79,14 @@ describe("the edge split for /account", () => {
     const account = locationBlock("/account");
     expect(account).toContain("proxy_pass http://$gb_account;");
     expect(account).toContain("add_header X-Edge-Location account always;");
-    // The routing block is not where the denial lives — /account/internal is
-    // its own, longer prefix, so nginx picks it first.
+    expect(account).toContain("client_max_body_size 6m;");
+    expect(account).toContain("proxy_request_buffering on;");
+    expect(account).toContain("limit_req zone=acct_public burst=20 nodelay;");
+    expect(account).toContain("limit_conn acct_conn 10;");
+    expect(account).toContain("access_log /var/log/nginx/access.log acct_safe;");
+    expect(edge).toContain("log_format acct_safe '[$time_local] \"$request_method $uri\" $status';");
+    expect(account).toContain("error_log /var/log/nginx/error.log crit;");
+    expect(edge).toContain("zone=acct_public:10m rate=60r/m");
     expect(account).not.toContain("deny all");
   });
 
@@ -104,6 +112,9 @@ describe("which process is given which secret", () => {
   it("the account server is the only service with the verifier + push key", () => {
     const account = service("account-server");
     expect(account).toContain("ACCT_ENABLED: ${ACCT_ENABLED:-false}"); // off until opted in
+    expect(account).toContain("ACCT_DATA_DIR: /data");
+    expect(account).toContain("ACCT_DATA_DIR_HOST: ${ACCT_DATA_DIR:?set ACCT_DATA_DIR");
+    expect(account).toContain("ACCT_REPO_HOST_DIR: ${ACCT_REPO_HOST_DIR:-${PWD}}");
     expect(account).toContain("ACCT_DB_PATH: /data/accounts.db");
     expect(account).toContain("VAPID_PUBLIC_KEY:");
     expect(account).toContain("VAPID_PRIVATE_KEY:");

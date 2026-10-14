@@ -19,8 +19,8 @@
 # (`/account/internal/*` → 403 from nginx). The account leg runs in BOTH
 # states, because "off" is what ships by default: off first (the public
 # surface unchanged), then with ACCT_ENABLED=true, where the pairing and the
-# real register/login/sync matrix (`tests/e2e/account_smoke.sh`) run through
-# the router — the only way to exercise them the way a browser reaches them.
+# closed, enumeration-safe registration surface (`tests/e2e/account_smoke.sh`)
+# run through the router — no account or mail delivery is created.
 #
 # Nothing in this script touches the live stack: the router binds 3940, the
 # mock 8099, and every container name is prefixed gb-topo-.
@@ -67,10 +67,11 @@ chmod 777 "$TOKEN_DIR"
 
 # The account server runs as the same uid (1001 `nextjs`) and creates its
 # SQLite file — plus the `-wal`/`-shm` siblings — INSIDE this mount, so the
-# directory has to be writable by it. Throwaway like TOKEN_DIR: the account
-# leg registers real accounts against it and the whole tree is deleted after.
+# directory has to be writable by it. Throwaway like TOKEN_DIR: the closed
+# registration flow touches no rows, and the temporary tree is deleted after.
 ACCT_DIR="$(mktemp -d)"
-chmod 777 "$ACCT_DIR"
+chmod 700 "$ACCT_DIR"
+chown 1001:1001 "$ACCT_DIR"
 
 # The mock has to be reachable from TWO places with ONE URL: the shim
 # container (over the network) and the curl "browser" running on this host.
@@ -78,6 +79,7 @@ HOST_IP="${GB_TOPO_HOST_IP:-$(hostname -I | awk '{print $1}')}"
 export GB_TOPO_TOKEN_DIR="$TOKEN_DIR"
 export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:8099"
 export GB_TOPO_ACCT_DIR="$ACCT_DIR"
+export GB_TOPO_REPO_DIR="$REPO"
 # The shipping default, stated explicitly rather than relied on as a compose
 # default: section 0d flips this and recreates the container.
 export GB_TOPO_ACCT_ENABLED=false
@@ -275,18 +277,16 @@ DENY2="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/account/internal
 check "feature ON: /account/internal/notify is still $DENY2 at the edge" $?
 
 echo
-echo "== the account matrix through the REAL router (register → login → sync) =="
-# tests/e2e/account_smoke.sh is the same gate CI runs, but every request here
-# has crossed nginx first: the session cookie has to survive the location
-# boundary, the 409/401 statuses have to pass through unaltered, and the
-# router must not turn any of it into a redirect or a 502. jq-only dependency,
-# checked so a host without it fails loudly instead of silently skipping.
+echo "== the closed-registration account surface through the REAL router =="
+# The public registration endpoint must remain generic and must never create
+# an account or issue a session before verified mailbox ownership. Authenticated
+# database/sync behavior is covered by ephemeral unit/integration fixtures.
 if ! command -v jq >/dev/null 2>&1; then
   echo "ERROR: jq is required for the account matrix" >&2
   FAIL=$((FAIL + 1))
 else
   ACCT_LOG="$(mktemp)"
-  "$WEBAPP/tests/e2e/account_smoke.sh" "$BASE" 2>&1 | tee "$ACCT_LOG"
+  "$WEBAPP/tests/e2e/account_smoke.sh" "$BASE" --expect-registration-closed 2>&1 | tee "$ACCT_LOG"
   ACCT_STATUS=${PIPESTATUS[0]}
   N_PASS="$(grep -c '^  PASS' "$ACCT_LOG" || true)"
   N_FAIL="$(grep -c '^  FAIL' "$ACCT_LOG" || true)"

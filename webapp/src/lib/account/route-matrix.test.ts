@@ -53,7 +53,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
 import { SESSION_COOKIE, SESSION_TTL_MS, resetAccountConfigCache } from "./config";
-import { closeAllDbs, findSession, insertSession, openDb } from "./db";
+import { closeAllDbs, findSession, insertAccount, insertSession, openDb } from "./db";
 import { resetAccountServices } from "./services";
 import { resetRateLimits } from "./ratelimit";
 import { hashToken, newSessionToken } from "./auth";
@@ -71,7 +71,6 @@ import * as internalNotifyRoute from "@/app/account/internal/notify/route";
 
 const BASE = "https://electricity.markarslan.ca";
 const EMAIL = "matrix@example.com";
-const PASSWORD = "correct horse battery staple";
 const INTERNAL_TOKEN = "matrix-internal-token";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -488,6 +487,9 @@ beforeAll(async () => {
   dbDir = mkdtempSync(join(tmpdir(), "wave-n-matrix-"));
   dbPath = join(dbDir, "accounts.db");
   process.env.ACCT_ENABLED = "true";
+  process.env.ACCT_DATA_DIR = dbDir;
+  process.env.ACCT_DATA_DIR_HOST = dbDir;
+  process.env.ACCT_REPO_HOST_DIR = process.cwd();
   process.env.ACCT_DB_PATH = dbPath;
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = INTERNAL_TOKEN;
@@ -497,24 +499,11 @@ beforeAll(async () => {
   delete process.env.VAPID_PRIVATE_KEY;
   resetAccountConfigCache();
 
-  const res = await registerRoute.POST(
-    new Request(`${BASE}/account/register`, {
-      method: "POST",
-      headers: { "content-type": "application/json", origin: BASE },
-      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
-    }),
-  );
-  expect(res.status, "the matrix fixture must be able to register an account").toBe(201);
-  const setCookie = res.headers.get("set-cookie") ?? "";
-  const match = /acct_session=([^;]*)/.exec(setCookie);
-  expect(match, "register must hand back a session cookie").toBeTruthy();
-  validToken = match![1];
-
-  const row = cfgDb().prepare("SELECT id FROM accounts WHERE email = ?").get(EMAIL) as
-    | { id: number }
-    | undefined;
-  expect(row, "the registered account must be readable back").toBeTruthy();
-  accountId = row!.id;
+  const db = cfgDb();
+  accountId = insertAccount(db, { email: EMAIL, passwordHash: "$argon2id$test-only", kdfSalt: randomBytes(16).toString("base64"), recoveryHash: null });
+  const session = newSessionToken();
+  validToken = session.token;
+  insertSession(db, session.hash, accountId, SESSION_TTL_MS);
 });
 
 afterAll(() => {
@@ -523,6 +512,9 @@ afterAll(() => {
   resetAccountConfigCache();
   for (const key of [
     "ACCT_ENABLED",
+    "ACCT_DATA_DIR",
+    "ACCT_DATA_DIR_HOST",
+    "ACCT_REPO_HOST_DIR",
     "ACCT_DB_PATH",
     "ACCT_PUBLIC_ORIGIN",
     "ACCT_INTERNAL_TOKEN",

@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS notify_log (
   sent_at     INTEGER NOT NULL,
   outcome     TEXT    NOT NULL,
   detail      TEXT
+, FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS notify_log_account_topic
@@ -232,12 +233,31 @@ export const DEFAULT_PUSH_PREFS: PushPrefs = {
 
 const handles = new Map<string, DatabaseSync>();
 
+function migrateNotifyCascade(db: DatabaseSync): void {
+  const version = Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
+  if (version >= 2) return;
+  const foreignKeys = db.prepare("PRAGMA foreign_key_list(notify_log)").all() as Array<{ table: string; from: string; to: string; on_delete: string }>;
+  if (!foreignKeys.some((fk) => fk.table === "accounts" && fk.from === "account_id" && fk.on_delete === "CASCADE")) {
+    db.exec(`
+      CREATE TABLE notify_log_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        topic TEXT NOT NULL, title TEXT NOT NULL, sent_at INTEGER NOT NULL,
+        outcome TEXT NOT NULL, detail TEXT
+      );
+      INSERT INTO notify_log_v2 (id, account_id, topic, title, sent_at, outcome, detail)
+        SELECT id, account_id, topic, title, sent_at, outcome, detail FROM notify_log n
+        WHERE EXISTS (SELECT 1 FROM accounts a WHERE a.id = n.account_id);
+      DROP TABLE notify_log;
+      ALTER TABLE notify_log_v2 RENAME TO notify_log;
+      CREATE INDEX notify_log_account_topic ON notify_log (account_id, topic, sent_at);
+    `);
+  }
+}
+
 /**
- * Open (and memoise) the database for `path`.
- *
- * Memoised because every route handler opens it and SQLite would otherwise
- * be re-opened — and re-migrated — per request. `PRAGMA foreign_keys` is
- * per-connection, so it is set here rather than in the schema.
+ * Open (and memoise) the database for `path`. Migrations are serialized by
+ * BEGIN IMMEDIATE and recorded using SQLite's transactional user_version.
  */
 export function openDb(path: string): DatabaseSync {
   const existing = handles.get(path);
@@ -257,7 +277,17 @@ export function openDb(path: string): DatabaseSync {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA foreign_keys = ON;");
-  db.exec(SCHEMA);
+  db.exec("BEGIN IMMEDIATE;");
+  try {
+    db.exec(SCHEMA);
+    migrateNotifyCascade(db);
+    db.exec("PRAGMA user_version = 2;");
+    db.exec("COMMIT;");
+  } catch (error) {
+    db.exec("ROLLBACK;");
+    db.close();
+    throw error;
+  }
   handles.set(path, db);
   return db;
 }
@@ -378,20 +408,41 @@ export function putBlob(
   accountId: number,
   input: { iv: string; data: string; baseRev: number },
 ): PutBlobResult {
-  const current = getBlob(db, accountId);
-  const currentRev = current?.rev ?? 0;
-  if (input.baseRev !== currentRev) return { ok: false, currentRev };
+  db.exec("BEGIN IMMEDIATE;");
+  try {
+    const current = getBlob(db, accountId);
+    const currentRev = current?.rev ?? 0;
+    if (input.baseRev !== currentRev) {
+      db.exec("ROLLBACK;");
+      return { ok: false, currentRev };
+    }
+    const rev = currentRev + 1;
+    const updatedAt = Date.now();
+    db.prepare(
+      `INSERT INTO blobs (account_id, iv, data, rev, updated_at, bytes)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(account_id) DO UPDATE SET
+         iv = excluded.iv, data = excluded.data, rev = excluded.rev,
+         updated_at = excluded.updated_at, bytes = excluded.bytes`,
+    ).run(accountId, input.iv, input.data, rev, updatedAt, Buffer.byteLength(input.data, "utf8"));
+    db.exec("COMMIT;");
+    return { ok: true, rev, updatedAt };
+  } catch (error) {
+    db.exec("ROLLBACK;");
+    throw error;
+  }
+}
 
-  const rev = currentRev + 1;
-  const updatedAt = Date.now();
-  db.prepare(
-    `INSERT INTO blobs (account_id, iv, data, rev, updated_at, bytes)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT(account_id) DO UPDATE SET
-       iv = excluded.iv, data = excluded.data, rev = excluded.rev,
-       updated_at = excluded.updated_at, bytes = excluded.bytes`,
-  ).run(accountId, input.iv, input.data, rev, updatedAt, Buffer.byteLength(input.data, "utf8"));
-  return { ok: true, rev, updatedAt };
+/** Delete an account and all associated metadata in one transaction. */
+export function deleteAccount(db: DatabaseSync, accountId: number): void {
+  db.exec("BEGIN IMMEDIATE;");
+  try {
+    db.prepare("DELETE FROM accounts WHERE id = ?").run(accountId);
+    db.exec("COMMIT;");
+  } catch (error) {
+    db.exec("ROLLBACK;");
+    throw error;
+  }
 }
 
 export function deleteBlob(db: DatabaseSync, accountId: number): void {

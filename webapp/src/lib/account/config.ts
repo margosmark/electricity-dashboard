@@ -24,8 +24,11 @@
  * deployment chose to give this process.
  */
 
-export const SESSION_COOKIE = "acct_session";
+import { resolve, relative, isAbsolute, join } from "node:path";
+import { realpathSync, statSync } from "node:fs";
+import { validateEmailConfig } from "./email";
 
+export const SESSION_COOKIE = "acct_session";
 /** Deliberately identical to Wave K's `gb_session` contract (90-day sliding). */
 export const SESSION_TTL_MS = 60 * 1000 * 60 * 24 * 90;
 
@@ -40,14 +43,15 @@ export const SESSION_TTL_MS = 60 * 1000 * 60 * 24 * 90;
 export const MAX_SYNC_BYTES = 5 * 1024 * 1024;
 
 const DEFAULT_PUBLIC_ORIGIN = "https://electricity.markarslan.ca";
-const DEFAULT_DB_PATH = "./.account/accounts.db";
-/** Internal-only: how often to re-check the app's rate payload for a change. */
 const DEFAULT_RATES_POLL_MS = 6 * 60 * 60 * 1000;
 
 export type AccountConfig = {
   /** True only when this process was explicitly told to be the account server. */
   enabled: boolean;
-  /** Absolute-or-relative SQLite file. Never on a path the app container writes. */
+  /** Host bind source and checkout paths, used to reject repository-local storage. */
+  hostDataDir: string;
+  hostRepoDir: string;
+  /** Absolute database file path within dataDir. */
   dbPath: string;
   /** The origin the app is served from — drives cookie flags + Origin checks. */
   publicOrigin: string;
@@ -65,19 +69,9 @@ export type AccountConfig = {
   ratesUrl: string;
   ratesPollMs: number;
   /**
-   * Hard ceiling on registered accounts (family scale, not a product).
-   *
-   * Registration is unauthenticated by design — no invite system, no SMTP —
-   * and a 5 MB blob per account is a disk-fill vector on an open endpoint.
-   * A tiny cap turns that into a bounded cost: at most `maxAccounts` rows
-   * exist whatever anyone does, and `OPERATIONS.md` shows the one SQL
-   * statement that removes a squatter.
-   *
-   * NOTE (round-1 review, M2): the Pangolin PIN gate is NOT counted on here.
-   * Measured from the public internet on 2026-10-07 with no cookies, `GET /`
-   * answered 200 straight through with no challenge, so the first lock is not
-   * observable from outside and this cap plus the per-source attempt budget
-   * (`lib/account/ratelimit.ts`) are what actually bound the endpoint.
+   * A ceiling on accounts is a defense-in-depth limit for later verified
+   * registration. Open self-registration is closed until mailbox verification
+   * is implemented and enabled; this does not authorize account creation.
    */
   maxAccounts: number;
 };
@@ -104,9 +98,12 @@ export function getAccountConfig(): AccountConfig {
   const privateKey = str("VAPID_PRIVATE_KEY");
   const subject = str("VAPID_SUBJECT", "mailto:ops@markarslan.ca");
 
+  const dataDir = "/data";
   cached = {
     enabled,
-    dbPath: str("ACCT_DB_PATH", DEFAULT_DB_PATH),
+    hostDataDir: str("ACCT_DATA_DIR_HOST"),
+    hostRepoDir: str("ACCT_REPO_HOST_DIR"),
+    dbPath: str("ACCT_DB_PATH", join(dataDir, "accounts.db")),
     publicOrigin: str("ACCT_PUBLIC_ORIGIN", DEFAULT_PUBLIC_ORIGIN).replace(/\/+$/, ""),
     sessionTtlMs: SESSION_TTL_MS,
     maxSyncBytes: MAX_SYNC_BYTES,
@@ -135,13 +132,41 @@ export function resetAccountConfigCache(): void {
   cached = null;
 }
 
-/**
- * Is this process the account server?
- *
- * Read from the environment on purpose (see the module header): this is the
- * one answer nginx cannot forge, because the two containers run the same
- * image and differ only in their env.
- */
-export function isAccountProcess(): boolean {
-  return str("ACCT_ENABLED", "false").toLowerCase() === "true";
+export function assertHostDataLocation(hostDataDir: string, hostRepoDir: string): void {
+  if (!isAbsolute(hostDataDir) || !isAbsolute(hostRepoDir)) {
+    throw new Error("Account storage unavailable: ACCT_DATA_DIR must be an absolute host path and ACCT_REPO_HOST_DIR must be set.");
+  }
+  const hostRel = relative(resolve(hostRepoDir), resolve(hostDataDir));
+  if (hostRel === "" || (!hostRel.startsWith("..") && !isAbsolute(hostRel))) {
+    throw new Error("Account storage unavailable: ACCT_DATA_DIR must be outside the host repository checkout.");
+  }
+}
+
+export function assertSecureDataDir(directory: string): void {
+  let stat;
+  try { stat = statSync(directory); } catch {
+    throw new Error("Account storage unavailable: ACCT_DATA_DIR does not exist or is not mounted.");
+  }
+  const uid = typeof process.getuid === "function" ? process.getuid() : -1;
+  if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o077) !== 0) {
+    throw new Error("Account storage unavailable: ACCT_DATA_DIR must be owned by the account process uid and have mode 0700 or stricter.");
+  }
+}
+
+export function assertAccountDataDir(cfg: AccountConfig): void {
+  validateEmailConfig(process.env);
+  assertHostDataLocation(cfg.hostDataDir, cfg.hostRepoDir);
+  const mountPath = process.env.NODE_ENV === "test" ? cfg.hostDataDir : "/data";
+  let resolved: string;
+  try { resolved = realpathSync(mountPath); } catch {
+    throw new Error("Account storage unavailable: account data directory is not mounted.");
+  }
+  const rel = relative(realpathSync(process.cwd()), resolved);
+  if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) {
+    throw new Error("Account storage unavailable: mounted /data must be outside the application checkout.");
+  }
+  if (resolve(cfg.dbPath) !== join(resolved, "accounts.db")) {
+    throw new Error("Account storage unavailable: ACCT_DB_PATH must be /data/accounts.db inside ACCT_DATA_DIR.");
+  }
+  assertSecureDataDir(resolved);
 }

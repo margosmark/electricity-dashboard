@@ -3,8 +3,8 @@
 # Runs the SAME four-container shape production runs (router → shim | account |
 # app) against a mock data custodian, on host port 3940 so it can never touch
 # the live stack on 3939. Driven by webapp/scripts/e2e-greenbutton-topology.sh,
-# which also supplies GB_TOPO_TOKEN_DIR, GB_TOPO_ACCT_DIR, GB_TOPO_ACCT_ENABLED
-# and GB_TOPO_MOCK_ORIGIN.
+# which also supplies GB_TOPO_TOKEN_DIR, GB_TOPO_ACCT_DIR, GB_TOPO_REPO_DIR,
+# GB_TOPO_ACCT_ENABLED and GB_TOPO_MOCK_ORIGIN.
 #
 #   docker compose -p gb-topo -f ops/edge/topology-test.compose.yml up -d
 #
@@ -72,6 +72,9 @@ services:
     environment:
       # Flipped by the gate: false (the shipping default) then true.
       ACCT_ENABLED: ${GB_TOPO_ACCT_ENABLED:-false}
+      ACCT_DATA_DIR: /data
+      ACCT_DATA_DIR_HOST: ${GB_TOPO_ACCT_DIR:?}
+      ACCT_REPO_HOST_DIR: ${GB_TOPO_REPO_DIR:?}
       ACCT_DB_PATH: /data/accounts.db
       # The origin this stack is reached on, so cookie flags match the surface
       # (…same reason GB_PUBLIC_ORIGIN above points at :3940).

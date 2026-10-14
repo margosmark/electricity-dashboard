@@ -47,6 +47,10 @@
 # string). This scope inherits the same file, so the two differ only in what
 # they record — path instead of path+query.
 log_format gb_noquery '$remote_addr [$time_local] "$uri" $status';
+# Account traffic can include mailbox and E2EE metadata in bodies and may be
+# grouped behind a shared tunnel peer. Log only route, verb and status: no IP,
+# query, referer, cookies, body or payload.
+log_format acct_safe '[$time_local] "$request_method $uri" $status';
 
 # …and the notify token is a PATH SEGMENT (`/greenbutton/notify/<token>`),
 # so `$uri` prints it. That is a long-lived shared secret, and `oauthFlow.test.ts`
@@ -87,7 +91,9 @@ log_format gb_notify '$remote_addr [$time_local] "/greenbutton/notify/<redacted>
 # never written. The access log for both already redacts.
 limit_req_zone $binary_remote_addr zone=gb_strict:10m rate=30r/m;
 limit_req_zone $binary_remote_addr zone=gb_soft:10m rate=300r/m;
+limit_req_zone $binary_remote_addr zone=acct_public:10m rate=60r/m;
 limit_conn_zone $binary_remote_addr zone=gb_conn:10m;
+limit_conn_zone $binary_remote_addr zone=acct_conn:10m;
 
 server {
   listen 80;
@@ -225,13 +231,24 @@ server {
     # on source IP would be wrong twice over: docker egress is the host, and
     # a local reverse proxy makes every external request look like 127.0.0.1.
     deny all;
+    access_log /var/log/nginx/access.log acct_safe;
+    error_log /var/log/nginx/error.log crit;
     # No proxy_pass: a denied request must never reach an upstream.
     add_header X-Edge-Location account-deny always;
   }
 
   # Wave N — the account API. Same two-header contract as the other splits.
   location /account {
+    # Cap at ingress and keep nginx request buffering ON (default, explicit)
+    # so oversized bodies are rejected before reaching the account process.
+    client_max_body_size 6m;
+    proxy_request_buffering on;
+    limit_req zone=acct_public burst=20 nodelay;
+    limit_conn acct_conn 10;
     proxy_pass http://$gb_account;
+    access_log /var/log/nginx/access.log acct_safe;
+    # Limit errors include the request line; do not write paths/queries to logs.
+    error_log /var/log/nginx/error.log crit;
     add_header X-Edge-Location account always;
   }
 

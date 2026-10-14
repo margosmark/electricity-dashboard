@@ -437,25 +437,12 @@ export function useAccount(options: Options = {}) {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
+    async (email: string): Promise<boolean> => {
       setBusy(true);
       busyRef.current = true;
       try {
-        const created = await api.register(email, password, sync.hasLocalData());
-        if (!(await adoptKey(password, created.kdfSalt))) return false;
-        serverRevRef.current = created.rev;
-        await applySessionInfo({
-          ...(await api.fetchSession()),
-          enabled: true,
-          authed: true,
-        } as SessionInfo);
-        if (created.recoveryCode) setRecoveryCode(created.recoveryCode);
-        say(
-          "ok",
-          sync.hasLocalData()
-            ? "Account created. Choose whether to back this device's data up to it."
-            : "Account created.",
-        );
+        await api.register(email);
+        say("ok", "Registration is not available yet. No password was requested or saved; mailbox verification must be enabled first.");
         return true;
       } catch (e) {
         const detail = e instanceof AccountApiError ? e.detail ?? e.code : "unknown_error";
@@ -466,7 +453,7 @@ export function useAccount(options: Options = {}) {
         busyRef.current = false;
       }
     },
-    [adoptKey, applySessionInfo, say],
+    [say],
   );
 
   const signOut = useCallback(async () => {

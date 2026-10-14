@@ -1,39 +1,20 @@
 #!/usr/bin/env bash
-# Wave N account gate — register → login → PUT sync → a SECOND profile →
-# GET sync → stale-revision 409 → logout kills the cookie, over real HTTP
-# against a real SQLite file in a booted container.
+# Wave N account gate — closed-by-default registration and HTTP routing checks.
 #
-# Two modes, because the feature has two ship criteria:
+# Modes:
+#   account_smoke.sh <base_url>                         # expect enabled account-server, registration closed
+#   account_smoke.sh <base_url> --expect-disabled       # app process answers 404 for every account route
+#   account_smoke.sh <base_url> --expect-registration-closed
 #
-#   account_smoke.sh <base_url>                   # ACCT_ENABLED=true required
-#   account_smoke.sh <base_url> --expect-disabled  # every /account/* × every method → 404
-#
-# The disabled mode is the "public app is unchanged with the feature off"
-# gate (P0): the app container carries no ACCT_* env at all, so it must
-# answer 404 — indistinguishable from "no such route" — rather than admit
-# that an account API exists somewhere else.
-#
-# BOTH modes now run a SURFACE GUARD and a MATRIX, so the gate cannot be
-# complete-by-accident again:
-#
-#   surface guard — the path list below is compared with the route files under
-#     `src/app/account/**/route.ts`. Add a route and forget the gate and the
-#     guard fails, instead of that route shipping unprobed.
-#   matrix — every path × every HTTP method × {no cookie, a live session, a
-#     forged cookie}. Over the real router, because the router is where the
-#     verb is decided: Next answers a verb the route does not export (and its
-#     auto-OPTIONS) by PATH, before any handler runs — the mechanism behind
-#     `2c8ca8d`, which shipped a `405`/`204 + Allow` on a deployment claiming
-#     to have no account API. `HEAD` is served by the route's `GET`, so it is
-#     probed as `GET`'s status (measured, not assumed — see section 9).
-#
-# No secrets, no fixtures, no jq dependency beyond what CI already ships.
-# Runtime: a few seconds (argon2id dominates: ~4 hashes).
+# The enabled-mode integration here deliberately does not create accounts or
+# claim delivery: it proves enumeration-safe pending responses and the real
+# router surface. Authenticated DB/CAS/cascade behavior is covered by ephemeral
+# unit/integration fixtures in src/lib/account/*.test.ts.
 
 set -euo pipefail
 
 BASE="${1:?usage: account_smoke.sh <base_url> [--expect-disabled]}"
-MODE="${2:-enabled}"
+MODE="${2:---expect-registration-closed}"
 MAX_WAIT="${SMOKE_WAIT_SECS:-30}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -243,6 +224,52 @@ if [ "$MODE" = "--expect-disabled" ]; then
   echo "account gate OK (feature off): ${PASS} checks"
   exit 0
 fi
+
+if [ "$MODE" = "--expect-registration-closed" ]; then
+  echo "account gate (feature enabled, registration closed): ${BASE}"
+  code=$(req - GET /account/session)
+  check "GET /account/session → 200 from enabled account process" $([ "$code" = "200" ] && echo 0 || echo 1)
+  check "session reports enabled and signed out" \
+    $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
+  check "account identity headers agree" \
+    $([ "$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] \
+      && [ "$(grep -i '^x-edge-location:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
+
+  attacker='attacker-owned-password'
+  code=$(req - POST /account/register "{\"email\":\"known@example.com\",\"password\":\"$attacker\"}")
+  known_body=$(cat /tmp/acct.body)
+  check "registration returns generic 202 verification_pending" \
+    $([ "$code" = "202" ] && [ "$(jget '.status')" = "verification_pending" ] && echo 0 || echo 1)
+  check "registration creates no session cookie" \
+    $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 1 || echo 0)
+  check "response never echoes password or claims email was sent" \
+    $(grep -qF "$attacker" /tmp/acct.body && echo 1 || echo 0)
+
+  code=$(req - POST /account/register '{"email":"unknown@example.com"}')
+  check "unknown address gets identical status and body (no enumeration)" \
+    $([ "$code" = "202" ] && [ "$(cat /tmp/acct.body)" = "$known_body" ] && echo 0 || echo 1)
+  check "unknown address also creates no session cookie" \
+    $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 1 || echo 0)
+
+  for path in $MATRIX_PATHS; do
+    for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
+      want=$(matrix_expect "$path" "$method" none)
+      code=$(matrix_req - "$method" "$path") || code=000
+      if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi
+      check "${method} ${path} [signed out] → ${code} (want ${want})" "$ok"
+      if [ "$code" != "405" ]; then
+        check "  …and it names no verbs (no Allow header)" \
+          $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
+      fi
+    done
+  done
+  [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
+  echo "account gate OK (registration closed): ${PASS} checks"
+  exit 0
+fi
+
+echo "account gate (legacy authenticated fixture mode is unsupported; use --expect-registration-closed): ${BASE}" >&2
+exit 2
 
 echo "account gate (expecting the feature ON): ${BASE}"
 

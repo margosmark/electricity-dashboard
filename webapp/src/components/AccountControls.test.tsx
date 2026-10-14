@@ -191,6 +191,18 @@ describe("the sign-in drawer", () => {
     expect(screen.queryByTestId("account-upgrade")).toBeNull();
   });
 
+  it("shows closed registration without asking for a password or claiming a message was sent", async () => {
+    const drawer = await openDrawer();
+    fireEvent.click(screen.getByTestId("account-switch-mode"));
+    expect(screen.getByText(/Registration is closed/i)).toBeTruthy();
+    expect(screen.queryByTestId("account-password-input")).toBeNull();
+    fireEvent.change(screen.getByTestId("account-email-input"), { target: { value: "owner@example.com" } });
+    (api.register as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: "verification_pending", detail: "pending" });
+    fireEvent.click(screen.getByTestId("account-register"));
+    await screen.findByText(/Registration is not available yet/i);
+    expect(drawer.textContent).toMatch(/No password was requested or saved/i);
+  });
+
   it("keeps the password out of localStorage on a successful sign-in", async () => {
     seedLocal();
     const password = "correct horse battery staple";
