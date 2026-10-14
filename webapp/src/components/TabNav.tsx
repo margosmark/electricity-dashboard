@@ -86,7 +86,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
 
   return (
     <nav
-      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 pt-2 md:pt-3 pb-0 bg-inset border-b-2 border-edge-muted"
+      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 pt-2 md:pt-3 pb-[3px] bg-inset border-b-2 border-edge"
       data-testid="tab-nav"
     >
       {/*
