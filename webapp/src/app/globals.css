@@ -26,15 +26,15 @@
   color-scheme: light;
 
   /* Surfaces — page → card → inset → hover → track is the depth ladder. */
-  --page: #f5f6f8; /* canvas; pairs with --ink-3 at 4.81:1 */
-  --card: #ffffff; /* the primary neobrutalist surface */
-  --inset: #f8fafc; /* sub-panels INSIDE a card (was bg-slate-50) */
-  --hover: #f1f5f9; /* hover/pressed (was bg-slate-100) */
+  --page: #f6f6f3; /* Quiet Meter canvas */
+  --card: #ffffff; /* quiet surface */
+  --inset: #ffffff; /* nested surfaces use hairlines, not slabs */
+  --hover: #f2f2ee; /* restrained hover */
   --track: #e2e8f0; /* progress + disabled tracks (was bg-slate-200) */
 
   /* Structure. `--edge` is every border-black in the app. */
-  --edge: #000000;
-  --edge-muted: rgba(0, 0, 0, 0.4); /* border-black/40, border-slate-300 */
+  --edge: #e5e5e0;
+  --edge-muted: #d5d6d1;
 
   /* Ink. Four steps, matching slate-600/500/400 + pure black.
      The two muted steps were DARKENED in LIGHT (t_3e571ddb Phase 2, L1): slate-500
@@ -45,14 +45,14 @@
      ink-4 ships the documented AA-safe fallback #5f6d80, NOT the #617084 the colour
      call proposed — #617084 measures 4.45:1 on emerald-100, the exact case the call
      anticipated; the fallback clears it everywhere measured. DARK is untouched. */
-  --ink: #000000;
-  --ink-2: #475569; /* slate-600 — secondary */
-  --ink-3: #666d7a; /* 4.81:1 canvas; 5.21:1 surface */
+  --ink: #14161a;
+  --ink-2: #545c6a;
+  --ink-3: #666d7a;
   --ink-4: #5f6d80; /* was slate-400 #94a3b8 — 4.64:1 on emerald-100 */
 
   /* Accent. The brand's ONE constant: #facc15 in both modes. */
-  --accent: #facc15;
-  --accent-ink: #000000; /* 13.7:1 on accent, both modes */
+  --accent: #c7f000;
+  --accent-ink: #0a0c10;
   --on-dark: #ffffff; /* stable ink for fixed dark-color slabs */
   --accent-soft: #fefce8; /* the soft tint panels (was bg-yellow-50/100) */
 
@@ -67,7 +67,7 @@
   --accent-emerald:   #34d399; /* emerald-400 · 10.9:1 on the black chip */
 
   /* Inverted chip: the "selected = flipped" token. Black in light. */
-  --inv: #000000;
+  --inv: #14161a;
   --inv-ink: #ffffff;
   /* The chip's MUTED ink — the second line under a headline number. Same
      problem as --accent-yellow one level down: slate-300 reads 12.7:1 on the
@@ -77,10 +77,10 @@
 
   /* Hard offset shadow paint. Geometry lives in the @utility block below;
      only the PAINT flips, so the sticker edge survives on a dark page. */
-  --shadow: rgba(0, 0, 0, 1);
-  --shadow-blue: rgba(37, 99, 235, 1);
-  --shadow-red: rgba(220, 38, 38, 1);
-  --shadow-violet: rgba(124, 58, 237, 1);
+  --shadow: rgba(20, 22, 26, 0.08);
+  --shadow-blue: rgba(20, 22, 26, 0.08);
+  --shadow-red: rgba(20, 22, 26, 0.08);
+  --shadow-violet: rgba(20, 22, 26, 0.08);
 
   /* Chart furniture. */
   --grid: rgba(0, 0, 0, 0.1); /* CartesianGrid */
@@ -266,50 +266,50 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --page: #020617;
-  --card: #0f172a; /* slate-900 */
-  --inset: #1e293b; /* slate-800 */
-  --hover: #263449;
-  --track: #334155; /* slate-700 */
+  --page: #0a0c10;
+  --card: #11141a;
+  --inset: #171b23;
+  --hover: #202630;
+  --track: #343a45;
 
   /* 12.0:1 vs card, 13.6:1 vs page — thick borders stay the loudest
      structure. Pure white was rejected: glare, and it flattens the step
      between a border and a light inverted chip. */
-  --edge: #cbd5e1; /* slate-300 */
-  --edge-muted: rgba(203, 213, 225, 0.45); /* 3.4:1 */
+  --edge: #242a35;
+  --edge-muted: #343a45;
 
-  --ink: #f8fafc; /* 17.1:1 on card, 19.3:1 on page */
-  --ink-2: #cbd5e1; /* 12.0:1 */
-  --ink-3: #94a3b8; /* 7.0:1 */
+  --ink: #f2f4f8;
+  --ink-2: #a9b2c2;
+  --ink-3: #8792a3;
   --ink-4: #8494aa; /* lifted off slate-400: 5.8:1 on card, 4.7:1 on inset */
 
   /* Unchanged — the brand constant. As TEXT it only works on dark
      (11.7:1), which is a gain, not a compromise. */
-  --accent: #facc15;
-  --accent-ink: #000000;
-  --accent-soft: color-mix(in srgb, #facc15 12%, var(--card)); /* ≈#2b2d27, 13.3:1 */
+  --accent: #e4ff57;
+  --accent-ink: #0a0c10;
+  --accent-soft: color-mix(in srgb, #e4ff57 12%, var(--card));
 
   /* Same four, re-pitched for the inverted chip, which is now LIGHT. Measured
      on --inv (#e2e8f0): 6.6:1, 5.3:1, 4.8:1, 4.7:1 — every one clears AA. */
-  --accent-yellow: #855006; /* on the LIGHT chip: 5.4:1 */
-  --accent-sky:    #0369a1; /* sky-700 */
-  --accent-orange: #a53809; /* on the LIGHT chip: 5.4:1 */
-  --accent-emerald:#046b4d; /* on the LIGHT chip: 5.3:1 */
+  --accent-yellow: #e4ff57;
+  --accent-sky:    #6ea8fe;
+  --accent-orange: #ffc53d;
+  --accent-emerald:#4ade80;
 
   /* "Invert the inversion": a chip's job is MAX local contrast, and in a
      dark world that is a LIGHT chip. Selected = flipped stays true. */
-  --inv: #e2e8f0;
-  --inv-ink: #0f172a; /* 14.5:1 */
-  --inv-ink-2: #475569; /* slate-600 · 6.9:1 on the light chip */
+  --inv: #171b23;
+  --inv-ink: #f2f4f8;
+  --inv-ink-2: #a9b2c2;
 
   /* Same Npx offsets, inverted paint. Black-on-dark is 1.04:1 — the
      signature neobrutalist edge would simply vanish. A hard WHITE offset
      reads as the same cut-out edge (1.3–1.6:1 vs page). Blur was rejected:
      the language forbids it. */
-  --shadow: rgba(255, 255, 255, 0.12);
-  --shadow-blue: #3b82f6; /* 5.5:1 vs dark page */
-  --shadow-red: #f87171; /* 7.3:1 */
-  --shadow-violet: #a78bfa; /* 7.4:1 */
+  --shadow: rgba(0, 0, 0, 0.18);
+  --shadow-blue: rgba(0, 0, 0, 0.18);
+  --shadow-red: rgba(0, 0, 0, 0.18);
+  --shadow-violet: rgba(0, 0, 0, 0.18);
 
   --grid: rgba(226, 232, 240, 0.09); /* 1.26:1 — correct: grid must never out-shout data */
   --axis: #cbd5e1; /* 12.0:1 */
@@ -681,6 +681,168 @@ body {
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+/* ---------------------------------------------------------------------------
+ * Quiet Meter visual system
+ *
+ * Utility classes remain in the component tree for compatibility, but their
+ * old neobrutalist geometry is intentionally retired here: thin surface edges,
+ * calm elevation, readable type hierarchy and accent used sparingly.
+ * ------------------------------------------------------------------------- */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+}
+
+/* Collapse every legacy 2–8px outlined slab to the same hairline language. */
+[class*="border-4"],
+[class*="border-8"],
+[class*="border-2"] {
+  border-width: 1px !important;
+  border-color: var(--edge) !important;
+}
+
+/* Offset stickers disappear; cards sit on calm stepped surfaces instead. */
+[class*="shadow-hard"],
+[class*="shadow-xl"] {
+  box-shadow: none !important;
+}
+
+/* Keep the layout's recognizable radius without the oversized pill-card look. */
+[class*="rounded-[3rem]"],
+[class*="rounded-[2rem]"],
+[class*="rounded-[1.5rem]"],
+[class*="rounded-2xl"],
+[class*="rounded-xl"] {
+  border-radius: 10px !important;
+}
+
+/* Saturated legacy slabs become quiet semantic surfaces; status remains named
+   and colored by its icon/ink rather than a full-bleed block. */
+[class*="bg-warn-slab"],
+[class*="bg-good-slab"],
+[class*="bg-bad-slab"],
+[class*="bg-info-slab"],
+[class*="bg-sky-slab"],
+[class*="bg-violet-slab"] {
+  background: var(--inset) !important;
+  color: var(--ink) !important;
+  border-color: var(--edge) !important;
+}
+
+/* Turn the old loud yellow callout into a muted note surface. */
+[class*="bg-warn-strip"],
+[class*="bg-accent-soft"] {
+  background: var(--inset) !important;
+}
+
+/* Quiet typography: retain hierarchy, retire ultra-heavy all-caps blocks. */
+[class~="font-black"] {
+  font-weight: 600 !important;
+}
+
+/* CTA and active navigation use lime; secondary controls remain hairline. */
+[class~="bg-accent"] {
+  background-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  border-color: var(--accent) !important;
+}
+
+/* The old full-width accent cards become quiet information surfaces. Lime is
+   kept for controls, selected navigation and small data marks—not slabs. */
+[class~="bg-accent"]:not(button):not(a):not([role="button"]) {
+  background: var(--inset) !important;
+  color: var(--ink) !important;
+  border-color: var(--edge) !important;
+}
+
+[class~="bg-accent"]:not(button):not(a):not([role="button"]) [class~="text-accent-ink"] {
+  color: var(--ink) !important;
+}
+
+[class~="bg-yellow-400"],
+[class~="bg-yellow-300"] {
+  background-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+
+[class~="bg-inv"] {
+  background: var(--card) !important;
+}
+
+[class~="text-inv-ink"] {
+  color: var(--ink) !important;
+}
+
+[class~="text-accent-yellow"] {
+  color: var(--warn) !important;
+}
+
+[class~="text-accent-ink"] {
+  color: var(--ink) !important;
+}
+
+[class~="text-inv-ink-2"] {
+  color: var(--ink-2) !important;
+}
+
+[class~="bg-accent"][class~="text-accent-ink"],
+button[class~="bg-accent"],
+a[class~="bg-accent"],
+[role="button"][class~="bg-accent"],
+[class~="bg-yellow-400"][class~="text-accent-ink"],
+[class~="bg-yellow-300"][class~="text-accent-ink"],
+button[class~="bg-yellow-400"],
+button[class~="bg-yellow-300"] {
+  color: var(--accent-ink) !important;
+}
+
+/* Three quiet section tabs, like the reference's text navigation rather than
+   the former outlined pills. Keep the active underline as the sole marker. */
+nav[data-testid="tab-nav"] [role="tab"] {
+  min-height: 44px !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ink-2) !important;
+}
+
+nav[data-testid="tab-nav"] [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--accent) !important;
+  color: var(--ink) !important;
+}
+
+/* Preserve the touch-target contract even where legacy utilities specified a
+   smaller height; this also makes hidden icon-only actions usable on phones. */
+button,
+input,
+select,
+summary,
+[role="button"],
+[role="tab"] {
+  min-height: 44px !important;
+}
+
+[data-testid="dashboard-toolbar"] {
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+/* Buttons stay comfortably tappable and no longer inherit sticker shadows. */
+button {
+  box-shadow: none;
+}
+
+/* App-wide focused controls use the accent ring instead of a blue halo. */
+:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--page) !important;
 }
 
 /**

@@ -50,7 +50,7 @@ const CONFIDENCE_STYLE: Record<ConfidenceLevel, string> = {
 
 const EFFORT_STYLE: Record<Effort, string> = {
   'no-plan-switch': 'bg-card text-ink',
-  'plan-switch-required': 'bg-warn-slab text-accent-ink',
+  'plan-switch-required': 'bg-inset text-ink',
 };
 
 function EmptyState({ analysis }: { analysis: TouShiftAnalysis }) {

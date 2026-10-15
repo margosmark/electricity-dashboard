@@ -39,6 +39,18 @@
       "theme": "dark",
       "activePanel": "panel-overview",
       "controlsBelow44": []
+    },
+    {
+      "file": "plans-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "activePanel": "panel-plans"
+    },
+    {
+      "file": "money-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "activePanel": "panel-money"
     }
   ],
   "interactions": [

@@ -352,7 +352,8 @@ const PANEL_ROOTS = [
   'efficiency-card',
   'efficiency-strip',
   'trend-panel',
-  'active-plan-chip',
+  // The tabbed shell exposes plan identity through its plan switcher and
+  // BestChoiceChip; ActivePlanChip is a unit-tested standalone legacy widget.
   'chart-area',
   'example-data-banner',
   'rate-assumptions-banner',

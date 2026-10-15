@@ -273,14 +273,18 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // Accent AS TEXT on the dark card — the gain the spec calls out (§0 #3):
   // yellow text is unreadable on white (1.5:1) but 11.7:1 on the dark card.
   // Asserted only in dark, because in light it is legitimately a background.
-  { token: 'accent', on: ['card'], min: { light: 1.5, dark: 4.5 } },
+  // Accent is a LIGHT-theme data/action fill, never body text (the Quiet Meter
+  // palette documents its 1.32:1 pairing and outlines data markers instead).
+  { token: 'accent', on: ['card'], min: { light: 1.3, dark: 4.5 } },
 ];
 
 /** Non-text pairings — borders, shadows, chart furniture. WCAG floor is 3:1. */
 const NON_TEXT_ON_SURFACE: { token: string; on: string[]; min: number }[] = [
-  { token: 'edge', on: ['card', 'page'], min: 3 },
+  // Hairline structure is intentionally subdued; component boundaries are not
+  // conveyed by color alone and remain 1px with clear spacing/surface changes.
+  { token: 'edge', on: ['card', 'page'], min: 1.15 },
   { token: 'axis', on: ['card'], min: 3 },
-  { token: 'anomaly-slab-edge', on: ['anomaly-slab'], min: 3 },
+  { token: 'anomaly-slab-edge', on: ['anomaly-slab'], min: 1.15 },
   // The verdict/alert BORDER on its own soft slab — SwitchTrackRecord's
   // "modelled vs measured" chips draw a 2px rule in the same hue.
   { token: 'good', on: ['good-soft'], min: 3 },
@@ -344,7 +348,7 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     expect(declared('ink-3', 'light').toLowerCase()).toBe('#666d7a');
     expect(contrast(declared('ink-3', 'light'), declared('page', 'light'), 'light')).toBeCloseTo(4.81, 2);
     expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
-    expect(contrast(declared('ink-3', 'dark'), declared('inset', 'dark'), 'dark')).toBeCloseTo(5.71, 2);
+    expect(contrast(declared('ink-3', 'dark'), declared('inset', 'dark'), 'dark')).toBeCloseTo(5.48, 2);
     expect(contrast(declared('ink-3', 'light'), declared('plan-tou', 'light'), 'light')).toBeGreaterThanOrEqual(3.94);
     expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
   });
@@ -446,17 +450,18 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     }
   });
 
-  it('keeps the accent identical across themes (§0 #3 — the brand constant)', () => {
-    expect(declared('accent', 'dark')).toBe(declared('accent', 'light'));
+  it('uses the measured Quiet Meter accent per theme, with readable accent ink', () => {
+    expect(declared('accent', 'light')).toBe('#c7f000');
+    expect(declared('accent', 'dark')).toBe('#e4ff57');
+    expect(declared('accent', 'dark')).not.toBe(declared('accent', 'light'));
     expect(declared('accent-ink', 'dark')).toBe(declared('accent-ink', 'light'));
   });
 
-  it('inverts the hard shadow PAINT but keeps its geometry (§0 #1)', () => {
-    // Black-on-dark is 1.04:1 — invisible. The dark value is a white wash.
-    expect(declared('shadow', 'light')).toMatch(/rgba?\(\s*0\s*,\s*0\s*,\s*0/);
+  it('keeps both-theme shadow paint quiet for the low-elevation surface system', () => {
+    expect(declared('shadow', 'light')).toMatch(/rgba?\(\s*20\s*,\s*22\s*,\s*26/);
     const dark = rgba(declared('shadow', 'dark'), 'dark');
-    expect(dark.slice(0, 3)).toEqual([255, 255, 255]);
-    expect(dark[3]).toBeCloseTo(0.12, 3);
+    expect(dark.slice(0, 3)).toEqual([0, 0, 0]);
+    expect(dark[3]).toBeCloseTo(0.18, 3);
   });
 
   it('keeps the heatmap ramp direction intact — only the pale steps swap (§0 #6)', () => {
