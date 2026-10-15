@@ -96,6 +96,22 @@ describe('Dashboard', () => {
     expect(dateInputs.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('keeps the date range and scope pills in the persistent shell, not the legacy toolbar', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const shell = screen.getByTestId('tab-nav');
+    const context = screen.getByTestId('dashboard-context');
+    const toolbar = screen.getByTestId('dashboard-toolbar');
+    expect(shell).toContainElement(context);
+    expect(context.querySelectorAll('input[type="date"]')).toHaveLength(2);
+    expect(toolbar.querySelectorAll('input[type="date"]')).toHaveLength(0);
+    expect(within(context).getByRole('button', { name: 'Billing Period' })).toBeInTheDocument();
+
+    await user.click(within(context).getByRole('button', { name: 'Month' }));
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('renders upload button', async () => {
     await renderLoaded();
     expect(screen.getByTitle('Upload XML')).toBeInTheDocument();

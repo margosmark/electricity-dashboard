@@ -344,7 +344,7 @@ export default function OverviewPanel({
                 aria-pressed={costMode === mode}
                 onClick={() => setCostMode(mode)}
                 className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:px-5 py-2 rounded-lg md:rounded-xl text-[11px] md:text-[11px] font-black transition-all ${
-                  costMode === mode ? 'bg-inv text-inv-ink' : 'text-ink hover:bg-card'
+                  costMode === mode ? 'bg-card text-ink' : 'text-ink hover:bg-card'
                 }`}
               >
                 {mode === 'yr' ? t('overview.perYear') : t('overview.perDay')}

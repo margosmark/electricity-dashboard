@@ -451,6 +451,24 @@ export default function Dashboard() {
   // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
   const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
 
+  /* The active date window belongs in the persistent Quiet Meter shell. It is
+     context for every tab, not a second, legacy toolbar below the content. */
+  const dashboardContext = (
+    <div data-testid="dashboard-context" className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
+      <div data-testid="dashboard-date-range" className="flex min-w-0 flex-1 items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:flex-none">
+        <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:flex-none md:text-sm" />
+        <span data-testid="window-separator" className="shrink-0 px-1 text-[10px] font-semibold text-ink-2">{t('toolbar.to')}</span>
+        <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:flex-none md:text-sm" />
+      </div>
+      <div data-testid="dashboard-scope" className="flex shrink-0 items-center gap-1 rounded-lg border border-edge-muted bg-hover p-1">
+        <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'BillingPeriod' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.billingPeriod')}</button>
+        <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'Month' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.month')}</button>
+        <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'YTD' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.ytd')}</button>
+      </div>
+      <ThemeToggle />
+    </div>
+  );
+
   /**
    * Wave I item 5 — the load shell.
    *
@@ -508,7 +526,7 @@ export default function Dashboard() {
       {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
-      <TabNav active={tab} onChange={setActiveTab} shellTools={<ThemeToggle />} />
+      <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
@@ -550,7 +568,7 @@ export default function Dashboard() {
           data-testid="upload-modal"
           className="fixed inset-0 bg-inv/70 z-[300] flex justify-center overflow-y-auto overlay-safe p-4"
         >
-          <div className="my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink">
+          <div className="my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none">
              <h2 className="text-2xl md:text-3xl tracking-tight mb-3 md:mb-4 flex items-center gap-2 text-ink font-semibold"><Upload size={22} strokeWidth={2} /> {t('upload.modal.title')}</h2>
              <p className="font-medium text-ink-2 text-sm md:text-base mb-6 md:mb-8">{t('upload.modal.privacy')} <span className="font-semibold text-ink">{t('upload.modal.privacyHighlight')}</span></p>
              {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} /></div>}
@@ -694,29 +712,7 @@ export default function Dashboard() {
             onJump={() => setActiveTab('overview')}
           />
 
-          <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
-            <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none px-3 py-2 border border-edge-muted rounded-lg font-medium text-base md:text-sm text-ink bg-card" />
-            {/* The quiet separator between the two window dates. Explicit hex
-                instead of `text-ink opacity-40`: 40% black on white is
-                #999999 = 2.84:1 at 10px (axe color-contrast — small text
-                needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still
-                reads as secondary; the hex is literal so the regression test
-                can measure the ratio instead of trusting a palette name. */}
-            <span data-testid="window-separator" className="text-ink-2 font-black text-[10px]">{t('toolbar.to')}</span>
-            <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none px-3 py-2 border border-edge-muted rounded-lg font-medium text-base md:text-sm text-ink bg-card" />
-          </div>
 
-          {/* The scope switch is row 1's flexible member: it eats the
-              slack so the row always reaches the card's right edge instead of
-              ending in white space (it is alone on its line below ~940px, where
-              it stretches across the whole row). */}
-          <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center px-2 py-2 border border-edge-muted rounded-lg font-medium text-[10px] uppercase transition-colors ${viewScope === 'BillingPeriod' ? 'bg-inset text-ink border-edge' : 'bg-card text-ink-2 hover:bg-hover'}`}>{t('scope.billingPeriod')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center px-2 py-2 border border-edge-muted rounded-lg font-medium text-[10px] uppercase transition-colors ${viewScope === 'Month' ? 'bg-inset text-ink border-edge' : 'bg-card text-ink-2 hover:bg-hover'}`}>{t('scope.month')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center px-2 py-2 border border-edge-muted rounded-lg font-medium text-[10px] uppercase transition-colors ${viewScope === 'YTD' ? 'bg-inset text-ink border-edge' : 'bg-card text-ink-2 hover:bg-hover'}`}>{t('scope.ytd')}</button>
-          </div>
         </div>
 
         {/* Row 2, full width. `lg:ml-auto` used to right-align this row and

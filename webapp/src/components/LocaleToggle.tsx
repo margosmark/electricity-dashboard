@@ -31,7 +31,7 @@ export default function LocaleToggle() {
       aria-pressed={locale === 'fr'}
       aria-label={t('locale.toggle.aria')}
       onClick={() => setLocale(next)}
-      className="no-print inline-flex min-h-11 min-w-11 items-center gap-1.5 px-3 py-2 bg-card text-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs shadow-hard-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500"
+      className="no-print inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg border border-edge-muted bg-card px-3 py-2 text-[10px] font-semibold uppercase text-ink transition-colors hover:bg-hover focus-visible:outline-none"
     >
       <Languages size={16} strokeWidth={4} aria-hidden="true" />
       <span lang={next}>{t('locale.toggle.label')}</span>
