@@ -37,12 +37,15 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
   }, [rows, plan, locale]);
   const selected = data.find((point) => point.key === activeKey) ?? data[data.length - 1];
   const maxRate = 14;
-  const plot = { x: 58, y: 10, width: 910, height: 180 };
+  // The Overview is a decision surface, not a full-screen analytics view.
+  // Keep the 27-month history dense enough for comparison while leaving the
+  // adjacent plan and attention surfaces in the same desktop composition.
+  const plot = { x: 58, y: 8, width: 910, height: 100 };
   const barWidth = data.length ? Math.min(24, plot.width / data.length * 0.62) : 10;
   const currentMonth = data[data.length - 1]?.key;
 
   return (
-    <section className="border border-edge-muted rounded-lg bg-card p-4 md:p-5" aria-labelledby="rate-by-month-title" data-testid="rate-by-month">
+    <section className="quiet-rate-card p-4 md:p-5" aria-labelledby="rate-by-month-title" data-testid="rate-by-month">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <h2 id="rate-by-month-title" className="text-sm font-semibold normal-case">{t('rateChart.title')}</h2>
         <p className="text-xs font-normal normal-case text-ink-3">{t('rateChart.subtitle', { count: data.length })}</p>
@@ -56,7 +59,7 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
       </div>
       {data.length > 0 ? <>
         <div className="w-full overflow-hidden">
-          <svg viewBox="0 0 1000 235" role="group" aria-label={t('rateChart.chartAria')} className="w-full h-auto" data-testid="rate-chart-svg">
+          <svg viewBox="0 0 1000 135" role="group" aria-label={t('rateChart.chartAria')} className="w-full h-auto" data-testid="rate-chart-svg">
             {Array.from({ length: 8 }, (_, index) => {
               const value = index * 2;
               const y = plot.y + plot.height - value / maxRate * plot.height;
@@ -78,7 +81,7 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
                   stroke={isCurrent ? 'var(--ink)' : 'none'} strokeWidth="1" tabIndex={0} role="img" aria-label={accessibleName}
                   data-testid="rate-chart-bar" data-month={point.key}
                   onFocus={() => setActiveKey(point.key)} onMouseEnter={() => setActiveKey(point.key)} />
-                {index % (data.length > 15 ? 3 : data.length > 9 ? 2 : 1) === 0 && <text x={x + barWidth / 2} y="211" textAnchor="middle" className="fill-current text-[10px]">{point.label}</text>}
+                {index % (data.length > 15 ? 3 : data.length > 9 ? 2 : 1) === 0 && <text x={x + barWidth / 2} y="124" textAnchor="middle" className="fill-current text-[10px]">{point.label}</text>}
               </g>;
             })}
           </svg>

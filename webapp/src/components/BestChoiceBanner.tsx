@@ -43,18 +43,12 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
       data-already-best={String(verdict.alreadyBest)}
       data-window-days={verdict.days}
       aria-labelledby="best-choice-heading"
-      className="bg-card text-ink p-4 md:p-5 rounded-lg border border-edge-muted flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-6 font-medium normal-case"
+      className="quiet-plan-callout p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-6"
     >
-      {/* Every word on the flood is BLACK — including the small window line,
-          which used to be --ink-4 (slate-400): 2.2:1 on the yellow in light
-          and 2.0:1 in dark. On a surface this loud the second line steps
-          DOWN IN SIZE, not in contrast — the banner's rule is 13.7:1 black on
-          accent in both themes. (The receipt's own --ink-4 label is a
-          different surface: it sits on --card, where dark clears 5.8:1 and
-          light's 2.56:1 is the pre-existing micro-label defect the spec
-          scoped out.) */}
+      {/* The plan recommendation is a quiet detail of the real plan surface;
+          its hierarchy comes from placement and type, not a full-bleed slab. */}
       <div className="space-y-1 text-left">
-        <div className="text-[10px] md:text-xs tracking-wide text-ink-3 font-medium uppercase">
+        <div className="quiet-overview-label tracking-wide">
           {t('bestChoice.eyebrow')}
         </div>
         <h4 id="best-choice-heading" className="text-sm md:text-base leading-tight font-medium">
@@ -68,12 +62,12 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
             {t('bestChoice.cheaperAlternative', { plan: t(`planShort.${verdict.best}`) })}
           </p>
         )}
-        <p className="text-[10px] md:text-xs font-normal text-ink-3 normal-case">
+        <p className="text-xs text-ink-3">
           {t('bestChoice.window', { count: verdict.days, days: verdict.days })} · {t('legal.commodityShort')}
         </p>
       </div>
-      <div className="bg-inset text-ink px-4 py-3 rounded-md border border-edge-muted flex flex-col items-start min-w-[130px]">
-        <div className="text-[10px] tracking-wide text-ink-3 mb-1 font-medium text-left uppercase">
+      <div className="quiet-plan-impact px-4 py-3 flex flex-col items-start min-w-[130px]">
+        <div className="quiet-overview-label tracking-wide mb-1 text-left">
           {t('bestChoice.impact')}
         </div>
         <div className="text-xl md:text-2xl text-ink whitespace-nowrap leading-none text-left font-semibold">
@@ -87,7 +81,7 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
             <span className="text-bad">-{formatDelta(verdict.delta)}</span>
           )}
         </div>
-        <div className="text-[9px] md:text-[10px] mt-2 font-normal text-left text-ink-3">
+        <div className="text-xs mt-2 text-left text-ink-3">
           {t('bestChoice.vsCurrent', { plan: planLabel(userPlan) })}
         </div>
       </div>

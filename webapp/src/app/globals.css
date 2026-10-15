@@ -696,107 +696,133 @@ body {
   color: var(--ink);
 }
 
-/* Collapse every legacy 2–8px outlined slab to the same hairline language. */
-[class*="border-4"],
-[class*="border-8"],
-[class*="border-2"] {
-  border-width: 1px !important;
-  border-color: var(--edge) !important;
+/* Overview owns its Quiet Meter treatment through explicit component roles.
+   Do not use utility-name selectors here: they leak style into unrelated
+   controls and make a later component change visually unpredictable. */
+.quiet-card {
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  color: var(--ink);
 }
 
-/* Offset stickers disappear; cards sit on calm stepped surfaces instead. */
-[class*="shadow-hard"],
-[class*="shadow-xl"] {
-  box-shadow: none !important;
+.quiet-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
 }
 
-/* Keep the layout's recognizable radius without the oversized pill-card look. */
-[class*="rounded-[3rem]"],
-[class*="rounded-[2rem]"],
-[class*="rounded-[1.5rem]"],
-[class*="rounded-2xl"],
-[class*="rounded-xl"] {
-  border-radius: 10px !important;
+.quiet-overview-metric {
+  min-width: 0;
+  padding: 1rem;
+  border-right: 1px solid var(--edge);
+  border-bottom: 1px solid var(--edge);
 }
 
-/* Saturated legacy slabs become quiet semantic surfaces; status remains named
-   and colored by its icon/ink rather than a full-bleed block. */
-[class*="bg-warn-slab"],
-[class*="bg-good-slab"],
-[class*="bg-bad-slab"],
-[class*="bg-info-slab"],
-[class*="bg-sky-slab"],
-[class*="bg-violet-slab"] {
-  background: var(--inset) !important;
-  color: var(--ink) !important;
-  border-color: var(--edge) !important;
+.quiet-overview-metric:nth-child(2n) {
+  border-right: 0;
 }
 
-/* Turn the old loud yellow callout into a muted note surface. */
-[class*="bg-warn-strip"],
-[class*="bg-accent-soft"] {
-  background: var(--inset) !important;
+.quiet-overview-metric:nth-last-child(-n + 2) {
+  border-bottom: 0;
 }
 
-/* Quiet typography: retain hierarchy, retire ultra-heavy all-caps blocks. */
-[class~="font-black"] {
-  font-weight: 600 !important;
+.quiet-overview-label,
+.quiet-overview-meta {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
-/* CTA and active navigation use lime; secondary controls remain hairline. */
-[class~="bg-accent"] {
-  background-color: var(--accent) !important;
-  color: var(--accent-ink) !important;
-  border-color: var(--accent) !important;
+.quiet-overview-value {
+  margin-top: 0.25rem;
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
-/* The old full-width accent cards become quiet information surfaces. Lime is
-   kept for controls, selected navigation and small data marks—not slabs. */
-[class~="bg-accent"]:not(button):not(a):not([role="button"]) {
-  background: var(--inset) !important;
-  color: var(--ink) !important;
-  border-color: var(--edge) !important;
+.quiet-bill-focus {
+  border-left: 3px solid var(--accent);
 }
 
-[class~="bg-accent"]:not(button):not(a):not([role="button"]) [class~="text-accent-ink"] {
-  color: var(--ink) !important;
+.quiet-projection {
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  padding: 1.25rem;
 }
 
-[class~="bg-yellow-400"],
-[class~="bg-yellow-300"] {
-  background-color: var(--accent) !important;
-  color: var(--accent-ink) !important;
+.quiet-projection-amount {
+  color: var(--ink);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
 }
 
-[class~="bg-inv"] {
-  background: var(--card) !important;
+.quiet-projection-stat,
+.quiet-data-stat,
+.quiet-plan-impact {
+  background: var(--inset);
+  border: 1px solid var(--edge-muted);
+  border-radius: 8px;
 }
 
-[class~="text-inv-ink"] {
-  color: var(--ink) !important;
+.quiet-rate-card,
+.quiet-plan-summary,
+.quiet-attention,
+.quiet-dataset-summary {
+  background: var(--card);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  color: var(--ink);
 }
 
-[class~="text-accent-yellow"] {
-  color: var(--warn) !important;
+.quiet-plan-callout {
+  background: var(--inset);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
 }
 
-[class~="text-accent-ink"] {
-  color: var(--ink) !important;
+.quiet-action {
+  background: transparent;
+  border: 1px solid var(--edge-muted);
+  border-radius: 8px;
+  color: var(--ink);
 }
 
-[class~="text-inv-ink-2"] {
-  color: var(--ink-2) !important;
+.quiet-action:hover {
+  background: var(--hover);
 }
 
-[class~="bg-accent"][class~="text-accent-ink"],
-button[class~="bg-accent"],
-a[class~="bg-accent"],
-[role="button"][class~="bg-accent"],
-[class~="bg-yellow-400"][class~="text-accent-ink"],
-[class~="bg-yellow-300"][class~="text-accent-ink"],
-button[class~="bg-yellow-400"],
-button[class~="bg-yellow-300"] {
-  color: var(--accent-ink) !important;
+.quiet-toggle {
+  background: var(--hover);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+}
+
+.quiet-toggle [aria-pressed="true"] {
+  background: var(--card);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+@media (min-width: 1024px) {
+  .quiet-overview-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quiet-overview-metric,
+  .quiet-overview-metric:nth-child(2n) {
+    border-bottom: 0;
+    border-right: 1px solid var(--edge);
+  }
+
+  .quiet-overview-metric:last-child {
+    border-right: 0;
+  }
 }
 
 /* Three quiet section tabs, like the reference's text navigation rather than
@@ -1064,8 +1090,4 @@ body {
     min-height: 7px !important;
   }
 
-  /* Screenshots of a chart never print their drop shadows. */
-  .print-compact [class*="shadow-"] {
-    box-shadow: none !important;
-  }
 }

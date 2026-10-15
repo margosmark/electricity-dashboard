@@ -2,9 +2,9 @@
  * OVERVIEW — the decision-first tab.
  *
  * Wave R's answer to "the best choice is now buried": this panel is what the
- * user sees first, and it contains only the four things that answer "what is
- * the verdict, what did it cost me, how fresh is the data, what will this
- * month cost?" — in that order, with the verdict as the first element.
+ * user sees first, and it leads with period context, the projected bill,
+ * rate history, and the adjacent plan/attention decisions. The detailed
+ * dataset and usage analysis remain available below that decision surface.
  *
  * Everything else moved to the tab it belongs to (Usage, Plans & Track
  * Record, Money & What-If). `fileStatus` is a slot so the Green Button chip
@@ -113,38 +113,74 @@ export default function OverviewPanel({
       )}
 
       {totals && (
-        <section aria-label={t('overview.keyFigures')} className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-edge-muted border border-edge-muted rounded-lg bg-card overflow-hidden" data-testid="overview-key-figures">
-          <div className="p-3 md:p-4 min-w-0">
-            <div className="text-[11px] font-medium normal-case text-ink-3">{t('overview.usageToDate')}</div>
-            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
+        <section aria-label={t('overview.keyFigures')} className="quiet-card quiet-overview-metrics" data-testid="overview-key-figures">
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.usageToDate')}</div>
+            <div className="quiet-overview-value tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
-          <div className="p-3 md:p-4 min-w-0">
-            <div className="text-[11px] font-medium normal-case text-ink-3">{t('overview.averageRate')}</div>
-            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{efficiency.allTime ? fmtCents(efficiency.allTime.cents, 1) : '—'}</div>
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.averageRate')}</div>
+            <div className="quiet-overview-value tabular-nums">{efficiency.allTime ? fmtCents(efficiency.allTime.cents, 1) : '—'}</div>
           </div>
-          <div className="p-3 md:p-4 min-w-0">
-            <div className="text-[11px] font-medium normal-case text-ink-3">{t('projection.thisMonthBill')}</div>
-            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{projection.ready ? fmtMoney(projection.projectedCost) : '—'}</div>
-            {!projection.ready && <div className="text-[10px] font-normal normal-case text-ink-3">{projection.gateNote}</div>}
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('projection.thisMonthBill')}</div>
+            <div className="quiet-overview-value tabular-nums">{projection.ready ? fmtMoney(projection.projectedCost) : '—'}</div>
+            {!projection.ready && <div className="quiet-overview-meta mt-1">{projection.gateNote}</div>}
           </div>
-          <div className="p-3 md:p-4 min-w-0">
-            <div className="text-[11px] font-medium normal-case text-ink-3">{t('overview.planCost')}</div>
-            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{verdict ? fmtMoney(verdict.currentCost) : '—'}</div>
-            {verdict && <div className="text-[10px] font-normal normal-case text-ink-3">{t('overview.planComparedWith', { plan: planLabel(verdict.best) })}</div>}
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.planCost')}</div>
+            <div className="quiet-overview-value tabular-nums">{verdict ? fmtMoney(verdict.currentCost) : '—'}</div>
+            {verdict && <div className="quiet-overview-meta mt-1">{t('overview.planComparedWith', { plan: planLabel(verdict.best) })}</div>}
           </div>
         </section>
       )}
 
-      {/* 1. THE ANSWER. First element, nothing above it but the tab strip. */}
-      <BestChoiceBanner comparison={comparison} userPlan={userPlan} days={days} />
+      <section className="quiet-bill-focus" aria-label={t('projection.thisMonthBill')} data-testid="overview-bill-focus">
+        <BillProjectionBanner projection={projection} />
+      </section>
+
+      <RateByMonth rows={usage.processedData} plan={userPlan} />
+
+      <section className="grid md:grid-cols-2 gap-4" aria-label={t('overview.planAndAttention')} data-testid="overview-plan-attention">
+        <div className="quiet-plan-summary p-4 md:p-5" data-testid="overview-plan-summary">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-base font-semibold">{t('overview.yourPlan')}</h2>
+            <span className="quiet-overview-label">{t('overview.current')}</span>
+          </div>
+          <BestChoiceBanner comparison={comparison} userPlan={userPlan} days={days} />
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.planCost')}</dt><dd className="font-semibold tabular-nums">{verdict ? fmtMoney(verdict.currentCost) : '—'}</dd></div>
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.cheapestAlternative')}</dt><dd className="font-semibold">{verdict ? planLabel(verdict.best) : '—'}</dd></div>
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.potentialSaving')}</dt><dd className="font-semibold tabular-nums text-good">{verdict ? fmtMoney(verdict.delta) : '—'}</dd></div>
+          </dl>
+          <button type="button" onClick={onOpenPlans} className="quiet-action mt-4 inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.comparePlans')}</button>
+        </div>
+
+        <div className="quiet-attention p-4 md:p-5" data-testid="overview-attention">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-base font-semibold">{t('overview.needsAttention')}</h2>
+            <span className="quiet-overview-label">{(rateMismatch ? 1 : 0) + (importReview ? 1 : 0)}</span>
+          </div>
+          {rateMismatch || importReview ? <ul className="divide-y divide-edge-muted">
+            {rateMismatch && <li className="py-3 first:pt-0">
+              <p className="text-sm font-medium">{t('staleness.title')}</p>
+              <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('staleness.editLink')}</a>
+            </li>}
+            {importReview && <li className="py-3 last:pb-0">
+              <p className="text-sm font-medium">{t('overview.importReviewBody')}</p>
+              <a href="/import" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('overview.reviewImports')}</a>
+            </li>}
+          </ul> : <p className="text-sm text-ink-3">{t('overview.noAttention')}</p>}
+        </div>
+      </section>
 
 
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
-        <div className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap gap-4 md:gap-6 items-center text-ink" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
-          <div className="bg-inv text-inv-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
-            <div className="text-[8px] md:text-[10px] text-accent-yellow">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
-            <div className="text-xl md:text-3xl italic font-black">{fmtKwh(totals.totalKwh, 0)}</div>
+        <div className="quiet-dataset-summary p-4 md:p-5 flex flex-wrap gap-4 md:gap-5 items-center" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
+          <div className="quiet-data-stat px-4 py-3">
+            <div className="quiet-overview-label">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
           {/* Wave S — the whole dataset as ONE price: what a kWh actually
@@ -156,7 +192,7 @@ export default function OverviewPanel({
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
-              className="bg-accent text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
+              className="quiet-data-stat px-4 py-3"
             >
               <div className="text-[8px] md:text-[10px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -238,7 +274,7 @@ export default function OverviewPanel({
             role="group"
             aria-label={t('overview.costModeAria')}
             /* A printed report states one unit; the switch itself is chrome. */
-            className="no-print bg-hover p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1"
+            className="quiet-toggle no-print p-1 flex gap-1"
           >
             {(['yr', 'day'] as const).map((mode) => (
               <button
@@ -272,13 +308,7 @@ export default function OverviewPanel({
                    near-white in dark and would sit at 1.85:1 / 2.76:1 on them.
                    text-accent-ink is #000 in both themes, which is what these
                    chips have always painted in light. */
-                className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-edge ${
-                  p.id === totals.bestPlan
-                    ? 'bg-good-slab text-accent-ink'
-                    : p.id === totals.worstPlan
-                      ? 'bg-bad-slab text-accent-ink'
-                      : 'bg-hover'
-                }`}
+                className="quiet-data-stat px-3 md:px-4 py-2"
               >
                 <div className="text-[8px] md:text-[10px]">{planLabel(p.id)}</div>
                 <div className="text-lg md:text-2xl italic font-black">
@@ -291,7 +321,7 @@ export default function OverviewPanel({
             ))}
           </div>
 
-          <div className="bg-accent text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
+          <div className="quiet-data-stat px-4 py-3">
             <div className="text-[8px] md:text-[10px]">{t('overview.bestVsWorst')}</div>
             <div className="text-lg md:text-2xl italic font-black">
               {money(totals.planDelta)}
@@ -310,10 +340,7 @@ export default function OverviewPanel({
             data-last-reading={totals.lastDate}
             data-age-days={freshness?.ageDays}
             data-stale={String(freshness?.stale ?? false)}
-            className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-edge flex flex-col ${
-              /* amber-300 is a fixed slab: same ink rule as the chips above. */
-              freshness?.stale ? 'bg-warn-strip text-ink' : 'bg-hover'
-            }`}
+            className="quiet-data-stat px-3 md:px-4 py-2 flex flex-col"
             title={
               freshness?.stale
                 ? t('overview.freshnessTitle', { relative: freshness.relative })
@@ -357,43 +384,7 @@ export default function OverviewPanel({
       {/* 4. Which file / feed this is, and whether it is connected. */}
       {fileStatus}
 
-      {/* 5. What this month is going to cost. */}
-      <BillProjectionBanner projection={projection} />
-      <p className="text-[9px] md:text-xs text-ink-3 font-black normal-case">{t('tab.usageOverviewNote')}</p>
-      <RateByMonth rows={usage.processedData} plan={userPlan} />
-
-      <section className="grid md:grid-cols-2 gap-4" aria-label={t('overview.planAndAttention')}>
-        <div className="border border-edge-muted rounded-lg bg-card p-4 md:p-5" data-testid="overview-plan-summary">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="text-sm font-semibold normal-case">{t('overview.yourPlan')}</h2>
-            <span className="text-[10px] uppercase tracking-wide text-ink-3">{t('overview.current')}</span>
-          </div>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.planCost')}</dt><dd className="font-semibold tabular-nums">{verdict ? fmtMoney(verdict.currentCost) : '—'}</dd></div>
-            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.cheapestAlternative')}</dt><dd className="font-semibold">{verdict ? planLabel(verdict.best) : '—'}</dd></div>
-            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.potentialSaving')}</dt><dd className="font-semibold tabular-nums text-good">{verdict ? fmtMoney(verdict.delta) : '—'}</dd></div>
-          </dl>
-          <button type="button" onClick={onOpenPlans} className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md border border-edge-muted px-4 text-sm font-medium hover:bg-hover">{t('overview.comparePlans')}</button>
-        </div>
-
-        <div className="border border-edge-muted rounded-lg bg-card p-4 md:p-5" data-testid="overview-attention">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <h2 className="text-sm font-semibold normal-case">{t('overview.needsAttention')}</h2>
-            <span className="text-[10px] text-ink-3">{(rateMismatch ? 1 : 0) + (importReview ? 1 : 0)}</span>
-          </div>
-          {rateMismatch || importReview ? <ul className="divide-y divide-edge-muted">
-            {rateMismatch && <li className="py-3 first:pt-0">
-              <p className="text-sm font-medium normal-case">{t('staleness.title')}</p>
-              <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center rounded-md border border-edge-muted px-3 text-xs font-medium">{t('staleness.editLink')}</a>
-            </li>}
-            {importReview && <li className="py-3 last:pb-0">
-              <p className="text-sm font-medium normal-case">{t('overview.importReviewBody')}</p>
-              <a href="/import" className="mt-2 inline-flex min-h-11 items-center rounded-md border border-edge-muted px-3 text-xs font-medium">{t('overview.reviewImports')}</a>
-            </li>}
-          </ul> : <p className="text-sm font-normal normal-case text-ink-3">{t('overview.noAttention')}</p>}
-        </div>
-      </section>
-
+      <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
       <UsagePanel {...usage} embedded />
     </div>
   );
