@@ -91,13 +91,15 @@ describe('Wave R 1 — the tab strip', () => {
     expect(list).toHaveAttribute('aria-orientation', 'horizontal');
 
     const tabs = within(list).getAllByRole('tab');
-    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-usage', 'tab-plans', 'tab-money']);
+    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-plans', 'tab-money']);
     // Only the SELECTED tab carries aria-controls: the other three panels are
     // not in the DOM, and an aria-controls naming an id nothing renders is the
     // dangling reference axe dings as aria-valid-attr-value (t_d5cc9a2d —
     // Lighthouse a11y 0.87). Every reference that IS present must resolve.
     const selectedTabs = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
     expect(selectedTabs).toHaveLength(1);
+    expect(within(list).getAllByRole('tab', { current: 'page' })).toEqual(selectedTabs);
+    expect(document.querySelectorAll('[aria-current]')).toHaveLength(1);
     for (const tab of tabs) {
       const controls = tab.getAttribute('aria-controls');
       if (tab === selectedTabs[0]) {
@@ -109,6 +111,7 @@ describe('Wave R 1 — the tab strip', () => {
         expect(controls).toBeNull();
       }
       expect(tab).toHaveAttribute('type', 'button');
+      expect(tab).toHaveAttribute('data-go');
       // Every tab is a real, reachable control with a 44 px touch target.
       expect(tab.className).toContain('min-h-11');
     }
@@ -135,11 +138,11 @@ describe('Wave R 1 — the tab strip', () => {
   it('uses roving tabindex: one stop for the whole strip', () => {
     render(<TabNav active="plans" onChange={() => {}} />);
     expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('tabindex', '0');
-    for (const name of ['Overview', 'Usage', 'Money']) {
+    for (const name of ['Overview', 'Money']) {
       expect(screen.getByRole('tab', { name })).toHaveAttribute('tabindex', '-1');
     }
     expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Usage' })).toHaveAttribute('aria-selected', 'false');
+
   });
 
   it('moves focus AND selection with the arrow keys, wrapping at both ends', async () => {
@@ -149,8 +152,8 @@ describe('Wave R 1 — the tab strip', () => {
 
     screen.getByRole('tab', { name: 'Overview' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(onChange).toHaveBeenLastCalledWith('usage');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Usage' }));
+    expect(onChange).toHaveBeenLastCalledWith('plans');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Plans' }));
 
     await user.keyboard('{ArrowLeft}');
     expect(onChange).toHaveBeenLastCalledWith('overview');
@@ -222,16 +225,16 @@ describe('Wave R 1 — the tab strip', () => {
     saveEnergyData(mockRawData);
     await renderLoaded();
 
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
     await user.click(screen.getByRole('tab', { name: 'Money' }));
     expect(screen.getByTestId('tab-panel-money')).toBeInTheDocument();
 
     // What the browser fires on back/forward between hash-only entries.
-    window.location.hash = '#tab=usage';
+    window.location.hash = '#tab=plans';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('tab-panel-usage')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-panel-plans')).toBeInTheDocument();
       expect(screen.queryByTestId('tab-panel-money')).not.toBeInTheDocument();
     });
   });
@@ -258,12 +261,14 @@ describe('Wave R 1 — the tab strip', () => {
  * ========================================================================== */
 
 describe('Wave R 2 — the answer is never buried', () => {
-  it('puts the banner first on Overview and the chip in the toolbar', async () => {
+  it('leads Overview with its period and source-derived key figures while keeping the answer and chip', async () => {
     saveEnergyData(mockRawData);
     await renderLoaded();
 
     const overview = screen.getByTestId('tab-panel-overview');
-    expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
+    expect(overview.firstElementChild).toBe(screen.getByTestId('overview-period-heading'));
+    expect(screen.getByTestId('overview-key-figures').querySelectorAll(':scope > div')).toHaveLength(4);
+    expect(screen.getByTestId('best-choice-banner')).toBeInTheDocument();
     expect(screen.getByTestId('best-choice-chip')).toBeInTheDocument();
   });
 
@@ -276,7 +281,7 @@ describe('Wave R 2 — the answer is never buried', () => {
     const chip = screen.getByTestId('best-choice-chip');
     expect(chip).toHaveAttribute('data-best-plan', banner.getAttribute('data-best-plan'));
 
-    for (const name of ['Usage', 'Plans', 'Money'] as const) {
+    for (const name of ['Plans', 'Money'] as const) {
       await user.click(screen.getByRole('tab', { name }));
       expect(screen.getByTestId('best-choice-chip')).toBeInTheDocument();
       expect(screen.queryByTestId('best-choice-banner')).not.toBeInTheDocument();
@@ -316,13 +321,23 @@ describe('Wave R 2 — the answer is never buried', () => {
     render(<VerdictLine comparison={{ TOU: 90, Tiered: 40, ULO: 70 }} userPlan="Tiered" days={30} />);
     const line = screen.getByTestId('verdict-line');
     expect(line).toHaveAttribute('data-already-best', 'true');
-    expect(line).toHaveTextContent(/Tiered is the cheapest of the three/);
+    expect(line).toHaveTextContent('Current plan $40 vs $40 (Tiered, cheapest) $0 more');
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('$0');
     expect(line).not.toHaveTextContent(/\$0\.00 less/);
+  });
+
+  it('names both source costs before reporting a derived saving', () => {
+    render(<VerdictLine comparison={{ TOU: 120, Tiered: 100, ULO: 140 }} userPlan="TOU" days={30} />);
+    const line = screen.getByTestId('verdict-line');
+    expect(line).toHaveTextContent('Current plan $120 vs $100 (Tiered, cheapest) ▲$20 more');
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('▲$20');
   });
 
   it('quotes a per-month figure and the window it was scaled from', () => {
     render(<BestChoiceChip comparison={{ TOU: 120, Tiered: 100, ULO: 140 }} userPlan="TOU" days={30} onJump={() => {}} active={false} />);
     const chip = screen.getByTestId('best-choice-chip');
+    expect(chip.tagName.toLowerCase()).toBe('button');
+    expect(chip).toHaveAttribute('data-go', 'overview');
     expect(chip).toHaveAttribute('data-best-plan', 'Tiered');
     expect(chip.textContent).toContain('Best: Tiered');
     expect(chip.textContent).toMatch(/-\$\d+\/mo/);
@@ -345,8 +360,7 @@ describe('Wave R 2 — the answer is never buried', () => {
  * ========================================================================== */
 
 describe('Wave R 3 — global chrome carries only global things', () => {
-  it('moves rate staleness onto Usage and file status onto Overview', async () => {
-    const user = userEvent.setup();
+  it('keeps usage insights and file status in Overview, outside global chrome', async () => {
     sessionStorage.clear();
     // Serve the real OEB page so the staleness check finds a newer set and
     // the banner actually renders — otherwise this would only prove that an
@@ -373,14 +387,9 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     expect(
       within(screen.getByTestId('tab-panel-overview')).getByTestId('overview-file-status'),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
-    const banner = await screen.findByTestId('rate-staleness-banner');
-    expect(
-      within(screen.getByTestId('tab-panel-usage')).getByTestId('rate-staleness-banner'),
-    ).toBe(banner);
-    expect(screen.queryByTestId('overview-file-status')).not.toBeInTheDocument();
+    const usage = within(screen.getByTestId('tab-panel-overview')).getByTestId('overview-usage');
+    expect(within(usage).getByTestId('dual-heatmap')).toBeInTheDocument();
+    expect(within(screen.getByTestId('tab-panel-overview')).getByText('Usage and insights are in Overview.')).toBeInTheDocument();
   });
 
   it('keeps one toolbar — with the plan switcher and upload — across every tab', async () => {
@@ -396,7 +405,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     // SLOT survives rather than a bell this browser does not have yet.
     expect(screen.queryByTestId('notification-toggle')).not.toBeInTheDocument();
 
-    for (const name of ['Usage', 'Plans', 'Money', 'Overview'] as const) {
+    for (const name of ['Plans', 'Money', 'Overview'] as const) {
       await user.click(screen.getByRole('tab', { name }));
       // Same nodes, not a remount: global chrome does not follow the tab.
       expect(screen.getByTestId('plan-switcher')).toBe(switcher);
@@ -410,7 +419,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     await renderLoaded();
     expect(screen.queryByRole('button', { name: 'CHART' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'INSIGHTS' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(4);
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 });
 
@@ -537,6 +546,24 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.getByTestId('accrual-chart')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByTestId('accrual-pace-line')).toBeInTheDocument();
     expect(screen.getByTestId('accrual-actual-line')).toBeInTheDocument();
+  });
+
+  it('places the rate alert directly before the Pace to date metric', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={OCTOBER}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        today={oct(10)}
+        rateNotice={<div role="alert" data-testid="money-rate-alert">Fix rate schedule</div>}
+      />,
+    );
+    const notice = screen.getByTestId('money-rate-alert-slot');
+    const paceCard = screen.getByTestId('accrual-pace-card');
+    expect(notice.nextElementSibling).toBe(paceCard);
+    expect(paceCard).toHaveTextContent('Pace to date');
   });
 
   it('draws real geometry — finite coordinates, a rising line, a pace that ends high', () => {
@@ -703,7 +730,7 @@ describe('Wave R 4d — the card answers its own question', () => {
     const chip = screen.getByTestId('accrual-pace-chip');
     expect(chip).toHaveAttribute('data-direction', 'above');
     expect(chip).toHaveTextContent(/pacing \$32\.34 ABOVE/);
-    expect(chip.className).toContain('bg-red-400');
+    expect(chip.className).toContain('bg-bad-slab');
     // The dotted line is drawn at that same average.
     expect(screen.getByTestId('accrual-benchmark-line')).toBeInTheDocument();
     expect(screen.getByTestId('bill-accrual')).toHaveAttribute('data-avg-prior-bills', '42.00');
@@ -724,7 +751,7 @@ describe('Wave R 4d — the card answers its own question', () => {
     );
     const chip = screen.getByTestId('accrual-pace-chip');
     expect(chip).toHaveAttribute('data-direction', 'below');
-    expect(chip.className).toContain('bg-emerald-300');
+    expect(chip.className).toContain('bg-good-slab-soft');
     expect(chip).toHaveTextContent(/pacing BELOW by/);
   });
 

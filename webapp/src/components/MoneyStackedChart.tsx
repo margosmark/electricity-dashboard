@@ -109,7 +109,7 @@ type ChartRow = {
  */
 const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string; key: string } | null> = {
   billed: null,
-  open: { text: 'Estimate', cls: 'bg-yellow-400 text-accent-ink border-edge', key: 'money.badge.estimate' },
+  open: { text: 'Estimate', cls: 'bg-accent text-accent-ink border-edge', key: 'money.badge.estimate' },
   gap: { text: 'No bill', cls: 'bg-track border-edge', key: 'money.badge.noBill' },
   derived: { text: 'Billing day', cls: 'bg-track border-edge', key: 'money.badge.billingDay' },
 };
@@ -381,8 +381,8 @@ export default function MoneyStackedChart({
       data-testid={testid}
       aria-pressed={mode === id}
       onClick={() => setMode(id)}
-      className={`min-h-[44px] px-3 md:px-4 border-2 border-edge text-[10px] md:text-xs font-black uppercase ${
-        mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-yellow-400 hover:text-accent-ink'
+      className={`seg min-h-[44px] px-3 md:px-4 border-2 border-edge text-[10px] md:text-xs font-black uppercase ${
+        mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-accent hover:text-accent-ink'
       }`}
     >
       {label}
@@ -484,7 +484,7 @@ export default function MoneyStackedChart({
           data-testid="money-share-stats"
           className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs"
         >
-          <div className="bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="bg-accent text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.shareDeliveryReg')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="non-commodity-pct">
               {fmtPercent(share.nonCommodityPct, 1)}
@@ -612,7 +612,7 @@ export default function MoneyStackedChart({
                     isShare ? 'share' : mode === 'usage' ? 'usage' : k === 'credit' ? 'credit' : 'cost'
                   }
                   fill={COST_SLICE_META[k as keyof typeof COST_SLICE_META].color}
-                  stroke="#000"
+                  stroke="var(--edge)"
                   strokeWidth={1}
                 >
                   {/* Cell per bar: billed periods keep the solid colour; any
@@ -625,7 +625,7 @@ export default function MoneyStackedChart({
                           ? COST_SLICE_META[k as keyof typeof COST_SLICE_META].color
                           : `url(#est-hatch-${k})`
                       }
-                      stroke="#000"
+                      stroke="var(--edge)"
                       strokeWidth={r.kind === 'billed' ? 1 : 2}
                       strokeDasharray={r.kind === 'billed' ? undefined : '6 4'}
                     />
@@ -659,7 +659,7 @@ export default function MoneyStackedChart({
                   })}
                   <ReferenceLine
                     y={overlay.actualPerPeriod}
-                    stroke="#059669"
+                    stroke="var(--chart-money-credit)"
                     strokeWidth={3}
                     ifOverflow="extendDomain"
                   />
@@ -712,7 +712,7 @@ export default function MoneyStackedChart({
               return (
                 <span key={plan} className="flex items-center gap-2">
                   <svg width="34" height="10" aria-hidden focusable="false">
-                    <line x1="0" y1="5" x2="34" y2="5" stroke="#000" strokeWidth="3" strokeDasharray={dash} />
+                    <line x1="0" y1="5" x2="34" y2="5" stroke="var(--edge)" strokeWidth="3" strokeDasharray={dash} />
                   </svg>
                   {line.label} {money(line.perPeriod)}
                   {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
@@ -726,7 +726,7 @@ export default function MoneyStackedChart({
             })}
             <span className="flex items-center gap-2">
               <svg width="34" height="10" aria-hidden focusable="false">
-                <line x1="0" y1="5" x2="34" y2="5" stroke="#059669" strokeWidth="4" />
+                <line x1="0" y1="5" x2="34" y2="5" stroke="var(--chart-money-credit)" strokeWidth="4" />
               </svg>
               {allBilledSilent ? (
                 /* `overlay.actual` is billTotals summed over periods that
@@ -831,7 +831,7 @@ export default function MoneyStackedChart({
                 <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
                   <span className="inline-flex items-center gap-1 justify-end">
                     {t('money.estTotal')}
-                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 text-accent-ink border-edge">
+                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-accent text-accent-ink border-edge">
                       {t('money.badge.estimate')}
                     </span>
                   </span>

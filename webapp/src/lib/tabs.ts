@@ -12,7 +12,7 @@
  * what makes the browser back button walk the tabs instead of leaving the app.
  */
 
-export const TAB_IDS = ['overview', 'usage', 'plans', 'money'] as const;
+export const TAB_IDS = ['overview', 'plans', 'money'] as const;
 
 export type TabId = (typeof TAB_IDS)[number];
 
@@ -39,12 +39,7 @@ export const TABS: readonly TabDef[] = [
     title: 'Overview',
     description: 'The answer first: best plan, totals, data freshness, this month’s bill.',
   },
-  {
-    id: 'usage',
-    label: 'Usage',
-    title: 'Usage',
-    description: 'The chart, the temperature curve behind it, rate seasons, anomalies and the weekday/hour routine.',
-  },
+
   {
     id: 'plans',
     label: 'Plans',

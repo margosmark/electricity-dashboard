@@ -64,14 +64,14 @@ const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n
 const kwh = (n: number) => fmtKwh(n, 2);
 
 const CLASS_STYLE: Record<BillLineClass, string> = {
-  commodity: 'border-l-8 border-blue-500',
-  delivery: 'border-l-8 border-violet-500',
-  regulatory: 'border-l-8 border-violet-400',
-  tax: 'border-l-8 border-amber-500',
-  credit: 'border-l-8 border-emerald-500',
+  commodity: 'border-l-8 border-info-edge',
+  delivery: 'border-l-8 border-ulo',
+  regulatory: 'border-l-8 border-ulo',
+  tax: 'border-l-8 border-warn',
+  credit: 'border-l-8 border-good',
   total: 'border-l-8 border-edge bg-accent-soft',
   info: 'border-l-8 border-track',
-  other: 'border-l-8 border-orange-400',
+  other: 'border-l-8 border-warn',
 };
 
 /** What kind of number a measurement line is, by the utility's own wording. */
@@ -148,7 +148,7 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
     split.status === 'split'
       ? 'bg-good-soft'
       : split.status === 'rejected'
-        ? 'bg-amber-50'
+        ? 'bg-warn-soft'
         : 'bg-inset';
   return (
     <div
@@ -424,7 +424,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
             aria-pressed={selected === 'all'}
             data-testid="actual-bill-all"
             className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
-              selected === 'all' ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
+              selected === 'all' ? 'bg-accent text-accent-ink' : 'bg-inset'
             }`}
           >
             {t('actualBill.allPeriods')}
@@ -437,7 +437,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               aria-pressed={selected === r.summary.startDate}
               data-testid={`actual-bill-pick-${r.summary.startDate}`}
               className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
-                selected === r.summary.startDate ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
+                selected === r.summary.startDate ? 'bg-accent text-accent-ink' : 'bg-inset'
               }`}
             >
               {billPeriodLabel(r.summary.start, r.summary.duration).split(' – ')[0]}
@@ -450,7 +450,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
         <div
           data-testid="rate-assumptions-banner"
           role="alert"
-          className="mt-4 md:mt-6 bg-red-600 text-white border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
+          className="mt-4 md:mt-6 bg-bad-slab-strong text-on-dark border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
         >
           {t('actualBill.rateBanner')}
         </div>

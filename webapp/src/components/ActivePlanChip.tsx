@@ -21,7 +21,7 @@ export default function ActivePlanChip() {
     <span
       data-testid="active-plan-chip"
       data-plan={plan}
-      className="inline-flex items-center gap-2 px-3 py-1 mt-3 bg-yellow-400 border-2 border-edge rounded-lg text-[10px] md:text-xs font-black uppercase text-accent-ink shadow-hard-3"
+      className="inline-flex items-center gap-2 px-3 py-1 mt-3 bg-accent border-2 border-edge rounded-lg text-[10px] md:text-xs font-black uppercase text-accent-ink shadow-hard-3"
       title={t('plan.chip.title')}
     >
       <span aria-hidden="true">▸</span>

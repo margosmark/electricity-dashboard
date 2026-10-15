@@ -235,7 +235,7 @@ describe('Wave S 1 — the EFFICIENCY card', () => {
     expect(chip).toHaveTextContent('(your last 12 bills)');
 
     // The chip is green only because the USAGE half improved.
-    expect(chip.className).toContain('bg-emerald-400');
+    expect(chip.className).toContain('bg-good-slab');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveAttribute('data-direction', 'up');
     expect(screen.getByTestId('efficiency-rates-line')).toHaveTextContent('+0.2¢/period');
     // Delivery gets its own line — reported, never credited with the verdict.
@@ -411,7 +411,7 @@ describe('Wave S 4 — OVERVIEW: strip numbers + the card', () => {
     );
   });
 
-  it('keeps the decision-first order: banner first, card after the strip', async () => {
+  it('orders the period, projected-bill focus, rate history, and decision surfaces before detail', async () => {
     localStorage.setItem('usage_summaries', JSON.stringify(summaries));
     localStorage.setItem('energy_data', JSON.stringify(dailyReadings('2026-05-01', '2026-08-20')));
     await renderLoaded();
@@ -419,9 +419,14 @@ describe('Wave S 4 — OVERVIEW: strip numbers + the card', () => {
     const overview = screen.getByTestId('tab-panel-overview');
     const children = Array.from(overview.children);
     const index = (id: string) => children.indexOf(screen.getByTestId(id));
-    expect(index('best-choice-banner')).toBe(0);
-    expect(index('totals-strip')).toBe(1);
-    expect(index('efficiency-card')).toBe(2);
+    expect(index('overview-period-heading')).toBe(0);
+    expect(index('overview-key-figures')).toBe(1);
+    expect(index('overview-bill-focus')).toBe(2);
+    expect(index('rate-by-month')).toBe(3);
+    expect(index('overview-plan-attention')).toBe(4);
+    expect(index('totals-strip')).toBe(5);
+    expect(index('efficiency-card')).toBe(6);
+    expect(within(screen.getByTestId('overview-plan-summary')).getByTestId('best-choice-banner')).toBeInTheDocument();
   });
 
   it('does not render the card at all for a readings-only file', async () => {

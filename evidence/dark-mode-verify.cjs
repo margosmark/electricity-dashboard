@@ -51,7 +51,7 @@ const OUT = __dirname;
 /** The token values this script expects to see PAINTED (globals.css). */
 const TOKENS = {
   light: {
-    page: 'rgb(248, 250, 252)', // #f8fafc
+    page: 'rgb(245, 246, 248)', // #f5f6f8
     card: 'rgb(255, 255, 255)', // #ffffff
     edge: 'rgb(0, 0, 0)', // #000000
     ink: 'rgb(0, 0, 0)', // #000000

@@ -36,7 +36,7 @@
 'use client';
 
 import { fmtDate, fmtMoney, fmtMoney0, useTranslation } from '@/i18n';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
   buildAccrualCurve,
@@ -69,6 +69,8 @@ export type BillAccrualCurveProps = {
   billDate?: { at: number; source: AccrualBillDateSource } | null;
   /** Injectable so the test is not a function of today's date. */
   today?: Date;
+  /** Actionable Money alert, placed immediately before the pace-to-date figure. */
+  rateNotice?: ReactNode;
 };
 
 const W = 720;
@@ -165,7 +167,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             y1={PAD.top}
             x2={tierX}
             y2={PAD.top + innerH}
-            stroke="#7C3AED"
+            stroke="var(--chart-tier-marker)"
             strokeWidth={2}
             strokeDasharray="6 4"
             opacity={curve.tierCrossingProjected ? 0.45 : 1}
@@ -176,7 +178,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
             y={PAD.top + 12}
             fontSize={10}
             fontWeight={900}
-            fill="#7C3AED"
+            fill="var(--chart-tier-marker)"
             opacity={curve.tierCrossingProjected ? 0.6 : 1}
           >
             {t('accrual.tierTwoArrow')}
@@ -231,7 +233,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         y1={y(0)}
         x2={x(curve.daysInPeriod)}
         y2={y(curve.projectedTotal)}
-        stroke="#FACC15"
+        stroke="var(--chart-pace)"
         strokeWidth={4}
         strokeDasharray="10 6"
         data-testid="accrual-pace-line"
@@ -261,7 +263,7 @@ function Chart({ curve }: { curve: AccrualCurve }) {
         data-testid="accrual-actual-line"
       />
       {last && (
-        <circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill="#FACC15" stroke="var(--ink)" strokeWidth={3} />
+        <circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill="var(--chart-pace)" stroke="var(--ink)" strokeWidth={3} />
       )}
 
       {/* x labels: period start, today, bill date */}
@@ -311,7 +313,7 @@ function Sparkline({ curve }: { curve: AccrualCurve }) {
         y1={y(0)}
         x2={x(curve.daysInPeriod)}
         y2={y(curve.projectedTotal)}
-        stroke="#FACC15"
+        stroke="var(--chart-pace)"
         strokeWidth={3}
         strokeDasharray="8 5"
       />
@@ -336,6 +338,7 @@ export default function BillAccrualCurve({
   summaries = [],
   billDate,
   today,
+  rateNotice,
 }: BillAccrualCurveProps) {
   const { t, locale } = useTranslation();
   // Wave U — month abbreviations follow the toggle ("Aug 26" / "26 août").
@@ -372,6 +375,7 @@ export default function BillAccrualCurve({
         <p data-testid="accrual-empty" className="text-[11px] md:text-sm font-bold normal-case text-ink-2">
           {curve.note}
         </p>
+        {rateNotice}
       </section>
     );
   }
@@ -393,8 +397,8 @@ export default function BillAccrualCurve({
       : Math.abs(curve.paceVsAvg) < 0.01
         ? { tone: 'bg-track text-ink', direction: 'even' as const, text: 'right on your 3-bill average' }
         : curve.overAvg
-          ? { tone: 'bg-red-400 text-accent-ink', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }
-          : { tone: 'bg-emerald-300 text-accent-ink', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };
+          ? { tone: 'bg-bad-slab text-accent-ink', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }
+          : { tone: 'bg-good-slab-soft text-accent-ink', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };
 
   const billDateLabel = fmtDate(new Date(`${curve.billDate}T12:00:00`), billDatePattern);
 
@@ -477,7 +481,7 @@ export default function BillAccrualCurve({
         data-testid="accrual-chart-toggle"
         aria-expanded={showFull}
         onClick={() => setShowFull((v) => !v)}
-        className="md:hidden mt-2 w-full min-h-[44px] border-2 border-edge rounded-xl bg-hover text-[10px] font-black uppercase hover:bg-yellow-400 hover:text-accent-ink active:bg-accent-soft0"
+        className="md:hidden mt-2 w-full min-h-[44px] border-2 border-edge rounded-xl bg-hover text-[10px] font-black uppercase hover:bg-accent hover:text-accent-ink active:bg-accent-soft0"
       >
         {showFull ? t('accrual.hideFull') : t('accrual.showFull')}
       </button>
@@ -493,14 +497,19 @@ export default function BillAccrualCurve({
             {t('accrual.measuredLine', { covered: curve.coveredDays, elapsed: curve.daysElapsed })}
           </div>
         </div>
-        <div className="bg-info-soft p-3 md:p-4 rounded-xl border-4 border-edge">
+        {rateNotice && (
+          <div data-testid="money-rate-alert-slot" className="col-span-2 lg:col-span-4">
+            {rateNotice}
+          </div>
+        )}
+        <div className="bg-info-soft p-3 md:p-4 rounded-xl border-4 border-edge" data-testid="accrual-pace-card">
           <div className="text-[8px] md:text-[10px] uppercase text-ink-3 font-black">{t('accrual.paceToDate')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-pace">
             {money(curve.paceToDate)}
           </div>
           <div className="text-[8px] font-black text-ink-3 normal-case">{money(curve.paceDaily)}{t('accrual.perDayUnit')}</div>
         </div>
-        <div className="bg-yellow-400 text-accent-ink p-3 md:p-4 rounded-xl border-4 border-edge">
+        <div className="bg-accent text-accent-ink p-3 md:p-4 rounded-xl border-4 border-edge">
           <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.landingAt')}</div>
           <div className="text-lg md:text-2xl italic font-black" data-testid="accrual-projected">
             {money(curve.projectedTotal)}
@@ -511,7 +520,7 @@ export default function BillAccrualCurve({
         </div>
         <div
           className={`p-3 md:p-4 rounded-xl border-4 border-edge ${
-            overPace === null ? 'bg-hover' : overPace ? 'bg-red-400 text-accent-ink' : 'bg-emerald-300 text-accent-ink'
+            overPace === null ? 'bg-hover' : overPace ? 'bg-bad-slab text-accent-ink' : 'bg-good-slab-soft text-accent-ink'
           }`}
         >
           <div className="text-[8px] md:text-[10px] uppercase font-black">{t('accrual.vsPaceLine')}</div>

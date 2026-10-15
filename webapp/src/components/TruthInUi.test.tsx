@@ -38,6 +38,7 @@ import PeriodDeltaTable from './PeriodDeltaTable';
 import PlanCards from './PlanCards';
 import SwitchTrackRecord from './SwitchTrackRecord';
 import VerdictLine from './VerdictLine';
+import BestChoiceBanner from './BestChoiceBanner';
 import { getLocale, planLabel, setLocale } from '@/i18n';
 import { buildPeriodStacks, periodDeltaRows, type PlanOverlay } from '@/lib/moneyViz';
 import {
@@ -232,6 +233,20 @@ describe('Truth in UI — plan cards', () => {
     const line = screen.getByTestId('verdict-line').textContent ?? '';
     expect(line.match(/Shift advice and the switch/g)).toHaveLength(1);
     expect(line).toContain('track record below can move this');
+  });
+
+  it('derives the Overview recommendation and ledger deltas from the plan figures', () => {
+    const comparison = { TOU: 2765.61, Tiered: 2131.93, ULO: 1946.10 };
+    render(<BestChoiceBanner comparison={comparison} userPlan="Tiered" days={30} />);
+    expect(screen.getByTestId('cheaper-alternative')).toHaveTextContent(
+      'Cheaper alternative → 5¢ Overnight',
+    );
+
+    render(<VerdictLine comparison={comparison} userPlan="Tiered" days={30} />);
+    const lineNode = screen.getByTestId('verdict-line');
+    expect(lineNode).toHaveTextContent('Current plan $2,132 vs $1,946 (5¢ Overnight, cheapest) ▲$186 more');
+    expect(lineNode).toHaveTextContent('$634 worse');
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('▲$186');
   });
 });
 

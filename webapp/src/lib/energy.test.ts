@@ -399,17 +399,17 @@ describe('isWeekendBar', () => {
 
 describe('getBarColor', () => {
   it('returns orange for weekend bars in daily view', () => {
-    expect(getBarColor('daily', '2024-01-06')).toBe('#F97316');
-    expect(getBarColor('daily', '2024-01-07')).toBe('#F97316');
+    expect(getBarColor('daily', '2024-01-06')).toBe('var(--chart-usage-weekend)');
+    expect(getBarColor('daily', '2024-01-07')).toBe('var(--chart-usage-weekend)');
   });
 
   it('returns blue for weekday bars in daily view', () => {
-    expect(getBarColor('daily', '2024-01-08')).toBe('#2563EB');
+    expect(getBarColor('daily', '2024-01-08')).toBe('var(--chart-usage-weekday)');
   });
 
   it('returns blue for non-daily views', () => {
-    expect(getBarColor('weekly', '2024-01-06')).toBe('#2563EB');
-    expect(getBarColor('hourly', '2024-01-08')).toBe('#2563EB');
+    expect(getBarColor('weekly', '2024-01-06')).toBe('var(--chart-usage-weekday)');
+    expect(getBarColor('hourly', '2024-01-08')).toBe('var(--chart-usage-weekday)');
   });
 });
 

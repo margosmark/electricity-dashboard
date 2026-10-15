@@ -72,7 +72,7 @@ function Row({ row }: { row: SwitchPeriodRow }) {
           <span
             data-testid="switch-plan-badge"
             className={`px-2 md:px-3 py-0.5 rounded-full border-2 border-edge text-[9px] md:text-[11px] font-black ${
-              unknown ? 'bg-track' : 'bg-yellow-400 text-accent-ink'
+              unknown ? 'bg-track' : 'bg-accent text-accent-ink'
             }`}
           >
             {row.plan === 'unknown'

@@ -1739,7 +1739,9 @@ export function isWeekendBar(zoomLevel: string, key: string | undefined): boolea
 }
 
 export function getBarColor(zoomLevel: string, key: string | undefined): string {
-  return isWeekendBar(zoomLevel, key) ? '#F97316' : '#2563EB';
+  return isWeekendBar(zoomLevel, key)
+    ? 'var(--chart-usage-weekend)'
+    : 'var(--chart-usage-weekday)';
 }
 
 /* ==========================================================================

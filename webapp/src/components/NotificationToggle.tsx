@@ -182,7 +182,7 @@ export function NotificationToggle({ connected, backgroundSync }: Props) {
             disabled={busy}
             aria-pressed={availability === "on"}
             className={`min-h-11 w-full px-4 py-3 rounded-lg border-4 border-edge text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 ${
-              availability === "on" ? "bg-emerald-400 text-accent-ink" : "bg-yellow-400 text-accent-ink"
+              availability === "on" ? "bg-good-slab text-accent-ink" : "bg-accent text-accent-ink"
             }`}
           >
             {availability === "on"

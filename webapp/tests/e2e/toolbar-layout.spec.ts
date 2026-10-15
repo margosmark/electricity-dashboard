@@ -118,25 +118,24 @@ test.describe('toolbar layout gate', () => {
 
 
 /**
- * The USAGE card's header row (t_fbf590fa addendum 2) — the same class of bug
+ * The Overview usage card's header row (t_fbf590fa addendum 2) — the same class of bug
  * as the toolbar's dead band, one card down: a flex row whose trailing element
  * absorbed a deficit it could not shrink into, clipped by the card's own
  * `overflow-hidden`.
  *
  * It rides THIS spec because the sweep machinery already exists, but its
  * fixtures are different on purpose: the toolbar gate measures the default tab
- * with the small sample, this measures the USAGE tab with the Mark-shaped seed
+ * with the small sample, this measures Overview with the Mark-shaped seed
  * (24 bills ⇒ a real selection cost string) at the five widths the clip was
  * reproduced at. Green-on-the-buggy-build is the failure mode to avoid here:
  * `scrollWidth > clientWidth` on the row IS the clip, and the cost block's
  * right edge vs the card's content edge is the same statement about the one
  * element that must never clip.
  */
-test.describe('USAGE card header row (t_fbf590fa)', () => {
+test.describe('Overview usage card header row (t_fbf590fa)', () => {
   test('the header row never clips its cost block', async ({ page }) => {
     test.setTimeout(240_000);
     await seedMarkShaped(page);
-    await page.getByTestId('tab-usage').click();
     await page.getByTestId('chart-header-row').waitFor({ timeout: 30_000 });
 
     const failures: string[] = [];
@@ -205,7 +204,7 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
 
     expect(
       failures,
-      `${failures.length}/${total} USAGE-header checks FAILED — the cost block is being clipped again:\n${failures.join('\n')}`,
+      `${failures.length}/${total} Overview usage-header checks FAILED — the cost block is being clipped again:\n${failures.join('\n')}`,
     ).toEqual([]);
   });
 
@@ -228,7 +227,6 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
   test('the header row holds the worst-case cost string at every swept width', async ({ page }) => {
     test.setTimeout(240_000);
     await seedMarkShaped(page);
-    await page.getByTestId('tab-usage').click();
     await page.getByTestId('chart-header-row').waitFor({ timeout: 30_000 });
 
     const WIDE = '$2,131.93';
@@ -285,7 +283,7 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
 
     expect(
       failures,
-      `${failures.length}/${total} USAGE-header checks FAILED at the worst-case cost string:\n${failures.join('\n')}`,
+      `${failures.length}/${total} Overview usage-header checks FAILED at the worst-case cost string:\n${failures.join('\n')}`,
     ).toEqual([]);
     expect(
       brokenWidths,

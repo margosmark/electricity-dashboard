@@ -66,7 +66,7 @@ const RATES = {
 
 /** Every tab, so the sweep covers every money surface the app paints.
  *  Keyed by `data-testid`, because the tab LABELS translate. */
-const TABS = ['overview', 'usage', 'plans', 'money'] as const;
+const TABS = ['overview', 'plans', 'money'] as const;
 
 function seed(): void {
   const store: Record<string, string> = {

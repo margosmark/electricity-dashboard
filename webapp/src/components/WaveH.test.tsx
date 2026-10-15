@@ -364,13 +364,13 @@ describe('Wave H 3 — semantics and labels', () => {
     // Wave R: the CHART/INSIGHTS toggle is now an ARIA tab strip — selected
     // state replaces pressed state, and exactly one tab is selected.
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(3);
     const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
     expect(selected).toHaveLength(1);
     expect(selected[0]).toBe(screen.getByRole('tab', { name: 'Overview' }));
     // Roving tabindex: the strip is ONE tab stop, not four.
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('tab', { name: 'Usage' })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('tabindex', '-1');
 
     // The scope buttons are mutually exclusive: never more than one pressed.
     // (First load here anchors on a Custom trailing window, so none is pressed
@@ -414,6 +414,7 @@ describe('Wave H 3 — semantics and labels', () => {
     // One ring that reads on white, yellow AND black chips.
     expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #ffffff/);
     expect(css).toMatch(/box-shadow:\s*0 0 0 6px #2563eb/);
+    expect(css).toMatch(/\.seg\s*{[^}]*min-height:\s*44px/);
     // Print contract for InsightsView.
     expect(css).toMatch(/@media print/);
     expect(css).toMatch(/@page\s*{[^}]*size:\s*portrait/);
@@ -569,6 +570,10 @@ describe('Wave H 4 — chart skeleton', () => {
       { timeout: 2500 },
     );
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
+    const dataTable = await screen.findByTestId('chart-data-table');
+    expect(dataTable.querySelectorAll('tbody tr')).toHaveLength(chartData.length);
+    expect(dataTable).toHaveTextContent(chartData[0].label);
+
   });
 });
 

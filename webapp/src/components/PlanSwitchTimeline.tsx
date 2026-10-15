@@ -169,7 +169,7 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
                       data-testid={`switch-bubble-${segment.start}`}
                       data-counted={String(segment.counted)}
                       className={`absolute left-0 top-3 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded-lg border-2 border-edge text-[8px] md:text-[10px] font-black shadow-hard-2 ${
-                        segment.counted ? 'bg-yellow-400 text-accent-ink' : 'bg-track text-ink-2'
+                        segment.counted ? 'bg-accent text-accent-ink' : 'bg-track text-ink-2'
                       }`}
                     >
                       {money(segment.saving)}

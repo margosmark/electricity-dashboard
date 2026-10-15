@@ -42,15 +42,15 @@ const TARGET_ICON: Record<ShiftOption['target'], React.ReactNode> = {
 };
 
 const CONFIDENCE_STYLE: Record<ConfidenceLevel, string> = {
-  'very-consistent': 'bg-emerald-400 text-accent-ink',
+  'very-consistent': 'bg-good-slab text-accent-ink',
   // slate, not yellow: the badge has to stay legible ON the yellow headline card
   somewhat: 'bg-track text-ink',
-  irregular: 'bg-red-400 text-accent-ink',
+  irregular: 'bg-bad-slab text-accent-ink',
 };
 
 const EFFORT_STYLE: Record<Effort, string> = {
   'no-plan-switch': 'bg-card text-ink',
-  'plan-switch-required': 'bg-orange-400 text-accent-ink',
+  'plan-switch-required': 'bg-inset text-ink',
 };
 
 function EmptyState({ analysis }: { analysis: TouShiftAnalysis }) {
@@ -117,7 +117,7 @@ function TierChip({ tier }: { tier: ShiftBlock['tier'] }) {
   return (
     <span
       data-testid="shift-tier-chip"
-      className="inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-blue-300 text-accent-ink"
+      className="inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-info-slab-soft text-accent-ink"
     >
       {t('shift.tierChip')}
     </span>
@@ -143,7 +143,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
   return (
     <div
       className={`border-2 md:border-4 border-edge rounded-lg md:rounded-xl p-3 md:p-4 ${
-        rank === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'
+        rank === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 font-black uppercase">
@@ -262,7 +262,7 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
           <span
             key={o.target}
             className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border-2 border-edge rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-black uppercase ${
-              i === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'
+              i === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
             }`}
           >
             {TARGET_ICON[o.target]}
@@ -284,7 +284,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
   return (
     <div
       data-testid="shift-headline"
-      className="bg-yellow-400 border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7 text-accent-ink"
+      className="bg-accent border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7 text-accent-ink"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-[10px] tracking-[0.25em] font-black uppercase">
@@ -324,7 +324,7 @@ function TierHeading({ count }: { count: number }) {
   return (
     <div
       data-testid="shift-tier-midpeak"
-      className="bg-blue-300 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink"
+      className="bg-info-slab-soft border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink"
     >
       <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">
         {t('shift.tierHeading')}
@@ -364,7 +364,7 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
       data-testid="shift-optimizer"
       className="space-y-4 md:space-y-6 font-black uppercase text-ink"
     >
-      <div className="bg-inv text-inv-ink p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-yellow-400 shadow-hard-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-inv text-inv-ink p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-accent shadow-hard-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-[10px] tracking-[0.25em] text-accent-yellow font-black">
             {t('shift.eyebrow')}
@@ -374,7 +374,7 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
             {t('shift.patternCheck')}
           </div>
         </div>
-        <div className="bg-yellow-400 text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center">
+        <div className="bg-accent text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center">
           <div className="text-[8px] md:text-[10px] font-black uppercase">
             {t('shift.ifEveryMoved')}
           </div>

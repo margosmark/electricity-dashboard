@@ -2,9 +2,9 @@
  * OVERVIEW — the decision-first tab.
  *
  * Wave R's answer to "the best choice is now buried": this panel is what the
- * user sees first, and it contains only the four things that answer "what is
- * the verdict, what did it cost me, how fresh is the data, what will this
- * month cost?" — in that order, with the verdict as the first element.
+ * user sees first, and it leads with period context, the projected bill,
+ * rate history, and the adjacent plan/attention decisions. The detailed
+ * dataset and usage analysis remain available below that decision surface.
  *
  * Everything else moved to the tab it belongs to (Usage, Plans & Track
  * Record, Money & What-If). `fileStatus` is a slot so the Green Button chip
@@ -16,17 +16,21 @@
 import React from 'react';
 import { dataFreshness } from '@/lib/freshness';
 import {
-  fmtCents, fmtDateLong, fmtDay, fmtKwh, fmtMoney, moneyPeriodUnit, planLabel, useTranslation,
+  fmtCents, fmtDate, fmtDateLong, fmtDay, fmtKwh, fmtMoney, fmtMoney0, fmtNumber, moneyPeriodUnit, planLabel, useTranslation,
 } from '@/i18n';
-import type { FullDataTotals } from '@/lib/energy';
+import type { AlwaysOnFloor, FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
 import { EFFICIENCY_SUBTITLE_KEY, type EfficiencyReport } from '@/lib/statistics';
-import BestChoiceBanner from '@/components/BestChoiceBanner';
+import { buildVerdict } from '@/lib/verdict';
+import RateByMonth from '@/components/RateByMonth';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
 import { daysBetweenDayKeys } from '@/lib/dateSpan';
+import UsagePanel, { type UsagePanelProps } from '@/components/UsagePanel';
+import { RATES_FILE_EDIT_URL } from '@/components/RateStalenessBanner';
+import type { AxisPeriod } from '@/lib/billingAxis';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -45,8 +49,17 @@ export type OverviewPanelProps = {
   efficiency: EfficiencyReport;
   /** Wired by Dashboard: the mini-line jumps to the MONEY tab. */
   onOpenMoney: () => void;
+  onOpenPlans: () => void;
   /** Green Button / file-status chip, wired by Dashboard. */
   fileStatus?: React.ReactNode;
+  /** Existing usage and insight tools, retained below the decision summary. */
+  usage: Omit<UsagePanelProps, 'embedded'>;
+  importReview: boolean;
+  rateMismatch?: boolean;
+  /** Latest file-backed billing window, never a mockup month. */
+  latestPeriod: AxisPeriod | null;
+  /** Source-derived always-on baseline for the same data window. */
+  floor?: AlwaysOnFloor | null;
 };
 
 export default function OverviewPanel({
@@ -60,7 +73,13 @@ export default function OverviewPanel({
   projection,
   efficiency,
   onOpenMoney,
+  onOpenPlans,
   fileStatus,
+  usage,
+  importReview,
+  rateMismatch = false,
+  latestPeriod,
+  floor,
 }: OverviewPanelProps) {
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
@@ -83,18 +102,146 @@ export default function OverviewPanel({
    * contract test pins that shape.
    */
   const unit = moneyPeriodUnit(costMode);
+  const verdict = buildVerdict(comparison, userPlan, days);
+  const headingDate = latestPeriod?.endDate ?? totals?.lastDate ?? null;
+  const observedAverageRate = React.useMemo(() => {
+    let kwh = 0;
+    let cost = 0;
+    for (const row of usage.processedData) {
+      kwh += row.usage_kwh;
+      cost += userPlan === 'TOU' ? row.costTOU : userPlan === 'Tiered' ? row.costTiered : row.costULO;
+    }
+    return kwh > 0 ? cost / kwh * 100 : null;
+  }, [usage.processedData, userPlan]);
+  const metricDeltas = React.useMemo(() => {
+    const months = new Map<string, { kwh: number; cost: number; days: Set<string> }>();
+    for (const row of usage.processedData) {
+      const key = row.dayStr.slice(0, 7);
+      const current = months.get(key) ?? { kwh: 0, cost: 0, days: new Set<string>() };
+      current.kwh += row.usage_kwh;
+      current.cost += userPlan === 'TOU' ? row.costTOU : userPlan === 'Tiered' ? row.costTiered : row.costULO;
+      current.days.add(row.dayStr);
+      months.set(key, current);
+    }
+    const keys = [...months.keys()].sort();
+    if (keys.length < 2) return null;
+    const current = months.get(keys.at(-1)!);
+    const previous = months.get(keys.at(-2)!);
+    if (!current || !previous || current.kwh <= 0 || previous.kwh <= 0) return null;
+    const [year, month] = keys.at(-1)!.split('-').map(Number);
+    const daysInCurrentMonth = new Date(year, month, 0).getDate();
+    return {
+      // A partial calendar month is not comparable to a whole previous one.
+      // Keep the rate delta, which is independently normalized per kWh.
+      usagePct: current.days.size === daysInCurrentMonth
+        ? (current.kwh - previous.kwh) / previous.kwh * 100
+        : null,
+      rateDelta: (current.cost / current.kwh - previous.cost / previous.kwh) * 100,
+    };
+  }, [usage.processedData, userPlan]);
 
   return (
-    <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="space-y-6 md:space-y-10" data-testid="tab-panel-overview">
-      {/* 1. THE ANSWER. First element, nothing above it but the tab strip. */}
-      <BestChoiceBanner comparison={comparison} userPlan={userPlan} days={days} />
+    <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className="order-2 space-y-5 md:space-y-7" data-testid="tab-panel-overview">
+      {totals && (
+        <header className="border-b border-edge-muted pb-3" data-testid="overview-period-heading">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight normal-case">
+            {headingDate ? fmtDate(new Date(headingDate + 'T00:00:00'), 'MMMM yyyy') : fmtDateLong(new Date(totals.lastDate + 'T00:00:00'))}
+          </h1>
+          <p className="quiet-overview-period-meta mt-1">
+            {latestPeriod
+              ? t('overview.billingPeriod', { period: latestPeriod.label })
+              : t('overview.wholeDataset', { start: fmtDay(totals.firstDate), end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="overview-context-pills">
+            <span className="quiet-context-pill">{t('overview.planPill', { plan: planLabel(userPlan) })}</span>
+            {floor && <span className="quiet-context-pill">{t('overview.floorPill', { cost: fmtMoney0(floor.annualCost) })}</span>}
+            <span className="quiet-context-pill">{t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}</span>
+            {latestPeriod?.estimated && <span className="quiet-context-pill">{t('overview.provisional')}</span>}
+            {fileStatus}
+          </div>
+        </header>
+      )}
+
+      {totals && (
+        <section aria-label={t('overview.keyFigures')} className="quiet-card quiet-overview-metrics" data-testid="overview-key-figures">
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.usageToDate')}</div>
+            <div className="quiet-overview-value tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
+            {metricDeltas?.usagePct !== null && metricDeltas?.usagePct !== undefined && <div className={`quiet-overview-meta mt-1 ${Math.abs(metricDeltas.usagePct) < 0.5 ? 'text-ink-3' : metricDeltas.usagePct < 0 ? 'text-good' : 'text-bad'}`}>{Math.abs(metricDeltas.usagePct) < 0.5 ? t('overview.deltaUnchanged') : t('overview.usageDelta', { percent: fmtNumber(Math.abs(metricDeltas.usagePct), 0), direction: metricDeltas.usagePct < 0 ? t('overview.lower') : t('overview.higher') })}</div>}
+          </div>
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.averageRate')}</div>
+            <div className="quiet-overview-value tabular-nums">{efficiency.allTime ? fmtCents(efficiency.allTime.cents, 1) : observedAverageRate !== null ? fmtCents(observedAverageRate, 1) : '—'}</div>
+            {metricDeltas && <div className={`quiet-overview-meta mt-1 ${Math.abs(metricDeltas.rateDelta) < 0.05 ? 'text-ink-3' : metricDeltas.rateDelta < 0 ? 'text-good' : 'text-bad'}`}>{Math.abs(metricDeltas.rateDelta) < 0.05 ? t('overview.deltaUnchanged') : t('overview.rateDelta', { rate: fmtCents(Math.abs(metricDeltas.rateDelta), 1), direction: metricDeltas.rateDelta < 0 ? t('overview.lower') : t('overview.higher') })}</div>}
+          </div>
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('projection.thisMonthBill')}</div>
+            <div className="quiet-overview-value tabular-nums">{projection.ready ? fmtMoney(projection.projectedCost) : '—'}</div>
+            <div className="quiet-overview-meta mt-1">{projection.ready ? t('overview.projectionMeasured', { covered: projection.monthDaysCovered, days: projection.daysInMonth }) : projection.gateNote}</div>
+          </div>
+          <div className="quiet-overview-metric">
+            <div className="quiet-overview-label">{t('overview.planCost')}</div>
+            <div className="quiet-overview-value tabular-nums">{verdict ? fmtMoney(verdict.currentCost) : '—'}</div>
+            {verdict && <div className="quiet-overview-meta mt-1">{t('overview.planDelta', { amount: fmtMoney(verdict.delta), plan: planLabel(verdict.best) })}</div>}
+          </div>
+        </section>
+      )}
+
+      <section className="quiet-bill-focus" aria-label={t('projection.thisMonthBill')} data-testid="overview-bill-focus">
+        <BillProjectionBanner projection={projection} floor={floor} />
+      </section>
+
+      <RateByMonth rows={usage.processedData} plan={userPlan} />
+
+      <section className="grid md:grid-cols-2 gap-4" aria-label={t('overview.planAndAttention')} data-testid="overview-plan-attention">
+        <div className="quiet-plan-summary p-4 md:p-5" data-testid="overview-plan-summary">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-base font-semibold">{t('overview.yourPlan')}</h2>
+            <span className="quiet-overview-label">{t('overview.current')}</span>
+          </div>
+          <dl
+            className="mt-4 space-y-2 text-sm"
+            data-testid="best-choice-banner"
+            data-best-plan={verdict?.best}
+            data-current-plan={userPlan}
+            data-already-best={String(verdict?.alreadyBest ?? false)}
+            data-window-days={verdict?.days}
+          >
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.plan')}</dt><dd className="font-semibold">{planLabel(userPlan)}</dd></div>
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.cheapestAlternative')}</dt><dd className="font-semibold">{verdict ? planLabel(verdict.best) : '—'}</dd></div>
+            <div className="flex justify-between gap-4 border-t border-edge-muted pt-2"><dt className="text-ink-2">{t('overview.potentialSaving')}</dt><dd className="font-semibold tabular-nums text-good">{verdict ? fmtMoney(verdict.delta) : '—'}</dd></div>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={onOpenPlans} className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.comparePlans')}</button>
+            <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.rateSchedule')}</a>
+          </div>
+        </div>
+
+        <div className="quiet-attention p-4 md:p-5" data-testid="overview-attention">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-base font-semibold">{t('overview.needsAttention')}</h2>
+            <span className="quiet-overview-label">{(rateMismatch ? 1 : 0) + (importReview ? 1 : 0)}</span>
+          </div>
+          {rateMismatch || importReview ? <ul className="divide-y divide-edge-muted">
+            {rateMismatch && <li className="py-3 first:pt-0">
+              <p className="text-sm font-medium">{t('staleness.title')}</p>
+              <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('staleness.editLink')}</a>
+            </li>}
+            {importReview && <li className="py-3 last:pb-0">
+              <p className="text-sm font-medium">{t('overview.importReviewBody')}</p>
+              <a href="/import" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('overview.reviewImports')}</a>
+            </li>}
+          </ul> : <p className="text-sm text-ink-3">{t('overview.noAttention')}</p>}
+        </div>
+      </section>
+
 
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
-        <div className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap gap-4 md:gap-6 items-center text-ink" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
-          <div className="bg-inv text-inv-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
-            <div className="text-[8px] md:text-[10px] text-accent-yellow">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
-            <div className="text-xl md:text-3xl italic font-black">{fmtKwh(totals.totalKwh, 0)}</div>
+        <div className="quiet-dataset-summary p-4 md:p-5 flex flex-wrap gap-4 md:gap-5 items-center" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
+          <div className="quiet-data-stat px-4 py-3">
+            <div className="quiet-overview-label">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+            <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
           {/* Wave S — the whole dataset as ONE price: what a kWh actually
@@ -106,7 +253,7 @@ export default function OverviewPanel({
           {efficiency.allTime && (
             <div
               data-testid="efficiency-strip"
-              className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge"
+              className="quiet-data-stat px-4 py-3"
             >
               <div className="text-[8px] md:text-[10px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
@@ -188,7 +335,7 @@ export default function OverviewPanel({
             role="group"
             aria-label={t('overview.costModeAria')}
             /* A printed report states one unit; the switch itself is chrome. */
-            className="no-print bg-hover p-1 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1"
+            className="quiet-toggle no-print p-1 flex gap-1"
           >
             {(['yr', 'day'] as const).map((mode) => (
               <button
@@ -222,13 +369,7 @@ export default function OverviewPanel({
                    near-white in dark and would sit at 1.85:1 / 2.76:1 on them.
                    text-accent-ink is #000 in both themes, which is what these
                    chips have always painted in light. */
-                className={`px-3 md:px-5 py-2 rounded-xl md:rounded-2xl border-4 border-edge ${
-                  p.id === totals.bestPlan
-                    ? 'bg-emerald-400 text-accent-ink'
-                    : p.id === totals.worstPlan
-                      ? 'bg-red-400 text-accent-ink'
-                      : 'bg-hover'
-                }`}
+                className="quiet-data-stat px-3 md:px-4 py-2"
               >
                 <div className="text-[8px] md:text-[10px]">{planLabel(p.id)}</div>
                 <div className="text-lg md:text-2xl italic font-black">
@@ -241,7 +382,7 @@ export default function OverviewPanel({
             ))}
           </div>
 
-          <div className="bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
+          <div className="quiet-data-stat px-4 py-3">
             <div className="text-[8px] md:text-[10px]">{t('overview.bestVsWorst')}</div>
             <div className="text-lg md:text-2xl italic font-black">
               {money(totals.planDelta)}
@@ -249,7 +390,7 @@ export default function OverviewPanel({
                 {unit}
               </span>
             </div>
-            <div className="text-[8px] md:text-[10px]">{totals.worstPlan} − {totals.bestPlan}</div>
+            <div className="text-[8px] md:text-[10px]">{planLabel(totals.worstPlan)} − {planLabel(totals.bestPlan)}</div>
           </div>
 
           {/* Wave H item 5 — "why is the chart empty at the end?" answered
@@ -260,10 +401,7 @@ export default function OverviewPanel({
             data-last-reading={totals.lastDate}
             data-age-days={freshness?.ageDays}
             data-stale={String(freshness?.stale ?? false)}
-            className={`px-3 md:px-4 py-2 rounded-xl md:rounded-2xl border-4 border-edge flex flex-col ${
-              /* amber-300 is a fixed slab: same ink rule as the chips above. */
-              freshness?.stale ? 'bg-amber-300 text-accent-ink' : 'bg-hover'
-            }`}
+            className="quiet-data-stat px-3 md:px-4 py-2 flex flex-col"
             title={
               freshness?.stale
                 ? t('overview.freshnessTitle', { relative: freshness.relative })
@@ -275,7 +413,7 @@ export default function OverviewPanel({
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
-                freshness?.stale ? 'text-accent-ink' : 'text-ink-3'
+                freshness?.stale ? 'text-ink' : 'text-ink-3'
               }`}
             >
               {freshness?.stale
@@ -305,10 +443,8 @@ export default function OverviewPanel({
       )}
 
       {/* 4. Which file / feed this is, and whether it is connected. */}
-      {fileStatus}
-
-      {/* 5. What this month is going to cost. */}
-      <BillProjectionBanner projection={projection} />
+      <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
+      <UsagePanel {...usage} embedded />
     </div>
   );
 }

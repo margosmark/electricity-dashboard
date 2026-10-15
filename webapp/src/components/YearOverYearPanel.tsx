@@ -168,9 +168,9 @@ export default function YearOverYearPanel({
                     // hover surface — under the 4.5 floor at 10px.
                     ? 'bg-hover text-ink'
                     : pct > 5
-                      ? 'bg-red-400 text-accent-ink'
+                      ? 'bg-bad-slab text-accent-ink'
                       : pct < -5
-                        ? 'bg-emerald-400 text-accent-ink'
+                        ? 'bg-good-slab text-accent-ink'
                         : 'bg-track text-ink';
                   return (
                     <div key={m} className="text-center">

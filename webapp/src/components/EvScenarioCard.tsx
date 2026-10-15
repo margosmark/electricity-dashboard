@@ -163,7 +163,7 @@ export default function EvScenarioCard({
         {scenario.source === 'detected' && (
           <span
             data-testid="ev-detect-note"
-            className="bg-emerald-400 text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]"
+            className="bg-good-slab text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]"
           >
             {t('ev.prefilled')}
           </span>
@@ -243,7 +243,7 @@ export default function EvScenarioCard({
                 key={plan}
                 data-testid={`ev-plan-${plan}`}
                 className={`border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-5 ${
-                  plan === 'ULO' ? 'bg-emerald-400 text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'
+                  plan === 'ULO' ? 'bg-good-slab text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'
                 }`}
               >
                 <div className="text-[10px] md:text-xs font-black uppercase">{planLabel(plan)}</div>
@@ -274,7 +274,7 @@ export default function EvScenarioCard({
 
           <div
             data-testid="ev-headline"
-            className="bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
+            className="bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
           >
             {t('ev.headlineLead')}{' '}
             <span className="italic">{fmtMoney(scenario.prices.ULO.perCharge)}</span> {t('ev.vs')}{' '}
@@ -289,7 +289,7 @@ export default function EvScenarioCard({
           {cm ? (
             <div
               data-testid="ev-charge-move"
-              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-100"
+              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-slab-pale"
             >
               <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
                 <span className="flex items-center gap-2">
@@ -302,7 +302,7 @@ export default function EvScenarioCard({
               {cm.alreadyOvernight && (
                 <div
                   data-testid="ev-already-overnight"
-                  className="bg-emerald-300 text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase"
+                  className="bg-good-slab-soft text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase"
                 >
                   {t('ev.alreadyOptimal')}
                 </div>
@@ -376,7 +376,7 @@ export default function EvScenarioCard({
           ) : (
             <div
               data-testid="ev-charge-move-empty"
-              className="border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-100 text-[10px] md:text-xs font-bold normal-case text-accent-ink-2"
+              className="border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-slab-pale text-[10px] md:text-xs font-bold normal-case text-accent-ink-2"
             >
               {t('ev.answerLead')} <span className="font-black">{t('ev.hourQuestion')}</span> {t('ev.priceAtHour')} {planLabel(plan)} {t('ev.againstMoving')}
             </div>
@@ -436,7 +436,7 @@ export default function EvScenarioCard({
           {exposure && (
             <div
               data-testid="ev-peak-exposure"
-              className="bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+              className="bg-bad-slab text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
             >
               <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
                 <TriangleAlert size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
@@ -477,7 +477,7 @@ export default function EvScenarioCard({
       {!scenario.ready && exposure && (
         <div
           data-testid="ev-peak-exposure"
-          className="mt-4 bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+          className="mt-4 bg-bad-slab text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
         >
           <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
             <Moon size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}

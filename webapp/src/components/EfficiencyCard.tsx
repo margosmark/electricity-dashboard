@@ -115,8 +115,8 @@ const SEASON_FILL: Record<Season, string> = {
 };
 
 const CHIP_CLASS: Record<TrendVerdict, string> = {
-  improving: 'bg-emerald-400 text-accent-ink',
-  worsening: 'bg-red-400 text-accent-ink',
+  improving: 'bg-good-slab text-accent-ink',
+  worsening: 'bg-bad-slab text-accent-ink',
   stable: 'bg-track',
 };
 
@@ -409,7 +409,7 @@ function Chart({
           cx={x(points.length - 1)}
           cy={y(last.cents)}
           r={6}
-          fill="#facc15"
+          fill="var(--chart-pace)"
           stroke="var(--ink)"
           strokeWidth={3}
         />

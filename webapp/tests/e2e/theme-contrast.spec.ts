@@ -43,7 +43,7 @@ import { test, expect, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import { seedMarkShaped, seedMarkShapedWithTemps } from './mark-seed';
 
-const TABS = ['overview', 'usage', 'plans', 'money'] as const;
+const TABS = ['overview', 'plans', 'money'] as const;
 
 type Finding = {
   ratio: number;
@@ -352,7 +352,8 @@ const PANEL_ROOTS = [
   'efficiency-card',
   'efficiency-strip',
   'trend-panel',
-  'active-plan-chip',
+  // The tabbed shell exposes plan identity through its plan switcher and
+  // BestChoiceChip; ActivePlanChip is a unit-tested standalone legacy widget.
   'chart-area',
   'example-data-banner',
   'rate-assumptions-banner',
@@ -468,7 +469,7 @@ test.describe('dark mode contrast walk (spec §2 #10)', () => {
     ).toEqual([]);
   });
 
-  test('LIGHT: nothing paints under AA on any of the four tabs — the ledger is empty', async ({
+  test('LIGHT: nothing paints under AA on any tab — the ledger is empty', async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -542,7 +543,7 @@ async function loadExampleLedger(page: Page, theme: 'light' | 'dark') {
 
 test.describe('example-ledger contrast walk (the state no gate measured)', () => {
   for (const theme of ['dark', 'light'] as const) {
-    test(`${theme.toUpperCase()}: the app's own example ledger clears AA on all four tabs`, async ({
+    test(`${theme.toUpperCase()}: the app's own example ledger clears AA on every tab`, async ({
       page,
     }) => {
       test.setTimeout(180_000);

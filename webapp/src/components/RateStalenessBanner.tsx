@@ -29,7 +29,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
     <div
       role="alert"
       data-testid="rate-staleness-banner"
-      className="relative z-[100] bg-orange-400 p-4 md:p-6 rounded-xl md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-accent-ink font-black uppercase space-y-3"
+      className="relative z-[100] bg-warn-slab p-4 md:p-6 rounded-xl md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-accent-ink font-black uppercase space-y-3"
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-4">
         <AlertTriangle size={22} strokeWidth={4} className="shrink-0" />
@@ -83,7 +83,7 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
         target="_blank"
         rel="noopener noreferrer"
         data-testid="banner-edit-link"
-        className="inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-info-slab hover:text-on-dark transition-colors"
       >
         {t('staleness.editLink')}
         <ExternalLink size={14} strokeWidth={4} />
