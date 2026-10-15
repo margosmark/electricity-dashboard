@@ -16,9 +16,9 @@
 import React from 'react';
 import { dataFreshness } from '@/lib/freshness';
 import {
-  fmtCents, fmtDate, fmtDateLong, fmtDay, fmtKwh, fmtMoney, fmtNumber, moneyPeriodUnit, planLabel, useTranslation,
+  fmtCents, fmtDate, fmtDateLong, fmtDay, fmtKwh, fmtMoney, fmtMoney0, fmtNumber, moneyPeriodUnit, planLabel, useTranslation,
 } from '@/i18n';
-import type { FullDataTotals } from '@/lib/energy';
+import type { AlwaysOnFloor, FullDataTotals } from '@/lib/energy';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
@@ -58,6 +58,8 @@ export type OverviewPanelProps = {
   rateMismatch?: boolean;
   /** Latest file-backed billing window, never a mockup month. */
   latestPeriod: AxisPeriod | null;
+  /** Source-derived always-on baseline for the same data window. */
+  floor?: AlwaysOnFloor | null;
 };
 
 export default function OverviewPanel({
@@ -77,6 +79,7 @@ export default function OverviewPanel({
   importReview,
   rateMismatch = false,
   latestPeriod,
+  floor,
 }: OverviewPanelProps) {
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
@@ -111,12 +114,13 @@ export default function OverviewPanel({
     return kwh > 0 ? cost / kwh * 100 : null;
   }, [usage.processedData, userPlan]);
   const metricDeltas = React.useMemo(() => {
-    const months = new Map<string, { kwh: number; cost: number }>();
+    const months = new Map<string, { kwh: number; cost: number; days: Set<string> }>();
     for (const row of usage.processedData) {
       const key = row.dayStr.slice(0, 7);
-      const current = months.get(key) ?? { kwh: 0, cost: 0 };
+      const current = months.get(key) ?? { kwh: 0, cost: 0, days: new Set<string>() };
       current.kwh += row.usage_kwh;
       current.cost += userPlan === 'TOU' ? row.costTOU : userPlan === 'Tiered' ? row.costTiered : row.costULO;
+      current.days.add(row.dayStr);
       months.set(key, current);
     }
     const keys = [...months.keys()].sort();
@@ -124,8 +128,14 @@ export default function OverviewPanel({
     const current = months.get(keys.at(-1)!);
     const previous = months.get(keys.at(-2)!);
     if (!current || !previous || current.kwh <= 0 || previous.kwh <= 0) return null;
+    const [year, month] = keys.at(-1)!.split('-').map(Number);
+    const daysInCurrentMonth = new Date(year, month, 0).getDate();
     return {
-      usagePct: (current.kwh - previous.kwh) / previous.kwh * 100,
+      // A partial calendar month is not comparable to a whole previous one.
+      // Keep the rate delta, which is independently normalized per kWh.
+      usagePct: current.days.size === daysInCurrentMonth
+        ? (current.kwh - previous.kwh) / previous.kwh * 100
+        : null,
       rateDelta: (current.cost / current.kwh - previous.cost / previous.kwh) * 100,
     };
   }, [usage.processedData, userPlan]);
@@ -137,12 +147,14 @@ export default function OverviewPanel({
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight normal-case">
             {headingDate ? fmtDate(new Date(headingDate + 'T00:00:00'), 'MMMM yyyy') : fmtDateLong(new Date(totals.lastDate + 'T00:00:00'))}
           </h1>
-          <p className="mt-1 text-xs md:text-sm font-normal normal-case text-ink-3">
+          <p className="quiet-overview-period-meta mt-1">
             {latestPeriod
               ? t('overview.billingPeriod', { period: latestPeriod.label })
               : t('overview.wholeDataset', { start: fmtDay(totals.firstDate), end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="overview-context-pills">
+            <span className="quiet-context-pill">{t('overview.planPill', { plan: planLabel(userPlan) })}</span>
+            {floor && <span className="quiet-context-pill">{t('overview.floorPill', { cost: fmtMoney0(floor.annualCost) })}</span>}
             <span className="quiet-context-pill">{t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}</span>
             {latestPeriod?.estimated && <span className="quiet-context-pill">{t('overview.provisional')}</span>}
             {fileStatus}
@@ -155,12 +167,12 @@ export default function OverviewPanel({
           <div className="quiet-overview-metric">
             <div className="quiet-overview-label">{t('overview.usageToDate')}</div>
             <div className="quiet-overview-value tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
-            {metricDeltas && <div className={`quiet-overview-meta mt-1 ${metricDeltas.usagePct <= 0 ? 'text-good' : 'text-bad'}`}>{t('overview.usageDelta', { percent: fmtNumber(Math.abs(metricDeltas.usagePct), 0), direction: metricDeltas.usagePct <= 0 ? t('overview.lower') : t('overview.higher') })}</div>}
+            {metricDeltas?.usagePct !== null && metricDeltas?.usagePct !== undefined && <div className={`quiet-overview-meta mt-1 ${Math.abs(metricDeltas.usagePct) < 0.5 ? 'text-ink-3' : metricDeltas.usagePct < 0 ? 'text-good' : 'text-bad'}`}>{Math.abs(metricDeltas.usagePct) < 0.5 ? t('overview.deltaUnchanged') : t('overview.usageDelta', { percent: fmtNumber(Math.abs(metricDeltas.usagePct), 0), direction: metricDeltas.usagePct < 0 ? t('overview.lower') : t('overview.higher') })}</div>}
           </div>
           <div className="quiet-overview-metric">
             <div className="quiet-overview-label">{t('overview.averageRate')}</div>
             <div className="quiet-overview-value tabular-nums">{efficiency.allTime ? fmtCents(efficiency.allTime.cents, 1) : observedAverageRate !== null ? fmtCents(observedAverageRate, 1) : '—'}</div>
-            {metricDeltas && <div className={`quiet-overview-meta mt-1 ${metricDeltas.rateDelta <= 0 ? 'text-good' : 'text-bad'}`}>{t('overview.rateDelta', { rate: fmtCents(Math.abs(metricDeltas.rateDelta), 1), direction: metricDeltas.rateDelta <= 0 ? t('overview.lower') : t('overview.higher') })}</div>}
+            {metricDeltas && <div className={`quiet-overview-meta mt-1 ${Math.abs(metricDeltas.rateDelta) < 0.05 ? 'text-ink-3' : metricDeltas.rateDelta < 0 ? 'text-good' : 'text-bad'}`}>{Math.abs(metricDeltas.rateDelta) < 0.05 ? t('overview.deltaUnchanged') : t('overview.rateDelta', { rate: fmtCents(Math.abs(metricDeltas.rateDelta), 1), direction: metricDeltas.rateDelta < 0 ? t('overview.lower') : t('overview.higher') })}</div>}
           </div>
           <div className="quiet-overview-metric">
             <div className="quiet-overview-label">{t('projection.thisMonthBill')}</div>
@@ -176,7 +188,7 @@ export default function OverviewPanel({
       )}
 
       <section className="quiet-bill-focus" aria-label={t('projection.thisMonthBill')} data-testid="overview-bill-focus">
-        <BillProjectionBanner projection={projection} />
+        <BillProjectionBanner projection={projection} floor={floor} />
       </section>
 
       <RateByMonth rows={usage.processedData} plan={userPlan} />

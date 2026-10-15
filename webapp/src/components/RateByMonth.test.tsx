@@ -16,6 +16,7 @@ describe('RateByMonth', () => {
     expect(bars[0]).toHaveAttribute('aria-label', expect.stringContaining('12.0'));
     expect(screen.getByTestId('rate-chart-svg')).toHaveTextContent('0');
     expect(screen.getByTestId('rate-chart-svg')).toHaveTextContent('14');
+    expect(screen.getByTestId('rate-chart-average-line')).toHaveAttribute('stroke-dasharray', '5 4');
     fireEvent.focus(bars[0]);
     expect(screen.getByTestId('rate-chart-readout')).toHaveTextContent('JAN 26');
     fireEvent.click(screen.getByText(/View accessible data table/i));

@@ -13,7 +13,9 @@ fs.mkdirSync(OUT, { recursive: true });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(BASE, { waitUntil: 'networkidle' });
+  // The dashboard can hold its own long-lived browser requests. The page's
+  // interactive readiness is the tab navigation below, not network idleness.
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('tab-nav').waitFor();
   if (!(await page.getByTestId('upload-modal').isVisible().catch(() => false))) {
     await page.getByRole('button', { name: 'Upload XML' }).click();

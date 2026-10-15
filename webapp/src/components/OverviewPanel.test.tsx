@@ -86,4 +86,37 @@ describe('Overview actionable attention items', () => {
       'https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts',
     );
   });
+
+  it('suppresses the usage delta for a partial current month and labels a zero rate delta neutrally', () => {
+    const monthlyRows = [
+      ...Array.from({ length: 30 }, (_, index) => {
+        const day = String(index + 1).padStart(2, '0');
+        return { dayStr: `2026-09-${day}`, dateObj: new Date(`2026-09-${day}T12:00:00`), usage_kwh: 10, costTOU: 1, costTiered: 1, costULO: 1 };
+      }),
+      ...Array.from({ length: 6 }, (_, index) => {
+        const day = String(index + 1).padStart(2, '0');
+        return { dayStr: `2026-10-${day}`, dateObj: new Date(`2026-10-${day}T12:00:00`), usage_kwh: 10, costTOU: 1, costTiered: 1, costULO: 1 };
+      }),
+    ] as typeof usage.processedData;
+    render(
+      <OverviewPanel
+        comparison={null}
+        userPlan="TOU"
+        days={36}
+        totals={{ firstDate: '2026-09-01', lastDate: '2026-10-06', totalKwh: 360, costTOU: 36, costTiered: 36, costULO: 36, bestPlan: 'TOU', worstPlan: 'ULO', planDelta: 0 }}
+        costMode="yr"
+        setCostMode={vi.fn()}
+        reframe=""
+        projection={projection}
+        efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
+        onOpenMoney={vi.fn()}
+        onOpenPlans={vi.fn()}
+        importReview={false}
+        latestPeriod={null}
+        usage={{ ...usage, processedData: monthlyRows }}
+      />,
+    );
+    expect(screen.queryByText(/lower than last month/i)).not.toBeInTheDocument();
+    expect(screen.getByText('No material change from last month')).toBeInTheDocument();
+  });
 });

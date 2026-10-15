@@ -10,9 +10,10 @@
 
 import { CalendarDays, Hourglass } from 'lucide-react';
 import type { BillProjection } from '@/lib/billProjection';
+import type { AlwaysOnFloor } from '@/lib/energy';
 import { fmtKwh, fmtMoney, useTranslation } from '@/i18n';
 
-export default function BillProjectionBanner({ projection }: { projection: BillProjection }) {
+export default function BillProjectionBanner({ projection, floor }: { projection: BillProjection; floor?: AlwaysOnFloor | null }) {
   // Wave U — `t` also re-renders this banner on a locale switch.
   const { t } = useTranslation();
   if (!projection.ready) {
@@ -41,8 +42,11 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
         <CalendarDays size={20} strokeWidth={2} className="text-ink-2" />
         <div>
           <div className="quiet-overview-label">{t('projection.projected', { month: projection.monthLabel })}</div>
-          <div data-testid="bill-projection-amount" className="quiet-projection-amount tabular-nums">
-            {fmtMoney(projection.projectedCost)}
+          <div className="flex flex-wrap items-end gap-2">
+            <div data-testid="bill-projection-amount" className="quiet-projection-amount tabular-nums">
+              {fmtMoney(projection.projectedCost)}
+            </div>
+            <span data-testid="bill-projection-provisional" className="quiet-projection-provisional">{t('overview.provisional')}</span>
           </div>
         </div>
       </div>
@@ -65,6 +69,14 @@ export default function BillProjectionBanner({ projection }: { projection: BillP
           {projection.monthDaysCovered}/{projection.daysInMonth}
         </div>
       </div>
+
+      {floor && <div className="quiet-projection-stat px-3 md:px-4 py-2" data-testid="bill-projection-always-on">
+        <div className="quiet-overview-label">{t('projection.alwaysOnLoad')}</div>
+        <div className="mt-1 text-lg md:text-xl font-semibold tabular-nums">
+          {fmtKwh(floor.kwhPerDay, 1)}
+          <span className="text-xs font-medium ml-1 text-ink-3">{t('projection.perDay')}</span>
+        </div>
+      </div>}
 
       {/* The method caption remains explicit without competing with the amount. */}
       <p className="text-xs text-ink-2 basis-full md:basis-auto max-w-2xl">

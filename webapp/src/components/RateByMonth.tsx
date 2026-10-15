@@ -58,7 +58,7 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
       <div className="flex items-center gap-2 mb-2 text-xs font-normal normal-case text-ink-2">
         <span className="inline-block w-2.5 h-2.5 rounded-sm bg-accent" aria-hidden="true" />
         <span>{t('rateChart.rateLegend')}</span>
-        {rateAverage12 !== null && <span className="text-ink-3">{t('rateChart.twelveMonthAverage', { rate: fmtCents(rateAverage12, 1) })}</span>}
+        {rateAverage12 !== null && <><span className="inline-block w-4 border-t border-dashed border-ink-2" aria-hidden="true" /><span className="text-ink-3">{t('rateChart.twelveMonthAverage', { rate: fmtCents(rateAverage12, 1) })}</span></>}
         <span role="status" aria-live="polite" className="ml-auto font-medium text-ink tabular-nums" data-testid="rate-chart-readout">
           {selected ? `${selected.label} · ${fmtCents(selected.rate, 1)}${selected.key === currentMonth ? ` · ${t('rateChart.current')}` : ''}` : t('rateChart.empty')}
         </span>
@@ -74,6 +74,16 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
                 <text x="48" y={y + 4} textAnchor="end" className="fill-current text-[11px]">{value}</text>
               </g>;
             })}
+            {rateAverage12 !== null && <line
+              data-testid="rate-chart-average-line"
+              x1={plot.x}
+              x2={plot.x + plot.width}
+              y1={plot.y + plot.height - Math.min(maxRate, rateAverage12) / maxRate * plot.height}
+              y2={plot.y + plot.height - Math.min(maxRate, rateAverage12) / maxRate * plot.height}
+              stroke="var(--ink-2)"
+              strokeWidth="1.5"
+              strokeDasharray="5 4"
+            />}
             {data.map((point, index) => {
               const slot = plot.width / data.length;
               const x = plot.x + index * slot + (slot - barWidth) / 2;

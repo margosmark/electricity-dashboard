@@ -801,6 +801,7 @@ export default function Dashboard() {
           onOpenPlans={() => setActiveTab('plans')}
           rateMismatch={Boolean(staleness.stale)}
           latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
+          floor={floor}
           usage={{
             staleness, anomalies, heatmapData, processedData, temps,
             zoomLevel, zoomTarget, goBack, navigatePeriod,

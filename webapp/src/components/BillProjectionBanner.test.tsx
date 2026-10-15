@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BillProjectionBanner from './BillProjectionBanner';
 import { projectMonthBill, MIN_DAYS_FOR_PROJECTION } from '@/lib/billProjection';
-import { processRawData, type DataPoint, type ProcessedPoint, type RateSet } from '@/lib/energy';
+import { processRawData, type AlwaysOnFloor, type DataPoint, type ProcessedPoint, type RateSet } from '@/lib/energy';
 
 const RATES: RateSet = {
   effectiveDate: '2025-11-01',
@@ -29,7 +29,8 @@ describe('BillProjectionBanner', () => {
     const projection = projectMonthBill(hourlyFrom(oct(1), 10, 1), 'Tiered', oct(10));
     expect(projection.ready).toBe(true);
 
-    render(<BillProjectionBanner projection={projection} />);
+    const floor = { kwhPerDay: 1.2 } as AlwaysOnFloor;
+    render(<BillProjectionBanner projection={projection} floor={floor} />);
 
     expect(screen.getByTestId('bill-projection')).toHaveAttribute('data-state', 'ready');
     // 240 kWh measured over 10 covered days: 197.37 kWh at tier 1 (12¢) + 42.63
@@ -40,6 +41,9 @@ describe('BillProjectionBanner', () => {
     expect(screen.getByText('Month to date')).toBeInTheDocument();
     expect(screen.getByText(/\$29\.74/)).toBeInTheDocument();
     expect(screen.getByText('10/31')).toBeInTheDocument();
+    expect(screen.getByTestId('bill-projection-provisional')).toHaveTextContent('Provisional');
+    expect(screen.getByTestId('bill-projection-always-on')).toHaveTextContent('Always-on load');
+    expect(screen.getByTestId('bill-projection-always-on')).toHaveTextContent('1.2 kWh/day');
     expect(screen.getByText(/Commodity cost only/)).toBeInTheDocument();
   });
 
