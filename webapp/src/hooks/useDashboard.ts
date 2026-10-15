@@ -35,7 +35,9 @@ import {
 import type { SeriesNote } from "@/lib/greenbutton/series";
 // A document-level refusal names the number it judged (greenbutton/limits.ts),
 // so its sentence is shown as-is instead of a generic "unparseable".
-import { isGreenButtonRefusal } from "@/lib/greenbutton/limits";
+// One implementation of "what the app says when a document will not
+// import" — shared with /import and the upload modal.
+import { recoveryMessage } from "@/lib/greenbutton/recovery";
 import {
   buildBackupDocument, serializeBackup, parseBackup, backupFilename, storageValuesFromBackup,
   EXAMPLE_DATA_KEY,
@@ -615,11 +617,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     try {
       feed = parseGreenButtonFeed(xml);
     } catch (e) {
-      // A refusal (over budget, or a bill figure no bill can hold) carries its
-      // own translated sentence — the toolbar shows that instead of guessing.
-      return isGreenButtonRefusal(e)
-        ? { ok: false, code: "unparseable", detail: e.detail }
-        : { ok: false, code: "unparseable" };
+      // ONE conversion, shared with `/import` and the upload modal: a refusal
+      // (over budget, a bill figure no bill can hold) shows its own sentence
+      // with the numbers it judged, everything else is explained from the
+      // document itself. Without a `detail` this outcome fell through to
+      // describeGbError's default branch, which ECHOES its code — the toolbar
+      // showed the bare word "unparseable" where a recovery message belongs
+      // (greenbutton/recovery.ts).
+      return {
+        ok: false,
+        code: "unparseable",
+        detail: recoveryMessage({ text: xml, error: e }).detail,
+      };
     }
     const groups = feed.groups;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
@@ -1048,31 +1057,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           try {
             feed = parseGreenButtonFeed(text);
           } catch (e) {
-            // A document-level refusal already carries its own headline,
-            // reason and hints (greenbutton/limits.ts) — showing it as itself
-            // is the one thing better than explaining the raw text.
-            if (isGreenButtonRefusal(e)) {
-              reject({
-                ok: false,
-                headline: e.headline,
-                detail: e.detail,
-                hints: e.hints,
-              } satisfies ParseDiagnostic);
-              return;
-            }
-            // Security refusals (external entities) and malformed markup land
-            // here: explain the document instead of repeating the exception.
-            const diag = diagnoseGreenButtonDocument(text, 0);
-            reject(
-              diag.ok
-                ? ({
-                    ok: false,
-                    headline: t('upload.couldNotRead', { name: file.name }),
-                    detail: String((e as Error)?.message ?? e),
-                    hints: [t('upload.redownloadHint')],
-                  } satisfies ParseDiagnostic)
-                : diag,
-            );
+            // ONE conversion, shared with `/import` and the sync toolbar
+            // (greenbutton/recovery.ts): a document-level refusal shows its
+            // own headline, reason and hints; security refusals and malformed
+            // markup are explained from the raw text; and the exception's own
+            // message — parser prose in English — is never what the reader
+            // gets. `fileName` keeps the modal's "Could not read <name>."
+            // headline for the case the diagnosis cannot explain.
+            reject(recoveryMessage({ text, error: e, fileName: file.name }));
             return;
           }
           const groups = feed.groups;

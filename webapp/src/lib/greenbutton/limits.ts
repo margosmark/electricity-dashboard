@@ -229,7 +229,17 @@ export function measureDocument(text: string): DocumentStats {
     }
     if (marker === '!' || marker === '?') {
       const end = endOfMarkup(text, lt);
-      if (end < 0) break;
+      // `endOfMarkup` adds 1 to `endOfTag`, so an UNTERMINATED `<?`/`<!`
+      // (a download cut off right after `<?xml`, the most common truncation
+      // there is) came back as 0 instead of -1 — which did not match `end < 0`
+      // and left `i` pinned at the same `<` forever: `measureDocument` spun
+      // at 100% CPU on a six-byte file and the import never returned
+      // (t_9dfd150b, found by the hostile-XML corpus). Nothing is gained by
+      // scanning past a construct that never closes: stop, and let the
+      // validator name the truncation. Byte and depth bounds still hold —
+      // bytes are exact from `text.length`, and `maxNestedTags` is the
+      // parser's own backstop behind this estimate.
+      if (end <= lt) break;
       i = end;
       continue;
     }

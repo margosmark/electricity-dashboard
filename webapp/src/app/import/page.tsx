@@ -32,7 +32,7 @@ import {
   type DataPoint,
   type UsagePointGroup,
 } from '@/lib/energy';
-import { diagnoseGreenButtonDocument, type ParseDiagnostic } from '@/lib/parseDiagnostic';
+import { type ParseDiagnostic } from '@/lib/parseDiagnostic';
 import UsagePointPicker from '@/components/UsagePointPicker';
 import { EXAMPLE_DATA_KEY } from '@/hooks/useDashboard';
 import {
@@ -41,7 +41,9 @@ import {
   planImport,
   type ImportPlan,
 } from '@/lib/importPlan';
-import { isGreenButtonRefusal } from '@/lib/greenbutton/limits';
+// One implementation of "what the app says when a document will not import"
+// — shared with the upload modal and the sync toolbar (greenbutton/recovery.ts).
+import { recoveryMessage } from '@/lib/greenbutton/recovery';
 // The readings live under the versioned key; storage.ts owns the read, the
 // legacy-key migration and the write (the dashboard reads exactly this).
 import { loadEnergyData, saveEnergyData } from '@/lib/storage';
@@ -134,17 +136,9 @@ function ImportFlow() {
         const parsed = parseGreenButtonUsagePoints(text);
         const total = parsed.reduce((n, g) => n + g.readings.length, 0);
         if (total === 0) {
-          const diag = diagnoseGreenButtonDocument(text, 0);
-          setIssue(
-            diag.ok
-              ? {
-                  ok: false,
-                  headline: t('upload.noReadingsHeadline'),
-                  detail: t('upload.noReadingsDetail'),
-                  hints: [t('upload.noReadingsHint')],
-                }
-              : diag,
-          );
+          // Nothing to import — and the diagnosis says WHY (no entries, no
+          // timestamps, not Green Button data at all), not just "no readings".
+          setIssue(recoveryMessage({ text, readings: 0 }));
           return;
         }
         if (parsed.length > 1) {
@@ -154,31 +148,17 @@ function ImportFlow() {
         }
         reviewOrImport(parsed[0].readings);
       } catch (e) {
-        // A refusal is not a mystery: it names the number it judged (see
-        // greenbutton/limits.ts), so it is shown as itself. The raw-text
-        // diagnostic below stays the fallback for everything else — a
-        // refusal over a poisoned bill figure would otherwise be reported as
-        // "produced no readable rows", which names the wrong problem.
-        if (isGreenButtonRefusal(e)) {
-          setIssue({ ok: false, headline: e.headline, detail: e.detail, hints: e.hints });
-          return;
-        }
-        const diag = diagnoseGreenButtonDocument(text, 0);
-        setIssue(
-          diag.ok
-            ? {
-                ok: false,
-                headline: t('upload.couldNotReadPlain'),
-                detail: String((e as Error)?.message ?? e),
-                hints: [t('upload.redownloadHint')],
-              }
-            : diag,
-        );
+        // ONE conversion for every failure: a refusal shows its own copy
+        // (it names the number it judged), everything else is explained from
+        // the raw text, and the exception's own message is never shown — it
+        // is parser prose written for a developer, in English, in both
+        // locales (greenbutton/recovery.ts).
+        setIssue(recoveryMessage({ text, error: e }));
       } finally {
         setParsing(false);
       }
     },
-    [reviewOrImport, t],
+    [reviewOrImport],
   );
 
   /** Raw XML or base64 in; the parser takes it from there. */
