@@ -598,11 +598,11 @@ export default function Dashboard() {
              {/* Why the last upload loaded nothing: names what was missing,
                  instead of a bare "invalid XML" (Wave G item 4). */}
              {parseIssue && !parseIssue.ok && (
-               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-edge bg-bad-soft rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
-                 <div className="text-sm md:text-lg font-black uppercase text-bad mb-2">{parseIssue.headline}</div>
-                 <p className="text-[11px] md:text-sm font-bold text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
+               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border border-edge-muted bg-bad-soft rounded-lg p-4 md:p-5 text-left">
+                 <div className="text-sm md:text-base font-semibold uppercase tracking-[0.08em] text-bad mb-2">{parseIssue.headline}</div>
+                 <p className="text-[11px] md:text-sm font-medium text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
                  {parseIssue.hints.length > 0 && (
-                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-bold text-ink-2 normal-case">
+                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-medium text-ink-2 normal-case">
                      {parseIssue.hints.map((h) => <li key={h}>{h}</li>)}
                    </ul>
                  )}

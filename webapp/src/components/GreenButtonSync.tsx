@@ -76,12 +76,12 @@ export function GreenButtonSync({
         <div
           data-testid="gb-unconfigured"
           data-gb-state="unconfigured"
-          className="mt-4 md:mt-6 border-2 border-dashed border-edge/40 rounded-xl md:rounded-2xl p-4 text-left"
+          className="mt-4 md:mt-6 border border-dashed border-edge-muted rounded-lg p-4 text-left bg-inset"
         >
-          <div className="text-[11px] md:text-xs font-black uppercase text-ink-3">
+          <div className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">
             {t("gb.liveSyncTitle")}
           </div>
-          <p className="mt-1 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
+          <p className="mt-1 text-[10px] md:text-xs font-medium text-ink-3 normal-case">
             {t("gb.notSwitchedOn")}
           </p>
         </div>

@@ -1,0 +1,379 @@
+{
+  "card": "t_69a51490",
+  "subject": "fresh Link Data upload modal (empty localStorage)",
+  "generatedAt": "2026-10-15T17:44:25.764Z",
+  "baseUrl": "http://127.0.0.1:3210/",
+  "repro": {
+    "install": "cd webapp && npm ci",
+    "build": "cd webapp && npm run build",
+    "serve": "cd webapp && npx next start -p 3210 &",
+    "run": "cd webapp && node evidence/link-data-verify.cjs",
+    "env": {
+      "QUIET_METER_BASE_URL": "http://127.0.0.1:3210/",
+      "QUIET_METER_CHROMIUM": "/usr/bin/chromium (default)"
+    }
+  },
+  "states": [
+    {
+      "viewport": "1440x900",
+      "theme": "light",
+      "screenshot": "link-data-1440-light.png",
+      "dialogRole": "dialog",
+      "dialogAriaModal": "true",
+      "dialogLabel": "Link your Green Button data",
+      "heading": "Link Data",
+      "documentViewportWidth": 1440,
+      "documentScrollWidth": 1440,
+      "documentOverflow": 0,
+      "dialogOverflow": 0,
+      "cardBox": {
+        "width": 672,
+        "height": 603
+      },
+      "cardSurface": {
+        "background": "rgb(255, 255, 255)",
+        "borderWidth": "1px",
+        "borderColor": "rgb(229, 229, 224)",
+        "borderRadius": "8px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "hasVisibleShadow": false,
+        "classNames": "my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none"
+      },
+      "controls": {
+        "xmlPresent": true,
+        "xmlAccept": ".xml",
+        "xmlMultiple": true,
+        "xmlLabel": "Upload Green Button XML",
+        "xmlHitArea": true,
+        "xmlDisabled": false,
+        "jsonPresent": true,
+        "jsonAccept": "application/json,.json",
+        "jsonLabel": "Import JSON backup",
+        "jsonFaceVisible": true,
+        "exampleVisible": true,
+        "exampleEnabled": true,
+        "exampleText": "Try with example data",
+        "cancelVisible": true,
+        "greenButtonSlot": true
+      },
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "pageErrors": [],
+      "failedResponses": [
+        {
+          "status": 404,
+          "url": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "expectedNoise": {
+        "reason": "GET /account/session 404 = account feature flag off in a local build with no ACCT_* env (documented in src/app/account/session/route.ts)",
+        "console": [
+          {
+            "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "source": "http://127.0.0.1:3210/account/session"
+          }
+        ],
+        "responses": [
+          {
+            "status": 404,
+            "url": "http://127.0.0.1:3210/account/session"
+          }
+        ]
+      },
+      "unexpected": {
+        "console": [],
+        "responses": [],
+        "pageErrors": []
+      },
+      "checks": {
+        "dialogLabelled": true,
+        "noHorizontalOverflow": true,
+        "xmlWired": true,
+        "jsonWired": true,
+        "jsonQuietSecondary": true,
+        "exampleUsable": true,
+        "cancelUsable": true,
+        "greenButtonSlot": true,
+        "quietSurface": true,
+        "cleanConsole": true,
+        "escapeCloses": true
+      },
+      "ok": true
+    },
+    {
+      "viewport": "1440x900",
+      "theme": "dark",
+      "screenshot": "link-data-1440-dark.png",
+      "dialogRole": "dialog",
+      "dialogAriaModal": "true",
+      "dialogLabel": "Link your Green Button data",
+      "heading": "Link Data",
+      "documentViewportWidth": 1440,
+      "documentScrollWidth": 1440,
+      "documentOverflow": 0,
+      "dialogOverflow": 0,
+      "cardBox": {
+        "width": 672,
+        "height": 603
+      },
+      "cardSurface": {
+        "background": "rgb(17, 20, 26)",
+        "borderWidth": "1px",
+        "borderColor": "rgb(36, 42, 53)",
+        "borderRadius": "8px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "hasVisibleShadow": false,
+        "classNames": "my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none"
+      },
+      "controls": {
+        "xmlPresent": true,
+        "xmlAccept": ".xml",
+        "xmlMultiple": true,
+        "xmlLabel": "Upload Green Button XML",
+        "xmlHitArea": true,
+        "xmlDisabled": false,
+        "jsonPresent": true,
+        "jsonAccept": "application/json,.json",
+        "jsonLabel": "Import JSON backup",
+        "jsonFaceVisible": true,
+        "exampleVisible": true,
+        "exampleEnabled": true,
+        "exampleText": "Try with example data",
+        "cancelVisible": true,
+        "greenButtonSlot": true
+      },
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "pageErrors": [],
+      "failedResponses": [
+        {
+          "status": 404,
+          "url": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "expectedNoise": {
+        "reason": "GET /account/session 404 = account feature flag off in a local build with no ACCT_* env (documented in src/app/account/session/route.ts)",
+        "console": [
+          {
+            "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "source": "http://127.0.0.1:3210/account/session"
+          }
+        ],
+        "responses": [
+          {
+            "status": 404,
+            "url": "http://127.0.0.1:3210/account/session"
+          }
+        ]
+      },
+      "unexpected": {
+        "console": [],
+        "responses": [],
+        "pageErrors": []
+      },
+      "checks": {
+        "dialogLabelled": true,
+        "noHorizontalOverflow": true,
+        "xmlWired": true,
+        "jsonWired": true,
+        "jsonQuietSecondary": true,
+        "exampleUsable": true,
+        "cancelUsable": true,
+        "greenButtonSlot": true,
+        "quietSurface": true,
+        "cleanConsole": true,
+        "escapeCloses": true
+      },
+      "ok": true
+    },
+    {
+      "viewport": "390x844",
+      "theme": "light",
+      "screenshot": "link-data-390-light.png",
+      "dialogRole": "dialog",
+      "dialogAriaModal": "true",
+      "dialogLabel": "Link your Green Button data",
+      "heading": "Link Data",
+      "documentViewportWidth": 390,
+      "documentScrollWidth": 390,
+      "documentOverflow": 0,
+      "dialogOverflow": 0,
+      "cardBox": {
+        "width": 358,
+        "height": 652
+      },
+      "cardSurface": {
+        "background": "rgb(255, 255, 255)",
+        "borderWidth": "1px",
+        "borderColor": "rgb(229, 229, 224)",
+        "borderRadius": "8px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "hasVisibleShadow": false,
+        "classNames": "my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none"
+      },
+      "controls": {
+        "xmlPresent": true,
+        "xmlAccept": ".xml",
+        "xmlMultiple": true,
+        "xmlLabel": "Upload Green Button XML",
+        "xmlHitArea": true,
+        "xmlDisabled": false,
+        "jsonPresent": true,
+        "jsonAccept": "application/json,.json",
+        "jsonLabel": "Import JSON backup",
+        "jsonFaceVisible": true,
+        "exampleVisible": true,
+        "exampleEnabled": true,
+        "exampleText": "Try with example data",
+        "cancelVisible": true,
+        "greenButtonSlot": true
+      },
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "pageErrors": [],
+      "failedResponses": [
+        {
+          "status": 404,
+          "url": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "expectedNoise": {
+        "reason": "GET /account/session 404 = account feature flag off in a local build with no ACCT_* env (documented in src/app/account/session/route.ts)",
+        "console": [
+          {
+            "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "source": "http://127.0.0.1:3210/account/session"
+          }
+        ],
+        "responses": [
+          {
+            "status": 404,
+            "url": "http://127.0.0.1:3210/account/session"
+          }
+        ]
+      },
+      "unexpected": {
+        "console": [],
+        "responses": [],
+        "pageErrors": []
+      },
+      "checks": {
+        "dialogLabelled": true,
+        "noHorizontalOverflow": true,
+        "xmlWired": true,
+        "jsonWired": true,
+        "jsonQuietSecondary": true,
+        "exampleUsable": true,
+        "cancelUsable": true,
+        "greenButtonSlot": true,
+        "quietSurface": true,
+        "cleanConsole": true,
+        "escapeCloses": true
+      },
+      "ok": true
+    },
+    {
+      "viewport": "390x844",
+      "theme": "dark",
+      "screenshot": "link-data-390-dark.png",
+      "dialogRole": "dialog",
+      "dialogAriaModal": "true",
+      "dialogLabel": "Link your Green Button data",
+      "heading": "Link Data",
+      "documentViewportWidth": 390,
+      "documentScrollWidth": 390,
+      "documentOverflow": 0,
+      "dialogOverflow": 0,
+      "cardBox": {
+        "width": 358,
+        "height": 652
+      },
+      "cardSurface": {
+        "background": "rgb(17, 20, 26)",
+        "borderWidth": "1px",
+        "borderColor": "rgb(36, 42, 53)",
+        "borderRadius": "8px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "hasVisibleShadow": false,
+        "classNames": "my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none"
+      },
+      "controls": {
+        "xmlPresent": true,
+        "xmlAccept": ".xml",
+        "xmlMultiple": true,
+        "xmlLabel": "Upload Green Button XML",
+        "xmlHitArea": true,
+        "xmlDisabled": false,
+        "jsonPresent": true,
+        "jsonAccept": "application/json,.json",
+        "jsonLabel": "Import JSON backup",
+        "jsonFaceVisible": true,
+        "exampleVisible": true,
+        "exampleEnabled": true,
+        "exampleText": "Try with example data",
+        "cancelVisible": true,
+        "greenButtonSlot": true
+      },
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "pageErrors": [],
+      "failedResponses": [
+        {
+          "status": 404,
+          "url": "http://127.0.0.1:3210/account/session"
+        }
+      ],
+      "expectedNoise": {
+        "reason": "GET /account/session 404 = account feature flag off in a local build with no ACCT_* env (documented in src/app/account/session/route.ts)",
+        "console": [
+          {
+            "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "source": "http://127.0.0.1:3210/account/session"
+          }
+        ],
+        "responses": [
+          {
+            "status": 404,
+            "url": "http://127.0.0.1:3210/account/session"
+          }
+        ]
+      },
+      "unexpected": {
+        "console": [],
+        "responses": [],
+        "pageErrors": []
+      },
+      "checks": {
+        "dialogLabelled": true,
+        "noHorizontalOverflow": true,
+        "xmlWired": true,
+        "jsonWired": true,
+        "jsonQuietSecondary": true,
+        "exampleUsable": true,
+        "cancelUsable": true,
+        "greenButtonSlot": true,
+        "quietSurface": true,
+        "cleanConsole": true,
+        "escapeCloses": true
+      },
+      "ok": true
+    }
+  ],
+  "ok": true
+}
