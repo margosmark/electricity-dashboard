@@ -839,6 +839,7 @@ body {
 
 .quiet-toggle [aria-pressed="true"] {
   background: var(--card);
+  color: var(--ink);
   box-shadow: 0 1px 2px var(--shadow);
 }
 
