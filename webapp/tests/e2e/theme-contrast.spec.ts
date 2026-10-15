@@ -624,12 +624,19 @@ test.describe('BillProjectionBanner dark-mode pairings (t_fbf590fa addendum 1)',
         };
       };
       const banner = document.querySelector('[data-testid="bill-projection"]')!;
-      const boxes = [...banner.querySelectorAll('.bg-card')].map(ratioOf);
+      // The banner's supporting facts moved off `.bg-card` onto the Quiet
+      // Meter role `quiet-projection-stat` (its own inset sub-surface), so
+      // the probe measures the surfaces the component actually paints —
+      // otherwise this asserts against zero boxes and never measures a
+      // pairing at all.
+      const boxes = [...banner.querySelectorAll('.quiet-projection-stat')].map(ratioOf);
       const caption = ratioOf(banner.querySelector('p')!);
       return { boxes, caption };
     });
 
-    expect(m.boxes.length, 'both mini-cards render').toBe(2);
+    // The two always-present mini-cards (month-to-date, days measured); the
+    // seeded always-on floor adds a third, which is measured too.
+    expect(m.boxes.length, 'both mini-cards render').toBeGreaterThanOrEqual(2);
     for (const b of [...m.boxes, m.caption]) {
       expect(b.ratio, `"${b.text}" ${b.fg} on ${b.bg} = ${b.ratio}:1`).toBeGreaterThanOrEqual(4.5);
     }

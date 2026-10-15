@@ -140,10 +140,13 @@ function ClassificationRow({ block }: { block: ShiftBlock }) {
 
 function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
   const { t } = useTranslation();
+  /* Rank 0 keeps a MARKER (the accent edge), not an accent slab: the
+     reference reserves fills for one primary action and marks the
+     recommendation with hairlines. */
   return (
     <div
-      className={`border border-edge rounded-lg md:rounded-xl p-3 md:p-4 ${
-        rank === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
+      className={`border border-edge rounded-lg md:rounded-xl p-3 md:p-4 bg-card ${
+        rank === 0 ? 'border-l-[3px] border-l-accent' : ''
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 font-semibold uppercase">
@@ -153,7 +156,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           <EffortChip effort={option.effort} />
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          <span className={`text-[10px] md:text-xs ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
+          <span className="text-[10px] md:text-xs text-ink-2">
             {fmtCents(option.destRateCents)}{t('efficiency.perKwh')}
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
@@ -163,7 +166,7 @@ function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
           </span>
         </div>
       </div>
-      <p className={`text-[9px] md:text-[11px] font-medium mt-1.5 md:mt-2 ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
+      <p className="text-[9px] md:text-[11px] font-medium mt-1.5 md:mt-2 text-ink-2">
         {option.assumption}
       </p>
     </div>
@@ -261,13 +264,13 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
         {block.options.map((o, i) => (
           <span
             key={o.target}
-            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border border-edge-muted rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-semibold uppercase ${
-              i === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
+            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-semibold uppercase ${
+              i === 0 ? 'bg-card border-accent' : 'bg-card border-edge-muted'
             }`}
           >
             {TARGET_ICON[o.target]}
             <span>{o.label}</span>
-            <span className={i === 0 ? 'text-accent-ink' : 'text-ink-2'}>{fmtCents(o.destRateCents)}</span>
+            <span className="text-ink-2">{fmtCents(o.destRateCents)}</span>
             <ArrowRight size={9} strokeWidth={4} className="hidden sm:block" />
             <span>{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
             <EffortChip effort={o.effort} />
@@ -281,13 +284,16 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
 /** One sentence for the whole household, with the worst badge we can stand behind. */
 function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
   const { t } = useTranslation();
+  /* Was a full accent slab. The reference paints verdicts as ink text on a
+     calm surface with an accent EDGE — so the card moves onto --inset and
+     keeps only a 3px accent rule down its left side. */
   return (
     <div
       data-testid="shift-headline"
-      className="bg-accent border border-edge rounded-xl md:rounded-2xl p-4 md:p-7 text-accent-ink"
+      className="bg-inset border border-edge border-l-[3px] border-l-accent rounded-lg p-4 md:p-7 text-ink"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[10px] tracking-[0.25em] font-semibold uppercase">
+        <div className="text-[10px] tracking-[0.25em] font-semibold uppercase text-ink-3">
           {t('shift.oneMove')}
         </div>
         <ConfidenceChip badge={headline.confidence} />
@@ -312,7 +318,7 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
         </span>
       </div>
       <p className="text-[10px] md:text-[12px] font-medium mt-2 md:mt-3">{headline.assumption}</p>
-      <div className="text-[9px] md:text-[11px] font-medium text-accent-ink mt-1 md:mt-2">
+      <div className="text-[9px] md:text-[11px] font-medium text-ink-3 mt-1 md:mt-2">
         {t('shift.supportingNote')}
       </div>
     </div>
@@ -374,14 +380,14 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
             {t('shift.patternCheck')}
           </div>
         </div>
-        <div className="bg-accent text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border border-edge-muted text-center">
-          <div className="text-[8px] md:text-[10px] font-semibold uppercase">
+        <div className="bg-page text-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border border-edge-muted text-center">
+          <div className="text-[8px] md:text-[10px] font-semibold uppercase text-ink-3">
             {t('shift.ifEveryMoved')}
           </div>
           <div className="text-2xl md:text-3xl leading-none mt-1 tabular-nums">
             {fmtMoney(analysis.totalMonthlySavings)}
           </div>
-          <div className="text-[8px] md:text-[10px] font-semibold uppercase">{t('shift.perMonth')}</div>
+          <div className="text-[8px] md:text-[10px] font-semibold uppercase text-ink-3">{t('shift.perMonth')}</div>
         </div>
       </div>
 

@@ -214,12 +214,19 @@ const floorFor = (min: Floor, theme: Theme): number =>
 
 const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // Body copy on the primary surface and on the page behind it.
-  { token: 'ink', on: ['card', 'page'], min: 4.5 },
+  { token: 'ink', on: ['card', 'page', 'accent-soft'], min: 4.5 },
   // Secondary copy, chips, switcher labels — on cards, sub-panels, hover
   // states and the inverted chip (a light chip in dark, a black one in
   // light; the ratio has to hold on BOTH).
-  { token: 'ink-2', on: ['card', 'page', 'inset', 'hover'], min: 4.5 },
-  { token: 'ink-3', on: ['card', 'page', 'inset'], min: 4.5 },
+  { token: 'ink-2', on: ['card', 'page', 'inset', 'hover', 'accent-soft'], min: 4.5 },
+  // `accent-soft` is a real SURFACE the muted ink steps paint on (money
+  // delta summary rows, the open-period tail card, plan callouts). It was
+  // absent from every `on` list, so the token layer stayed green while the
+  // PAINTED walk measured ink-3 at 4.32:1 and ink-4 at 4.4:1 on its dark
+  // olive — the exact hole this file exists to close. Declaring it here
+  // pins the pairing in both themes: dark clears it by darkening the tint
+  // (see the token's own comment), light always cleared it at #fefce8.
+  { token: 'ink-3', on: ['card', 'page', 'inset', 'accent-soft'], min: 4.5 },
   // --ink-4 carries 56 micro-label sites at 8-10px. In LIGHT it used to be
   // slate-400 (2.56:1 on the card) — the spec's §2 #4 measured that and
   // scoped it out, so this row pinned the gap instead of widening the floor.
@@ -227,7 +234,7 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // AA on every surface it paints (card 5.27, page/inset 5.04, worst 4.64 on
   // emerald-100), so the row now holds the full 4.5:1 floor in BOTH themes —
   // the debt is released, not relaxed.
-  { token: 'ink-4', on: ['card', 'page', 'inset'], min: 4.5 },
+  { token: 'ink-4', on: ['card', 'page', 'inset', 'accent-soft'], min: 4.5 },
   // Text ON the accent. Unchanged in both themes (13.7:1) — but the rule is
   // still asserted, because "the brand colour never changes" is exactly the
   // kind of assumption that quietly stops being true.

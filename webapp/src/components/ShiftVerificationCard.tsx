@@ -17,9 +17,12 @@ import { fmtKwh, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
 const VERDICT_STYLE: Record<ShiftVerdict, { box: string; icon: ReactNode }> = {
   improved: { box: 'bg-good-slab text-accent-ink', icon: <ArrowUpRight size={16} strokeWidth={4} /> },
   worse: { box: 'bg-bad-slab text-accent-ink', icon: <ArrowDownRight size={16} strokeWidth={4} /> },
-  diverged: { box: 'bg-warn-slab', icon: <Scale size={16} strokeWidth={4} /> },
+  // warn-slab and info-slab-soft are FIXED slabs (invariant across themes),
+  // so like good/bad they pin their own ink: inheriting the themed `text-ink`
+  // painted near-white #f2f4f8 on the orange at 2.06:1 in dark.
+  diverged: { box: 'bg-warn-slab text-accent-ink', icon: <Scale size={16} strokeWidth={4} /> },
   'no-change': { box: 'bg-track', icon: <Minus size={16} strokeWidth={4} /> },
-  'no-offpeak': { box: 'bg-info-slab-soft', icon: <Scale size={16} strokeWidth={4} /> },
+  'no-offpeak': { box: 'bg-info-slab-soft text-accent-ink', icon: <Scale size={16} strokeWidth={4} /> },
 };
 
 function WindowChip({
