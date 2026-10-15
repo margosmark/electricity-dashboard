@@ -43,7 +43,7 @@ export type Translate = (key: string, params?: Record<string, string | number>) 
  * carries the utility's registration number inside its name, and the NUMBER is
  * the data (it travels as `{n}`), not part of the label.
  */
-export const BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
+const FIXTURE_BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
   'amount due': 'billnote.amountDue',
   'balance forward': 'billnote.balanceForward',
   'bill post date': 'billnote.billPostDate',
@@ -65,6 +65,74 @@ export const BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
   'regulatory charges': 'billnote.regulatoryCharges',
   'total electricity charges': 'billnote.totalElectricityCharges',
   'number of days in bill period': 'billnote.numberOfDaysInBillPeriod',
+};
+
+/**
+ * The SECOND document's vocabulary: every line name the committed Enbridge Gas
+ * (Ontario) feed carries that the fixture utility's list above does not already
+ * cover (`tests/fixtures/utility-enbridge-gas.xml`, provenance in that
+ * directory's README).
+ *
+ * WHY A GAS BILL IS IN AN ELECTRICITY APP'S CATALOG
+ * `ActualBillPanel` prints whatever itemized `UsageSummary` the imported file
+ * carries — `classifyBillLine()` deliberately keys off the raw note and sends
+ * an unknown wording to `other` rather than dropping it — so an Ontario
+ * household that imports its Enbridge feed reaches the same two surfaces an
+ * Oakville bill does (the bill panel and the plan-timeline evidence line), and
+ * on the French page every one of those 30 names printed English. Seven of the
+ * feed's names already sat in the table above, word for word (`Amount Due`,
+ * `Due Date`, the two read dates, both meter reads, the days-in-bill-period
+ * line), which is the evidence that the vocabulary is shared across
+ * commodities rather than gas-specific.
+ *
+ * Same rule as the block above: the EN value is the file's own wording byte
+ * for byte, and `billNote.test.tsx`'s "invents no vocabulary" ratchet compares
+ * every value here against a name a committed fixture actually states — so a
+ * label nobody can point at a document cannot enter this table.
+ */
+const PROVIDER_BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
+  'adjustment factor (atmospheric)': 'billnote.adjustmentFactorAtmospheric',
+  'balance forward ($)': 'billnote.balanceForwardAmount',
+  'bill date': 'billnote.billDate',
+  'charges from other companies ($)': 'billnote.chargesFromOtherCompanies',
+  'contract demand charge': 'billnote.contractDemandCharge',
+  'customer charge': 'billnote.customerCharge',
+  'direct purchase admin charge': 'billnote.directPurchaseAdminCharge',
+  'expansion surcharge': 'billnote.expansionSurcharge',
+  'gas cost adjustment ($)': 'billnote.gasCostAdjustment',
+  'gas cost adjustment ¢/m#': 'billnote.gasCostAdjustmentRate',
+  'gas delivery variable charge': 'billnote.gasDeliveryVariableCharge',
+  'gas federal carbon charge': 'billnote.gasFederalCarbonCharge',
+  'gas service provider admin fee ($)': 'billnote.gasServiceProviderAdminFee',
+  'gas service provider supply charge ($)': 'billnote.gasServiceProviderSupplyCharge',
+  'gas supply charge': 'billnote.gasSupplyCharge',
+  'gas supply rate ¢/m#': 'billnote.gasSupplyRate',
+  'gas transportation charge ($)': 'billnote.gasTransportationCharge',
+  'hydrogen blended credit': 'billnote.hydrogenBlendedCredit',
+  'hst ($)': 'billnote.hstAmount',
+  'load balancing charge': 'billnote.loadBalancingCharge',
+  'other gas charges ($)': 'billnote.otherGasCharges',
+  'payments received ($)': 'billnote.paymentsReceived',
+  'previous balance ($)': 'billnote.previousBalance',
+  'previous usage consumption': 'billnote.previousUsageConsumption',
+  'pressure factor': 'billnote.pressureFactor',
+  'reversal of previously billed charges': 'billnote.reversalOfPreviouslyBilledCharges',
+  'total gas charges ($)': 'billnote.totalGasCharges',
+  'total gas supply rate ¢/m# (net)': 'billnote.totalGasSupplyRate',
+  'transportation to enbridge (lvb)': 'billnote.transportationToEnbridge',
+  'usage (unadjusted)': 'billnote.usageUnadjusted',
+};
+
+/**
+ * Normalised note → catalog key, from BOTH committed documents. The table is
+ * two-way with the fixtures and `billNote.test.tsx` pins it from three sides:
+ * every name reaches a key, every key reaches a name, and every name still
+ * composes back to ITS OWN wording — so a name that folded onto another's key
+ * fails the byte-identical test rather than printing the wrong label.
+ */
+export const BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
+  ...FIXTURE_BILL_NOTE_KEYS,
+  ...PROVIDER_BILL_NOTE_KEYS,
 };
 
 /**

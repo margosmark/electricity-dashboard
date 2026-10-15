@@ -38,8 +38,18 @@ import {
 } from './billNote';
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
-/** The two fixtures that carry an itemized bill (`<espi:note>` per line). */
-const WITH_NOTES = ['usage-summary-open-tail.xml', 'usage-summary-synthetic.xml'];
+/**
+ * The THREE fixtures that carry an itemized bill (`<espi:note>` per line): the
+ * two synthetic electricity bills, plus the committed Enbridge Gas (Ontario)
+ * feed — the second PROVIDER whose wording the catalog now has to cover, and
+ * the one that made "unrecognized provider label" a measurable class instead
+ * of a claim.
+ */
+const WITH_NOTES = [
+  'usage-summary-open-tail.xml',
+  'usage-summary-synthetic.xml',
+  'utility-enbridge-gas.xml',
+];
 const NOTES = [
   ...new Set(
     WITH_NOTES.flatMap((file) => [
@@ -67,8 +77,9 @@ describe('the utility’s line names, in the reader’s language', () => {
   it('covers every name the shipped fixtures carry', () => {
     // A fixture that grows a line name must grow the catalog with it — this is
     // the ratchet that keeps "the class" closed instead of the three rows qa
-    // happened to count.
-    expect(NOTES.length).toBe(21);
+    // happened to count. 21 distinct names in the two synthetic bills + 30 the
+    // Enbridge feed adds beyond them (it shares 7) = 51.
+    expect(NOTES.length).toBe(51);
     const unmapped = NOTES.filter((note) => billNoteKey(note) === null);
     expect(unmapped, `unmapped line names: ${unmapped.join(' | ')}`).toEqual([]);
   });
@@ -123,6 +134,18 @@ describe('the utility’s line names, in the reader’s language', () => {
       })
       .map(([, key]) => key);
     expect(orphans).toEqual([]);
+  });
+
+  it('is exactly two-way with the fixtures: no key without a name, no name without a key', () => {
+    // The other direction of the same ratchet, stated on the TABLE: a fold that
+    // collides (two providers writing the same normalised string) would print
+    // one utility's label for another's line, and a key nothing states would be
+    // dead weight nobody can verify.
+    const keys = Object.values(BILL_NOTE_KEYS);
+    expect(new Set(keys).size, 'two line names folded onto one key').toBe(keys.length);
+    expect(new Set(Object.keys(BILL_NOTE_KEYS)), 'keys no committed name reaches').toEqual(
+      new Set(NOTES.map(normalizeBillNote)),
+    );
   });
 });
 
@@ -206,6 +229,57 @@ describe('the plan-timeline evidence line', () => {
         expect(line.textContent, note).toContain(note);
       }
       expect(line.getAttribute('title'), raw).toBeNull();
+    }
+  });
+});
+
+/**
+ * The SECOND provider's document, PAINTED — the class this card is about.
+ * `ActualBillPanel` renders whatever itemized summary the imported file
+ * carries, so this Ontario gas feed reaches the same panel an Oakville bill
+ * does: before the catalog grew, all 37 of these lines fell back to the
+ * utility's English wording on the French page (the fallback is correct — it
+ * is simply English).
+ */
+describe('the panel with a second provider’s bill', () => {
+  const summaries = parseUsageSummaries(
+    fs.readFileSync(path.join(FIXTURES, 'utility-enbridge-gas.xml'), 'utf8'),
+  );
+
+  it('parses one itemized bill of 37 lines — so coverage here is measurable', () => {
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].items).toHaveLength(37);
+  });
+
+  it('paints French for every line and keeps the file’s wording on the node', () => {
+    setLocale('fr');
+    const { container } = render(<ActualBillPanel summaries={summaries} allData={[]} plan="TOU" />);
+    const lines = [...container.querySelectorAll('[data-bill-note]')];
+    expect(lines).toHaveLength(37);
+    for (const el of lines) {
+      const note = el.getAttribute('data-bill-note') as string;
+      expect(el.textContent, note).toBe(billNoteText(note, t));
+      expect(el.textContent, note).not.toBe(note);
+      expect(el.getAttribute('title'), note).toBe(note);
+    }
+    // Concrete rows, so a passing count cannot hide a wrong or missing label:
+    // a name only this provider writes, and the tax line.
+    expect(screen.getAllByText('Charge de fourniture de gaz')).toHaveLength(1);
+    expect(screen.getAllByText('Transport vers Enbridge (LVB)')).toHaveLength(1);
+    expect(screen.getAllByText('TVH ($)')).toHaveLength(1);
+    expect(screen.queryAllByText('Gas Supply Charge')).toHaveLength(0);
+    expect(screen.queryAllByText('Transportation to Enbridge (LVB)')).toHaveLength(0);
+  });
+
+  it('is byte-identical on the English page', () => {
+    setLocale('en');
+    const { container } = render(<ActualBillPanel summaries={summaries} allData={[]} plan="TOU" />);
+    const lines = [...container.querySelectorAll('[data-bill-note]')];
+    expect(lines).toHaveLength(37);
+    for (const el of lines) {
+      const note = el.getAttribute('data-bill-note') as string;
+      expect(el.textContent, note).toBe(note);
+      expect(el.getAttribute('title'), note).toBeNull();
     }
   });
 });
