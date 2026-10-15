@@ -20,7 +20,7 @@ import os from 'node:os';
  */
 
 // The real Oakville export cannot be committed, so this is the Oakville-SHAPED
-// stand-in: 8 760 hourly readings, EV overnight block, on-peak appliance hits.
+// stand-in: 8 904 hourly readings, EV overnight block, on-peak appliance hits.
 const SAMPLE = path.resolve(__dirname, '../../public/samples/example-usage.xml');
 
 /** Repo-root evidence dir (Playwright runs with cwd = webapp/). */
@@ -59,7 +59,7 @@ test.describe('full journey', () => {
           page.evaluate(() => (JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}')?.points || []).length),
         { timeout: 30_000 },
       )
-      .toBe(8760);
+      .toBe(8904);
 
     // --- 3. Totals: real numbers, real dates. ----------------------------
     const strip = page.getByTestId('totals-strip');
@@ -147,14 +147,14 @@ test.describe('full journey', () => {
           page.evaluate(() => (JSON.parse(localStorage.getItem('energy_data_v2') || '{"points":[]}')?.points || []).length),
         { timeout: 30_000 },
       )
-      .toBe(8760);
+      .toBe(8904);
 
     await expect(page.getByTestId('totals-strip')).toBeVisible();
 
     // Wave H: the demo opens on the WHOLE bundled year — one lonely bar
     // would not be "the full experience".
     await expect(page.locator('input[type="date"]').first()).toHaveValue('2025-10-01');
-    await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-09-30');
+    await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-10-06');
     // The chart remains on the decision-first Overview.
     await page.getByRole('tab', { name: 'Overview' }).click();
     // ...so the monthly chart has a year of tick labels, not one. Recharts

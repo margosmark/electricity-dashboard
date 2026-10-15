@@ -72,6 +72,7 @@ describe('Overview actionable attention items', () => {
         onOpenMoney={vi.fn()}
         onOpenPlans={vi.fn()}
         importReview
+        latestPeriod={null}
         usage={usage}
       />,
     );

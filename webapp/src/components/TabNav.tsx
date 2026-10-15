@@ -21,7 +21,7 @@
 
 'use client';
 
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Banknote, Gauge, Scale } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
 import { useTranslation } from '@/i18n';
@@ -36,9 +36,11 @@ const ICONS: Record<TabId, typeof Gauge> = {
 export type TabNavProps = {
   active: TabId;
   onChange: (tab: TabId) => void;
+  /** Global display preferences belong in the shell, not below page content. */
+  shellTools?: ReactNode;
 };
 
-export default function TabNav({ active, onChange }: TabNavProps) {
+export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   // Wave U — `lib/tabs.ts` keeps the canonical English definitions (pure
   // data, unit-tested); the strip renders the localized view of them.
@@ -95,14 +97,15 @@ export default function TabNav({ active, onChange }: TabNavProps) {
         itself to the next pill. gap-2 leaves 8 − 3 = 5px of clear air; the
         360px fit still holds (4 × 76px + 3 × 8px = 328px).
       */}
-      <div
-        role="tablist"
-        aria-label={t('tabnav.aria')}
-        aria-orientation="horizontal"
-        onKeyDown={onKeyDown}
-        className="flex gap-2 md:gap-3 overflow-x-auto"
-      >
-        {TABS.map((tab, index) => {
+      <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:gap-3">
+        <div
+          role="tablist"
+          aria-label={t('tabnav.aria')}
+          aria-orientation="horizontal"
+          onKeyDown={onKeyDown}
+          className="flex min-w-0 flex-1 gap-2 overflow-x-auto md:gap-3"
+        >
+          {TABS.map((tab, index) => {
           const Icon = ICONS[tab.id];
           const selected = tab.id === active;
           return (
@@ -133,7 +136,9 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               <span>{t(`tab.${tab.id}`)}</span>
             </button>
           );
-        })}
+          })}
+        </div>
+        {shellTools && <div className="order-2 basis-full sm:order-none sm:basis-auto">{shellTools}</div>}
       </div>
     </nav>
   );

@@ -313,9 +313,18 @@ export default function Dashboard() {
   // Wave U: `t` in deps — projectMonthBill builds its gate note/caption in
   // the active language, so a toggle must re-run it.
   const projection = useMemo(
-    () => projectMonthBill(processedData, userPlan, new Date()),
+    () => {
+      // The bundled fixture is deliberately dated and must exercise the
+      // large early-month surface deterministically. Real imports still use
+      // the wall clock, so a Sep-30 file remains honestly gated rather than
+      // being silently reinterpreted as a current bill.
+      const today = exampleData && processedData.length > 0
+        ? new Date(processedData.reduce((latest, row) => row.dateObj > latest ? row.dateObj : latest, processedData[0].dateObj))
+        : new Date();
+      return projectMonthBill(processedData, userPlan, today);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [processedData, userPlan, t],
+    [processedData, userPlan, exampleData, t],
   );
 
   // Weekly before/after: last 7 full days vs the 7 before, on the full
@@ -499,7 +508,7 @@ export default function Dashboard() {
       {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
-      <TabNav active={tab} onChange={setActiveTab} />
+      <TabNav active={tab} onChange={setActiveTab} shellTools={<ThemeToggle />} />
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
@@ -737,11 +746,7 @@ export default function Dashboard() {
               <button> in the tab order with aria-pressed and a localized
               name (Wave H's a11y bar). */}
           <LocaleToggle />
-          {/* Dark mode — next to the language switch because both are
-              preferences about how the answer is SHOWN, not what it says.
-              A radiogroup, not a cycling button: three states behind one
-              control is an ARIA anti-pattern (see ThemeToggle.tsx). */}
-          <ThemeToggle />
+
           {/* `lg:min-w-max` on the floor button: below lg it stacks its three
               lines, so it cannot overflow sideways; from lg up it becomes a
               row, and a wide theme/language cluster could squeeze it under its
@@ -795,6 +800,7 @@ export default function Dashboard() {
           onOpenMoney={() => setActiveTab('money')}
           onOpenPlans={() => setActiveTab('plans')}
           rateMismatch={Boolean(staleness.stale)}
+          latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
           usage={{
             staleness, anomalies, heatmapData, processedData, temps,
             zoomLevel, zoomTarget, goBack, navigatePeriod,

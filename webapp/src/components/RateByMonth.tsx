@@ -36,6 +36,11 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
     }));
   }, [rows, plan, locale]);
   const selected = data.find((point) => point.key === activeKey) ?? data[data.length - 1];
+  const rateAverage12 = useMemo(() => {
+    const recent = data.slice(-12);
+    const kwh = recent.reduce((sum, point) => sum + point.kwh, 0);
+    return kwh > 0 ? recent.reduce((sum, point) => sum + point.rate * point.kwh, 0) / kwh : null;
+  }, [data]);
   const maxRate = 14;
   // The Overview is a decision surface, not a full-screen analytics view.
   // Keep the 27-month history dense enough for comparison while leaving the
@@ -53,6 +58,7 @@ export default function RateByMonth({ rows, plan }: { rows: ProcessedPoint[]; pl
       <div className="flex items-center gap-2 mb-2 text-xs font-normal normal-case text-ink-2">
         <span className="inline-block w-2.5 h-2.5 rounded-sm bg-accent" aria-hidden="true" />
         <span>{t('rateChart.rateLegend')}</span>
+        {rateAverage12 !== null && <span className="text-ink-3">{t('rateChart.twelveMonthAverage', { rate: fmtCents(rateAverage12, 1) })}</span>}
         <span role="status" aria-live="polite" className="ml-auto font-medium text-ink tabular-nums" data-testid="rate-chart-readout">
           {selected ? `${selected.label} · ${fmtCents(selected.rate, 1)}${selected.key === currentMonth ? ` · ${t('rateChart.current')}` : ''}` : t('rateChart.empty')}
         </span>

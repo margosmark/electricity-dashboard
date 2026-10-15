@@ -734,6 +734,16 @@ body {
   font-weight: 500;
 }
 
+.quiet-context-pill {
+  background: var(--inset);
+  border: 1px solid var(--edge-muted);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
 .quiet-overview-value {
   margin-top: 0.25rem;
   color: var(--ink);
