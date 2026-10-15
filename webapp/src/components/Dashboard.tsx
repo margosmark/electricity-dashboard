@@ -455,10 +455,10 @@ export default function Dashboard() {
      context for every tab, not a second, legacy toolbar below the content. */
   const dashboardContext = (
     <div data-testid="dashboard-context" className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
-      <div data-testid="dashboard-date-range" className="flex min-w-0 flex-1 items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:flex-none">
-        <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:flex-none md:text-sm" />
+      <div data-testid="dashboard-date-range" className="flex w-full flex-none items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:w-auto">
+        <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
         <span data-testid="window-separator" className="shrink-0 px-1 text-[10px] font-semibold text-ink-2">{t('toolbar.to')}</span>
-        <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:flex-none md:text-sm" />
+        <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
       </div>
       <div data-testid="dashboard-scope" className="flex shrink-0 items-center gap-1 rounded-lg border border-edge-muted bg-hover p-1">
         <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'BillingPeriod' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.billingPeriod')}</button>

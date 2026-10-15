@@ -93,7 +93,7 @@ describe('Dashboard', () => {
   it('renders date inputs', async () => {
     await renderLoaded();
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs.length).toBeGreaterThanOrEqual(2);
+    expect(dateInputs).toHaveLength(2);
   });
 
   it('keeps the date range and scope pills in the persistent shell, not the legacy toolbar', async () => {

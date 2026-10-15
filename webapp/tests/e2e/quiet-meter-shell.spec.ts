@@ -62,6 +62,38 @@ for (const viewport of VIEWPORTS) {
         expect(await toolbar.locator('input[type="date"]').count()).toBe(0);
         expect(await context.locator('input[type="date"]').count()).toBe(2);
 
+        const dateInputs = context.locator('input[type="date"]');
+        const [dateRangeBox, scopeBox, dateBoxes] = await Promise.all([
+          page.getByTestId('dashboard-date-range').boundingBox(),
+          page.getByTestId('dashboard-scope').boundingBox(),
+          dateInputs.evaluateAll((inputs) => inputs.map((input) => ({
+            width: input.getBoundingClientRect().width,
+            height: input.getBoundingClientRect().height,
+            clientWidth: input.clientWidth,
+            scrollWidth: input.scrollWidth,
+            value: (input as HTMLInputElement).value,
+          }))),
+        ]);
+        expect(dateRangeBox).not.toBeNull();
+        expect(scopeBox).not.toBeNull();
+        expect(dateBoxes).toHaveLength(2);
+
+        if (viewport.width === 390) {
+          // The range gets a dedicated mobile row.  Native date controls must
+          // remain wide enough to show their complete yyyy-mm-dd values.
+          expect(dateRangeBox!.width).toBeGreaterThanOrEqual(2 * 110);
+          for (const date of dateBoxes) {
+            expect(date.width).toBeGreaterThanOrEqual(110);
+            expect(date.height).toBeGreaterThanOrEqual(44);
+            expect(date.scrollWidth).toBeLessThanOrEqual(date.clientWidth);
+            expect(date.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          }
+          expect(scopeBox!.y).toBeGreaterThan(dateRangeBox!.y);
+        } else {
+          // Desktop retains the compact inline date/scope context row.
+          expect(Math.abs(scopeBox!.y - dateRangeBox!.y)).toBeLessThanOrEqual(1);
+        }
+
         await context.getByRole('button', { name: 'Month' }).click();
         await expect(context.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
 
