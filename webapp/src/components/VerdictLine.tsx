@@ -38,7 +38,7 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
       data-testid="verdict-line"
       data-best-plan={verdict.best}
       data-already-best={String(verdict.alreadyBest)}
-      className="bg-accent border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4"
+      className="bg-accent border border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-semibold uppercase text-[11px] md:text-sm"
     >
       <span className="text-[8px] md:text-[10px] tracking-[0.2em] block text-accent-ink mb-1">
         {t('verdict.eyebrow')}
@@ -60,11 +60,11 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
         <span className="text-accent-ink">{fmtMoney0(worseVsCurrent)} {t('verdict.worse')}</span>
       )}{' '}
       {verdict.alreadyBest ? (
-        <span className="font-bold normal-case text-[10px] md:text-xs">
+        <span className="font-medium normal-case text-[10px] md:text-xs">
           {t('verdict.nothingToSwitch', { count: verdict.days, days: verdict.days })}
         </span>
       ) : (
-        <span className="font-bold normal-case text-[10px] md:text-xs">
+        <span className="font-medium normal-case text-[10px] md:text-xs">
           {t('verdict.winsDetail', {
             count: verdict.days,
             days: verdict.days,

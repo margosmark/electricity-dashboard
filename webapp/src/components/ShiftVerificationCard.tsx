@@ -34,18 +34,18 @@ function WindowChip({
   const { t } = useTranslation();
   return (
     <div
-      className={`border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 ${accent ? 'bg-accent text-accent-ink' : 'bg-card'}`}
+      className={`border border-edge rounded-xl md:rounded-2xl p-3 md:p-4 ${accent ? 'bg-accent text-accent-ink' : 'bg-card'}`}
     >
-      <div className="text-[8px] md:text-[10px] font-black uppercase">{label}</div>
-      <div className={`text-[10px] md:text-xs font-bold ${accent ? 'text-accent-ink' : 'text-ink-2'}`}>
+      <div className="text-[8px] md:text-[10px] font-semibold uppercase">{label}</div>
+      <div className={`text-[10px] md:text-xs font-medium ${accent ? 'text-accent-ink' : 'text-ink-2'}`}>
         {window.start} → {window.end} · {t('verify.chipDays', { count: window.days, days: window.days })}
       </div>
-      <div className="text-xl md:text-2xl italic font-black mt-1">
+      <div className="text-lg md:text-xl font-semibold tabular-nums mt-1">
         {window.offPeakShare !== null
           ? fmtPercent(window.offPeakShare * 100, 1)
           : fmtMoney(window.totalCost)}
       </div>
-      <div className={`text-[8px] md:text-[10px] font-black uppercase ${accent ? 'text-accent-ink' : 'text-ink-3'}`}>
+      <div className={`text-[8px] md:text-[10px] font-semibold uppercase ${accent ? 'text-accent-ink' : 'text-ink-3'}`}>
         {window.offPeakShare !== null
           ? t('verify.chipOffPeak', {
               cost: fmtMoney(window.totalCost),
@@ -69,11 +69,11 @@ export default function ShiftVerificationCard({
     <div
       data-testid="shift-verification"
       data-verdict={verification.verdict}
-      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-xl md:rounded-2xl border border-edge text-ink font-semibold uppercase"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 md:mb-6">
-        <h3 className="text-2xl md:text-4xl italic">{t('verify.cardTitle')}</h3>
-        <span className="bg-inv text-inv-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]">
+        <h3 className="text-base md:text-lg font-semibold uppercase tracking-[0.08em]">{t('verify.cardTitle')}</h3>
+        <span className="bg-inv text-inv-ink border border-edge-muted rounded-full px-3 py-1 text-[9px] md:text-[11px]">
           {t('verify.cardBadge')}
         </span>
       </div>
@@ -81,12 +81,12 @@ export default function ShiftVerificationCard({
       {!verification.ready ? (
         <div
           data-testid="shift-verification-empty"
-          className="bg-hover border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+          className="bg-hover border border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
         >
-          <div className="font-black uppercase text-sm md:text-xl mb-2">
+          <div className="font-semibold uppercase text-sm md:text-xl mb-2">
             {verification.headline}
           </div>
-          <p className="font-bold text-ink-2 text-xs md:text-sm normal-case">
+          <p className="font-medium text-ink-2 text-xs md:text-sm normal-case">
             {verification.detail}
           </p>
         </div>
@@ -94,7 +94,7 @@ export default function ShiftVerificationCard({
         <div className="space-y-4 md:space-y-6">
           <div
             data-testid="shift-verification-headline"
-            className={`${style.box} border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 flex items-start gap-3`}
+            className={`${style.box} border border-edge rounded-xl md:rounded-2xl p-4 md:p-6 flex items-start gap-3`}
           >
             <span className="shrink-0 mt-1">{style.icon}</span>
             <div className="text-lg md:text-2xl leading-tight">{verification.headline}</div>
@@ -115,11 +115,11 @@ export default function ShiftVerificationCard({
 
           <p
             data-testid="shift-verification-detail"
-            className="text-[10px] md:text-xs font-bold text-ink-2 normal-case"
+            className="text-[10px] md:text-xs font-medium text-ink-2 normal-case"
           >
             {verification.detail}
           </p>
-          <p className="text-[9px] md:text-[11px] font-bold text-ink-3 normal-case">
+          <p className="text-[9px] md:text-[11px] font-medium text-ink-3 normal-case">
             {verification.caveat}
           </p>
         </div>

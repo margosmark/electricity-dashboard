@@ -55,8 +55,8 @@ const ORIGIN_STYLE: Record<PeriodPlan['origin'], string> = {
 };
 
 const FIELD_CLASS =
-  'min-h-11 p-2 md:p-2.5 border-2 border-edge rounded-lg bg-inset ' +
-  'font-black text-sm md:text-xs text-ink outline-none focus:bg-accent-soft';
+  'min-h-11 p-2 md:p-2.5 border border-edge-muted rounded-lg bg-inset ' +
+  'font-semibold text-sm md:text-xs text-ink outline-none focus:bg-accent-soft';
 
 function todayIso(): string {
   const d = new Date();
@@ -97,16 +97,16 @@ export function PlanTimelineEditor({ summaries }: Props) {
   return (
     <section
       data-testid="plan-timeline"
-      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-xl md:rounded-2xl border border-edge text-ink font-semibold uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t('timeline.eyebrow')}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">{t('timeline.title')}</h2>
+          <h2 className="text-base md:text-lg font-semibold uppercase tracking-[0.08em]">{t('timeline.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
+        <div className="text-[10px] md:text-xs font-medium text-ink-3 normal-case max-w-md">
           {t('timeline.blurb')}
         </div>
       </div>
@@ -120,16 +120,16 @@ export function PlanTimelineEditor({ summaries }: Props) {
               data-testid={`plan-timeline-period-${summary.startDate}`}
               data-plan={assignment.plan}
               data-origin={assignment.origin}
-              className="border-2 border-edge rounded-lg md:rounded-xl bg-inset px-3 py-2 md:px-4 md:py-3"
+              className="border border-edge-muted rounded-lg md:rounded-xl bg-inset px-3 py-2 md:px-4 md:py-3"
             >
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <span className="font-black text-xs md:text-sm">
+                <span className="font-semibold text-xs md:text-sm">
                   {billPeriodLabel(summary.start, summary.duration)}
                 </span>
                 <span className="flex items-center gap-2">
                   <span
                     data-testid="plan-timeline-plan-badge"
-                    className="px-2 md:px-3 py-0.5 rounded-full border-2 border-edge text-[9px] md:text-[11px] font-black"
+                    className="px-2 md:px-3 py-0.5 rounded-full border border-edge-muted text-[9px] md:text-[11px] font-semibold"
                   >
                     {assignment.plan === 'unknown'
                       ? t('timeline.originUnknown')
@@ -137,7 +137,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                   </span>
                   <span
                     data-testid="plan-timeline-origin"
-                    className={`px-2 py-0.5 rounded border-2 border-edge text-[8px] md:text-[9px] font-black ${ORIGIN_STYLE[assignment.origin]}`}
+                    className={`px-2 py-0.5 rounded border border-edge-muted text-[8px] md:text-[9px] font-semibold ${ORIGIN_STYLE[assignment.origin]}`}
                   >
                     {t(ORIGIN_KEY[assignment.origin])}
                   </span>
@@ -159,7 +159,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                       ? undefined
                       : detection.evidence.join(' · ')
                   }
-                  className="mt-1 text-[9px] md:text-[10px] text-ink-3 font-bold normal-case"
+                  className="mt-1 text-[9px] md:text-[10px] text-ink-3 font-medium normal-case"
                 >
                   {t('timeline.evidence')}{' '}
                   {detection.evidence.slice(0, 3).map((note) => billNoteText(note, t)).join(' · ')}
@@ -167,14 +167,14 @@ export function PlanTimelineEditor({ summaries }: Props) {
                 </div>
               )}
               {assignment.origin === 'unknown' && (
-                <div className="mt-1 text-[9px] md:text-[10px] text-ink-3 font-bold normal-case">
+                <div className="mt-1 text-[9px] md:text-[10px] text-ink-3 font-medium normal-case">
                   {t('timeline.noGuess', { reason: detection.reason ?? '' })}
                 </div>
               )}
               {assignment.conflict && assignment.declared && (
                 <div
                   data-testid="plan-timeline-conflict"
-                  className="mt-1 text-[9px] md:text-[10px] font-bold normal-case text-bad"
+                  className="mt-1 text-[9px] md:text-[10px] font-medium normal-case text-bad"
                 >
                   {t('timeline.conflict', {
                     declared: planLabel(assignment.declared.plan),
@@ -190,7 +190,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
       {/* ---- the user's own entries ------------------------------------- */}
       <div className="mt-6 md:mt-8 border-t-4 border-edge pt-4 md:pt-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg md:text-2xl italic font-black">{t('timeline.yourEntries')}</h3>
+          <h3 className="text-sm md:text-base font-semibold">{t('timeline.yourEntries')}</h3>
           <button
             type="button"
             data-testid="plan-timeline-add"
@@ -199,19 +199,19 @@ export function PlanTimelineEditor({ summaries }: Props) {
               if (add({ plan: 'TOU', from: day, to: day })) setError(null);
               else setError(t('timeline.errorAdd'));
             }}
-            className="min-h-11 px-4 md:px-6 py-2 bg-accent text-accent-ink border-2 border-edge rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-accent active:bg-accent-soft transition-colors"
+            className="min-h-11 px-4 md:px-6 py-2 bg-accent text-accent-ink border border-edge-muted rounded-lg font-semibold text-[10px] md:text-xs uppercase hover:bg-accent active:bg-accent-soft transition-colors"
           >
             {t('timeline.addEntry')}
           </button>
         </div>
-        <p className="mt-1 md:mt-2 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
+        <p className="mt-1 md:mt-2 text-[10px] md:text-xs font-medium text-ink-3 normal-case">
           {t('timeline.entriesBlurb')}
         </p>
 
         {entries.length === 0 ? (
           <div
             data-testid="plan-timeline-empty"
-            className="mt-3 md:mt-4 bg-inset border-2 border-edge rounded-lg px-3 py-3 md:px-4 text-[10px] md:text-xs font-black text-ink-3 normal-case"
+            className="mt-3 md:mt-4 bg-inset border border-edge-muted rounded-lg px-3 py-3 md:px-4 text-[10px] md:text-xs font-semibold text-ink-3 normal-case"
           >
             {t('timeline.empty')}
           </div>
@@ -221,9 +221,9 @@ export function PlanTimelineEditor({ summaries }: Props) {
               <li
                 key={e.id}
                 data-testid="plan-timeline-entry"
-                className="flex flex-wrap items-center gap-2 md:gap-3 border-2 border-edge rounded-lg bg-card px-3 py-2 md:px-4"
+                className="flex flex-wrap items-center gap-2 md:gap-3 border border-edge-muted rounded-lg bg-card px-3 py-2 md:px-4"
               >
-                <span className="text-[9px] md:text-[10px] font-black text-ink-4">{t('timeline.iWasOn')}</span>
+                <span className="text-[9px] md:text-[10px] font-semibold text-ink-4">{t('timeline.iWasOn')}</span>
                 <select
                   data-testid="plan-timeline-entry-plan"
                   aria-label={t('timeline.planAria')}
@@ -240,7 +240,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                     </option>
                   ))}
                 </select>
-                <span className="text-[9px] md:text-[10px] font-black text-ink-4">{t('timeline.from')}</span>
+                <span className="text-[9px] md:text-[10px] font-semibold text-ink-4">{t('timeline.from')}</span>
                 <input
                   data-testid="plan-timeline-entry-from"
                   aria-label={t('timeline.fromAria')}
@@ -252,7 +252,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                   }}
                   className={FIELD_CLASS}
                 />
-                <span className="text-[9px] md:text-[10px] font-black text-ink-4">{t('timeline.to')}</span>
+                <span className="text-[9px] md:text-[10px] font-semibold text-ink-4">{t('timeline.to')}</span>
                 <input
                   data-testid="plan-timeline-entry-to"
                   aria-label={t('timeline.toAria')}
@@ -272,7 +272,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
                     remove(e.id);
                     setError(null);
                   }}
-                  className="ml-auto min-h-11 min-w-11 px-3 border-2 border-edge rounded-lg bg-card hover:bg-err-bg active:bg-bad-soft font-black text-xs uppercase"
+                  className="ml-auto min-h-11 min-w-11 px-3 border border-edge-muted rounded-lg bg-card hover:bg-err-bg active:bg-bad-soft font-semibold text-xs uppercase"
                 >
                   ✕
                 </button>
@@ -285,7 +285,7 @@ export function PlanTimelineEditor({ summaries }: Props) {
           <div
             data-testid="plan-timeline-error"
             role="alert"
-            className="mt-2 md:mt-3 bg-bad-soft border-2 border-bad rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-bad normal-case"
+            className="mt-2 md:mt-3 bg-bad-soft border border-bad rounded-lg px-3 py-2 text-[10px] md:text-xs font-semibold text-bad normal-case"
           >
             {error}
           </div>
