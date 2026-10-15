@@ -10,10 +10,9 @@ import { seedMarkShaped } from './mark-seed';
  *             independent anchors all give exactly 3.0). The width
  *             compensation in D3a is what makes the SAME code pass both.
  *
- * D1 (the black full-bleed rule under the pills) is deliberately absent: its
- * only open question is @designerbot's `border-accent` vs
- * `border-b-2 border-edge-muted` colour call, and nothing ships until that
- * lands. D1's checks ride along with D1.
+ * D1 (the sticky rule under the pills) uses the authoritative black/dark-slate
+ * `border-edge` token. Its rendered colour, spacing, opaque surface, and shadow
+ * boundary are asserted below at both viewports and in both themes.
  *
  * The seed is Mark-shaped: 24 monthly bills (Aug 2024 → Jul 2026) plus
  * readings running into the current month so the projection gate opens — the
@@ -211,6 +210,43 @@ for (const vp of VIEWPORTS) {
       expect(d4!.clearance, 'projection card bottom vs viewport bottom').toBeGreaterThanOrEqual(33);
       expect(d4!.scrollY, 'we really were at max scroll').toBe(d4!.maxScroll);
     });
+
+    for (const theme of ['light', 'dark'] as const) {
+      test(`D1 sticky rule in ${theme} at ${vp.width}×${vp.height}`, async ({ page }) => {
+        await page.context().addInitScript((value) => localStorage.setItem('theme', value), theme);
+        await seedAndReload(page);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        const d1 = await page.getByTestId('tab-nav').evaluate((nav) => {
+          const style = getComputedStyle(nav);
+          const navRect = nav.getBoundingClientRect();
+          const tabList = nav.querySelector('[role="tablist"]')!;
+          const listRect = tabList.getBoundingClientRect();
+          const active = nav.querySelector('[role="tab"][data-active="true"]')!;
+          const activeRect = active.getBoundingClientRect();
+          const shadow = getComputedStyle(active).boxShadow;
+          const shadowOffset = /rgb\(37,\s*99,\s*235\)\s+(-?[\d.]+)px\s+(-?[\d.]+)px/.exec(shadow);
+          const shadowBottom = activeRect.bottom + (shadowOffset ? parseFloat(shadowOffset[2]) : 0);
+          return {
+            borderWidth: style.borderBottomWidth,
+            borderColor: style.borderBottomColor,
+            background: style.backgroundColor,
+            backdrop: style.backdropFilter,
+            rowToRuleGap: navRect.bottom - parseFloat(style.borderBottomWidth) - listRect.bottom,
+            shadowBottom,
+            navBottom: navRect.bottom,
+          };
+        });
+
+        expect(d1.borderWidth).toBe('2px');
+        expect(d1.borderColor).toBe(theme === 'light' ? 'rgb(0, 0, 0)' : 'rgb(203, 213, 225)');
+        expect(d1.background, 'the inset surface is opaque').not.toBe('rgba(0, 0, 0, 0)');
+        expect(d1.backdrop).toBe('none');
+        expect(d1.rowToRuleGap, 'pill row to border top').toBeGreaterThanOrEqual(0);
+        expect(d1.rowToRuleGap, 'pill row to border top').toBeLessThanOrEqual(3);
+        expect(d1.shadowBottom, 'blue shadow ends at or above the nav bottom edge').toBeLessThanOrEqual(d1.navBottom);
+      });
+    }
   });
 }
 
