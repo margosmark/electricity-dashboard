@@ -261,12 +261,14 @@ describe('Wave R 1 — the tab strip', () => {
  * ========================================================================== */
 
 describe('Wave R 2 — the answer is never buried', () => {
-  it('puts the banner first on Overview and the chip in the toolbar', async () => {
+  it('leads Overview with its period and source-derived key figures while keeping the answer and chip', async () => {
     saveEnergyData(mockRawData);
     await renderLoaded();
 
     const overview = screen.getByTestId('tab-panel-overview');
-    expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
+    expect(overview.firstElementChild).toBe(screen.getByTestId('overview-period-heading'));
+    expect(screen.getByTestId('overview-key-figures').querySelectorAll(':scope > div')).toHaveLength(4);
+    expect(screen.getByTestId('best-choice-banner')).toBeInTheDocument();
     expect(screen.getByTestId('best-choice-chip')).toBeInTheDocument();
   });
 

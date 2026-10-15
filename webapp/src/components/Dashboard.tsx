@@ -40,6 +40,7 @@ import { AccountControls } from '@/components/AccountControls';
 import { AccountTriggers } from '@/components/AccountTriggers';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
+import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
 import SeriesNotesNotice from '@/components/SeriesNotesNotice';
@@ -468,7 +469,7 @@ export default function Dashboard() {
         role="status"
         aria-busy="true"
         aria-live="polite"
-        className="space-y-10 text-ink relative font-black uppercase"
+        className="space-y-6 text-ink relative"
       >
         <div className="bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap items-center gap-4 md:gap-6">
           <div className="skeleton-bar h-11 w-11 rounded-xl border-2 border-edge/10" />
@@ -492,7 +493,7 @@ export default function Dashboard() {
     );
 
   return (
-    <div key="ready" className="space-y-6 md:space-y-10 text-ink relative font-black uppercase">
+    <div key="ready" className="flex flex-col space-y-5 md:space-y-7 text-ink relative">
       {/* Wave N — renders nothing on its own: it is what lets an anomaly
           computed here reach a closed tab (server caps, never on its own). */}
       {accountTriggers}
@@ -663,7 +664,7 @@ export default function Dashboard() {
           void in the bottom-left of the card. The card is now a column: each
           row is full width, and the flexible members (the scope switch, the
           floor button) absorb the slack instead of white space doing it. */}
-      <div className="no-print relative z-[200] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-hard-8 border-4 border-edge flex flex-col gap-4 md:gap-6 text-ink">
+      <div data-testid="dashboard-toolbar" className="order-4 no-print relative z-[200] bg-transparent py-3 border-b border-edge-muted flex flex-col gap-3 md:gap-4 text-ink">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="min-h-11 min-w-11 p-3 md:p-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-red-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
@@ -792,6 +793,8 @@ export default function Dashboard() {
           projection={projection}
           efficiency={efficiency}
           onOpenMoney={() => setActiveTab('money')}
+          onOpenPlans={() => setActiveTab('plans')}
+          rateMismatch={Boolean(staleness.stale)}
           usage={{
             staleness, anomalies, heatmapData, processedData, temps,
             zoomLevel, zoomTarget, goBack, navigatePeriod,
@@ -846,6 +849,7 @@ export default function Dashboard() {
           projection={projection}
           openPeriod={openPeriod}
           billingDay={billingDay}
+          rateNotice={staleness.stale ? <RateStalenessBanner result={staleness} /> : undefined}
         />
       )}
 

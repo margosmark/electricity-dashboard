@@ -43,7 +43,7 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
       data-already-best={String(verdict.alreadyBest)}
       data-window-days={verdict.days}
       aria-labelledby="best-choice-heading"
-      className="bg-accent text-accent-ink p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-accent-ink shadow-hard-12 md:shadow-hard-24 flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase"
+      className="bg-card text-ink p-4 md:p-5 rounded-lg border border-edge-muted flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-6 font-medium normal-case"
     >
       {/* Every word on the flood is BLACK — including the small window line,
           which used to be --ink-4 (slate-400): 2.2:1 on the yellow in light
@@ -53,32 +53,32 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
           different surface: it sits on --card, where dark clears 5.8:1 and
           light's 2.56:1 is the pre-existing micro-label defect the spec
           scoped out.) */}
-      <div className="space-y-2 md:space-y-4 text-center lg:text-left">
-        <div className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-accent-ink font-black">
+      <div className="space-y-1 text-left">
+        <div className="text-[10px] md:text-xs tracking-wide text-ink-3 font-medium uppercase">
           {t('bestChoice.eyebrow')}
         </div>
-        <h4 id="best-choice-heading" className="text-3xl md:text-5xl italic leading-tight">
-          {t('bestChoice.headline')} <br />
-          <span className="text-4xl sm:text-6xl md:text-8xl text-accent-ink not-italic block mt-1 md:mt-2 font-black">
+        <h4 id="best-choice-heading" className="text-sm md:text-base leading-tight font-medium">
+          {t('bestChoice.headline')}{' '}
+          <span className="text-lg md:text-xl text-ink not-italic font-semibold">
             {planLabel(verdict.best)}
           </span>
         </h4>
         {!verdict.alreadyBest && (
-          <p data-testid="cheaper-alternative" className="text-base md:text-xl font-black text-accent-ink normal-case">
+          <p data-testid="cheaper-alternative" className="text-xs md:text-sm font-normal text-ink-2 normal-case">
             {t('bestChoice.cheaperAlternative', { plan: t(`planShort.${verdict.best}`) })}
           </p>
         )}
-        <p className="text-[9px] md:text-[11px] font-bold text-accent-ink normal-case">
+        <p className="text-[10px] md:text-xs font-normal text-ink-3 normal-case">
           {t('bestChoice.window', { count: verdict.days, days: verdict.days })} · {t('legal.commodityShort')}
         </p>
       </div>
-      <div className="bg-card text-ink p-6 md:p-10 rounded-2xl md:rounded-[2.5rem] border-4 border-edge shadow-xl lg:rotate-3 flex flex-col items-center min-w-[200px] md:min-w-[300px]">
-        <div className="text-[10px] tracking-widest text-ink-4 mb-1 md:mb-2 font-black text-center uppercase">
+      <div className="bg-inset text-ink px-4 py-3 rounded-md border border-edge-muted flex flex-col items-start min-w-[130px]">
+        <div className="text-[10px] tracking-wide text-ink-3 mb-1 font-medium text-left uppercase">
           {t('bestChoice.impact')}
         </div>
-        <div className="text-4xl md:text-7xl italic text-ink whitespace-nowrap leading-none text-center font-black">
+        <div className="text-xl md:text-2xl text-ink whitespace-nowrap leading-none text-left font-semibold">
           {verdict.alreadyBest ? (
-            <span className="text-good text-2xl md:text-5xl not-italic block">
+            <span className="text-good text-base md:text-lg not-italic block">
               {t('bestChoice.optimumA')}
               <br />
               {t('bestChoice.optimumB')}
@@ -87,7 +87,7 @@ export default function BestChoiceBanner({ comparison, userPlan, days }: BestCho
             <span className="text-bad">-{formatDelta(verdict.delta)}</span>
           )}
         </div>
-        <div className="text-[8px] md:text-[10px] mt-2 md:mt-4 font-black text-center text-ink">
+        <div className="text-[9px] md:text-[10px] mt-2 font-normal text-left text-ink-3">
           {t('bestChoice.vsCurrent', { plan: planLabel(userPlan) })}
         </div>
       </div>

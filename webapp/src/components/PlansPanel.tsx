@@ -71,7 +71,7 @@ export default function PlansPanel({
 }: PlansPanelProps) {
   const { t } = useTranslation();
   return (
-    <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="space-y-6 md:space-y-10" data-testid="tab-panel-plans">
+    <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="order-2 space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}
       <VerdictLine comparison={comparison} userPlan={userPlan} days={days} />
 

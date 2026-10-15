@@ -411,7 +411,7 @@ describe('Wave S 4 — OVERVIEW: strip numbers + the card', () => {
     );
   });
 
-  it('keeps the decision-first order: banner first, card after the strip', async () => {
+  it('keeps the period and key figures ahead of the decision banner and efficiency detail', async () => {
     localStorage.setItem('usage_summaries', JSON.stringify(summaries));
     localStorage.setItem('energy_data', JSON.stringify(dailyReadings('2026-05-01', '2026-08-20')));
     await renderLoaded();
@@ -419,9 +419,11 @@ describe('Wave S 4 — OVERVIEW: strip numbers + the card', () => {
     const overview = screen.getByTestId('tab-panel-overview');
     const children = Array.from(overview.children);
     const index = (id: string) => children.indexOf(screen.getByTestId(id));
-    expect(index('best-choice-banner')).toBe(0);
-    expect(index('totals-strip')).toBe(1);
-    expect(index('efficiency-card')).toBe(2);
+    expect(index('overview-period-heading')).toBe(0);
+    expect(index('overview-key-figures')).toBe(1);
+    expect(index('best-choice-banner')).toBe(2);
+    expect(index('totals-strip')).toBe(3);
+    expect(index('efficiency-card')).toBe(4);
   });
 
   it('does not render the card at all for a readings-only file', async () => {

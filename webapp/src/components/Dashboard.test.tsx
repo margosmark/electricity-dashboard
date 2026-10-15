@@ -298,10 +298,11 @@ describe('Dashboard', () => {
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
   });
 
-  it('puts the best-choice banner first on Overview — the answer is not buried', async () => {
+  it('leads Overview with its period heading and retains the decision banner', async () => {
     await renderLoaded();
     const overview = screen.getByTestId('tab-panel-overview');
-    expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
+    expect(overview.firstElementChild).toBe(screen.getByTestId('overview-period-heading'));
+    expect(screen.getByTestId('best-choice-banner')).toBeInTheDocument();
   });
 
   // --- Rate display single-source-of-truth -----------------------------------

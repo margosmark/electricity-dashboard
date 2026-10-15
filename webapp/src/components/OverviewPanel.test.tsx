@@ -56,8 +56,8 @@ const projection = {
   gateNote: 'No data',
 } as BillProjection;
 
-describe('Overview actionable import alert', () => {
-  it('exposes a real route to the import review workflow', () => {
+describe('Overview actionable attention items', () => {
+  it('exposes a real route to the import review workflow from its own attention row', () => {
     render(
       <OverviewPanel
         comparison={null}
@@ -70,15 +70,16 @@ describe('Overview actionable import alert', () => {
         projection={projection}
         efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
         onOpenMoney={vi.fn()}
+        onOpenPlans={vi.fn()}
         importReview
         usage={usage}
       />,
     );
-    const alert = screen.getByTestId('overview-import-alert');
+    const alert = screen.getByTestId('overview-attention');
     const control = screen.getByRole('link', { name: 'Review imports' });
     expect(alert).toContainElement(control);
     expect(control).toHaveAttribute('href', '/import');
-    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(screen.getByTestId('overview-plan-summary')).toContainElement(screen.getByRole('button', { name: 'Compare plans' }));
     expect(screen.getByRole('link', { name: 'Fix rate schedule' })).toHaveAttribute(
       'href',
       'https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts',

@@ -39,11 +39,13 @@ describe('MoneyPanel DOM order', () => {
         projection={projection}
         openPeriod={null}
         billingDay={1}
+        rateNotice={<div role="alert">Rate schedule needs updating</div>}
       />,
     );
     const panel = screen.getByTestId('tab-panel-money');
     expect(Array.from(panel.children).map((child) => child.getAttribute('data-testid'))).toEqual([
       'money-decomposition-slot',
+      'money-rate-alert',
       'money-pace-slot',
       'money-true-bill-slot',
       'money-ev-slot',
@@ -51,6 +53,8 @@ describe('MoneyPanel DOM order', () => {
     // MoneySection is lazy-loaded; its slot still leads the live DOM before
     // the chart/pace and what-if controls hydrate.
     expect(screen.getByTestId('money-decomposition-slot')).toBe(panel.firstElementChild);
+    expect(screen.getByTestId('money-rate-alert')).toContainElement(screen.getByRole('alert'));
+    expect(screen.getByTestId('money-rate-alert').nextElementSibling).toBe(screen.getByTestId('money-pace-slot'));
     expect(screen.getByTestId('money-pace-slot')).toContainElement(screen.getByTestId('bill-accrual'));
   });
 });

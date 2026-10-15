@@ -86,7 +86,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
 
   return (
     <nav
-      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 py-2 md:py-3 bg-inset/95 backdrop-blur-sm border-b-4 border-edge"
+      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 pt-2 md:pt-3 pb-[3px] bg-inset border-b-2 border-edge"
       data-testid="tab-nav"
     >
       {/*
@@ -123,10 +123,10 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               tabIndex={selected ? 0 : -1}
               title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs whitespace-nowrap transition-all ${
+              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-xs whitespace-nowrap transition-all ${
                 selected
-                  ? 'bg-inv text-accent-yellow shadow-hard-blue-3'
-                  : 'bg-card text-ink-3 hover:text-ink hover:bg-hover'
+                  ? 'bg-card text-ink border-b-2 border-b-accent'
+                  : 'bg-inset text-ink-2 hover:text-ink'
               }`}
             >
               <Icon size={14} strokeWidth={4} aria-hidden="true" className="shrink-0" />

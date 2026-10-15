@@ -263,7 +263,9 @@ describe('Dashboard integration', () => {
     expect(usage).toContainElement(banner);
     fireEvent.click(screen.getByRole('tab', { name: 'Money' }));
     const moneyPanel = await screen.findByTestId('tab-panel-money');
-    expect(within(moneyPanel).queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
+    const moneyAlert = within(moneyPanel).getByTestId('money-rate-alert');
+    expect(moneyAlert).toContainElement(within(moneyPanel).getByTestId('rate-staleness-banner'));
+    expect(moneyAlert.nextElementSibling).toBe(within(moneyPanel).getByTestId('money-pace-slot'));
   });
 
   it('renders the trend empty state in the relocated Overview usage section', async () => {

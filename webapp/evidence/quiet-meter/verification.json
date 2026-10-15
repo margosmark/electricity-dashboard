@@ -1,0 +1,65 @@
+{
+  "screenshots": [
+    {
+      "file": "overview-1440-light.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "bars": 12,
+      "metrics": 4,
+      "theme": "light",
+      "activePanel": "panel-overview",
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "bars": 12,
+      "metrics": 4,
+      "theme": "dark",
+      "activePanel": "panel-overview",
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-390-light.png",
+      "viewport": 390,
+      "scroll": 390,
+      "bars": 12,
+      "metrics": 4,
+      "theme": "light",
+      "activePanel": "panel-overview",
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-390-dark.png",
+      "viewport": 390,
+      "scroll": 390,
+      "bars": 12,
+      "metrics": 4,
+      "theme": "dark",
+      "activePanel": "panel-overview",
+      "controlsBelow44": []
+    }
+  ],
+  "interactions": [
+    {
+      "action": "keyboard-focus-rate-bar",
+      "focusedReadout": "OCT 25 · 9.5¢",
+      "accessibleName": "OCT 25: 9.5¢ average rate across 906 kilowatt-hours"
+    },
+    {
+      "action": "open-rate-data-table",
+      "rows": 12
+    },
+    {
+      "action": "select-plans-tab",
+      "selected": "true"
+    },
+    {
+      "action": "select-money-tab",
+      "selected": "true"
+    }
+  ],
+  "errors": [],
+  "ok": true
+}

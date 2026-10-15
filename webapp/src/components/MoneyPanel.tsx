@@ -18,6 +18,7 @@
 import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 import { type ProcessedPoint, type RateSet, type UsageSummary } from '@/lib/energy';
+import type { ReactNode } from 'react';
 import type { BillProjection } from '@/lib/billProjection';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import BillAccrualCurve from '@/components/BillAccrualCurve';
@@ -47,6 +48,7 @@ export type MoneyPanelProps = {
   openPeriod: { start: number; end: number } | null;
   /** The user's billing-day setting — the no-bills fallback for the bill date. */
   billingDay: number;
+  rateNotice?: ReactNode;
 };
 
 export default function MoneyPanel({
@@ -60,6 +62,7 @@ export default function MoneyPanel({
   projection,
   openPeriod,
   billingDay,
+  rateNotice,
 }: MoneyPanelProps) {
   /**
    * When this open period will be billed through — the accrual's pace line
@@ -79,11 +82,13 @@ export default function MoneyPanel({
   }, [openPeriod, summaries, billingDay]);
 
   return (
-    <div id="panel-money" role="tabpanel" aria-labelledby="tab-money" className="space-y-6 md:space-y-10" data-testid="tab-panel-money">
+    <div id="panel-money" role="tabpanel" aria-labelledby="tab-money" className="order-2 space-y-6 md:space-y-10" data-testid="tab-panel-money">
       {/* Wave O — the bill, itemized and compared. */}
       <div data-testid="money-decomposition-slot">
         <MoneySection summaries={summaries} allData={allData} plan={plan} />
       </div>
+
+      {rateNotice && <div data-testid="money-rate-alert">{rateNotice}</div>}
 
       {/* Accrue-as-you-go: where the open period is heading, right now. */}
       <div data-testid="money-pace-slot">
