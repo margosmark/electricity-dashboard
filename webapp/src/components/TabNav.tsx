@@ -172,7 +172,39 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
         deployed build) while the strip wrongly reported "fits". Pills now
         floor at their content and the strip does the scrolling.
       */}
-      <div className="flex flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
+      {/*
+        t_bb120a04 — where #113's Quiet Meter shell meets this strip's fit
+        gate. Every number below was measured on the merged tree (9de692c +
+        df271fd) before this line changed:
+
+        - 162px of strip scroll at 1024×768. #113 moved the date window,
+          scope switcher and theme toggle into this row as `shellTools`, and
+          their natural row is 800px in en / 938.5px in fr. The row packed
+          them next to the strip because the tablist's flex-basis is 0% (its
+          hypothetical size is 0, so 0 + 12 + 800 still "fits" the 976px row)
+          — the strip then grew into the 164px left over while its three pills
+          needed 326px.
+        - 83px of strip scroll in fr at EVERY xl width (1280, 1440 and 1536
+          alike). This shell caps the row at 1180px (measured: nav 1228px at
+          1440 AND at 1536), and 313 fr pills + 12 gap + 938.5 toolbar =
+          1263px — so #113's `xl:flex-nowrap`, which makes the two share one
+          row from xl up, can only work in en. That is the measured verdict
+          on the "is xl:flex-nowrap the intended row rule?" question: it
+          cannot be, because the strip may never scroll at default text in
+          either locale. The row keeps `flex-wrap` at every width and the
+          toolbar keeps `basis-full`: the gap (8/12px) plus a 100% basis can
+          never share a line with the strip, so the strip owns line 1 and the
+          toolbar owns line 2 — full width, deterministic in both locales,
+          with no locale-dependent nav height to shift on a language toggle.
+        - 672px of document scrollWidth at 390×844 with 200% text. The date
+          inputs floor at 7rem each (224px at root 32), so
+          dashboard-date-range's min-content is 640px and this wrapper's
+          automatic minimum size (min-width: auto) pushed line 2 out to 640px
+          inside a 358px viewport. min-w-0 drops that floor;
+          overflow-x-auto gives the toolbar the strip's own answer — the
+          container scrolls, the page never pans.
+      */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
         <div
           role="tablist"
           aria-label={t('tabnav.aria')}
@@ -214,7 +246,27 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
           );
           })}
         </div>
-        {shellTools && <div className="order-2 basis-full sm:order-none sm:basis-auto">{shellTools}</div>}
+      {/*
+        The wrapper's own two numbers, measured on that same tree:
+
+        - 672px of document scrollWidth at 390×844 with 200% text. The date
+          inputs floor at 7rem each (224px at root 32), so
+          dashboard-date-range's min-content is 640px and this wrapper's
+          automatic minimum size (min-width: auto) pushed line 2 out to 640px
+          inside a 358px viewport (150% text read 514). min-w-0 drops that
+          floor; overflow-x-auto gives the toolbar the strip's own answer —
+          the container scrolls, the page never pans. Measured after: 390 at
+          both 150% and 200%.
+        - `basis-full` is what puts this wrapper on its OWN line at every
+          width: with a positive row gap, a 100% flex-basis can never share a
+          line with the strip, so the row rule above holds by construction
+          rather than by breakpoint.
+      */}
+      {shellTools && (
+        <div className="order-2 basis-full sm:order-none min-w-0 overflow-x-auto">
+          {shellTools}
+        </div>
+      )}
       </div>
     </nav>
   );

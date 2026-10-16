@@ -27,6 +27,20 @@ import { seedMarkShaped } from './mark-seed';
  * follow-up card t_82a4dc08. Nav-box containment IS still asserted in every
  * cell, both locales.
  *
+ * t_bb120a04 (#113 × #114): the sweep also pins the ROW RULE that the two
+ * PRs collided over. #113 moved the date window / scope / theme toolbar into
+ * this nav as `shellTools` (an 800px natural row in en, 938.5px in fr) while
+ * the strip's flex-basis stayed 0%, so at 1024×768 the toolbar claimed 800px
+ * of the 976px row and the strip scrolled 162px — and at 200% text the date
+ * inputs' 7rem floors pushed that line to 640px inside a 358px viewport
+ * (document scrollWidth 672). The shell caps the row at 1180px at any
+ * width (nav 1228px at 1440 and 1536 alike), so #113's `xl:flex-nowrap`
+ * sharing rule can only ever fit en: the fr fit cell reads stripScroll 83 at
+ * 1280/1440/1536 under it. The rule asserted below, in every cell of the
+ * sweep and both locales: the strip owns line 1, the toolbar owns its own
+ * full-width line 2, the page never pans, and the strip never scrolls at
+ * default text.
+ *
  * Every parameter is guarded (locale labels, applied font size, selected
  * tab, seam value), so a silently-unapplied parameter can't produce a vacuous
  * green. This spec does not read the console — nothing here needs it.
@@ -180,6 +194,14 @@ async function snapshotStrip(page: Page) {
     const active = pills.find((p) => p.dataset.active === 'true');
     const navRect = nav.getBoundingClientRect();
     const listRect = list.getBoundingClientRect();
+    // The row's SECOND child is the shellTools wrapper (the #113 Quiet Meter
+    // toolbar: date window + scope + theme). t_bb120a04 asserts the row rule
+    // it carries: it always takes its own full-width line and never shares
+    // the strip's.
+    const row = nav.firstElementChild as HTMLElement | null;
+    const shell =
+      row && row.children.length > 1 ? (row.lastElementChild as HTMLElement) : null;
+    const shellRect = shell ? shell.getBoundingClientRect() : null;
     return {
       vw: document.documentElement.clientWidth,
       docScroll: document.documentElement.scrollWidth,
@@ -188,6 +210,13 @@ async function snapshotStrip(page: Page) {
       navTop: navRect.top,
       navHeight: nav.offsetHeight,
       paddingTop: getComputedStyle(nav).paddingTop,
+      tablistTop: listRect.top,
+      tablistBottom: listRect.bottom,
+      tablistRight: listRect.right,
+      shellTop: shellRect ? shellRect.top : null,
+      shellBottom: shellRect ? shellRect.bottom : null,
+      shellRight: shellRect ? shellRect.right : null,
+      shellWidth: shellRect ? shellRect.width : null,
       stripScroll: list.scrollWidth - list.clientWidth,
       pillCount: pills.length,
       activeId: active?.dataset.testid ?? null,
@@ -293,6 +322,27 @@ for (const locale of ['en', 'fr'] as Locale[]) {
       expect(s!.stripScroll, `${at}: strip has nothing to scroll`).toBeLessThanOrEqual(1);
       expect(s!.escapes, `${at}: every label inside its pill`).toEqual([]);
       expect(s!.pillMinHeight, `${at}: touch height floor`).toBeGreaterThanOrEqual(44);
+
+      // ROW RULE (t_bb120a04 — #113 × #114): the Quiet Meter shell toolbar
+      // NEVER shares the strip's row — not at any width, in either locale.
+      // Measured: the toolbar's natural row is 800px in en and 938.5px in
+      // fr, while this shell caps the row at 1180px (nav 1228px at 1440 AND
+      // at 1536 alike), so under #113's `xl:flex-nowrap` — which makes the
+      // two share one row from xl up — the fr fit cell reads stripScroll 83
+      // at 1280, 1440 and 1536. The rule this spec pins: strip on line 1,
+      // toolbar on its own full-width line 2 (basis-full), in every cell of
+      // the sweep, so the strip is never asked to share its row and never
+      // scrolls at default text.
+      expect(s!.shellTop, `${at}: the shell toolbar renders in the row`).not.toBeNull();
+      expect(
+        s!.shellTop!,
+        `${at}: the toolbar takes its own line, never the strip's`,
+      ).toBeGreaterThanOrEqual(s!.tablistBottom - 1);
+      // basis-full: the toolbar's line spans the same width as the strip's.
+      expect(
+        Math.abs(s!.shellRight! - s!.tablistRight!),
+        `${at}: the toolbar line spans the full row (basis-full)`,
+      ).toBeLessThanOrEqual(2);
     }
   });
 }
