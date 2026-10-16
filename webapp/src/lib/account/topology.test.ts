@@ -29,6 +29,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const edge = fs.readFileSync(path.join(REPO_ROOT, "ops", "edge", "default.conf.template"), "utf8");
 const compose = fs.readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8");
+const topologyScript = fs.readFileSync(path.join(REPO_ROOT, "webapp", "scripts", "e2e-greenbutton-topology.sh"), "utf8");
 
 /**
  * Drop full-line comments before asserting.
@@ -63,11 +64,62 @@ function service(name: string): string {
   return stripComments(next === -1 ? rest : rest.slice(0, next + 1));
 }
 
+describe("the account topology gate provisions disposable storage", () => {
+  it("uses a root helper container rather than host chown, and stops/cleans on failure", () => {
+    expect(topologyScript).toMatch(/ACCT_DIR="\$\(mktemp -d\)"/);
+    expect(topologyScript).toContain("docker run --rm --user 0 --entrypoint sh");
+    expect(topologyScript).toContain("chown 1001:1001 /data && chmod 700 /data");
+    expect(topologyScript).toContain("chown $HOST_UID:$HOST_GID /data && chmod 700 /data");
+    expect(topologyScript).toContain('rm -rf "$TOKEN_DIR" "$ACCT_DIR"');
+    expect(topologyScript).toContain("exit 1");
+    expect(topologyScript).not.toMatch(/^chown 1001:1001 \"\$ACCT_DIR\"$/m);
+    expect(topologyScript).toContain('GB_TOPO_PORT="$PORT" GB_TOPO_MOCK_PORT="$MOCK_PORT"');
+    expect(topologyScript).toContain('GB_TOPO_APP_IMAGE="$IMAGE" GB_TOPO_ROUTER_IMAGE="$ROUTER_IMAGE"');
+  });
+
+  it("keeps the full closed-registration route sweep below the edge request rate", () => {
+    const smoke = fs.readFileSync(path.join(REPO_ROOT, "webapp", "tests", "e2e", "account_smoke.sh"), "utf8");
+    expect(smoke).toContain("sleep 1.1");
+    expect(smoke).toContain("MATRIX_PATHS");
+    expect(smoke).toContain("[signed out]");
+    expect(topologyScript).toContain("--expect-registration-closed");
+  });
+
+  it("probes real-edge body, rate-limit and non-vacuous account log redaction", () => {
+    expect(edge).toContain("limit_req_status 429;");
+    expect(topologyScript).toContain("head -c 6291457 /dev/zero");
+    expect(topologyScript).toContain('"$BODY_CODE" = 413');
+    expect(topologyScript).toContain('"$CODE" = 429');
+    expect(topologyScript).toContain("unique account canary request itself is present in router log");
+    expect(topologyScript).toContain("query/IP/cookie canary is absent from router log");
+  });
+
+  it("writes every response into run-private files, never a fixed shared /tmp name", () => {
+    // A fixed path in a shared sticky /tmp belongs to whoever created it first:
+    // a root-owned leftover from a privileged run can be neither truncated nor
+    // unlinked by this user, so curl fails on the gate's FIRST request with
+    // `(23) Failed writing received data to disk/application` and `set -e`
+    // aborts before a single cell is counted — the topology gate then reports
+    // one anonymous early exit instead of the sweep that never ran.
+    const smoke = stripComments(
+      fs.readFileSync(path.join(REPO_ROOT, "webapp", "tests", "e2e", "account_smoke.sh"), "utf8"),
+    );
+    expect(smoke).not.toContain("/tmp/acct.");
+    expect(smoke).toMatch(/SCRATCH="\$\(mktemp -d\)"/);
+    // …and a curl failure must be a reported cell, not an abort.
+    expect(smoke).toContain("curl_dump");
+    expect(smoke).toContain("cell reports 000");
+    expect(stripComments(topologyScript)).not.toContain("/tmp/acct-edge.");
+  });
+});
+
 describe("the edge split for /account", () => {
   it("denies /account/internal outright — no upstream, no allow list", () => {
     const internal = locationBlock("/account/internal");
     expect(internal).toContain("deny all");
-    // A denied request must never reach a container: no proxy_pass at all,
+    expect(internal).toContain("access_log /var/log/nginx/access.log acct_safe;");
+    expect(internal).toContain("error_log /var/log/nginx/error.log crit;");
+    // A denied request must never reach a container: no `proxy_pass` at all,
     // and no `allow` list keyed on an address docker egress would fake.
     expect(internal).not.toContain("proxy_pass");
     expect(internal).not.toMatch(/^\s*allow\s/m);
@@ -77,8 +129,14 @@ describe("the edge split for /account", () => {
     const account = locationBlock("/account");
     expect(account).toContain("proxy_pass http://$gb_account;");
     expect(account).toContain("add_header X-Edge-Location account always;");
-    // The routing block is not where the denial lives — /account/internal is
-    // its own, longer prefix, so nginx picks it first.
+    expect(account).toContain("client_max_body_size 6m;");
+    expect(account).toContain("proxy_request_buffering on;");
+    expect(account).toContain("limit_req zone=acct_public burst=20 nodelay;");
+    expect(account).toContain("limit_conn acct_conn 10;");
+    expect(account).toContain("access_log /var/log/nginx/access.log acct_safe;");
+    expect(edge).toContain("log_format acct_safe '[$time_local] \"$request_method $uri\" $status';");
+    expect(account).toContain("error_log /var/log/nginx/error.log crit;");
+    expect(edge).toContain("zone=acct_public:10m rate=60r/m");
     expect(account).not.toContain("deny all");
   });
 
@@ -104,6 +162,9 @@ describe("which process is given which secret", () => {
   it("the account server is the only service with the verifier + push key", () => {
     const account = service("account-server");
     expect(account).toContain("ACCT_ENABLED: ${ACCT_ENABLED:-false}"); // off until opted in
+    expect(account).toContain("ACCT_DATA_DIR: /data");
+    expect(account).toContain("ACCT_DATA_DIR_HOST: ${ACCT_DATA_DIR:?set ACCT_DATA_DIR");
+    expect(account).toContain("ACCT_REPO_HOST_DIR: ${ACCT_REPO_HOST_DIR:-${PWD}}");
     expect(account).toContain("ACCT_DB_PATH: /data/accounts.db");
     expect(account).toContain("VAPID_PUBLIC_KEY:");
     expect(account).toContain("VAPID_PRIVATE_KEY:");

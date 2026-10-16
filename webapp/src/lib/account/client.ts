@@ -113,15 +113,8 @@ export const login = (email: string, password: string) =>
     updatedAt: string | null;
   }>("/account/login", { email, password });
 
-export const register = (email: string, password: string, hasLocalData: boolean) =>
-  post<{
-    ok: true;
-    email: string;
-    kdfSalt: string;
-    recoveryCode: string | null;
-    hasBlob: boolean;
-    rev: number;
-  }>("/account/register", { email, password, hasLocalData });
+export const register = (email: string) =>
+  post<{ ok: true; status: "verification_pending"; detail: string }>("/account/register", { email });
 
 export const logout = () => post<{ ok: boolean }>("/account/logout");
 

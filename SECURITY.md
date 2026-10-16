@@ -219,10 +219,13 @@ as HTML.
 8. Touched the account server — its routes, the E2EE blob, the push fan-out,
    `ACCT_*` / `VAPID_*`, or the `/account` locations in
    `ops/edge/default.conf.template`? → the live half of that contract is
-   `webapp/scripts/e2e-greenbutton-topology.sh` (§0d runs BOTH flag states and
-   the real register/login/sync matrix through the router) plus
-   `webapp/tests/e2e/account_smoke.sh` (both states, every path × every method
-   × {no cookie, live session, forged cookie}), the static half is
+   `webapp/scripts/e2e-greenbutton-topology.sh` (feature-off and
+   enabled-but-registration-closed router routes; it does not run authenticated
+   registration/login/sync) plus `webapp/tests/e2e/account_smoke.sh` (the
+   registration-closed session and method/path checks through the router).
+   Authenticated registration/login/sync lifecycle behavior is covered by
+   ephemeral tests in `webapp/src/lib/account/account.test.ts` and
+   `route-matrix.test.ts`; the static half is
    `webapp/src/lib/account/topology.test.ts`, and the route surface itself is
    pinned by `webapp/src/lib/account/route-matrix.test.ts` — which reads the
    route files off disk, so a NEW `/account/*` route fails the gate until its
@@ -230,5 +233,4 @@ as HTML.
    negotiable and no other test covers them: the server stores **ciphertext it
    cannot read** (the derived key never leaves the device), the notify log
    holds topic/title/outcome and **never a reading**, and `/account/*` answers
-   404 with `ACCT_ENABLED` unset — the deployment claims no account API at
-   all, for every method.
+   all, for every method. P0 account hardening also requires registration to remain closed until actual email ownership verification exists: the endpoint is generic `202 verification_pending`, checks no account existence, never stores a pending password, and sends no fake email. The mailbox must be proven BEFORE the user chooses a password. `ACCT_DATA_DIR` is an absolute, external, uid/mode-checked mount validated at startup; SQLite changes run transactionally with `user_version` migrations, notify metadata cascades on account deletion, and ciphertext CAS uses `BEGIN IMMEDIATE`. The account edge location caps bodies at 6 MiB before forwarding, buffers before upstream, applies request-rate/concurrency limits, and logs only verb, route and status (no IP, query, referer, cookies or body) with sensitive error lines suppressed. Client IP throttling keys only nginx-overwritten `X-Real-IP` (the TCP peer nginx actually sees); the Pangolin/tunnel topology may make this a shared NAT bucket. There is no configured trusted-proxy CIDR, so never treat the upstream client-controlled `X-Forwarded-For` chain as the end-user identity. New passphrases are at least 15 characters because the same human secret protects offline guesses against both the verifier and stolen ciphertext; legacy credentials can still sign in. No mail adapter, secret, account database, or live enablement is included. See `webapp/src/lib/account/{security,db,account,route-matrix,topology}.test.ts` and `OPERATIONS.md`.

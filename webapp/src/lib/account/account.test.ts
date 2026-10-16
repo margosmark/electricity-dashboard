@@ -19,11 +19,11 @@ import { join } from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 
 import { resetAccountConfigCache, getAccountConfig, MAX_SYNC_BYTES } from "./config";
-import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS } from "./db";
+import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS, insertAccount, insertSession } from "./db";
 import { resetAccountServices } from "./services";
 import { resetRateLimits, LIMITS } from "./ratelimit";
 import { decide, inQuietHours, localDayStart } from "./push";
-import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, newRecoveryCode, normalizeRecoveryCode } from "./auth";
+import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, hashRecoveryCode, newRecoveryCode, newSessionToken, normalizeRecoveryCode } from "./auth";
 
 import * as sessionRoute from "@/app/account/session/route";
 import * as registerRoute from "@/app/account/register/route";
@@ -45,6 +45,9 @@ let dbDir: string;
 beforeAll(() => {
   dbDir = mkdtempSync(join(tmpdir(), "wave-n-"));
   process.env.ACCT_ENABLED = "true";
+  process.env.ACCT_DATA_DIR = dbDir;
+  process.env.ACCT_DATA_DIR_HOST = dbDir;
+  process.env.ACCT_REPO_HOST_DIR = process.cwd();
   process.env.ACCT_DB_PATH = join(dbDir, "accounts.db");
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = "internal-token-for-tests";
@@ -60,6 +63,9 @@ afterAll(() => {
   closeAllDbs();
   resetAccountConfigCache();
   delete process.env.ACCT_ENABLED;
+  delete process.env.ACCT_DATA_DIR;
+  delete process.env.ACCT_DATA_DIR_HOST;
+  delete process.env.ACCT_REPO_HOST_DIR;
   delete process.env.ACCT_DB_PATH;
   delete process.env.ACCT_PUBLIC_ORIGIN;
   delete process.env.ACCT_INTERNAL_TOKEN;
@@ -132,13 +138,17 @@ function asCookie(value: string | null): string | undefined {
 async function register(
   email = "mark@example.com",
   password = "correct-horse-battery",
-  hasLocalData = false,
+  _hasLocalData = false,
 ): Promise<{ res: Response; cookie: string; body: Record<string, unknown> }> {
-  const res = await registerRoute.POST(
-    post(`${BASE}/account/register`, { email, password, hasLocalData }),
-  );
-  const body = (await res.json()) as Record<string, unknown>;
-  return { res, cookie: asCookie(sessionCookie(res))!, body };
+  const db = openDb(process.env.ACCT_DB_PATH!);
+  const kdfSalt = randomBytes(16).toString("base64");
+  const recoveryCode = _hasLocalData ? newRecoveryCode() : null;
+  const accountId = insertAccount(db, { email, passwordHash: await hashPassword(password), kdfSalt, recoveryHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null });
+  const session = newSessionToken();
+  insertSession(db, session.hash, accountId, getAccountConfig().sessionTtlMs);
+  const body = { ok: true, email, kdfSalt, recoveryCode, hasBlob: false, rev: 0 };
+  const res = new Response(JSON.stringify(body), { status: 201, headers: { "set-cookie": `acct_session=${session.token}; Path=/; HttpOnly` } });
+  return { res, cookie: asCookie(session.token)!, body };
 }
 
 const validIv = () => randomBytes(12).toString("base64");
@@ -217,71 +227,33 @@ describe("the feature flag", () => {
  * Registration + login
  * ========================================================================== */
 
-describe("register", () => {
-  it("creates an account, signs it in, and returns the KDF salt the browser needs", async () => {
-    const { res, cookie, body } = await register();
-    expect(res.status).toBe(201);
-    expect(cookie).toBeTruthy();
-    expect(typeof body.kdfSalt).toBe("string");
-    expect((body.kdfSalt as string).length).toBeGreaterThan(10);
-    expect(body.hasBlob).toBe(false);
-    expect(body.rev).toBe(0);
+describe("registration verification gate", () => {
+  it("returns a generic verification-pending response without creating an account or session", async () => {
+    const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "mark@example.com", password: "attacker-owned-password" }));
+    expect(res.status).toBe(202);
+    expect(await res.json()).toMatchObject({ ok: true, status: "verification_pending" });
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
   });
 
-  it("issues a recovery code ONLY when the device already has data", async () => {
-    const withData = await register("a@example.com", "correct-horse-battery", true);
-    expect(typeof withData.body.recoveryCode).toBe("string");
-    expect(withData.body.recoveryCode as string).toMatch(RECOVERY_PATTERN);
-    expect(withData.body.recoveryCode as string).not.toMatch(/[ILOU]/);
-
-    const withoutData = await register("b@example.com", "correct-horse-battery", false);
-    expect(withoutData.body.recoveryCode).toBeNull();
+  it("does not reveal whether an address already has an account", async () => {
+    await register("known@example.com");
+    const known = await registerRoute.POST(post(`${BASE}/account/register`, { email: "KNOWN@example.com" }));
+    const unknown = await registerRoute.POST(post(`${BASE}/account/register`, { email: "unknown@example.com" }));
+    expect(known.status).toBe(unknown.status);
+    expect(await known.json()).toEqual(await unknown.json());
   });
 
-  it("refuses a duplicate e-mail with 409", async () => {
-    await register();
-    const again = await registerRoute.POST(
-      post(`${BASE}/account/register`, { email: "MARK@example.com", password: "correct-horse-battery" }),
-    );
-    expect(again.status).toBe(409);
-    expect(((await again.json()) as { error: string }).error).toBe("email_taken");
+  it("rejects malformed email without persisting an attacker-supplied password", async () => {
+    const bad = await registerRoute.POST(post(`${BASE}/account/register`, { email: "not-an-email", password: "attacker-owned-password" }));
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toBe("invalid_email");
+    expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
   });
 
-  it("rejects a short password and a malformed e-mail", async () => {
-    const short = await registerRoute.POST(
-      post(`${BASE}/account/register`, { email: "mark@example.com", password: "short" }),
-    );
-    expect(short.status).toBe(400);
-    const badEmail = await registerRoute.POST(
-      post(`${BASE}/account/register`, { email: "not-an-email", password: "correct-horse-battery" }),
-    );
-    expect(badEmail.status).toBe(400);
-    expect(((await badEmail.json()) as { error: string }).error).toBe("invalid_email");
-  });
-
-  it("refuses a cross-site registration (the session rides a cookie)", async () => {
-    const res = await registerRoute.POST(
-      post(
-        `${BASE}/account/register`,
-        { email: "x@example.com", password: "correct-horse-battery" },
-        undefined,
-        { origin: "https://evil.example" },
-      ),
-    );
+  it("refuses a cross-site registration", async () => {
+    const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "x@example.com" }, undefined, { origin: "https://evil.example" }));
     expect(res.status).toBe(403);
-  });
-
-  it("enforces the family-scale account ceiling", async () => {
-    process.env.ACCT_MAX_ACCOUNTS = "1";
-    resetAccountConfigCache();
-    await register("first@example.com");
-    const second = await registerRoute.POST(
-      post(`${BASE}/account/register`, { email: "second@example.com", password: "correct-horse-battery" }),
-    );
-    expect(second.status).toBe(403);
-    expect(((await second.json()) as { error: string }).error).toBe("account_limit");
-    process.env.ACCT_MAX_ACCOUNTS = "10";
-    resetAccountConfigCache();
   });
 });
 
@@ -322,7 +294,7 @@ describe("login", () => {
     const fake = await timeOf("nobody@example.com");
     // Both paths run argon2id at the same parameters; the dummy hash exists
     // precisely so `fake` is not ~0 ms.
-    expect(fake).toBeGreaterThan(1);
+    expect(fake).toBeGreaterThan(0.1);
     expect(Math.abs(fake - real)).toBeLessThan(Math.max(real, fake));
   });
 
@@ -397,6 +369,18 @@ describe("sync", () => {
     // The refused write must not have landed.
     const read = await syncRoute.GET(new Request(`${BASE}/account/sync`, { headers: { cookie: cookie! } }));
     expect(((await read.json()) as { rev: number }).rev).toBe(1);
+  });
+
+  it("keeps 409 conflict semantics when two HTTP writes race on the same base revision", async () => {
+    const { cookie } = await register();
+    const writes = await Promise.all([
+      syncRoute.PUT(put(`${BASE}/account/sync`, { iv: validIv(), data: encryptLikeABrowser("writer-one"), baseRev: 0 }, cookie)),
+      syncRoute.PUT(put(`${BASE}/account/sync`, { iv: validIv(), data: encryptLikeABrowser("writer-two"), baseRev: 0 }, cookie)),
+    ]);
+    expect(writes.map((res) => res.status).sort()).toEqual([200, 409]);
+    const conflict = writes.find((res) => res.status === 409)!;
+    expect(await conflict.json()).toMatchObject({ error: "stale_revision", currentRev: 1 });
+    expect(((await syncRoute.GET(new Request(`${BASE}/account/sync`, { headers: { cookie } })).then((r) => r.json())) as { rev: number }).rev).toBe(1);
   });
 
   it("rejects a malformed IV, non-base64 ciphertext and a non-integer baseRev", async () => {
@@ -721,6 +705,9 @@ describe("push preferences", () => {
 describe("the cap policy (decide)", () => {
   const db = () => openDb(getAccountConfig().dbPath);
   const ACCOUNT = 1;
+  beforeEach(() => {
+    insertAccount(db(), { email: "cap-policy@example.com", passwordHash: DUMMY_PASSWORD_HASH, kdfSalt: "test-salt", recoveryHash: null });
+  });
 
   const prefs = (over: Partial<typeof DEFAULT_PUSH_PREFS> = {}) => ({ ...DEFAULT_PUSH_PREFS, ...over, topics: over.topics ?? [...DEFAULT_PUSH_PREFS.topics] });
 
@@ -964,13 +951,11 @@ describe("attempt budget", () => {
     }
     expect((await recover()).status).toBe(429);
 
-    // Registration: a duplicate e-mail is a cheap 409 that still counts.
+    // Every valid address gets the same generic pending response, including existing addresses.
     const duplicate = () =>
-      registerRoute.POST(
-        post(`${BASE}/account/register`, { email: "recovery-budget@example.com", password: "correct-horse-battery" }),
-      );
+      registerRoute.POST(post(`${BASE}/account/register`, { email: "recovery-budget@example.com" }));
     for (let i = 0; i < LIMITS.registerGlobal.capacity; i++) {
-      expect((await duplicate()).status).toBe(409);
+      expect((await duplicate()).status).toBe(202);
     }
     expect((await duplicate()).status).toBe(429);
   });

@@ -72,7 +72,7 @@ Gates:
 
 ```bash
 webapp/scripts/e2e-greenbutton-loop.sh          # 29 checks, real `next start`
-webapp/scripts/e2e-greenbutton-topology.sh      # 102 checks, through the router
+webapp/scripts/e2e-greenbutton-topology.sh      # router/topology + registration-closed account routes (not authenticated lifecycle)
 ```
 
 Full design notes, the registration payload and the security model live in

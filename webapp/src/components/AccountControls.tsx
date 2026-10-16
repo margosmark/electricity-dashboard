@@ -95,7 +95,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
 
   const submitAuth = async (e: FormEvent) => {
     e.preventDefault();
-    const ok = tab === "signup" ? await account.signUp(email, password) : await account.signIn(email, password);
+    const ok = tab === "signup" ? await account.signUp(email) : await account.signIn(email, password);
     if (ok) {
       setPassword("");
       // Sign-in can END with a question the user has to answer (the
@@ -103,7 +103,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
       // drawer here would hide it, and a hidden prompt is a prompt that never
       // happened. Read from the ref, not from `prompt`: the render that carries
       // the new prompt has not happened yet when this resumes.
-      if (!account.promptRef.current) setOpen(false);
+      if (tab !== "signup" && !account.promptRef.current) setOpen(false);
     }
   };
 
@@ -328,22 +328,27 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                     className={INPUT_CLASS}
                   />
                 </div>
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="acct-password">
-                    {t('account.passwordLabel')}
-                  </label>
-                  <input
-                    id="acct-password"
-                    data-testid="account-password-input"
-                    type="password"
-                    autoComplete={tab === "signup" ? "new-password" : "current-password"}
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
-                </div>
+                {tab === "signup" && (
+                  <p role="status" className="border-4 border-black bg-yellow-100 p-3 text-[10px] normal-case">
+                    {t('account.registrationClosed')}
+                  </p>
+                )}
+                {tab !== "signup" && (
+                  <div>
+                    <label className={FIELD_LABEL} htmlFor="acct-password">{t('account.passwordLabel')}</label>
+                    <input
+                      id="acct-password"
+                      data-testid="account-password-input"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      minLength={1}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                )}
                 <button
                   type="submit"
                   data-testid={tab === "signup" ? "account-register" : "account-login"}
@@ -416,12 +421,14 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   type="password"
                   autoComplete="new-password"
                   required
-                  minLength={8}
+                  minLength={15}
+                  maxLength={200}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className={INPUT_CLASS}
                 />
               </div>
+              <p className="text-[9px] text-ink-2 normal-case">{t('account.passphraseHint')}</p>
               <p className="text-[9px] text-ink-2 normal-case">
                 {t('account.recoverWarn')}
               </p>

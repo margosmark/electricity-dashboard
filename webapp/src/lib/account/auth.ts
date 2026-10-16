@@ -44,8 +44,12 @@ export const ARGON2_OPTIONS = {
   parallelism: 1,
 } as const;
 
-/** NIST: at least 8 characters. Capped so one request cannot pin a core. */
-export const MIN_PASSWORD_LENGTH = 8;
+/**
+ * Minimum 15 characters: the verifier protects against offline Argon2id
+ * guessing, while this same secret derives the E2EE key from public salt and
+ * stolen ciphertext. Favor memorable passphrases; do not silently trim them.
+ */
+export const MIN_PASSWORD_LENGTH = 15;
 export const MAX_PASSWORD_LENGTH = 200;
 export const MAX_EMAIL_LENGTH = 254;
 
@@ -88,6 +92,12 @@ export function normalizeEmail(raw: unknown): CredentialResult<string> {
     return { ok: false, error: "That does not look like an e-mail address (expected name@example.com)." };
   }
   return { ok: true, value: email };
+}
+
+export function validateLoginPassword(raw: unknown): CredentialResult<string> {
+  if (typeof raw !== "string" || raw.length === 0) return { ok: false, error: "Enter a password." };
+  if (raw.length > MAX_PASSWORD_LENGTH) return { ok: false, error: `Passwords are limited to ${MAX_PASSWORD_LENGTH} characters.` };
+  return { ok: true, value: raw };
 }
 
 export function validatePassword(raw: unknown): CredentialResult<string> {

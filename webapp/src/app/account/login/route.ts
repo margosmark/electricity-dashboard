@@ -31,7 +31,7 @@ import {
   newSessionToken,
   normalizeEmail,
   timingEqualize,
-  validatePassword,
+  validateLoginPassword,
   verifyPassword,
 } from "@/lib/account/auth";
 import { checkAttempts, loginAttempts, refundIdentity, spendAttempts } from "@/lib/account/ratelimit";
@@ -47,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const email = normalizeEmail((body.value as { email?: unknown } | null)?.email);
   if (!email.ok) return accountError(400, "invalid_email", email.error);
-  const password = validatePassword((body.value as { password?: unknown } | null)?.password);
+  const password = validateLoginPassword((body.value as { password?: unknown } | null)?.password);
   if (!password.ok) return accountError(400, "invalid_password", password.error);
 
   // Budget first, argon2 second: refusing before the 17 ms hash is the whole

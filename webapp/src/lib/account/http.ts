@@ -22,7 +22,7 @@
 
 import { NextResponse } from "next/server";
 import type { DatabaseSync } from "node:sqlite";
-import { getAccountConfig, SESSION_COOKIE, MAX_SYNC_BYTES, type AccountConfig } from "./config";
+import { getAccountConfig, SESSION_COOKIE, MAX_SYNC_BYTES, assertAccountDataDir, type AccountConfig } from "./config";
 import {
   openDb,
   findSession,
@@ -86,6 +86,7 @@ export function rateLimitError(retryAfterSeconds: number): NextResponse {
 export function requireEnabled(): AccountConfig | NextResponse {
   const cfg = getAccountConfig();
   if (!cfg.enabled) return accountError(404, "not_found");
+  assertAccountDataDir(cfg);
   ensureAccountServices();
   return cfg;
 }
