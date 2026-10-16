@@ -466,8 +466,10 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
   // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
   const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
 
-  /* The active date window belongs in the persistent Quiet Meter shell. It is
-     context for every tab, not a second, legacy toolbar below the content. */
+  /* The active date window belongs in the persistent route shell. It is
+     context for every tab, not a second, legacy toolbar below the content.
+     The classic route uses this same wired control group in its historical
+     shell so both routes change the same analytics state. */
   const dashboardContext = (
     <div data-testid="dashboard-context" className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
       <div data-testid="dashboard-date-range" className="flex w-full flex-none items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:w-auto">
@@ -480,7 +482,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
         <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'Month' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.month')}</button>
         <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'YTD' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.ytd')}</button>
       </div>
-      <ThemeToggle />
+      {variant === 'quiet' && <ThemeToggle />}
     </div>
   );
 
@@ -542,7 +544,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
       {variant === 'classic' ? (
-        <ClassicTabNav active={classicTab} onChange={setClassicTab} />
+        <ClassicTabNav active={classicTab} onChange={setClassicTab} shellTools={dashboardContext} />
       ) : (
         <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
       )}

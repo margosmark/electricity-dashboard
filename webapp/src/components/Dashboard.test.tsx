@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
 import Dashboard from './Dashboard';
@@ -76,6 +76,30 @@ describe('Dashboard', () => {
     await userEvent.click(screen.getByTestId('classic-tab-usage'));
     expect(screen.getByTestId('tab-panel-usage')).toBeInTheDocument();
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+  });
+
+  it('classic shell date and scope controls change the classic analytics window', async () => {
+    const user = userEvent.setup();
+    render(<Dashboard variant="classic" />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    const shell = screen.getByTestId('classic-tab-nav');
+    const context = within(shell).getByTestId('dashboard-context');
+    const [startInput, endInput] = context.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const initialDate = format(new Date(mockRawData[0].timestamp * 1000), 'yyyy-MM-dd');
+    expect(startInput).toHaveValue(initialDate);
+    expect(endInput).toHaveValue(initialDate);
+
+    await user.click(within(context).getByRole('button', { name: 'Month' }));
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
+    expect(startInput.value).not.toBe(initialDate);
+    expect(endInput.value).not.toBe(initialDate);
+
+    fireEvent.change(startInput, { target: { value: initialDate } });
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'false');
+    expect(startInput).toHaveValue(initialDate);
   });
 
   it('renders plan selection buttons', async () => {
