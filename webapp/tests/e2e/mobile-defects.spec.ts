@@ -35,7 +35,15 @@ const VIEWPORTS = [
  */
 const seedAndReload = seedMarkShaped;
 
-/** D2 — clearance between the selected pill's hard blue shadow and its neighbour. */
+/**
+ * D2 — clearance between the selected pill's marker and its neighbour.
+ *
+ * Post-redesign (#110) the marker is the pill's own 2px accent underline
+ * (`border-b-2 border-b-accent`), not the old hard blue shadow: measured on
+ * the deployed build 79b7d00, boxShadow is 'none' and the accent token
+ * resolves to rgb(199, 240, 0) in light. The clearance intent is
+ * unchanged — gap-2 must keep the marker ≥8px clear of the next pill.
+ */
 async function measureD2(page: Page) {
   return page.evaluate(() => {
     const active = document.querySelector('[role="tab"][data-active="true"]');
@@ -46,16 +54,22 @@ async function measureD2(page: Page) {
     const next = pills[index + 1];
     if (!next) return null;
     const cs = getComputedStyle(active as Element);
-    const shadow = /rgb\(37,\s*99,\s*235\)\s+(-?[\d.]+)px\s+(-?[\d.]+)px/.exec(cs.boxShadow);
-    const offset = shadow ? Math.abs(parseFloat(shadow[1])) : 0;
+    // Resolve --accent through a probe element so the check follows the
+    // theme instead of pinning the light-theme literal.
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--accent)';
+    document.body.append(probe);
+    const accent = getComputedStyle(probe).color;
+    probe.remove();
     const a = active.getBoundingClientRect();
     const n = next.getBoundingClientRect();
     return {
       shadow: cs.boxShadow,
+      markerWidth: cs.borderBottomWidth,
+      markerColor: cs.borderBottomColor,
+      accent,
       pillGap: n.left - a.right,
-      shadowClearance: n.left - (a.right + offset),
       focusVisible: (active as HTMLElement).matches(':focus-visible'),
-      offset,
     };
   });
 }
@@ -169,17 +183,19 @@ for (const vp of VIEWPORTS) {
       test.setTimeout(180_000);
       await seedAndReload(page);
 
-      // --- D2: the blue sliver must keep its 5px of air. ---------------
+      // --- D2: the accent marker must keep its 8px of air. --------------
       const d2 = await measureD2(page);
       expect(d2, 'a selected tab with a neighbour to its right').not.toBeNull();
-      // The blue hard shadow is a deliberate language element (toolbar
-      // buttons use shadow-hard-blue-4) — spacing, not colour, is the fix.
-      expect(d2!.shadow).toContain('37, 99, 235');
-      expect(d2!.focusVisible, 'the sliver was never the focus ring').toBe(false);
-      expect(d2!.offset, '3px hard offset').toBe(3);
+      // The #110 redesign retired the hard blue shadow — the marker is now
+      // the pill's own 2px accent underline (measured on the deployed
+      // build: boxShadow 'none'). Spacing, not colour, was ever the fix,
+      // and the underline inherits that bar: it must be the --accent token
+      // at 2px, still 8px clear of the neighbour via gap-2.
+      expect(d2!.shadow, 'no hard shadow since #110').toBe('none');
+      expect(d2!.markerWidth, 'the redesign marker is a 2px underline').toBe('2px');
+      expect(d2!.markerColor, 'marker colour = the --accent token').toBe(d2!.accent);
+      expect(d2!.focusVisible, 'the marker was never the focus ring').toBe(false);
       expect(d2!.pillGap, 'gap-2 = 8px between pills').toBeGreaterThanOrEqual(8);
-      // Shadow ends 3px into that gap → ≥5px of clear air (spec: ≥4px).
-      expect(d2!.shadowClearance).toBeGreaterThanOrEqual(4);
 
       // --- D3: legible type, no collisions, labels inside their bands. --
       const d3 = await measureD3(page);
