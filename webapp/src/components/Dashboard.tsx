@@ -451,6 +451,24 @@ export default function Dashboard() {
   // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
   const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
 
+  /* The active date window belongs in the persistent Quiet Meter shell. It is
+     context for every tab, not a second, legacy toolbar below the content. */
+  const dashboardContext = (
+    <div data-testid="dashboard-context" className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
+      <div data-testid="dashboard-date-range" className="flex w-full flex-none items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:w-auto">
+        <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
+        <span data-testid="window-separator" className="shrink-0 px-1 text-[10px] font-semibold text-ink-2">{t('toolbar.to')}</span>
+        <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
+      </div>
+      <div data-testid="dashboard-scope" className="flex shrink-0 items-center gap-1 rounded-lg border border-edge-muted bg-hover p-1">
+        <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'BillingPeriod' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.billingPeriod')}</button>
+        <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'Month' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.month')}</button>
+        <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'YTD' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.ytd')}</button>
+      </div>
+      <ThemeToggle />
+    </div>
+  );
+
   /**
    * Wave I item 5 — the load shell.
    *
@@ -508,7 +526,7 @@ export default function Dashboard() {
       {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
-      <TabNav active={tab} onChange={setActiveTab} shellTools={<ThemeToggle />} />
+      <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
@@ -548,22 +566,22 @@ export default function Dashboard() {
           aria-modal="true"
           aria-label={t('upload.modal.aria')}
           data-testid="upload-modal"
-          className="fixed inset-0 bg-inv/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
+          className="fixed inset-0 bg-inv/70 z-[300] flex justify-center overflow-y-auto overlay-safe p-4"
         >
-          <div className="my-auto bg-card p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-edge shadow-hard-10 md:shadow-hard-20 max-w-2xl w-full text-ink">
-             <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-ink font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> {t('upload.modal.title')}</h2>
-             <p className="font-bold text-ink-2 text-sm md:text-lg mb-6 md:mb-10 text-ink">{t('upload.modal.privacy')} <span className="underline decoration-blue-500">{t('upload.modal.privacyHighlight')}</span></p>
+          <div className="my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none">
+             <h2 className="text-2xl md:text-3xl tracking-tight mb-3 md:mb-4 flex items-center gap-2 text-ink font-semibold"><Upload size={22} strokeWidth={2} /> {t('upload.modal.title')}</h2>
+             <p className="font-medium text-ink-2 text-sm md:text-base mb-6 md:mb-8">{t('upload.modal.privacy')} <span className="font-semibold text-ink">{t('upload.modal.privacyHighlight')}</span></p>
              {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} /></div>}
-             <p className="text-[10px] md:text-xs font-black uppercase text-ink-3 mb-3">{t('upload.modal.mergeHint')}</p>
+             <p className="text-[10px] md:text-xs font-medium uppercase tracking-[0.08em] text-ink-3 mb-3">{t('upload.modal.mergeHint')}</p>
              <div className="relative">
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label={t('upload.xml.aria')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-accent bg-accent-soft' : 'border-edge bg-inset'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
+                <div className={`p-8 md:p-12 border border-dashed ${parsing ? 'border-accent bg-accent-soft' : 'border-edge-muted bg-inset'} rounded-lg text-center`}><div className="text-lg md:text-xl font-medium text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
              </div>
              {/* The other way in with no utility file at all: a JSON this app
                  exported before (full profile or readings only). */}
              <label className="mt-4 block cursor-pointer">
                <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label={t('upload.importJson.aria')} className="sr-only" />
-               <span className="block min-h-11 w-full py-3 bg-good-soft border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs text-ink text-center">{t('upload.importJson.label')}</span>
+               <span className="block min-h-11 w-full py-3 bg-hover border border-edge-muted rounded-lg font-medium text-[10px] md:text-xs text-ink text-center">{t('upload.importJson.label')}</span>
              </label>
              {/* Wave K — the other way to get data in: authorise once and
                  let the shim pipe ESPI straight through to localStorage. */}
@@ -580,11 +598,11 @@ export default function Dashboard() {
              {/* Why the last upload loaded nothing: names what was missing,
                  instead of a bare "invalid XML" (Wave G item 4). */}
              {parseIssue && !parseIssue.ok && (
-               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-edge bg-bad-soft rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
-                 <div className="text-sm md:text-lg font-black uppercase text-bad mb-2">{parseIssue.headline}</div>
-                 <p className="text-[11px] md:text-sm font-bold text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
+               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border border-edge-muted bg-bad-soft rounded-lg p-4 md:p-5 text-left">
+                 <div className="text-sm md:text-base font-semibold uppercase tracking-[0.08em] text-bad mb-2">{parseIssue.headline}</div>
+                 <p className="text-[11px] md:text-sm font-medium text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
                  {parseIssue.hints.length > 0 && (
-                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-bold text-ink-2 normal-case">
+                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-medium text-ink-2 normal-case">
                      {parseIssue.hints.map((h) => <li key={h}>{h}</li>)}
                    </ul>
                  )}
@@ -599,7 +617,7 @@ export default function Dashboard() {
                  data-testid="try-example-data"
                  onClick={() => { setParseIssue(null); void loadExampleData(); }}
                  disabled={parsing}
-                 className="flex-1 min-h-11 py-3 md:py-4 bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
+                 className="flex-1 min-h-11 py-3 bg-accent text-accent-ink border border-accent rounded-lg font-semibold text-[11px] md:text-xs transition-colors hover:brightness-95 disabled:opacity-50 disabled:cursor-wait"
                >
                  {parsing ? t('upload.tryExample.loading') : t('upload.tryExample.idle')}
                </button>
@@ -611,14 +629,14 @@ export default function Dashboard() {
                  <button
                    type="button"
                    onClick={() => { setParseIssue(null); setShowUploadModal(false); }}
-                   className="min-h-11 py-3 md:py-4 px-6 bg-hover border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs"
+                   className="quiet-action min-h-11 py-3 px-6 font-medium text-[10px] md:text-xs"
                  >
                    {t('common.cancel')}
                    </button>
                )}
              </div>
-             <p className="mt-3 text-[9px] md:text-[11px] font-bold text-ink-3 normal-case">
-               <span className="font-black uppercase">{t('example.modal.title')}</span>{' '}
+             <p className="mt-3 text-[9px] md:text-[11px] font-medium text-ink-3 normal-case">
+               <span className="font-semibold uppercase tracking-[0.08em]">{t('example.modal.title')}</span>{' '}
                {t('example.modal.body')}
              </p>
           </div>
@@ -673,11 +691,11 @@ export default function Dashboard() {
           void in the bottom-left of the card. The card is now a column: each
           row is full width, and the flexible members (the scope switch, the
           floor button) absorb the slack instead of white space doing it. */}
-      <div data-testid="dashboard-toolbar" className="order-4 no-print relative z-[200] bg-transparent py-3 border-b border-edge-muted flex flex-col gap-3 md:gap-4 text-ink">
+      <div data-testid="dashboard-toolbar" className="order-1 no-print relative z-[200] border-b border-edge-muted py-3 flex flex-col gap-3 md:gap-4 text-ink">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
-           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="min-h-11 min-w-11 p-3 md:p-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-red-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-info border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
+           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="quiet-action min-h-11 min-w-11 p-3 transition-colors hover:bg-hover"><Upload size={18} strokeWidth={2} /></button>
+           <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="quiet-action min-h-11 min-w-11 p-3 text-bad transition-colors hover:bg-hover"><Trash2 size={18} strokeWidth={2} /></button>
+           <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="quiet-action min-h-11 min-w-11 p-3 text-info transition-colors hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={2} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
@@ -694,29 +712,7 @@ export default function Dashboard() {
             onJump={() => setActiveTab('overview')}
           />
 
-          <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
-            <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-base md:text-sm text-ink bg-card" />
-            {/* The quiet separator between the two window dates. Explicit hex
-                instead of `text-ink opacity-40`: 40% black on white is
-                #999999 = 2.84:1 at 10px (axe color-contrast — small text
-                needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still
-                reads as secondary; the hex is literal so the regression test
-                can measure the ratio instead of trusting a palette name. */}
-            <span data-testid="window-separator" className="text-ink-2 font-black text-[10px]">{t('toolbar.to')}</span>
-            <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-base md:text-sm text-ink bg-card" />
-          </div>
 
-          {/* The scope switch is row 1's flexible member: it eats the
-              slack so the row always reaches the card's right edge instead of
-              ending in white space (it is alone on its line below ~940px, where
-              it stretches across the whole row). */}
-          <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-accent text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>
-          </div>
         </div>
 
         {/* Row 2, full width. `lg:ml-auto` used to right-align this row and
@@ -724,11 +720,11 @@ export default function Dashboard() {
             gap opens to 24px at lg because the button is now wide enough that
             its `hover:scale-105` would otherwise reach into the switcher. */}
         <div className="w-full flex flex-wrap items-center gap-3 md:gap-4 lg:gap-6">
-          <div className="bg-hover p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex items-center gap-2 md:gap-3">
+          <div className="bg-hover px-2 py-1 rounded-lg border border-edge-muted flex items-center gap-2">
              <Settings2 size={16} className="text-ink-3" />
              <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-ink font-black" />
           </div>
-          <div data-testid="plan-switcher" className="bg-hover p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1">
+          <div data-testid="plan-switcher" className="bg-hover p-1 rounded-lg border border-edge-muted flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
                   accessible name. A label like "Select Time-of-Use plan" hides
                   "TOU" from the name (axe label-content-name-mismatch — the
@@ -739,7 +735,7 @@ export default function Dashboard() {
                   Tiered/TOU/ULO, which stay the accessible name (the visible
                   text IS the name — see the note above). `data-plan` always
                   carries the canonical id. */}
-              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-inv text-inv-ink shadow-lg' : 'text-ink hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
+              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 rounded-md text-[10px] font-medium transition-colors ${userPlan === p ? 'bg-card text-ink border border-edge' : 'text-ink-2 hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
           {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
               the language of the answer belongs beside the answer. A real
@@ -762,9 +758,9 @@ export default function Dashboard() {
               1280 (the very next breakpoint) back into a wrap, opening a
               45,936px² dead band 936px² over the gate. */}
           {floor && (
-          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-info-slab text-on-dark min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
+          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="quiet-data-stat min-h-11 flex-1 min-w-[120px] lg:min-w-max px-3 py-2 text-center font-medium relative transition-colors hover:bg-hover group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
-            <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
+            <div className="text-xl md:text-2xl lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
             <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</div>
           </button>
           )}

@@ -172,7 +172,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
         deployed build) while the strip wrongly reported "fits". Pills now
         floor at their content and the strip does the scrolling.
       */}
-      <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
         <div
           role="tablist"
           aria-label={t('tabnav.aria')}

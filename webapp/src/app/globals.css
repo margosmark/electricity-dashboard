@@ -287,7 +287,16 @@
      (11.7:1), which is a gain, not a compromise. */
   --accent: #e4ff57;
   --accent-ink: #0a0c10;
-  --accent-soft: color-mix(in srgb, #e4ff57 12%, var(--card));
+  /* The tinted sub-surface (money delta summary rows, open-period tail,
+     plan callouts). At 12% it mixed to rgb(42,48,33) — an olive the MUTED
+     ink steps could not clear AA on: ink-3 measured 4.32:1 and ink-4
+     4.4:1, both under the 4.5 floor (the painted walk in
+     tests/e2e/theme-contrast.spec.ts caught it; the token layer never
+     listed accent-soft as a surface, which is the half fixed in
+     darkMode.test.ts). 8% mixes to rgb(34,39,31), which clears the floor
+     with margin — ink-3 4.84:1, ink-4 4.93:1 — while still reading as a
+     tint rather than as the card. LIGHT is byte-identical at #fefce8. */
+  --accent-soft: color-mix(in srgb, #e4ff57 8%, var(--card));
 
   /* Same four, re-pitched for the inverted chip, which is now LIGHT. Measured
      on --inv (#e2e8f0): 6.6:1, 5.3:1, 4.8:1, 4.7:1 — every one clears AA. */
@@ -839,7 +848,8 @@ body {
 
 .quiet-toggle [aria-pressed="true"] {
   background: var(--card);
-  box-shadow: 0 1px 2px var(--shadow);
+  color: var(--ink) !important;
+  box-shadow: none;
 }
 
 @media (min-width: 1024px) {

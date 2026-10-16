@@ -76,12 +76,12 @@ export function GreenButtonSync({
         <div
           data-testid="gb-unconfigured"
           data-gb-state="unconfigured"
-          className="mt-4 md:mt-6 border-2 border-dashed border-edge/40 rounded-xl md:rounded-2xl p-4 text-left"
+          className="mt-4 md:mt-6 border border-dashed border-edge-muted rounded-lg p-4 text-left bg-inset"
         >
-          <div className="text-[11px] md:text-xs font-black uppercase text-ink-3">
+          <div className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">
             {t("gb.liveSyncTitle")}
           </div>
-          <p className="mt-1 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
+          <p className="mt-1 text-[10px] md:text-xs font-medium text-ink-3 normal-case">
             {t("gb.notSwitchedOn")}
           </p>
         </div>
@@ -159,7 +159,7 @@ export function GreenButtonSync({
     <div
       data-testid="gb-connect-card"
       data-gb-state={state}
-      className="mt-4 md:mt-6 border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-left bg-inset"
+      className="mt-4 md:mt-6 border border-edge-muted rounded-lg p-4 md:p-5 text-left bg-inset"
     >
       <div className="flex items-center gap-2">
         <Link2 size={16} strokeWidth={4} />
@@ -194,7 +194,7 @@ export function GreenButtonSync({
               data-testid="gb-sync"
               onClick={onSync}
               disabled={syncing}
-              className="min-h-11 py-3 px-5 bg-good-slab-deep text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60"
+              className="min-h-11 py-3 px-5 bg-good-slab-deep text-accent-ink border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs transition-colors disabled:opacity-60"
             >
               {syncing ? t("gb.syncing") : t("gb.syncNow")}
             </button>
@@ -206,7 +206,7 @@ export function GreenButtonSync({
                   onDisconnect();
                 }
               }}
-              className="min-h-11 py-3 px-5 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs"
+              className="min-h-11 py-3 px-5 bg-card text-bad border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs"
             >
               {t("gb.disconnect")}
             </button>
@@ -221,7 +221,7 @@ export function GreenButtonSync({
             type="button"
             data-testid="gb-connect"
             onClick={onConnect}
-            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-good-slab-deep text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
+            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-good-slab-deep text-accent-ink border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs transition-colors"
           >
             {t("gb.authorise")}
           </button>

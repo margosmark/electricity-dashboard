@@ -49,7 +49,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
   const { t } = useTranslation();
   if (period.planVerdict === 'skipped') {
     return (
-      <span className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black">
+      <span className="px-2 py-1 rounded border border-edge-muted bg-track text-ink-2 text-[9px] md:text-[10px] font-semibold">
         {t('hindsight.planChipSkipped')}
       </span>
     );
@@ -58,7 +58,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-plan-chip"
-        className="px-2 py-1 rounded border-2 border-edge bg-track text-ink-2 text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border border-edge-muted bg-track text-ink-2 text-[9px] md:text-[10px] font-semibold"
       >
         {t('hindsight.planChipUnknown')}
       </span>
@@ -68,7 +68,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-plan-chip"
-        className="px-2 py-1 rounded border-2 border-warn bg-warn-soft text-warn text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border border-warn bg-warn-soft text-warn text-[9px] md:text-[10px] font-semibold"
       >
         {t('hindsight.planChipUntrusted', { amount: money(period.planExcluded ?? 0) })}
       </span>
@@ -78,7 +78,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
     return (
       <span
         data-testid="hindsight-plan-chip"
-        className="px-2 py-1 rounded border-2 border-bad bg-bad-soft text-bad text-[9px] md:text-[10px] font-black"
+        className="px-2 py-1 rounded border border-bad bg-bad-soft text-bad text-[9px] md:text-[10px] font-semibold"
       >
         {t('hindsight.planChipOverpaid', {
           amount: money(period.planMiss ?? 0),
@@ -90,7 +90,7 @@ function PlanChip({ period }: { period: HindsightPeriod }) {
   return (
     <span
       data-testid="hindsight-plan-chip"
-      className="px-2 py-1 rounded border-2 border-good bg-good-soft text-good text-[9px] md:text-[10px] font-black"
+      className="px-2 py-1 rounded border border-good bg-good-soft text-good text-[9px] md:text-[10px] font-semibold"
     >
       {t('hindsight.planChipBest')}
     </span>
@@ -107,14 +107,14 @@ function Row({ period }: { period: HindsightPeriod }) {
       data-testid={`hindsight-period-${period.summary.startDate}`}
       data-plan={period.plan}
       data-origin={period.origin}
-      className="border-4 border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-5"
+      className="border border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="font-black uppercase text-sm md:text-base">{period.label}</span>
+        <span className="font-semibold uppercase text-sm md:text-base">{period.label}</span>
         <span className="flex flex-wrap items-center gap-2">
           <span
             data-testid="hindsight-plan-badge"
-            className={`px-2 md:px-3 py-0.5 rounded-full border-2 border-edge text-[9px] md:text-[11px] font-black ${
+            className={`px-2 md:px-3 py-0.5 rounded-full border border-edge-muted text-[9px] md:text-[11px] font-semibold ${
               unknown ? 'bg-track' : 'bg-accent text-accent-ink'
             }`}
           >
@@ -123,20 +123,20 @@ function Row({ period }: { period: HindsightPeriod }) {
               : t('track.onPlan', { plan: planLabel(plan).toUpperCase() })}
           </span>
           {period.origin === 'detected' && (
-            <span className="px-2 py-0.5 rounded border-2 border-edge text-[8px] md:text-[9px] font-black bg-hover">
+            <span className="px-2 py-0.5 rounded border border-edge-muted text-[8px] md:text-[9px] font-semibold bg-hover">
               {t('hindsight.detectedBadge')}
             </span>
           )}
-          <span className="px-2 py-0.5 rounded border-2 border-edge text-[8px] md:text-[9px] font-black bg-hover">
+          <span className="px-2 py-0.5 rounded border border-edge-muted text-[8px] md:text-[9px] font-semibold bg-hover">
             {period.season === 'winter' ? t('season.winter') : t('season.summer')}
             {period.straddlesSeason ? ` · ${t('hindsight.straddle')}` : ''}
           </span>
           {period.conflict && (
-            <span className="px-2 py-0.5 rounded border-2 border-bad text-[8px] md:text-[9px] font-black text-bad">
+            <span className="px-2 py-0.5 rounded border border-bad text-[8px] md:text-[9px] font-semibold text-bad">
               {t('track.conflict')}
             </span>
           )}
-          <span className="px-2 py-0.5 rounded border-2 border-edge text-[8px] md:text-[9px] font-black bg-hover">
+          <span className="px-2 py-0.5 rounded border border-edge-muted text-[8px] md:text-[9px] font-semibold bg-hover">
             {fmtKwh(period.kwh)}
           </span>
         </span>
@@ -145,18 +145,18 @@ function Row({ period }: { period: HindsightPeriod }) {
       {period.switchRow.skipped !== null ? (
         <div
           data-testid="hindsight-skip"
-          className="mt-2 md:mt-3 bg-hover border-2 border-edge rounded-lg px-3 py-2 text-[10px] md:text-xs font-black text-ink-2 normal-case"
+          className="mt-2 md:mt-3 bg-hover border border-edge-muted rounded-lg px-3 py-2 text-[10px] md:text-xs font-semibold text-ink-2 normal-case"
         >
           {t('hindsight.periodSkipped', { reason: period.switchRow.skipped })}
         </div>
       ) : (
-        <div className="mt-2 md:mt-3 bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+        <div className="mt-2 md:mt-3 bg-inset border border-edge-muted rounded-lg p-2 md:p-3">
           <div className="text-ink-4 text-[8px] uppercase">{t('hindsight.rowPlan')}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <PlanChip period={period} />
           </div>
           {statesMoney && !unknown && period.switchRow.modeled && (
-            <div className="mt-1 text-[9px] md:text-[10px] font-bold text-ink-4 normal-case">
+            <div className="mt-1 text-[9px] md:text-[10px] font-medium text-ink-4 normal-case">
               {t('hindsight.planBasis', {
                 paid: money(period.switchRow.actual),
                 plan: planLabel(plan),
@@ -167,7 +167,7 @@ function Row({ period }: { period: HindsightPeriod }) {
       )}
 
       {period.planReason && period.planVerdict !== 'skipped' && (
-        <div className="mt-1 text-[9px] md:text-[10px] font-bold text-ink-4 normal-case">
+        <div className="mt-1 text-[9px] md:text-[10px] font-medium text-ink-4 normal-case">
           {period.planReason}
         </div>
       )}
@@ -195,16 +195,16 @@ export function HindsightPanel({ summaries, allData }: Props) {
   return (
     <section
       data-testid="hindsight-panel"
-      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-xl md:rounded-2xl border border-edge text-ink font-semibold uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4">
             {t('hindsight.eyebrow')}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">{t('hindsight.title')}</h2>
+          <h2 className="text-base md:text-lg font-semibold uppercase tracking-[0.08em]">{t('hindsight.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
+        <div className="text-[10px] md:text-xs font-medium text-ink-3 normal-case max-w-md">
           {t('hindsight.blurb')}
         </div>
       </div>
@@ -212,10 +212,10 @@ export function HindsightPanel({ summaries, allData }: Props) {
       {/* ---- the headline: the plan, on the same readings ---------------- */}
       <div
         data-testid="hindsight-headline"
-        className="mt-4 md:mt-6 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+        className="mt-4 md:mt-6 bg-inv text-inv-ink border border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
       >
         {planMiss === null ? (
-          <div data-testid="hindsight-empty" className="text-[11px] md:text-sm font-black">
+          <div data-testid="hindsight-empty" className="text-[11px] md:text-sm font-semibold">
             {t('hindsight.headlineEmpty', {
               total: periods.length,
               coverage: 90,
@@ -229,7 +229,7 @@ export function HindsightPanel({ summaries, allData }: Props) {
               </div>
               <div
                 data-testid="hindsight-plan-total"
-                className="text-3xl md:text-5xl italic font-black text-accent-yellow"
+                className="text-xl md:text-2xl font-semibold tabular-nums text-accent-yellow"
               >
                 <Money value={planMiss} />
               </div>
@@ -241,13 +241,13 @@ export function HindsightPanel({ summaries, allData }: Props) {
                 the magnitude is the headline's own, read without a clamp. */}
             <div
               data-testid="hindsight-headline-note"
-              className="mt-2 md:mt-3 text-[10px] md:text-xs font-black normal-case"
+              className="mt-2 md:mt-3 text-[10px] md:text-xs font-semibold normal-case"
             >
               {planMiss < 0
                 ? t('hindsight.headlineNoteSaved', { plan: money(-planMiss) })
                 : t('hindsight.headlineNote', { plan: money(planMiss) })}
             </div>
-            <div className="mt-1 text-[9px] md:text-[10px] font-bold text-ink-4 normal-case">
+            <div className="mt-1 text-[9px] md:text-[10px] font-medium text-ink-4 normal-case">
               {t('hindsight.totalNote')}
             </div>
           </>
@@ -258,13 +258,13 @@ export function HindsightPanel({ summaries, allData }: Props) {
       {worstPlan && (
         <div
           data-testid={`hindsight-worst-${worstPlan.summary.startDate}`}
-          className="mt-3 md:mt-4 border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft p-3 md:p-4"
+          className="mt-3 md:mt-4 border border-edge rounded-xl md:rounded-2xl bg-accent-soft p-3 md:p-4"
         >
           <div className="text-[8px] uppercase text-ink-4">
             {t('hindsight.worstPeriod', { label: worstPlan.label })}
           </div>
-          <div className="text-xl md:text-3xl italic font-black">{money(worstPlan.planMiss ?? 0)}</div>
-          <div className="text-[9px] md:text-[10px] font-bold normal-case text-ink-2">
+          <div className="text-lg md:text-xl font-semibold tabular-nums">{money(worstPlan.planMiss ?? 0)}</div>
+          <div className="text-[9px] md:text-[10px] font-medium normal-case text-ink-2">
             {t('hindsight.worstBasis', {
               paid: money(worstPlan.switchRow.actual),
               plan: planLabel(worstPlan.plan === 'unknown' ? 'TOU' : worstPlan.plan),
@@ -280,7 +280,7 @@ export function HindsightPanel({ summaries, allData }: Props) {
         ))}
       </div>
 
-      <div className="mt-4 md:mt-6 border-t-4 border-edge pt-3 md:pt-4 text-[10px] md:text-xs font-bold text-ink-3 normal-case space-y-1">
+      <div className="mt-4 md:mt-6 border-t-4 border-edge pt-3 md:pt-4 text-[10px] md:text-xs font-medium text-ink-3 normal-case space-y-1">
         <p>{t('hindsight.legendScope')}</p>
         <p>{t('hindsight.legendPlanSide')}</p>
         <p>

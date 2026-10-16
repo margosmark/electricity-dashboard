@@ -72,14 +72,14 @@ function EmptyState({ analysis }: { analysis: TouShiftAnalysis }) {
   return (
     <div
       data-testid="shift-optimizer-empty"
-      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 text-ink"
+      className="bg-card p-6 md:p-10 rounded-xl md:rounded-2xl border border-edge text-ink"
     >
-      <h3 className="text-2xl md:text-4xl italic mb-3 md:mb-5 font-black uppercase">
+      <h3 className="text-base md:text-lg mb-2 md:mb-3 font-semibold uppercase tracking-[0.08em]">
         {t('shift.title')}
       </h3>
-      <div className="bg-hover border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6">
-        <div className="font-black uppercase text-sm md:text-xl mb-2">{title}</div>
-        <p className="font-bold text-ink-2 text-xs md:text-sm">{detail}</p>
+      <div className="bg-hover border border-edge rounded-xl md:rounded-2xl p-4 md:p-6">
+        <div className="font-semibold uppercase text-sm md:text-xl mb-2">{title}</div>
+        <p className="font-medium text-ink-2 text-xs md:text-sm">{detail}</p>
       </div>
     </div>
   );
@@ -91,7 +91,7 @@ function ConfidenceChip({ badge }: { badge: ConfidenceBadge }) {
       data-testid="confidence-badge"
       data-level={badge.level}
       title={badge.detail}
-      className={`inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${CONFIDENCE_STYLE[badge.level]}`}
+      className={`inline-flex items-center border border-edge-muted rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-semibold uppercase whitespace-nowrap ${CONFIDENCE_STYLE[badge.level]}`}
     >
       {badge.label}
     </span>
@@ -104,7 +104,7 @@ function EffortChip({ effort }: { effort: Effort }) {
     <span
       data-testid="effort-chip"
       data-effort={effort}
-      className={`inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap ${EFFORT_STYLE[effort]}`}
+      className={`inline-flex items-center border border-edge-muted rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-semibold uppercase whitespace-nowrap ${EFFORT_STYLE[effort]}`}
     >
       {effort === 'no-plan-switch' ? t('shift.effortNone') : t('shift.effortSwitch')}
     </span>
@@ -117,7 +117,7 @@ function TierChip({ tier }: { tier: ShiftBlock['tier'] }) {
   return (
     <span
       data-testid="shift-tier-chip"
-      className="inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-info-slab-soft text-accent-ink"
+      className="inline-flex items-center border border-edge-muted rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-semibold uppercase whitespace-nowrap bg-info-slab-soft text-accent-ink"
     >
       {t('shift.tierChip')}
     </span>
@@ -128,10 +128,10 @@ function TierChip({ tier }: { tier: ShiftBlock['tier'] }) {
 function ClassificationRow({ block }: { block: ShiftBlock }) {
   return (
     <div data-testid="block-classification" className="mt-2 md:mt-3">
-      <div className="text-[10px] md:text-xs font-black uppercase text-ink">
+      <div className="text-[10px] md:text-xs font-semibold uppercase text-ink">
         {block.classification.label}
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
+      <div className="text-[9px] md:text-[11px] font-medium text-ink-3">
         {block.classification.detail}
       </div>
     </div>
@@ -140,30 +140,33 @@ function ClassificationRow({ block }: { block: ShiftBlock }) {
 
 function OptionRow({ option, rank }: { option: ShiftOption; rank: number }) {
   const { t } = useTranslation();
+  /* Rank 0 keeps a MARKER (the accent edge), not an accent slab: the
+     reference reserves fills for one primary action and marks the
+     recommendation with hairlines. */
   return (
     <div
-      className={`border-2 md:border-4 border-edge rounded-lg md:rounded-xl p-3 md:p-4 ${
-        rank === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
+      className={`border border-edge rounded-lg md:rounded-xl p-3 md:p-4 bg-card ${
+        rank === 0 ? 'border-l-[3px] border-l-accent' : ''
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 font-black uppercase">
+      <div className="flex flex-wrap items-center justify-between gap-2 font-semibold uppercase">
         <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs">
           {TARGET_ICON[option.target]}
           <span>{option.label}</span>
           <EffortChip effort={option.effort} />
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          <span className={`text-[10px] md:text-xs ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
+          <span className="text-[10px] md:text-xs text-ink-2">
             {fmtCents(option.destRateCents)}{t('efficiency.perKwh')}
           </span>
           <ArrowRight size={10} strokeWidth={4} className="hidden sm:block" />
-          <span className="text-sm md:text-lg italic">
+          <span className="text-sm md:text-lg">
             {fmtMoney(option.monthlySavings)}
             <span className="text-[8px] md:text-[10px] not-italic">{t('common.perMonth')}</span>
           </span>
         </div>
       </div>
-      <p className={`text-[9px] md:text-[11px] font-bold mt-1.5 md:mt-2 ${rank === 0 ? 'text-accent-ink' : 'text-ink-2'}`}>
+      <p className="text-[9px] md:text-[11px] font-medium mt-1.5 md:mt-2 text-ink-2">
         {option.assumption}
       </p>
     </div>
@@ -176,22 +179,22 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
     <div
       data-testid={`shift-block-${block.id}`}
       data-tier={block.tier}
-      className="bg-card border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7"
+      className="bg-card border border-edge rounded-xl md:rounded-2xl p-4 md:p-7"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3 md:mb-5">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="bg-inv text-accent-yellow w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center font-black text-sm md:text-base shrink-0">
+          <div className="bg-inv text-accent-yellow w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center font-semibold text-sm md:text-base shrink-0">
             {rank + 1}
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="font-black uppercase text-lg md:text-2xl leading-none">
+              <div className="font-semibold uppercase text-lg md:text-2xl leading-none">
                 {block.label}
               </div>
               <ConfidenceChip badge={block.confidence} />
               <TierChip tier={block.tier} />
             </div>
-            <div className="text-[10px] md:text-xs font-bold text-ink-3 mt-1 md:mt-2">
+            <div className="text-[10px] md:text-xs font-medium text-ink-3 mt-1 md:mt-2">
               {t('shift.blockMeta', {
                 kwh: fmtNumber(block.avgWeeklyKwh, 1),
                 seen: block.weeksSeen,
@@ -201,10 +204,10 @@ function BlockCard({ block, rank }: { block: ShiftBlock; rank: number }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[8px] md:text-[10px] font-black uppercase text-ink-4">
+          <div className="text-[8px] md:text-[10px] font-semibold uppercase text-ink-4">
             {t('shift.bestCase')}
           </div>
-          <div className="text-xl md:text-3xl italic font-black text-good">
+          <div className="text-lg md:text-xl font-semibold tabular-nums text-good">
             {fmtMoney(block.bestMonthlySavings)}
             <span className="text-[10px] md:text-sm not-italic">{t('common.perMonth')}</span>
           </div>
@@ -227,30 +230,30 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
     <div
       data-testid={`shift-block-${block.id}`}
       data-tier={block.tier}
-      className="bg-card border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 shadow-hard-4 space-y-1.5 md:space-y-2"
+      className="bg-card border border-edge rounded-xl md:rounded-2xl p-3 md:p-4 space-y-1.5 md:space-y-2"
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-3">
-        <div className="bg-inv text-accent-yellow w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center font-black text-[10px] md:text-xs shrink-0">
+        <div className="bg-inv text-accent-yellow w-6 h-6 md:w-8 md:h-8 rounded-md md:rounded-lg flex items-center justify-center font-semibold text-[10px] md:text-xs shrink-0">
           {rank + 1}
         </div>
-        <div className="font-black uppercase text-sm md:text-base">{block.label}</div>
+        <div className="font-semibold uppercase text-sm md:text-base">{block.label}</div>
         <ConfidenceChip badge={block.confidence} />
         <TierChip tier={block.tier} />
         <div className="ml-auto flex items-center gap-2 md:gap-3">
-          <span className="text-[9px] md:text-[11px] font-black uppercase text-ink-3">
+          <span className="text-[9px] md:text-[11px] font-semibold uppercase text-ink-3">
             {t('shift.bestCase')}
           </span>
-          <span className="text-sm md:text-lg italic font-black text-good">
+          <span className="text-sm md:text-lg font-semibold tabular-nums text-good">
             {fmtMoney(block.bestMonthlySavings)}
             <span className="text-[8px] md:text-[10px] not-italic">{t('common.perMonth')}</span>
           </span>
         </div>
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-ink">
+      <div className="text-[9px] md:text-[11px] font-medium text-ink">
         {block.classification.label} ·{' '}
         <span className="text-ink-3">{block.classification.detail}</span>
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-ink-3">
+      <div className="text-[9px] md:text-[11px] font-medium text-ink-3">
         {t('shift.blockMeta', {
           kwh: fmtNumber(block.avgWeeklyKwh, 1),
           seen: block.weeksSeen,
@@ -261,15 +264,15 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
         {block.options.map((o, i) => (
           <span
             key={o.target}
-            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border-2 border-edge rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-black uppercase ${
-              i === 0 ? 'bg-accent text-accent-ink' : 'bg-card'
+            className={`inline-flex flex-wrap items-center gap-1 md:gap-1.5 border rounded-lg px-1.5 md:px-2 py-1 text-[9px] md:text-[10px] font-semibold uppercase ${
+              i === 0 ? 'bg-card border-accent' : 'bg-card border-edge-muted'
             }`}
           >
             {TARGET_ICON[o.target]}
             <span>{o.label}</span>
-            <span className={i === 0 ? 'text-accent-ink' : 'text-ink-2'}>{fmtCents(o.destRateCents)}</span>
+            <span className="text-ink-2">{fmtCents(o.destRateCents)}</span>
             <ArrowRight size={9} strokeWidth={4} className="hidden sm:block" />
-            <span className="italic">{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
+            <span>{fmtMoney(o.monthlySavings)}{t('common.perMonthShort')}</span>
             <EffortChip effort={o.effort} />
           </span>
         ))}
@@ -281,24 +284,27 @@ function SupportingRow({ block, rank }: { block: ShiftBlock; rank: number }) {
 /** One sentence for the whole household, with the worst badge we can stand behind. */
 function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
   const { t } = useTranslation();
+  /* Was a full accent slab. The reference paints verdicts as ink text on a
+     calm surface with an accent EDGE — so the card moves onto --inset and
+     keeps only a 3px accent rule down its left side. */
   return (
     <div
       data-testid="shift-headline"
-      className="bg-accent border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7 text-accent-ink"
+      className="bg-inset border border-edge border-l-[3px] border-l-accent rounded-lg p-4 md:p-7 text-ink"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[10px] tracking-[0.25em] font-black uppercase">
+        <div className="text-[10px] tracking-[0.25em] font-semibold uppercase text-ink-3">
           {t('shift.oneMove')}
         </div>
         <ConfidenceChip badge={headline.confidence} />
       </div>
-      <div className="text-xl md:text-4xl font-black uppercase leading-tight mt-2 md:mt-3">
+      <div className="text-xl md:text-2xl font-semibold leading-tight mt-2 md:mt-3">
         {headline.headline}
       </div>
       <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-3 md:mt-4">
         <span
           data-testid="shift-headline-share"
-          className="bg-inv text-inv-ink border-2 border-edge rounded-full px-2.5 md:px-3 py-1 text-[9px] md:text-[11px] font-black uppercase"
+          className="bg-inv text-inv-ink border border-edge-muted rounded-full px-2.5 md:px-3 py-1 text-[9px] md:text-[11px] font-semibold uppercase"
         >
           {t('shift.shareLine', {
             pct: fmtPercent(Math.round(headline.share * 100)),
@@ -307,12 +313,12 @@ function HeadlineCard({ headline }: { headline: ShiftHeadline }) {
           })}
         </span>
         <EffortChip effort={headline.effort} />
-        <span className="text-[10px] md:text-xs font-black uppercase">
+        <span className="text-[10px] md:text-xs font-semibold uppercase">
           {headline.optionLabel}
         </span>
       </div>
-      <p className="text-[10px] md:text-[12px] font-bold mt-2 md:mt-3">{headline.assumption}</p>
-      <div className="text-[9px] md:text-[11px] font-bold text-accent-ink mt-1 md:mt-2">
+      <p className="text-[10px] md:text-[12px] font-medium mt-2 md:mt-3">{headline.assumption}</p>
+      <div className="text-[9px] md:text-[11px] font-medium text-ink-3 mt-1 md:mt-2">
         {t('shift.supportingNote')}
       </div>
     </div>
@@ -324,15 +330,15 @@ function TierHeading({ count }: { count: number }) {
   return (
     <div
       data-testid="shift-tier-midpeak"
-      className="bg-info-slab-soft border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink"
+      className="bg-info-slab-soft border border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink"
     >
-      <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">
+      <div className="text-[10px] md:text-xs font-semibold uppercase tracking-[0.2em]">
         {t('shift.tierHeading')}
       </div>
-      <div className="text-sm md:text-lg font-black uppercase mt-1">
+      <div className="text-sm md:text-lg font-semibold uppercase mt-1">
         {t('shift.tierCount', { count, blocks: count })}
       </div>
-      <div className="text-[9px] md:text-[11px] font-bold text-ink-2">
+      <div className="text-[9px] md:text-[11px] font-medium text-ink-2">
         {t('shift.tierNote')}
       </div>
     </div>
@@ -343,7 +349,7 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
   const { t } = useTranslation();
   if (analysis.blocks.length === 0) {
     return (
-      <div className="font-black uppercase text-ink">
+      <div className="font-semibold uppercase text-ink">
         <EmptyState analysis={analysis} />
       </div>
     );
@@ -362,26 +368,26 @@ export default function ShiftOptimizer({ analysis }: { analysis: TouShiftAnalysi
   return (
     <div
       data-testid="shift-optimizer"
-      className="space-y-4 md:space-y-6 font-black uppercase text-ink"
+      className="space-y-4 md:space-y-6 font-semibold uppercase text-ink"
     >
-      <div className="bg-inv text-inv-ink p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-accent shadow-hard-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-inv text-inv-ink p-5 md:p-8 rounded-xl md:rounded-2xl border border-accent flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-[10px] tracking-[0.25em] text-accent-yellow font-black">
+          <div className="text-[10px] tracking-[0.25em] text-accent-yellow font-semibold">
             {t('shift.eyebrow')}
           </div>
-          <div className="text-xl md:text-3xl italic leading-tight mt-1">{countLine}</div>
-          <div className="text-[10px] md:text-xs font-bold text-inv-ink-2 mt-1">
+          <div className="text-lg md:text-xl leading-tight mt-1 tabular-nums">{countLine}</div>
+          <div className="text-[10px] md:text-xs font-medium text-inv-ink-2 mt-1">
             {t('shift.patternCheck')}
           </div>
         </div>
-        <div className="bg-accent text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center">
-          <div className="text-[8px] md:text-[10px] font-black uppercase">
+        <div className="bg-page text-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border border-edge-muted text-center">
+          <div className="text-[8px] md:text-[10px] font-semibold uppercase text-ink-3">
             {t('shift.ifEveryMoved')}
           </div>
-          <div className="text-3xl md:text-5xl italic leading-none mt-1">
+          <div className="text-2xl md:text-3xl leading-none mt-1 tabular-nums">
             {fmtMoney(analysis.totalMonthlySavings)}
           </div>
-          <div className="text-[8px] md:text-[10px] font-black uppercase">{t('shift.perMonth')}</div>
+          <div className="text-[8px] md:text-[10px] font-semibold uppercase text-ink-3">{t('shift.perMonth')}</div>
         </div>
       </div>
 
