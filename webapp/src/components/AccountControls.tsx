@@ -55,8 +55,6 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   // Escape closes, exactly like every other overlay in this app. Registered
   // once (not gated on `open`) so there is never a frame where the drawer is
@@ -109,27 +107,13 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
 
   const submitRecover = async (e: FormEvent) => {
     e.preventDefault();
-    const { recover } = await import("@/lib/account/client");
-    const entered = newPassword;
+    const { requestRecovery } = await import("@/lib/account/client");
     try {
-      const res = await recover({
-        email: recoveryEmail,
-        recoveryCode: recoveryCodeInput,
-        newPassword: entered,
-      });
-      setRecoveryCodeInput("");
-      setNewPassword("");
-      setTab("signin");
-      setEmail(recoveryEmail);
-      if (res.blobDropped && res.blobDroppedReason) account.notify("error", res.blobDroppedReason);
-      else account.notify("ok", "Password updated — sign in with it.");
-      // Re-entering through the normal sign-in keeps ONE code path for
-      // "derive the key and pull"; nothing about recovery is special there.
-      await account.signIn(recoveryEmail, entered);
-      setOpen(false);
+      await requestRecovery(recoveryEmail);
+      account.notify("ok", t('account.recoveryRequest'));
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      account.notify("error", `Could not recover: ${detail}`);
+      account.notify("error", `Could not request recovery: ${detail}`);
     }
   };
 
@@ -428,12 +412,11 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   className={INPUT_CLASS}
                 />
               </div>
-              <p className="text-[9px] text-ink-2 normal-case">{t('account.passphraseHint')}</p>
               <p className="text-[9px] text-ink-2 normal-case">
-                {t('account.recoverWarn')}
+                {t('account.recoverWarn')} {t('account.recoveryLinkHelp')}
               </p>
               <button type="submit" disabled={busy} className={BUTTON_CLASS + " bg-violet-slab"}>
-                <KeyRound size={14} strokeWidth={4} /> {t('account.setPassword')}
+                <KeyRound size={14} strokeWidth={4} /> {t('account.recoveryLinkButton')}
               </button>
             </form>
           )}

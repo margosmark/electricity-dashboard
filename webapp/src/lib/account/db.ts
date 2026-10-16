@@ -48,6 +48,18 @@ export type AccountRow = {
   kdf_salt: string;
   recovery_hash: string | null;
   created_at: number;
+  email_verified_at: number | null;
+};
+
+export type EmailTokenRow = {
+  token_hash: string;
+  purpose: "registration" | "recovery";
+  account_id: number | null;
+  email: string;
+  has_local_data: number;
+  expires_at: number;
+  used_at: number | null;
+  created_at: number;
 };
 
 export type SessionRow = {
@@ -103,7 +115,32 @@ CREATE TABLE IF NOT EXISTS accounts (
   password_hash  TEXT    NOT NULL,
   kdf_salt       TEXT    NOT NULL,
   recovery_hash  TEXT,
+  created_at     INTEGER NOT NULL,
+  email_verified_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS email_tokens (
+  token_hash     TEXT PRIMARY KEY,
+  purpose        TEXT NOT NULL CHECK (purpose IN ('registration', 'recovery')),
+  account_id     INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+  email          TEXT NOT NULL,
+  has_local_data INTEGER NOT NULL DEFAULT 0,
+  expires_at     INTEGER NOT NULL,
+  used_at        INTEGER,
   created_at     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at);
+
+CREATE TABLE IF NOT EXISTS email_suppressions (
+  email         TEXT PRIMARY KEY COLLATE NOCASE,
+  reason        TEXT NOT NULL,
+  source        TEXT NOT NULL,
+  created_at    INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS smtp_event_replays (
+  signature     TEXT PRIMARY KEY,
+  seen_at       INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -280,6 +317,13 @@ export function openDb(path: string): DatabaseSync {
   db.exec("BEGIN IMMEDIATE;");
   try {
     db.exec(SCHEMA);
+    // Existing Wave-N databases predate mailbox verification. This migration is
+    // intentionally additive and never changes or reads the encrypted blob.
+    try {
+      db.exec("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER");
+    } catch {
+      /* column already exists */
+    }
     migrateNotifyCascade(db);
     db.exec("PRAGMA user_version = 2;");
     db.exec("COMMIT;");
@@ -318,13 +362,13 @@ export function findAccountById(db: DatabaseSync, id: number): AccountRow | null
 
 export function insertAccount(
   db: DatabaseSync,
-  input: { email: string; passwordHash: string; kdfSalt: string; recoveryHash: string | null },
+  input: { email: string; passwordHash: string; kdfSalt: string; recoveryHash: string | null; emailVerifiedAt?: number | null },
 ): number {
   const info = db
     .prepare(
-      "INSERT INTO accounts (email, password_hash, kdf_salt, recovery_hash, created_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO accounts (email, password_hash, kdf_salt, recovery_hash, created_at, email_verified_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .run(input.email.trim().toLowerCase(), input.passwordHash, input.kdfSalt, input.recoveryHash, Date.now());
+    .run(input.email.trim().toLowerCase(), input.passwordHash, input.kdfSalt, input.recoveryHash, Date.now(), input.emailVerifiedAt ?? null);
   return Number(info.lastInsertRowid);
 }
 
@@ -334,6 +378,87 @@ export function setPasswordHash(db: DatabaseSync, accountId: number, hash: strin
 
 export function setRecoveryHash(db: DatabaseSync, accountId: number, hash: string | null): void {
   db.prepare("UPDATE accounts SET recovery_hash = ? WHERE id = ?").run(hash, accountId);
+}
+
+/* --------------------------------------------------------------------------
+ * Mailbox-proof tokens and suppression state.
+ * Only SHA-256(token) is stored; the clear token exists in the request/email
+ * path and is never written to logs or database rows.
+ * ------------------------------------------------------------------------ */
+
+export function insertEmailToken(
+  db: DatabaseSync,
+  input: {
+    tokenHash: string;
+    purpose: EmailTokenRow["purpose"];
+    accountId: number | null;
+    email: string;
+    hasLocalData?: boolean;
+    expiresAt: number;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO email_tokens
+      (token_hash, purpose, account_id, email, has_local_data, expires_at, used_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+  ).run(
+    input.tokenHash,
+    input.purpose,
+    input.accountId,
+    input.email.trim().toLowerCase(),
+    input.hasLocalData === true ? 1 : 0,
+    input.expiresAt,
+    Date.now(),
+  );
+}
+
+export function findEmailToken(db: DatabaseSync, tokenHash: string): EmailTokenRow | null {
+  return (db.prepare("SELECT * FROM email_tokens WHERE token_hash = ?").get(tokenHash) as EmailTokenRow | undefined) ?? null;
+}
+
+export function deleteEmailToken(db: DatabaseSync, tokenHash: string): void {
+  db.prepare("DELETE FROM email_tokens WHERE token_hash = ?").run(tokenHash);
+}
+
+export function deleteEmailTokensForEmail(db: DatabaseSync, email: string, purpose: EmailTokenRow["purpose"]): void {
+  db.prepare("DELETE FROM email_tokens WHERE email = ? COLLATE NOCASE AND purpose = ?").run(email, purpose);
+}
+
+/** Atomically consume a token after its purpose and expiry were checked. */
+export function consumeEmailToken(db: DatabaseSync, tokenHash: string, now = Date.now()): boolean {
+  const result = db
+    .prepare("UPDATE email_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?")
+    .run(now, tokenHash, now);
+  return Number(result.changes) === 1;
+}
+
+export function pruneEmailTokens(db: DatabaseSync, now = Date.now()): void {
+  db.prepare("DELETE FROM email_tokens WHERE expires_at <= ? OR used_at <= ?").run(now, now - 24 * 60 * 60 * 1000);
+}
+
+export function isSuppressed(db: DatabaseSync, email: string): boolean {
+  return Boolean(db.prepare("SELECT 1 FROM email_suppressions WHERE email = ? COLLATE NOCASE").get(email));
+}
+
+export function suppressEmail(db: DatabaseSync, email: string, reason: string, source: string): void {
+  db.prepare(
+    `INSERT INTO email_suppressions (email, reason, source, created_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET reason = excluded.reason, source = excluded.source, created_at = excluded.created_at`,
+  ).run(email.trim().toLowerCase(), reason.slice(0, 200), source.slice(0, 100), Date.now());
+}
+
+export function rememberSmtpEvent(db: DatabaseSync, signature: string, now = Date.now()): boolean {
+  pruneSmtpEventReplays(db, now);
+  try {
+    db.prepare("INSERT INTO smtp_event_replays (signature, seen_at) VALUES (?, ?)").run(signature, now);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function pruneSmtpEventReplays(db: DatabaseSync, now = Date.now()): void {
+  db.prepare("DELETE FROM smtp_event_replays WHERE seen_at <= ?").run(now - 24 * 60 * 60 * 1000);
 }
 
 /* --------------------------------------------------------------------------

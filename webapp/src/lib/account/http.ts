@@ -373,6 +373,30 @@ export function readJsonSmall(request: Request): Promise<CappedRead> {
   return readJsonCapped(request, 64 * 1024);
 }
 
+/** Bounded raw text read for signed webhook bodies; never buffers untrusted input. */
+export async function readTextCapped(request: Request, maxBytes = 64 * 1024): Promise<{ ok: true; value: string } | { ok: false; status: number }> {
+  const body = request.body;
+  if (!body) return { ok: false, status: 400 };
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      if (total + value.byteLength > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, status: 413 };
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } catch {
+    return { ok: false, status: 400 };
+  }
+  return { ok: true, value: Buffer.concat(chunks).toString("utf8") };
+}
+
 /** Pull a string field out of a parsed body without trusting its type. */
 export function stringField(body: unknown, key: string): string | null {
   if (!body || typeof body !== "object") return null;

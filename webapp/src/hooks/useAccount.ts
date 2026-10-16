@@ -437,12 +437,13 @@ export function useAccount(options: Options = {}) {
   );
 
   const signUp = useCallback(
-    async (email: string): Promise<boolean> => {
+    async (email: string, password: string): Promise<boolean> => {
+      void password;
       setBusy(true);
       busyRef.current = true;
       try {
-        await api.register(email);
-        say("ok", "Registration is not available yet. No password was requested or saved; mailbox verification must be enabled first.");
+        await api.register(email, sync.hasLocalData());
+        say("ok", "Check your e-mail to verify the mailbox, then choose the password there.");
         return true;
       } catch (e) {
         const detail = e instanceof AccountApiError ? e.detail ?? e.code : "unknown_error";

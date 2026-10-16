@@ -1,55 +1,33 @@
 /**
- * POST /account/recover — forgot the password, no SMTP, and an honest answer.
+ * POST /account/recover.
  *
- * THE TRUTH THIS ENDPOINT HAS TO TELL (design §11, confirmed in the PM
- * ruling): there is no e-mail to send a reset link through, so a recovery
- * CODE issued when the server copy was created is the only way back in.
- *
- * What recovery restores: the ACCOUNT (a new password verifier).
- * What it cannot restore: the DATA. The blob is encrypted with a key derived
- * from the OLD password and the server holds no key at all — that is the
- * entire promise of client-side E2EE, and pretending otherwise here would be
- * the moment it stopped being true. So the unreadable ciphertext is DELETED
- * rather than left as something that looks like a backup, `blobDropped`
- * says so, and the client tells the user to sync again from whichever device
- * still holds the local copy (which the UI calls the real one for exactly
- * this reason).
- *
- * A fresh recovery code is returned on success, so the account never ends up
- * with a code that has already been spent.
+ * In verified mode this only requests a mailbox link and always returns the
+ * same 202 shape for an unknown, existing, or suppressed address. The password
+ * is accepted only by POST /account/recover/verify after that link is proven.
+ * The legacy recovery-code path is retained only for the local compatibility
+ * fixture (ACCT_EMAIL_VERIFICATION=false).
  */
 
 import {
   deleteBlob,
+  deleteEmailToken,
+  deleteEmailTokensForEmail,
   deleteSessionsForAccount,
   findAccountByEmail,
   getBlob,
+  insertEmailToken,
   insertSession,
-  setRecoveryHash,
+  isSuppressed,
   setPasswordHash as writePasswordHash,
+  setRecoveryHash,
+  suppressEmail,
 } from "@/lib/account/db";
-import {
-  accountError,
-  accountJson,
-  applySessionCookie,
-  getDb,
-  isConfig,
-  rateLimitError,
-  readJsonSmall,
-  rejectCrossOrigin,
-  requireEnabled,
-} from "@/lib/account/http";
-import {
-  DUMMY_PASSWORD_HASH,
-  hashPassword,
-  hashRecoveryCode,
-  newRecoveryCode,
-  newSessionToken,
-  normalizeEmail,
-  validatePassword,
-  verifyRecoveryCode,
-} from "@/lib/account/auth";
+import { EMAIL_TOKEN_TTL_MS, type AccountConfig } from "@/lib/account/config";
+import { accountError, accountJson, applySessionCookie, getDb, isConfig, rateLimitError, readJsonSmall, rejectCrossOrigin, requireEnabled } from "@/lib/account/http";
+import { DUMMY_PASSWORD_HASH, hashPassword, hashRecoveryCode, newEmailToken, newRecoveryCode, newSessionToken, normalizeEmail, validatePassword, verifyRecoveryCode } from "@/lib/account/auth";
 import { checkAttempts, recoverAttempts, refundIdentity, spendAttempts } from "@/lib/account/ratelimit";
+import { recoveryEmail, sendAccountEmail } from "@/lib/account/email";
+import { SmtpDeliveryError } from "@/lib/account/smtp";
 
 export const dynamic = "force-dynamic";
 
@@ -58,72 +36,72 @@ export async function POST(request: Request): Promise<Response> {
   if (!isConfig(cfg)) return cfg;
   const csrf = rejectCrossOrigin(request);
   if (csrf) return csrf;
-
   const body = await readJsonSmall(request);
   if (!body.ok) return accountError(body.status, "bad_request", body.error);
   const value = (body.value ?? {}) as { email?: unknown; recoveryCode?: unknown; newPassword?: unknown };
-
   const email = normalizeEmail(value.email);
   if (!email.ok) return accountError(400, "invalid_email", email.error);
-  const password = validatePassword(value.newPassword);
-  if (!password.ok) return accountError(400, "invalid_password", password.error);
 
-  // Same brake as login, tighter: this is an argon2 loop against a 100-bit
-  // code — unguessable, but free to run if it is never slowed down.
+  if (!cfg.emailVerification) return legacyRecover(request, cfg, email.value, value);
+  if (value.recoveryCode !== undefined || value.newPassword !== undefined) return accountError(400, "verification_required", "Open the recovery link before choosing a new password.");
+  if (!cfg.smtp) return accountError(503, "email_unavailable");
+
   const attempts = recoverAttempts(email.value, request);
   const verdict = checkAttempts(attempts);
   if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
-
   const db = getDb(cfg);
+  deleteEmailTokensForEmail(db, email.value, "recovery");
   const account = findAccountByEmail(db, email.value);
+  if (!account || !account.email_verified_at || isSuppressed(db, email.value)) {
+    spendAttempts(attempts);
+    return accountJson({ ok: true, recoveryRequested: true }, { status: 202 });
+  }
+  const token = newEmailToken();
+  insertEmailToken(db, { tokenHash: token.hash, purpose: "recovery", accountId: account.id, email: account.email, expiresAt: Date.now() + EMAIL_TOKEN_TTL_MS });
+  try {
+    await sendAccountEmail(cfg, recoveryEmail(cfg, account.email, token.token));
+  } catch (error) {
+    deleteEmailToken(db, token.hash);
+    if (error instanceof SmtpDeliveryError && error.permanent) suppressEmail(db, account.email, "permanent_delivery_failure", "smtp");
+    spendAttempts(attempts);
+    return accountError(503, "email_unavailable");
+  }
+  refundIdentity(attempts);
+  return accountJson({ ok: true, recoveryRequested: true }, { status: 202 });
+}
+
+async function legacyRecover(
+  request: Request,
+  cfg: AccountConfig,
+  emailValue: string,
+  value: { recoveryCode?: unknown; newPassword?: unknown },
+): Promise<Response> {
+  const password = validatePassword(value.newPassword);
+  if (!password.ok) return accountError(400, "invalid_password", password.error);
+  const attempts = recoverAttempts(emailValue, request);
+  const verdict = checkAttempts(attempts);
+  if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
+  const db = getDb(cfg);
+  const account = findAccountByEmail(db, emailValue);
   const codeOk = account?.recovery_hash
     ? await verifyRecoveryCode(account.recovery_hash, value.recoveryCode)
-    : // Unknown account still pays one argon2 verification: "no such
-      // account" and "wrong code" must be indistinguishable.
-      await verifyRecoveryCode(DUMMY_PASSWORD_HASH, value.recoveryCode);
-
+    : await verifyRecoveryCode(DUMMY_PASSWORD_HASH, value.recoveryCode);
   if (!account || !codeOk) {
     spendAttempts(attempts);
     return accountError(401, "invalid_recovery", "That e-mail address and recovery code do not match.");
   }
   refundIdentity(attempts);
-
   const hadBlob = Boolean(getBlob(db, account.id));
   await writePasswordHash(db, account.id, await hashPassword(password.value));
   if (hadBlob) deleteBlob(db, account.id);
   deleteSessionsForAccount(db, account.id);
-
   const recoveryCode = newRecoveryCode();
   setRecoveryHash(db, account.id, await hashRecoveryCode(recoveryCode));
-
   const session = newSessionToken();
   insertSession(db, session.hash, account.id, cfg.sessionTtlMs);
-
-  const res = accountJson({
-    ok: true,
-    email: account.email,
-    kdfSalt: account.kdf_salt,
-    hadBlob,
-    // The UI must say this out loud — see the module header.
-    blobDropped: hadBlob,
-    blobDroppedReason: hadBlob
-      ? "Your stored copy was encrypted with the old password, so it could not be kept. Sync again from a device that still has your data."
-      : null,
-    recoveryCode,
-    rev: 0,
-    hasBlob: false,
-  });
+  const res = accountJson({ ok: true, email: account.email, kdfSalt: account.kdf_salt, hadBlob, blobDropped: hadBlob, blobDroppedReason: hadBlob ? "Your stored copy was encrypted with the old password, so it could not be kept. Sync again from a device that still has your data." : null, recoveryCode, rev: 0, hasBlob: false });
   applySessionCookie(res, session.token, Math.floor(cfg.sessionTtlMs / 1000));
   return res;
 }
 
-/*
- * Wrong-method stubs — see `wrongMethod()` in `lib/account/http.ts`.
- *
- * Next routes by path and answers the verbs this route does not export
- * (and its auto-OPTIONS) before any handler runs, so without these a
- * disabled deployment would answer 405/204 and admit that an account API
- * exists here (SECURITY.md 5.1). With them: 404 while the feature is off,
- * an honest 405 — naming the method — once it is on.
- */
 export { wrongMethod as GET, wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as DELETE, wrongMethod as OPTIONS } from "@/lib/account/http";

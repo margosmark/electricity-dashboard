@@ -68,6 +68,9 @@ import * as recoverRoute from "@/app/account/recover/route";
 import * as prefsRoute from "@/app/account/push/preferences/route";
 import * as subscribeRoute from "@/app/account/push/subscribe/route";
 import * as internalNotifyRoute from "@/app/account/internal/notify/route";
+import * as verifyRoute from "@/app/account/verify/route";
+import * as recoveryVerifyRoute from "@/app/account/recover/verify/route";
+import * as smtpEventsRoute from "@/app/account/smtp-events/route";
 
 const BASE = "https://electricity.markarslan.ca";
 const EMAIL = "matrix@example.com";
@@ -140,6 +143,9 @@ const MODULES: Record<string, Record<string, unknown>> = {
   "/account/push/preferences": prefsRoute,
   "/account/push/subscribe": subscribeRoute,
   "/account/internal/notify": internalNotifyRoute,
+  "/account/verify": verifyRoute,
+  "/account/recover/verify": recoveryVerifyRoute,
+  "/account/smtp-events": smtpEventsRoute,
 };
 
 /* ==========================================================================
@@ -309,6 +315,23 @@ const CONTRACT: Record<string, RouteContract> = {
         anonymous: { status: 404, error: "not_found" },
         authenticated: { status: 404, error: "not_found" },
       },
+    },
+  },
+  "/account/verify": {
+    real: {
+      GET: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+    },
+  },
+  "/account/recover/verify": {
+    real: {
+      GET: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+    },
+  },
+  "/account/smtp-events": {
+    real: {
+      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
     },
   },
 };
@@ -494,6 +517,7 @@ beforeAll(async () => {
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = INTERNAL_TOKEN;
   process.env.ACCT_MAX_ACCOUNTS = "10";
+  process.env.ACCT_EMAIL_VERIFICATION = "false";
   process.env.ACCT_RATES_URL = "http://127.0.0.1:1/api/rates";
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
@@ -519,6 +543,7 @@ afterAll(() => {
     "ACCT_PUBLIC_ORIGIN",
     "ACCT_INTERNAL_TOKEN",
     "ACCT_MAX_ACCOUNTS",
+    "ACCT_EMAIL_VERIFICATION",
     "ACCT_RATES_URL",
   ]) {
     delete process.env[key];

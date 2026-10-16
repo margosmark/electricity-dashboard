@@ -113,8 +113,26 @@ export const login = (email: string, password: string) =>
     updatedAt: string | null;
   }>("/account/login", { email, password });
 
-export const register = (email: string) =>
-  post<{ ok: true; status: "verification_pending"; detail: string }>("/account/register", { email });
+export const register = (email: string, hasLocalData: boolean) =>
+  post<{
+    ok: true;
+    verificationRequired: true;
+  }>("/account/register", { email, hasLocalData });
+
+export const requestRecovery = (email: string) =>
+  post<{ ok: true; recoveryRequested: true }>("/account/recover", { email });
+
+export const verifyRegistration = (token: string, password: string) =>
+  post<{ ok: true; email: string; kdfSalt: string; recoveryCode: string | null; hasBlob: boolean; rev: number }>(
+    "/account/verify",
+    { token, password },
+  );
+
+export const verifyRecovery = (token: string, newPassword: string) =>
+  post<{ ok: true; email: string; kdfSalt: string; hadBlob: boolean; blobDropped: boolean; blobDroppedReason: string | null; hasBlob: false; rev: 0 }>(
+    "/account/recover/verify",
+    { token, newPassword },
+  );
 
 export const logout = () => post<{ ok: boolean }>("/account/logout");
 

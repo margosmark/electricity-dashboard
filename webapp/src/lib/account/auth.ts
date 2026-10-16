@@ -14,9 +14,9 @@
  * ever runs (1); it never sees (2) in any form — that is the whole point of
  * client-side E2EE.
  *
- * There is NO password reset by e-mail: this deployment has no SMTP and no
- * third-party IdP (that is a scope fence from the card, not an oversight).
- * What exists instead is a recovery CODE, issued only at the moment a server
+ * Public registration/recovery use the configurable SMTP transport: the
+ * mailbox must be proven before a password verifier or session exists. The
+ * legacy recovery CODE path is retained only for the local compatibility mode.
  * copy of the data comes into existence (registration on a device that
  * already has data, or the first upload otherwise). See `POST
  * /account/recover`. Losing the password still means losing the SERVER copy —
@@ -128,6 +128,12 @@ export function newSessionToken(): SessionToken {
 
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+/** A URL-safe, 256-bit one-use token. Only its hash is stored server-side. */
+export function newEmailToken(): { token: string; hash: string } {
+  const token = randomBytes(32).toString("base64url");
+  return { token, hash: hashToken(token) };
 }
 
 /** Constant-time compare that tolerates a length mismatch (never throws). */

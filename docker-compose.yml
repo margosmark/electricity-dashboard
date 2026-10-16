@@ -136,6 +136,19 @@ services:
       ACCT_INTERNAL_TOKEN: ${ACCT_INTERNAL_TOKEN:-}
       ACCT_RATES_URL: http://energy-dashboard:3000/api/rates
       ACCT_MAX_ACCOUNTS: ${ACCT_MAX_ACCOUNTS:-10}
+      # Verified mailbox registration/recovery. SMTP secrets are injected by
+      # the approved host secret mechanism; no values belong in this file.
+      ACCT_EMAIL_VERIFICATION: ${ACCT_EMAIL_VERIFICATION:-true}
+      ACCT_SMTP_HOST: ${ACCT_SMTP_HOST:-}
+      ACCT_SMTP_PORT: ${ACCT_SMTP_PORT:-587}
+      ACCT_SMTP_TLS_MODE: ${ACCT_SMTP_TLS_MODE:-starttls}
+      ACCT_SMTP_USERNAME: ${ACCT_SMTP_USERNAME:-}
+      ACCT_SMTP_PASSWORD: ${ACCT_SMTP_PASSWORD:-}
+      ACCT_SMTP_HELO: ${ACCT_SMTP_HELO:-electricity.markarslan.ca}
+      ACCT_SMTP_FROM: ${ACCT_SMTP_FROM:-}
+      ACCT_SMTP_REPLY_TO: ${ACCT_SMTP_REPLY_TO:-}
+      ACCT_SMTP_EVENTS_SECRET: ${ACCT_SMTP_EVENTS_SECRET:-}
+      ACCT_SMTP_TIMEOUT_MS: ${ACCT_SMTP_TIMEOUT_MS:-15000}
       # Push is optional: without these three the account server still runs
       # sync and reports pushConfigured:false instead of failing to boot.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}

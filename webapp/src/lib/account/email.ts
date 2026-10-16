@@ -1,10 +1,37 @@
-/**
- * Provider-agnostic boundary for verified registration and account recovery.
- * There is deliberately no concrete sender in this release: a future flow
- * must verify mailbox control before asking for/committing a passphrase.
- * Never persist clear tokens in an outbox or write token-bearing URLs to logs.
- */
-import { accessSync, constants, statSync } from "node:fs";
+import type { AccountConfig } from "./config";
+import { sendTransactionalEmail, type TransactionalMessage } from "./smtp";
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char);
+}
+
+function linkMessage(cfg: AccountConfig, to: string, subject: string, intro: string, link: string): TransactionalMessage {
+  const safeLink = escapeHtml(link);
+  const text = `${intro}\n\nOpen this link, then complete the action with the form shown:\n${link}\n\nThis link expires in 30 minutes and can be used once. If you did not request it, no account was changed.`;
+  const html = `<p>${escapeHtml(intro)}</p><p><a href="${safeLink}">Continue</a></p><p>This link expires in 30 minutes and can be used once. If you did not request it, no account was changed.</p>`;
+  return { to, subject, text, html };
+}
+
+export function registrationEmail(cfg: AccountConfig, email: string, token: string): TransactionalMessage {
+  const link = `${cfg.publicOrigin}/account/verify?token=${encodeURIComponent(token)}`;
+  return linkMessage(cfg, email, "Verify your electricity dashboard account", "Confirm your e-mail address to finish creating your electricity dashboard account.", link);
+}
+
+export function recoveryEmail(cfg: AccountConfig, email: string, token: string): TransactionalMessage {
+  const link = `${cfg.publicOrigin}/account/recover/verify?token=${encodeURIComponent(token)}`;
+  return linkMessage(cfg, email, "Recover your electricity dashboard account", "A password recovery was requested for this electricity dashboard account.", link);
+}
+
+export function sendAccountEmail(cfg: AccountConfig, message: TransactionalMessage): Promise<void> {
+  return sendTransactionalEmail(cfg, message);
+}
+
+/* ---------------------------------------------------------------------------
+ * Provider-level e-mail intent validation (inherited from main's account
+ * hardening). Kept as a fail-fast check — `assertAccountDataDir` validates
+ * `ACCT_EMAIL_*` intent independently of the SMTP sender contract above, so a
+ * misconfigured live deployment refuses to start rather than half-send.
+ * ------------------------------------------------------------------------- */
 
 export type VerificationPurpose = "registration" | "recovery";
 export type VerificationMessage = {

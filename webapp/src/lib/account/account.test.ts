@@ -52,6 +52,7 @@ beforeAll(() => {
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = "internal-token-for-tests";
   process.env.ACCT_MAX_ACCOUNTS = "10";
+  process.env.ACCT_EMAIL_VERIFICATION = "false";
   process.env.ACCT_RATES_URL = "http://127.0.0.1:1/api/rates";
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
@@ -70,6 +71,7 @@ afterAll(() => {
   delete process.env.ACCT_PUBLIC_ORIGIN;
   delete process.env.ACCT_INTERNAL_TOKEN;
   delete process.env.ACCT_MAX_ACCOUNTS;
+  delete process.env.ACCT_EMAIL_VERIFICATION;
   delete process.env.ACCT_RATES_URL;
   rmSync(dbDir, { recursive: true, force: true });
 });
