@@ -21,12 +21,15 @@ function linkMessage(cfg: AccountConfig, to: string, subject: string, intro: str
 }
 
 export function registrationEmail(cfg: AccountConfig, email: string, token: string): TransactionalMessage {
-  const link = `${cfg.publicOrigin}/account/verify?token=${encodeURIComponent(token)}`;
+  // Fragments are not sent in HTTP requests, so nginx access/error logs and
+  // Referer headers never receive the bearer token. The landing page copies
+  // the fragment into the explicit POST body after the user opens the link.
+  const link = `${cfg.publicOrigin}/account/verify#token=${encodeURIComponent(token)}`;
   return linkMessage(cfg, email, "Verify your electricity dashboard account", "Confirm your e-mail address to finish creating your electricity dashboard account.", link);
 }
 
 export function recoveryEmail(cfg: AccountConfig, email: string, token: string): TransactionalMessage {
-  const link = `${cfg.publicOrigin}/account/recover/verify?token=${encodeURIComponent(token)}`;
+  const link = `${cfg.publicOrigin}/account/recover/verify#token=${encodeURIComponent(token)}`;
   return linkMessage(cfg, email, "Recover your electricity dashboard account", "A password recovery was requested for this electricity dashboard account.", link);
 }
 

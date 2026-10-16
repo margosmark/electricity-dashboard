@@ -10,7 +10,7 @@
 
 import net from "node:net";
 import tls from "node:tls";
-import type { AccountConfig } from "./config";
+import { isValidHelo, type AccountConfig } from "./config";
 
 export type TransactionalMessage = {
   to: string;
@@ -176,6 +176,12 @@ function tlsUpgrade(socket: net.Socket, cfg: NonNullable<AccountConfig["smtp"]>)
 export async function sendTransactionalEmail(cfg: AccountConfig, message: TransactionalMessage): Promise<void> {
   const smtp = cfg.smtp;
   if (!smtp) throw new SmtpDeliveryError(null, false);
+  // Validate before opening a socket or constructing EHLO. Besides rejecting
+  // CR/LF command injection, this keeps malformed deployment config from
+  // reaching any SMTP peer at all.
+  if ((smtp.tlsMode !== "implicit" && smtp.tlsMode !== "starttls") || !isValidHelo(smtp.helo)) {
+    throw new SmtpDeliveryError(null, true);
+  }
   const to = mailbox(message.to);
   const from = mailbox(smtp.from);
   let socket: Socket | null = null;

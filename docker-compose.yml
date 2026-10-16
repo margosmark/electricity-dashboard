@@ -1,10 +1,13 @@
 secrets:
   acct_smtp_username:
-    file: ${ACCT_SMTP_USERNAME_FILE:-./.account/secrets/smtp-username}
+    # Empty, non-secret placeholder keeps the disabled stack startable. An
+    # enabled deployment must override this with its 0400 host secret path;
+    # config.ts rejects the empty placeholder and fails closed.
+    file: ${ACCT_SMTP_USERNAME_FILE:-./ops/account/empty-secret}
   acct_smtp_password:
-    file: ${ACCT_SMTP_PASSWORD_FILE:-./.account/secrets/smtp-password}
+    file: ${ACCT_SMTP_PASSWORD_FILE:-./ops/account/empty-secret}
   acct_smtp_events_secret:
-    file: ${ACCT_SMTP_EVENTS_SECRET_FILE:-./.account/secrets/smtp-events-secret}
+    file: ${ACCT_SMTP_EVENTS_SECRET_FILE:-./ops/account/empty-secret}
 
 services:
   # ------------------------------------------------------------------
@@ -146,7 +149,7 @@ services:
       ACCT_MAX_ACCOUNTS: ${ACCT_MAX_ACCOUNTS:-10}
       # Verified mailbox registration/recovery. SMTP secrets are injected by
       # the approved host secret mechanism; no values belong in this file.
-      ACCT_EMAIL_VERIFICATION: ${ACCT_EMAIL_VERIFICATION:-true}
+      ACCT_EMAIL_VERIFICATION_ENABLED: ${ACCT_EMAIL_VERIFICATION_ENABLED:-false}
       ACCT_SMTP_HOST: ${ACCT_SMTP_HOST:-}
       ACCT_SMTP_PORT: ${ACCT_SMTP_PORT:-}
       ACCT_SMTP_TLS_MODE: ${ACCT_SMTP_TLS_MODE:-}

@@ -69,7 +69,7 @@ beforeAll(() => {
     ACCT_ENABLED: "true",
     ACCT_DB_PATH: dbPath,
     ACCT_PUBLIC_ORIGIN: BASE,
-    ACCT_EMAIL_VERIFICATION: "true",
+    ACCT_EMAIL_VERIFICATION_ENABLED: "true",
     ACCT_SMTP_HOST: "smtp.example.test",
     ACCT_SMTP_PORT: "587",
     ACCT_SMTP_TLS_MODE: "starttls",
@@ -97,7 +97,7 @@ afterAll(() => {
   closeAllDbs();
   resetAccountServices();
   resetAccountConfigCache();
-  for (const key of ["ACCT_ENABLED", "ACCT_DB_PATH", "ACCT_PUBLIC_ORIGIN", "ACCT_EMAIL_VERIFICATION", "ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE", "ACCT_RATES_URL"]) delete process.env[key];
+  for (const key of ["ACCT_ENABLED", "ACCT_DB_PATH", "ACCT_PUBLIC_ORIGIN", "ACCT_EMAIL_VERIFICATION_ENABLED", "ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE", "ACCT_RATES_URL"]) delete process.env[key];
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -115,9 +115,11 @@ describe("verified registration and mailbox recovery", () => {
     expect(pending?.purpose).toBe("registration");
     expect(pending?.token_hash).not.toContain(token);
 
-    const scanned = await verifyRoute.GET(new Request(`${BASE}/account/verify?token=${token}`));
+    const scanned = await verifyRoute.GET(new Request(`${BASE}/account/verify#token=${token}`));
     expect(scanned.status).toBe(200);
-    expect(await scanned.text()).toContain(token);
+    const scannedHtml = await scanned.text();
+    expect(scannedHtml).toContain("location.hash");
+    expect(scannedHtml).not.toContain(token);
     expect(findEmailToken(db, pending!.token_hash)?.used_at).toBeNull();
 
     const verified = await verifyRoute.POST(post("/account/verify", { token, password: "correct horse battery" }));
@@ -164,9 +166,11 @@ describe("verified registration and mailbox recovery", () => {
     const requested = await recoverRoute.POST(post("/account/recover", { email: "recover@example.test" }));
     expect(requested.status).toBe(202);
     const token = latestToken();
-    const scanned = await recoveryVerifyRoute.GET(new Request(`${BASE}/account/recover/verify?token=${token}`));
+    const scanned = await recoveryVerifyRoute.GET(new Request(`${BASE}/account/recover/verify#token=${token}`));
     expect(scanned.status).toBe(200);
-    expect((await scanned.text()).includes(token)).toBe(true);
+    const scannedHtml = await scanned.text();
+    expect(scannedHtml).toContain("location.hash");
+    expect(scannedHtml.includes(token)).toBe(false);
 
     const recovered = await recoveryVerifyRoute.POST(post("/account/recover/verify", { token, newPassword: "new password" }));
     const payload = await json(recovered);

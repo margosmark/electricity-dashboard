@@ -249,6 +249,9 @@ server {
     proxy_pass http://$gb_account;
     access_log /var/log/nginx/access.log gb_noquery;
     # Limit errors include the request line; do not write paths/queries to logs.
+    # Account bearer links use URL fragments and explicit POST bodies, so no
+    # token should be in the request URL. Keep error paths quiet as a second
+    # guard: nginx's default error messages can echo request metadata.
     error_log /var/log/nginx/error.log crit;
     add_header Referrer-Policy "no-referrer" always;
     add_header X-Edge-Location account always;

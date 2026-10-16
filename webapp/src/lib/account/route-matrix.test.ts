@@ -43,11 +43,11 @@
  *    `lib/account/topology.test.ts`, and the HTTP gate cover them).
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -71,6 +71,16 @@ import * as internalNotifyRoute from "@/app/account/internal/notify/route";
 import * as verifyRoute from "@/app/account/verify/route";
 import * as recoveryVerifyRoute from "@/app/account/recover/verify/route";
 import * as smtpEventsRoute from "@/app/account/smtp-events/route";
+
+const emailTestState = vi.hoisted(() => ({ token: "" }));
+vi.mock("@/lib/account/email", () => ({
+  registrationEmail: (_cfg: unknown, email: string, token: string) => {
+    emailTestState.token = token;
+    return { to: email, subject: "verify", text: token, html: token };
+  },
+  enqueueAccountEmail: vi.fn(() => true),
+  drainOutbox: vi.fn(),
+}));
 
 const BASE = "https://electricity.markarslan.ca";
 const EMAIL = "matrix@example.com";
@@ -319,19 +329,19 @@ const CONTRACT: Record<string, RouteContract> = {
   },
   "/account/verify": {
     real: {
-      GET: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
-      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+      GET: { anonymous: { status: 200 }, authenticated: { status: 200 } },
+      POST: { anonymous: { status: 400, error: "invalid_verification" }, authenticated: { status: 400, error: "invalid_verification" } },
     },
   },
   "/account/recover/verify": {
     real: {
-      GET: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
-      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+      GET: { anonymous: { status: 200 }, authenticated: { status: 200 } },
+      POST: { anonymous: { status: 400, error: "invalid_recovery" }, authenticated: { status: 400, error: "invalid_recovery" } },
     },
   },
   "/account/smtp-events": {
     real: {
-      POST: { anonymous: { status: 404, error: "not_found" }, authenticated: { status: 404, error: "not_found" } },
+      POST: { anonymous: { status: 401, error: "invalid_signature" }, authenticated: { status: 401, error: "invalid_signature" } },
     },
   },
 };
@@ -342,6 +352,9 @@ const CONTRACT: Record<string, RouteContract> = {
 
 let dbDir: string;
 let dbPath: string;
+let smtpUsernameFile: string;
+let smtpPasswordFile: string;
+let smtpEventsFile: string;
 let accountId: number;
 /** A live session for `EMAIL` (the `valid` column). */
 let validToken: string;
@@ -509,6 +522,13 @@ function answeredByTable(
 beforeAll(async () => {
   dbDir = mkdtempSync(join(tmpdir(), "wave-n-matrix-"));
   dbPath = join(dbDir, "accounts.db");
+  smtpUsernameFile = join(dbDir, "smtp-username");
+  smtpPasswordFile = join(dbDir, "smtp-password");
+  smtpEventsFile = join(dbDir, "smtp-events-secret");
+  for (const file of [smtpUsernameFile, smtpPasswordFile, smtpEventsFile]) {
+    writeFileSync(file, "test-secret", { mode: 0o400 });
+    chmodSync(file, 0o400);
+  }
   process.env.ACCT_ENABLED = "true";
   process.env.ACCT_DATA_DIR = dbDir;
   process.env.ACCT_DATA_DIR_HOST = dbDir;
@@ -517,7 +537,17 @@ beforeAll(async () => {
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = INTERNAL_TOKEN;
   process.env.ACCT_MAX_ACCOUNTS = "10";
-  process.env.ACCT_EMAIL_VERIFICATION = "false";
+  process.env.ACCT_EMAIL_VERIFICATION_ENABLED = "true";
+  process.env.ACCT_SMTP_HOST = "smtp.example.test";
+  process.env.ACCT_SMTP_PORT = "587";
+  process.env.ACCT_SMTP_TLS_MODE = "starttls";
+  process.env.ACCT_SMTP_HELO = "electricity.markarslan.ca";
+  process.env.ACCT_SMTP_FROM = "accounts@electricity.markarslan.ca";
+  process.env.ACCT_SMTP_REPLY_TO = "support@electricity.markarslan.ca";
+  process.env.ACCT_SMTP_TIMEOUT_MS = "1000";
+  process.env.ACCT_SMTP_USERNAME_FILE = smtpUsernameFile;
+  process.env.ACCT_SMTP_PASSWORD_FILE = smtpPasswordFile;
+  process.env.ACCT_SMTP_EVENTS_SECRET_FILE = smtpEventsFile;
   process.env.ACCT_RATES_URL = "http://127.0.0.1:1/api/rates";
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
@@ -527,11 +557,17 @@ beforeAll(async () => {
     new Request(`${BASE}/account/register`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: BASE },
-      body: JSON.stringify({ email: EMAIL, password: PASSWORD, policyAccepted: true, privacyVersion: "2026-10-16", termsVersion: "2026-10-16" }),
+      body: JSON.stringify({ email: EMAIL, policyAccepted: true, privacyVersion: "2026-10-16", termsVersion: "2026-10-16" }),
     }),
   );
-  expect(res.status, "the matrix fixture must be able to register an account").toBe(201);
-  const setCookie = res.headers.get("set-cookie") ?? "";
+  expect(res.status, "the matrix fixture must be able to request verification").toBe(202);
+  const verified = await verifyRoute.POST(new Request(`${BASE}/account/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: BASE },
+    body: JSON.stringify({ token: emailTestState.token, password: PASSWORD }),
+  }));
+  expect(verified.status, "the matrix fixture must be able to consume verification").toBe(201);
+  const setCookie = verified.headers.get("set-cookie") ?? "";
   const match = /acct_session=([^;]*)/.exec(setCookie);
   expect(match, "register must hand back a session cookie").toBeTruthy();
   validToken = match![1];
@@ -556,7 +592,17 @@ afterAll(() => {
     "ACCT_PUBLIC_ORIGIN",
     "ACCT_INTERNAL_TOKEN",
     "ACCT_MAX_ACCOUNTS",
-    "ACCT_EMAIL_VERIFICATION",
+    "ACCT_EMAIL_VERIFICATION_ENABLED",
+    "ACCT_SMTP_HOST",
+    "ACCT_SMTP_PORT",
+    "ACCT_SMTP_TLS_MODE",
+    "ACCT_SMTP_HELO",
+    "ACCT_SMTP_FROM",
+    "ACCT_SMTP_REPLY_TO",
+    "ACCT_SMTP_TIMEOUT_MS",
+    "ACCT_SMTP_USERNAME_FILE",
+    "ACCT_SMTP_PASSWORD_FILE",
+    "ACCT_SMTP_EVENTS_SECRET_FILE",
     "ACCT_RATES_URL",
   ]) {
     delete process.env[key];

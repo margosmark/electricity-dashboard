@@ -16,7 +16,7 @@ import { SMTP_EVENT_MAX_SKEW_MS } from "@/lib/account/config";
 export async function POST(request: Request): Promise<Response> {
   const cfg = requireEnabled();
   if (!isConfig(cfg)) return cfg;
-  if (!cfg.emailVerification || !cfg.smtp?.eventsSecret) return accountError(404, "not_found");
+  if (!cfg.emailVerificationEnabled || !cfg.smtp?.eventsSecret) return accountError(404, "not_found");
   const timestamp = request.headers.get("x-smtp-timestamp") ?? "";
   const signature = request.headers.get("x-smtp-signature") ?? "";
   const timestampMs = Number(timestamp) * 1000;

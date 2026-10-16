@@ -14,23 +14,27 @@ import {
 import { accountError, accountJson, applySessionCookie, getDb, isConfig, readJsonSmall, readTextCapped, rejectCrossOrigin, requireEnabled } from "@/lib/account/http";
 import { hashPassword, hashToken, newSessionToken, validatePassword } from "@/lib/account/auth";
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(_request: Request): Promise<Response> {
+  void _request;
   const cfg = requireEnabled();
   if (!isConfig(cfg)) return cfg;
-  if (!cfg.emailVerification) return accountError(404, "not_found");
-  const token = new URL(request.url).searchParams.get("token") ?? "";
-  const safeToken = /^[A-Za-z0-9_-]{40,64}$/.test(token) ? token : "";
-  const html = `<!doctype html><meta charset="utf-8"><title>Recover account</title><h1>Recover your account</h1><form method="post" action="/account/recover/verify"><input type="hidden" name="token" value="${safeToken}"><label>New password <input type="password" name="newPassword" minlength="8" required></label><button type="submit">Set password</button></form>`;
+  if (!cfg.emailVerificationEnabled) return accountError(404, "not_found");
+  if (!cfg.smtp) return accountError(503, "email_unavailable");
+  // The token remains a fragment until this page copies it into the explicit
+  // POST body. Fragments never reach nginx, access logs, error logs, or
+  // Referer headers.
+  const html = `<!doctype html><meta charset="utf-8"><title>Recover account</title><h1>Recover your account</h1><form method="post" action="/account/recover/verify"><input type="hidden" name="token" id="token"><label>New password <input type="password" name="newPassword" minlength="8" required></label><button type="submit">Set password</button></form><noscript>JavaScript is required to continue.</noscript><script>const token=document.getElementById("token");const match=/^#token=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);if(token&&match){token.value=match[1];history.replaceState(null,"",location.pathname);}</script>`;
   return new Response(html, {
     status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; form-action 'self'" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; script-src 'unsafe-inline'; form-action 'self'" },
   });
 }
 
 export async function POST(request: Request): Promise<Response> {
   const cfg = requireEnabled();
   if (!isConfig(cfg)) return cfg;
-  if (!cfg.emailVerification) return accountError(404, "not_found");
+  if (!cfg.emailVerificationEnabled) return accountError(404, "not_found");
+  if (!cfg.smtp) return accountError(503, "email_unavailable");
   const csrf = rejectCrossOrigin(request);
   if (csrf) return csrf;
   const body = request.headers.get("content-type")?.includes("application/x-www-form-urlencoded")

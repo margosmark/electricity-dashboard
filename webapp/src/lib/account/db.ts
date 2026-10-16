@@ -552,12 +552,14 @@ export function claimEmailOutbox(db: DatabaseSync, now = Date.now()): EmailOutbo
 }
 
 export function markEmailOutboxSent(db: DatabaseSync, id: number, now = Date.now()): void {
-  db.prepare("UPDATE email_outbox SET status = 'sent', sent_at = ?, lease_until = NULL WHERE id = ?").run(now, id);
+  // Delivery is terminal: remove the bearer-bearing MIME payload while
+  // retaining the audit row and retry metadata needed for operations.
+  db.prepare("UPDATE email_outbox SET status = 'sent', text = '', html = '', sent_at = ?, lease_until = NULL WHERE id = ?").run(now, id);
 }
 
 export function retryEmailOutbox(db: DatabaseSync, id: number, permanent: boolean, now = Date.now()): void {
   if (permanent) {
-    db.prepare("UPDATE email_outbox SET status = 'failed', lease_until = NULL WHERE id = ?").run(id);
+    db.prepare("UPDATE email_outbox SET status = 'failed', text = '', html = '', lease_until = NULL WHERE id = ?").run(id);
     return;
   }
   db.prepare(

@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { closeAllDbs, deleteAccount, insertAccount, insertSession, openDb, putBlob } from "./db";
+import { claimEmailOutbox, closeAllDbs, deleteAccount, enqueueEmailOutbox, insertAccount, insertSession, markEmailOutboxSent, openDb, putBlob, retryEmailOutbox } from "./db";
 import { ACCOUNT_TERMS_VERSION, PRIVACY_POLICY_VERSION, hasCurrentPolicyAcceptance } from "./policy";
 
 let root: string;
@@ -97,6 +97,25 @@ describe("account database integrity", () => {
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, currentRev: 1 }]);
     expect(db.prepare("SELECT rev FROM blobs WHERE account_id=?").get(accountId)).toEqual({ rev: 1 });
+  });
+
+  it("clears bearer-bearing payloads after terminal outbox transitions but retains transient retries", () => {
+    const db = openDb(join(root, "outbox.db"));
+    const message = { to: "owner@example.test", subject: "verify", text: "https://example.test/#token=bearer-token", html: "<a href=\"https://example.test/#token=bearer-token\">verify</a>" };
+    expect(enqueueEmailOutbox(db, { tokenHash: "sent-hash", ...message })).toBe(true);
+    const sent = claimEmailOutbox(db, Date.now() + 1)!;
+    markEmailOutboxSent(db, sent.id, Date.now() + 2);
+    expect(db.prepare("SELECT status, text, html FROM email_outbox WHERE id=?").get(sent.id)).toEqual({ status: "sent", text: "", html: "" });
+
+    expect(enqueueEmailOutbox(db, { tokenHash: "failed-hash", ...message })).toBe(true);
+    const failed = claimEmailOutbox(db, Date.now() + 3)!;
+    retryEmailOutbox(db, failed.id, true, Date.now() + 4);
+    expect(db.prepare("SELECT status, text, html FROM email_outbox WHERE id=?").get(failed.id)).toEqual({ status: "failed", text: "", html: "" });
+
+    expect(enqueueEmailOutbox(db, { tokenHash: "retry-hash", ...message })).toBe(true);
+    const retry = claimEmailOutbox(db, Date.now() + 5)!;
+    retryEmailOutbox(db, retry.id, false, Date.now() + 6);
+    expect(db.prepare("SELECT status, text, html FROM email_outbox WHERE id=?").get(retry.id)).toEqual(expect.objectContaining({ status: "pending", text: message.text, html: message.html }));
   });
 });
 

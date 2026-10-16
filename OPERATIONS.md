@@ -234,15 +234,17 @@ secret mechanism (never in git, cards or chat):
 | `ACCT_SMTP_REPLY_TO` | monitored Reply-To mailbox |
 | `ACCT_SMTP_EVENTS_SECRET` | HMAC secret for signed relay bounce/complaint POSTs to `/account/smtp-events` |
 
-`ACCT_EMAIL_VERIFICATION` defaults to `true`; do not set it to `false` on a
-public deployment. `POST /account/register` and `POST /account/recover` return
-the same 202 shape for unknown, existing and suppressed addresses. The link
-GET is scanner-safe; only the explicit verification POST consumes its one-use,
-30-minute, purpose-bound token. Tokens are SHA-256 hashed at rest and never
-logged. A relay's permanent SMTP failure or a signed bounce/complaint adds the
-address to the suppression table without exposing it to the caller. Signed
-events use `HMAC-SHA256(timestamp + "." + rawBody)`, a five-minute clock window,
-and a replay table.
+`ACCT_EMAIL_VERIFICATION_ENABLED` defaults to `false` and is independent of
+`ACCT_ENABLED`. When either flag is false, email-dependent registration,
+recovery and verification routes return indistinguishable 404s without creating
+accounts, sessions, tokens or outbox rows. When it is true, the complete SMTP
+contract is required; missing or invalid SMTP configuration fails closed with
+`503 email_unavailable`. The link GET is scanner-safe; only the explicit
+verification POST consumes its one-use, 30-minute, purpose-bound token. Tokens
+are SHA-256 hashed at rest and never logged. A relay's permanent SMTP failure
+or a signed bounce/complaint adds the address to the suppression table without
+exposing it to the caller. Signed events use `HMAC-SHA256(timestamp + "." + rawBody)`,
+a five-minute clock window, and a replay table.
 
 The sender must have strict DKIM/DMARC alignment and the Reply-To must be
 monitored before public enablement. The external release gate is Mark's

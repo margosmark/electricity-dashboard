@@ -56,7 +56,7 @@ export function ensureAccountServices(): void {
   st.timer = setInterval(() => {
     void checkRates(cfg);
   }, cfg.ratesPollMs);
-  if (cfg.smtp) {
+  if (cfg.emailVerificationEnabled && cfg.smtp) {
     void drainOutbox(cfg, db);
     st.outboxTimer = setInterval(() => {
       void drainOutbox(cfg, db);
