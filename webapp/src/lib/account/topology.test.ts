@@ -93,6 +93,24 @@ describe("the account topology gate provisions disposable storage", () => {
     expect(topologyScript).toContain("unique account canary request itself is present in router log");
     expect(topologyScript).toContain("query/IP/cookie canary is absent from router log");
   });
+
+  it("writes every response into run-private files, never a fixed shared /tmp name", () => {
+    // A fixed path in a shared sticky /tmp belongs to whoever created it first:
+    // a root-owned leftover from a privileged run can be neither truncated nor
+    // unlinked by this user, so curl fails on the gate's FIRST request with
+    // `(23) Failed writing received data to disk/application` and `set -e`
+    // aborts before a single cell is counted — the topology gate then reports
+    // one anonymous early exit instead of the sweep that never ran.
+    const smoke = stripComments(
+      fs.readFileSync(path.join(REPO_ROOT, "webapp", "tests", "e2e", "account_smoke.sh"), "utf8"),
+    );
+    expect(smoke).not.toContain("/tmp/acct.");
+    expect(smoke).toMatch(/SCRATCH="\$\(mktemp -d\)"/);
+    // …and a curl failure must be a reported cell, not an abort.
+    expect(smoke).toContain("curl_dump");
+    expect(smoke).toContain("cell reports 000");
+    expect(stripComments(topologyScript)).not.toContain("/tmp/acct-edge.");
+  });
 });
 
 describe("the edge split for /account", () => {

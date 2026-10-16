@@ -22,13 +22,58 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 JAR="$(mktemp -d)/cookies.txt"
 JAR2="$(mktemp -d)/cookies.txt"
 JAR3="$(mktemp -d)/cookies.txt"
-trap 'rm -rf "$(dirname "$JAR")" "$(dirname "$JAR2")" "$(dirname "$JAR3")"' EXIT
+
+# Where every response of this gate is written down.
+#
+# These dumps used to be two FIXED paths under the shared /tmp (named
+# `acct.hdr` and `acct.body` there).
+# A shared sticky /tmp is name-addressed, not run-addressed: a file left behind
+# by another, privileged run stays root-owned 0644, and neither `>`, `unlink`
+# nor `mktemp`-style replacement can take that name back — so curl fails on the
+# FIRST request of this script with
+#
+#     curl: (23) Failed writing received data to disk/application
+#
+# and `set -e` aborts the whole gate before a single cell is counted (the
+# topology gate then reports the early exit as one anonymous failure). A
+# private mktemp -d directory belongs to this run alone: no stale file from
+# another run, no collision with a concurrent run, no privilege question.
+SCRATCH="$(mktemp -d)"
+HDR="$SCRATCH/headers"
+BODY="$SCRATCH/body"
+trap 'rm -rf "$SCRATCH" "$(dirname "$JAR")" "$(dirname "$JAR2")" "$(dirname "$JAR3")"' EXIT
 
 PASS=0
 FAIL=0
 check() { # check <label> <condition-exit-status>
   if [ "$2" -eq 0 ]; then PASS=$((PASS + 1)); printf '  PASS  %s\n' "$1"
   else FAIL=$((FAIL + 1)); printf '  FAIL  %s\n' "$1"; fi
+}
+
+# ONE place every request of this gate is written down: headers land in $HDR,
+# the body in $BODY, the HTTP status is echoed for the caller.
+#
+# A transport or output failure is a REPORTED CELL, never an abort. curl's own
+# exit status here is not evidence about the server, so the dumps are cleared
+# (a previous response must never be read as this one), `000` is echoed — which
+# every expectation in this script already treats as "not the answer I want" —
+# and the reason is printed to stderr for the operator. Without this, `set -e`
+# kills the script at its first request and the gate reports one anonymous
+# early exit instead of the cells that actually failed.
+curl_dump() { # curl_dump <method> <path> <curl options…>
+  local method="$1" path="$2"
+  shift 2
+  local out="" rc=0
+  out="$(curl -sS -D "$HDR" -o "$BODY" -w '%{http_code}' "$@")" || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    printf '%s' "$out"
+    return 0
+  fi
+  { : >"$HDR" && : >"$BODY"; } 2>/dev/null || true
+  printf '  note  curl %s %s failed (exit %d) — dumps cleared, cell reports 000\n' \
+    "$method" "$path" "$rc" >&2
+  printf '000'
+  return 0
 }
 
 # The route probe sends `{}` for body-carrying verbs. The closed-registration
@@ -39,37 +84,33 @@ matrix_req() { # matrix_req <cookie|-> <method> <path>
   [ "$cookie" != "-" ] && hdr_args=(-H "cookie: $cookie")
   case "$method" in POST|PUT|PATCH|DELETE) body='{}' ;; esac
   if [ -n "$body" ]; then
-    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+    curl_dump "$method" "$path" "${hdr_args[@]}" -X "$method" \
+      -H 'content-type: application/json' --data "$body" "${BASE}${path}"
   elif [ "$method" = "HEAD" ]; then
-    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      --head "${BASE}${path}"
+    curl_dump "$method" "$path" "${hdr_args[@]}" --head "${BASE}${path}"
   else
-    curl -sS "${hdr_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" "${BASE}${path}"
+    curl_dump "$method" "$path" "${hdr_args[@]}" -X "$method" "${BASE}${path}"
   fi
 }
 
-# HTTP verb helpers: body + status + headers land in /tmp so greps are cheap.
+# HTTP verb helpers: body + status + headers land in $HDR/$BODY so greps are cheap.
 req() { # req <jar|-> <method> <path> [json-body]
   local jar="$1" method="$2" path="$3" body="${4:-}"
   local jar_args=()
   [ "$jar" != "-" ] && jar_args=(-c "$jar" -b "$jar")
   if [ -n "$body" ]; then
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" -X "$method" \
+      -H 'content-type: application/json' --data "$body" "${BASE}${path}"
   elif [ "$method" = "HEAD" ]; then
     # --head, not -X HEAD: with -X HEAD curl waits for a body that never
     # comes and exits 18, which `set -e` would take as a dead server.
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      --head "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" --head "${BASE}${path}"
   else
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" -X "$method" "${BASE}${path}"
   fi
 }
 
-jget() { jq -r "$1" < /tmp/acct.body 2>/dev/null; }
+jget() { jq -r "$1" < "$BODY" 2>/dev/null; }
 
 # True when $1 equals any of the remaining arguments — for the cells whose
 # contract has more than one correct answer (see `matrix_expect`).
@@ -171,7 +212,7 @@ if [ "$MODE" = "--expect-disabled" ]; then
     $([ "$code" = "404" ] && echo 0 || echo 1)
   # The identity header must say WHO answered: the process with no ACCT_* is
   # the app, and that is the half of the H1 contract this side can prove.
-  proc=$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')
+  proc=$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}' || true)
   check "x-gb-process: app on an account path (process identity, not path)" \
     $([ "$proc" = "app" ] && echo 0 || echo 1)
   # Every METHOD, on every app-owned /account/* path — not just the verb each
@@ -207,7 +248,7 @@ if [ "$MODE" = "--expect-disabled" ]; then
   code=$(matrix_req - DELETE /account/session) || code=000
   check "DELETE /account/session → 404 (not 405)" $([ "$code" = "404" ] && echo 0 || echo 1)
   check "…and the answer carries no Allow header" \
-    $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
+    $(grep -qi '^allow:' "$HDR" && echo 1 || echo 0)
   [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
   echo "account gate OK (feature off): ${PASS} checks"
   exit 0
@@ -220,24 +261,24 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
   check "session reports enabled and signed out" \
     $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
   check "account identity headers agree" \
-    $([ "$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] \
-      && [ "$(grep -i '^x-edge-location:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
+    $([ "$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] \
+      && [ "$(grep -i '^x-edge-location:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
 
   attacker='attacker-owned-password'
   code=$(req - POST /account/register "{\"email\":\"known@example.com\",\"password\":\"$attacker\"}")
-  known_body=$(cat /tmp/acct.body)
+  known_body=$(cat "$BODY")
   check "registration returns generic 202 verification_pending" \
     $([ "$code" = "202" ] && [ "$(jget '.status')" = "verification_pending" ] && echo 0 || echo 1)
   check "registration creates no session cookie" \
-    $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 1 || echo 0)
+    $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
   check "response never echoes password or claims email was sent" \
-    $(grep -qF "$attacker" /tmp/acct.body && echo 1 || echo 0)
+    $(grep -qF "$attacker" "$BODY" && echo 1 || echo 0)
 
   code=$(req - POST /account/register '{"email":"unknown@example.com"}')
   check "unknown address gets identical status and body (no enumeration)" \
-    $([ "$code" = "202" ] && [ "$(cat /tmp/acct.body)" = "$known_body" ] && echo 0 || echo 1)
+    $([ "$code" = "202" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
   check "unknown address also creates no session cookie" \
-    $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 1 || echo 0)
+    $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
 
   for path in $MATRIX_PATHS; do
     for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
@@ -251,7 +292,7 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
       check "${method} ${path} [signed out] → ${code} (want ${want})" "$ok"
       if [ "$code" != "405" ]; then
         check "  …and it names no verbs (no Allow header)" \
-          $(grep -qi '^allow:' /tmp/acct.hdr && echo 1 || echo 0)
+          $(grep -qi '^allow:' "$HDR" && echo 1 || echo 0)
       fi
     done
   done

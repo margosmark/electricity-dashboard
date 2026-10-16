@@ -358,13 +358,20 @@ echo "== public account edge size/rate/privacy controls =="
 # rejected it before the request reached the app container.
 BODY_FILE="$(mktemp)"
 BODY_CANARY="acct-body-$(date +%s)-$$"
+# Private, run-unique dumps: the response of this probe used to be written to
+# fixed /tmp names, which a stale file from a privileged run (or a concurrent
+# gate) can make unwritable — curl then answers `23` and the 413 cell would
+# fail for a reason that has nothing to do with the edge. mktemp owns the name.
+EDGE_HDR="$(mktemp)"
+EDGE_BODY="$(mktemp)"
 head -c 6291457 /dev/zero >"$BODY_FILE"
-BODY_CODE="$(curl -sS --max-time 15 -D /tmp/acct-edge.hdr -o /tmp/acct-edge.body \
+BODY_CODE="$(curl -sS --max-time 15 -D "$EDGE_HDR" -o "$EDGE_BODY" \
   -w '%{http_code}' -H 'content-type: application/octet-stream' \
   --data-binary "@$BODY_FILE" "$BASE/account/session?body=$BODY_CANARY")"
 rm -f "$BODY_FILE"
-BODY_EDGE="$(grep -i '^x-edge-location:' /tmp/acct-edge.hdr | tr -d '\r' | awk '{print $2}')"
-BODY_APP="$(grep -i '^x-gb-process:' /tmp/acct-edge.hdr | tr -d '\r' | awk '{print $2}')"
+BODY_EDGE="$(grep -i '^x-edge-location:' "$EDGE_HDR" | tr -d '\r' | awk '{print $2}')"
+BODY_APP="$(grep -i '^x-gb-process:' "$EDGE_HDR" | tr -d '\r' | awk '{print $2}')"
+rm -f "$EDGE_HDR" "$EDGE_BODY"
 check "body >6 MiB rejected as 413 at account ingress" "$([ "$BODY_CODE" = 413 ] && echo 0 || echo 1)"
 check "oversized body response is edge-owned, not app-owned" \
   "$([ "$BODY_EDGE" = account ] && [ "$BODY_APP" != account ] && echo 0 || echo 1)"
