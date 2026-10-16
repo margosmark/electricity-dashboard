@@ -8,6 +8,27 @@
       "metrics": 4,
       "theme": "light",
       "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 92,
+        "width": 343.71875
+      },
+      "scopeTop": 92,
+      "dateInputs": [
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2026-10-06"
+        }
+      ],
       "controlsBelow44": []
     },
     {
@@ -18,6 +39,27 @@
       "metrics": 4,
       "theme": "dark",
       "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 92,
+        "width": 343.71875
+      },
+      "scopeTop": 92,
+      "dateInputs": [
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2026-10-06"
+        }
+      ],
       "controlsBelow44": []
     },
     {
@@ -28,6 +70,27 @@
       "metrics": 4,
       "theme": "light",
       "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 128,
+        "width": 358
+      },
+      "scopeTop": 190,
+      "dateInputs": [
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2026-10-06"
+        }
+      ],
       "controlsBelow44": []
     },
     {
@@ -38,6 +101,27 @@
       "metrics": 4,
       "theme": "dark",
       "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 128,
+        "width": 358
+      },
+      "scopeTop": 190,
+      "dateInputs": [
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2026-10-06"
+        }
+      ],
       "controlsBelow44": []
     },
     {

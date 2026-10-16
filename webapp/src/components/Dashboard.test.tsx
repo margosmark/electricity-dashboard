@@ -93,7 +93,23 @@ describe('Dashboard', () => {
   it('renders date inputs', async () => {
     await renderLoaded();
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs.length).toBeGreaterThanOrEqual(2);
+    expect(dateInputs).toHaveLength(2);
+  });
+
+  it('keeps the date range and scope pills in the persistent shell, not the legacy toolbar', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const shell = screen.getByTestId('tab-nav');
+    const context = screen.getByTestId('dashboard-context');
+    const toolbar = screen.getByTestId('dashboard-toolbar');
+    expect(shell).toContainElement(context);
+    expect(context.querySelectorAll('input[type="date"]')).toHaveLength(2);
+    expect(toolbar.querySelectorAll('input[type="date"]')).toHaveLength(0);
+    expect(within(context).getByRole('button', { name: 'Billing Period' })).toBeInTheDocument();
+
+    await user.click(within(context).getByRole('button', { name: 'Month' }));
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('renders upload button', async () => {
@@ -486,5 +502,114 @@ describe('Dashboard storage surfacing', () => {
     expect(store.get('some_other_app')).toBe('keep-me');
     expect(store.get('theme')).toBe('dark');
     // confirmReset then reloads; jsdom only logs its usual "not implemented" notice
+  });
+});
+
+/* ========================================================================== *
+ * Link Data — the fresh / no-data modal (card t_69a51490)
+ *
+ * These lock the Quiet Meter surface contract of the first-run dialog only:
+ * one labelled dialog, the semantic token ladder, a hairline edge with no
+ * hard-offset shadow, and the exact file inputs the handlers are wired to.
+ * They deliberately assert tokens and semantics, never a full class string.
+ * ========================================================================== */
+
+describe('Link Data fresh modal', () => {
+  async function renderFreshModal() {
+    Storage.prototype.getItem = vi.fn(() => null);
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    return screen.getByTestId('upload-modal');
+  }
+
+  it('auto-opens as a single labelled modal dialog over a quiet scrim', async () => {
+    const modal = await renderFreshModal();
+    expect(modal).toHaveAttribute('role', 'dialog');
+    expect(modal).toHaveAttribute('aria-modal', 'true');
+    expect(modal).toHaveAccessibleName('Link your Green Button data');
+    // scrim stays, but it is a plain tint — no blur layer, no second overlay
+    expect(modal.className).toContain('bg-inv/70');
+    expect(modal.className).not.toContain('backdrop-blur');
+    // and the fresh state carries no storage notice to explain
+    expect(screen.queryByTestId('storage-notice')).not.toBeInTheDocument();
+  });
+
+  it('the dialog card uses the quiet ladder: hairline edge, rounded-lg, no shadow', async () => {
+    const modal = await renderFreshModal();
+    const card = modal.firstElementChild as HTMLElement;
+    for (const token of ['bg-card', 'text-ink', 'border-edge', 'rounded-lg', 'shadow-none', 'max-w-2xl']) {
+      expect(card.classList.contains(token)).toBe(true);
+    }
+    // the legacy surface is gone: no thick border, no deep radius, no hard shadow
+    expect(card.className).not.toMatch(/border-[248]\b|rounded-\[|shadow-hard/);
+    expect(screen.getByRole('heading', { name: 'Link Data' })).toBeInTheDocument();
+    expect(screen.getByText(/privacy-first/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drop XML Here/i)).toBeInTheDocument();
+  });
+
+  it('keeps the XML and JSON file inputs exactly as wired', async () => {
+    const modal = await renderFreshModal();
+    const xml = screen.getByLabelText('Upload Green Button XML') as HTMLInputElement;
+    expect(xml.closest('[data-testid="upload-modal"]')).toBe(modal);
+    expect(xml).toHaveAttribute('type', 'file');
+    expect(xml).toHaveAttribute('accept', '.xml');
+    expect(xml).toHaveAttribute('multiple');
+    expect(xml).not.toBeDisabled();
+
+    const json = screen.getByLabelText('Import JSON backup') as HTMLInputElement;
+    expect(json.closest('[data-testid="upload-modal"]')).toBe(modal);
+    expect(json).toHaveAttribute('type', 'file');
+    expect(json).toHaveAttribute('accept', 'application/json,.json');
+  });
+
+  it('offers example data as the primary CTA and Cancel as the quiet secondary', async () => {
+    const modal = await renderFreshModal();
+    const example = screen.getByTestId('try-example-data');
+    expect(example).toBeEnabled();
+    expect(example.className).toContain('bg-accent');
+    expect(example.className).toContain('text-accent-ink');
+
+    const cancel = within(modal).getByRole('button', { name: 'Cancel' });
+    expect(cancel.className).toContain('quiet-action');
+    // Cancel really is the way out of the first-run dialog
+    await userEvent.setup().click(cancel);
+    expect(screen.queryByTestId('upload-modal')).not.toBeInTheDocument();
+  });
+
+  it('reads in hierarchy order: title, privacy, drop zone, JSON, Green Button, CTAs', async () => {
+    const modal = await renderFreshModal();
+    const card = modal.firstElementChild as HTMLElement;
+    const beats = (earlier: Element, later: Element) =>
+      Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const title = screen.getByRole('heading', { name: 'Link Data' });
+    const privacy = screen.getByText(/privacy-first/i);
+    const dropzone = screen.getByText(/Drop XML Here/i);
+    const json = screen.getByLabelText('Import JSON backup');
+    // Fresh browser, no live-shim secret in jsdom: the block after the import
+    // choices is the Green Button card when configured, its quiet placeholder
+    // when the deployment has not switched the feature on. Both are this
+    // dialog's Green Button area and both must sit in the same slot.
+    const greenButtonSlot = card.querySelector<HTMLElement>(
+      '[data-testid="gb-connect-card"], [data-testid="gb-unconfigured"]',
+    );
+    expect(greenButtonSlot).not.toBeNull();
+    const greenButton = greenButtonSlot as HTMLElement;
+    expect(greenButton.className).toMatch(/rounded-lg/);
+    expect(greenButton.className).not.toMatch(/shadow-hard|border-[248]\b/);
+    const example = screen.getByTestId('try-example-data');
+    const cancel = within(modal).getByRole('button', { name: 'Cancel' });
+
+    for (const node of [title, privacy, dropzone, json, greenButton, example, cancel]) {
+      expect(card).toContainElement(node as HTMLElement);
+    }
+    expect(beats(title, privacy)).toBe(true);
+    expect(beats(privacy, dropzone)).toBe(true);
+    expect(beats(dropzone, json)).toBe(true);
+    expect(beats(json, greenButton)).toBe(true);
+    expect(beats(greenButton, example)).toBe(true);
+    expect(beats(example, cancel)).toBe(true);
   });
 });

@@ -255,12 +255,16 @@ export default function OverviewPanel({
               data-testid="efficiency-strip"
               className="quiet-data-stat px-4 py-3"
             >
-              <div className="text-[8px] md:text-[10px] font-black">
+              {/* Micro labels: the reference retires 8px (">=11px"), and these
+                  four paint on --inset, so they carry the themed muted ink
+                  rather than the fixed --accent-ink that measured 1.13:1 on
+                  the dark card surface. */}
+              <div className="text-[11px] md:text-[11px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
               </div>
               <div className="flex gap-4 md:gap-6 mt-1">
                 <div>
-                  <div className="text-[8px] font-black uppercase">{t('overview.allTime')}</div>
+                  <div className="text-[11px] font-black uppercase">{t('overview.allTime')}</div>
                   <div className="flex gap-3 md:gap-4">
                     <div>
                       <div
@@ -271,7 +275,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.cents, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -283,14 +287,14 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.centsInclTax, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[8px] font-black uppercase">{t('overview.inView')}</div>
+                  <div className="text-[11px] font-black uppercase">{t('overview.inView')}</div>
                   <div className="flex gap-3 md:gap-4">
                     <div>
                       <div
@@ -301,7 +305,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.cents, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -313,14 +317,14 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.centsInclTax, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="text-[8px] font-black normal-case mt-1">
+              <div className="text-[11px] font-black normal-case mt-1">
                 {t('overview.billsTotal', { count: efficiency.allTime.bills })}
                 {efficiency.inView
                   ? ` · ${t('overview.billsInView', { count: efficiency.inView.bills })}`
@@ -344,7 +348,7 @@ export default function OverviewPanel({
                 aria-pressed={costMode === mode}
                 onClick={() => setCostMode(mode)}
                 className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:px-5 py-2 rounded-lg md:rounded-xl text-[11px] md:text-[11px] font-black transition-all ${
-                  costMode === mode ? 'bg-inv text-inv-ink' : 'text-ink hover:bg-card'
+                  costMode === mode ? 'bg-card text-ink' : 'text-ink hover:bg-card'
                 }`}
               >
                 {mode === 'yr' ? t('overview.perYear') : t('overview.perDay')}

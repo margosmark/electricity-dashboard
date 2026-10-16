@@ -88,7 +88,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
 
   return (
     <nav
-      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 pt-2 md:pt-3 pb-[3px] bg-inset border-b-2 border-edge"
+      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-6 px-4 md:px-6 pt-2 md:pt-3 pb-[3px] bg-inset border-b-2 border-edge"
       data-testid="tab-nav"
     >
       {/*
@@ -97,7 +97,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
         itself to the next pill. gap-2 leaves 8 − 3 = 5px of clear air; the
         360px fit still holds (4 × 76px + 3 × 8px = 328px).
       */}
-      <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
         <div
           role="tablist"
           aria-label={t('tabnav.aria')}
