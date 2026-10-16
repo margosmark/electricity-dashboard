@@ -50,8 +50,10 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useThemeBootstrap } from '@/lib/theme';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
+import ClassicTabNav, { type ClassicTabId } from '@/components/ClassicTabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
 import OverviewPanel from '@/components/OverviewPanel';
+import UsagePanel from '@/components/UsagePanel';
 
 import PlansPanel from '@/components/PlansPanel';
 import MoneyPanel from '@/components/MoneyPanel';
@@ -94,7 +96,12 @@ function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDism
   );
 }
 
-export default function Dashboard() {
+export type DashboardProps = {
+  /** The public route keeps the Quiet Meter shell; /classic restores the historical composition. */
+  variant?: 'quiet' | 'classic';
+};
+
+export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
   const {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
@@ -137,6 +144,14 @@ export default function Dashboard() {
   const [userPlan, setUserPlan] = useSelectedPlan();
   // Wave R: four tabs, remembered in localStorage and addressable at #tab=.
   const { tab, select: setActiveTab } = useTabs();
+  // Classic view deliberately keeps its four historical destinations without
+  // changing the Quiet Meter tab store or its URL contract.
+  const [classicTab, setClassicTab] = React.useState<ClassicTabId>('overview');
+  const activeTab = variant === 'classic' ? classicTab : tab;
+  const selectTab = (next: ClassicTabId) => {
+    if (variant === 'classic') setClassicTab(next);
+    else if (next !== 'usage') setActiveTab(next);
+  };
   // Wave H item 7: $/yr vs $/day reframing of the totals strip.
   const [costMode, setCostMode] = React.useState<'yr' | 'day'>('yr');
 
@@ -526,7 +541,11 @@ export default function Dashboard() {
       {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
-      <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
+      {variant === 'classic' ? (
+        <ClassicTabNav active={classicTab} onChange={setClassicTab} />
+      ) : (
+        <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
+      )}
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
@@ -708,8 +727,8 @@ export default function Dashboard() {
             comparison={comparison}
             userPlan={userPlan}
             days={windowDays}
-            active={tab === 'overview'}
-            onJump={() => setActiveTab('overview')}
+            active={activeTab === 'overview'}
+            onJump={() => selectTab('overview')}
           />
 
 
@@ -782,7 +801,7 @@ export default function Dashboard() {
 
       {/* The four sections. Only the active one renders — a hidden tab's
           charts are not drawn, measured or announced to a screen reader. */}
-      {tab === 'overview' && (
+      {activeTab === 'overview' && (
         <OverviewPanel
           comparison={comparison}
           userPlan={userPlan}
@@ -793,8 +812,8 @@ export default function Dashboard() {
           reframe={reframe}
           projection={projection}
           efficiency={efficiency}
-          onOpenMoney={() => setActiveTab('money')}
-          onOpenPlans={() => setActiveTab('plans')}
+          onOpenMoney={() => selectTab('money')}
+          onOpenPlans={() => selectTab('plans')}
           rateMismatch={Boolean(staleness.stale)}
           latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
           floor={floor}
@@ -805,6 +824,7 @@ export default function Dashboard() {
             selectionCost, userPlan, startDate, filteredData,
           }}
           importReview={refusalNotes.length > 0 || Boolean(parseIssue)}
+          showUsage={variant !== 'classic'}
           fileStatus={
             <div className="no-print" data-testid="overview-file-status">
               <GreenButtonSync
@@ -823,7 +843,28 @@ export default function Dashboard() {
       )}
 
 
-      {tab === 'plans' && (
+      {variant === 'classic' && activeTab === 'usage' && (
+        <UsagePanel
+          staleness={staleness}
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          processedData={processedData}
+          temps={temps}
+          zoomLevel={zoomLevel}
+          zoomTarget={zoomTarget}
+          goBack={goBack}
+          navigatePeriod={navigatePeriod}
+          setZoomLevelAndClear={setZoomLevelAndClear}
+          activeChartData={activeChartData}
+          handleBarClick={handleBarClick}
+          selectionCost={selectionCost}
+          userPlan={userPlan}
+          startDate={startDate}
+          filteredData={filteredData}
+        />
+      )}
+
+      {activeTab === 'plans' && (
         <PlansPanel
           comparison={comparison}
           userPlan={userPlan}
@@ -840,7 +881,7 @@ export default function Dashboard() {
         />
       )}
 
-      {tab === 'money' && (
+      {activeTab === 'money' && (
         <MoneyPanel
           summaries={billFeed.summaries}
           allData={processedData}

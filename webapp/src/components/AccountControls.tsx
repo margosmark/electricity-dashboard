@@ -329,7 +329,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   />
                 </div>
                 {tab === "signup" && (
-                  <p role="status" className="border-4 border-black bg-yellow-100 p-3 text-[10px] normal-case">
+                  <p role="status" className="border-4 border-edge bg-warn-soft p-3 text-[10px] normal-case">
                     {t('account.registrationClosed')}
                   </p>
                 )}

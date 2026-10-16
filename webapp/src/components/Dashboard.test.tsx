@@ -60,6 +60,24 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
   });
 
+  it('classic variant restores the four historical destinations and Usage panel', async () => {
+    render(<Dashboard variant="classic" />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('classic-tab-nav')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Overview', 'Usage', 'Plans', 'Money',
+    ]);
+    expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
+    expect(screen.queryByTestId('overview-usage')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('classic-tab-usage'));
+    expect(screen.getByTestId('tab-panel-usage')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+  });
+
   it('renders plan selection buttons', async () => {
     await renderLoaded();
     // Scoped to the nav switcher: the totals strip also names the plans.
