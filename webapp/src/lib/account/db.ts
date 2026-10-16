@@ -49,6 +49,9 @@ export type AccountRow = {
   recovery_hash: string | null;
   created_at: number;
   email_verified_at: number | null;
+  privacy_version: string | null;
+  terms_version: string | null;
+  accepted_at: number | null;
 };
 
 export type EmailTokenRow = {
@@ -60,6 +63,24 @@ export type EmailTokenRow = {
   expires_at: number;
   used_at: number | null;
   created_at: number;
+  privacy_version: string | null;
+  terms_version: string | null;
+  accepted_at: number | null;
+};
+
+export type EmailOutboxRow = {
+  id: number;
+  token_hash: string;
+  to_address: string;
+  subject: string;
+  text: string;
+  html: string;
+  status: "pending" | "sending" | "sent" | "failed";
+  attempts: number;
+  next_attempt_at: number;
+  lease_until: number | null;
+  created_at: number;
+  sent_at: number | null;
 };
 
 export type SessionRow = {
@@ -116,7 +137,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   kdf_salt       TEXT    NOT NULL,
   recovery_hash  TEXT,
   created_at     INTEGER NOT NULL,
-  email_verified_at INTEGER
+  email_verified_at INTEGER,
+  privacy_version TEXT,
+  terms_version   TEXT,
+  accepted_at    INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS email_tokens (
@@ -127,9 +151,28 @@ CREATE TABLE IF NOT EXISTS email_tokens (
   has_local_data INTEGER NOT NULL DEFAULT 0,
   expires_at     INTEGER NOT NULL,
   used_at        INTEGER,
-  created_at     INTEGER NOT NULL
+  created_at     INTEGER NOT NULL,
+  privacy_version TEXT,
+  terms_version   TEXT,
+  accepted_at    INTEGER
 );
 CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at);
+
+CREATE TABLE IF NOT EXISTS email_outbox (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  token_hash      TEXT NOT NULL UNIQUE,
+  to_address      TEXT NOT NULL,
+  subject         TEXT NOT NULL,
+  text            TEXT NOT NULL,
+  html            TEXT NOT NULL,
+  status          TEXT NOT NULL CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at INTEGER NOT NULL,
+  lease_until     INTEGER,
+  created_at      INTEGER NOT NULL,
+  sent_at         INTEGER
+);
+CREATE INDEX IF NOT EXISTS email_outbox_ready ON email_outbox (status, next_attempt_at);
 
 CREATE TABLE IF NOT EXISTS email_suppressions (
   email         TEXT PRIMARY KEY COLLATE NOCASE,
@@ -317,15 +360,25 @@ export function openDb(path: string): DatabaseSync {
   db.exec("BEGIN IMMEDIATE;");
   try {
     db.exec(SCHEMA);
-    // Existing Wave-N databases predate mailbox verification. This migration is
-    // intentionally additive and never changes or reads the encrypted blob.
+    // Existing Wave-N databases predate mailbox verification. These migrations
+    // are intentionally additive and never change or read the encrypted blob.
     try {
       db.exec("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER");
     } catch {
       /* column already exists */
     }
+    for (const [table, column, type] of [
+      ["accounts", "privacy_version", "TEXT"],
+      ["accounts", "terms_version", "TEXT"],
+      ["accounts", "accepted_at", "INTEGER"],
+      ["email_tokens", "privacy_version", "TEXT"],
+      ["email_tokens", "terms_version", "TEXT"],
+      ["email_tokens", "accepted_at", "INTEGER"],
+    ] as const) {
+      try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`); } catch { /* already exists */ }
+    }
     migrateNotifyCascade(db);
-    db.exec("PRAGMA user_version = 2;");
+    db.exec("PRAGMA user_version = 3;"); 
     db.exec("COMMIT;");
   } catch (error) {
     db.exec("ROLLBACK;");
@@ -362,14 +415,37 @@ export function findAccountById(db: DatabaseSync, id: number): AccountRow | null
 
 export function insertAccount(
   db: DatabaseSync,
-  input: { email: string; passwordHash: string; kdfSalt: string; recoveryHash: string | null; emailVerifiedAt?: number | null },
+  input: {
+    email: string;
+    passwordHash: string;
+    kdfSalt: string;
+    recoveryHash: string | null;
+    emailVerifiedAt?: number | null;
+    privacyVersion?: string | null;
+    termsVersion?: string | null;
+    acceptedAt?: number | null;
+  },
 ): number {
   const info = db
     .prepare(
-      "INSERT INTO accounts (email, password_hash, kdf_salt, recovery_hash, created_at, email_verified_at) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO accounts (email, password_hash, kdf_salt, recovery_hash, created_at, email_verified_at, privacy_version, terms_version, accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .run(input.email.trim().toLowerCase(), input.passwordHash, input.kdfSalt, input.recoveryHash, Date.now(), input.emailVerifiedAt ?? null);
+    .run(input.email.trim().toLowerCase(), input.passwordHash, input.kdfSalt, input.recoveryHash, Date.now(), input.emailVerifiedAt ?? null, input.privacyVersion ?? null, input.termsVersion ?? null, input.acceptedAt ?? null);
   return Number(info.lastInsertRowid);
+}
+
+export function deleteAccount(db: DatabaseSync, accountId: number): void {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const table of ["sessions", "blobs", "push_subs", "push_prefs", "notify_log"]) {
+      db.prepare(`DELETE FROM ${table} WHERE account_id = ?`).run(accountId);
+    }
+    db.prepare("DELETE FROM accounts WHERE id = ?").run(accountId);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function setPasswordHash(db: DatabaseSync, accountId: number, hash: string): void {
@@ -395,12 +471,15 @@ export function insertEmailToken(
     email: string;
     hasLocalData?: boolean;
     expiresAt: number;
+    privacyVersion?: string | null;
+    termsVersion?: string | null;
+    acceptedAt?: number | null;
   },
 ): void {
   db.prepare(
     `INSERT INTO email_tokens
-      (token_hash, purpose, account_id, email, has_local_data, expires_at, used_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+      (token_hash, purpose, account_id, email, has_local_data, expires_at, used_at, created_at, privacy_version, terms_version, accepted_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
   ).run(
     input.tokenHash,
     input.purpose,
@@ -409,6 +488,9 @@ export function insertEmailToken(
     input.hasLocalData === true ? 1 : 0,
     input.expiresAt,
     Date.now(),
+    input.privacyVersion ?? null,
+    input.termsVersion ?? null,
+    input.acceptedAt ?? null,
   );
 }
 
@@ -434,6 +516,54 @@ export function consumeEmailToken(db: DatabaseSync, tokenHash: string, now = Dat
 
 export function pruneEmailTokens(db: DatabaseSync, now = Date.now()): void {
   db.prepare("DELETE FROM email_tokens WHERE expires_at <= ? OR used_at <= ?").run(now, now - 24 * 60 * 60 * 1000);
+}
+
+export function enqueueEmailOutbox(
+  db: DatabaseSync,
+  input: { tokenHash: string; to: string; subject: string; text: string; html: string },
+): boolean {
+  try {
+    db.prepare(
+      `INSERT INTO email_outbox
+        (token_hash, to_address, subject, text, html, status, next_attempt_at, created_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    ).run(input.tokenHash, input.to, input.subject, input.text, input.html, Date.now(), Date.now());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Claim one row; stale leases are recoverable after a process restart. */
+export function claimEmailOutbox(db: DatabaseSync, now = Date.now()): EmailOutboxRow | null {
+  const row = db.prepare(
+    `SELECT * FROM email_outbox
+     WHERE (status = 'pending' AND next_attempt_at <= ?)
+        OR (status = 'sending' AND lease_until <= ?)
+     ORDER BY id LIMIT 1`,
+  ).get(now, now) as EmailOutboxRow | undefined;
+  if (!row) return null;
+  const changed = db.prepare(
+    `UPDATE email_outbox SET status = 'sending', lease_until = ?
+     WHERE id = ? AND ((status = 'pending' AND next_attempt_at <= ?)
+        OR (status = 'sending' AND lease_until <= ?))`,
+  ).run(now + 60_000, row.id, now, now);
+  return Number(changed.changes) === 1 ? { ...row, status: "sending", lease_until: now + 60_000 } : null;
+}
+
+export function markEmailOutboxSent(db: DatabaseSync, id: number, now = Date.now()): void {
+  db.prepare("UPDATE email_outbox SET status = 'sent', sent_at = ?, lease_until = NULL WHERE id = ?").run(now, id);
+}
+
+export function retryEmailOutbox(db: DatabaseSync, id: number, permanent: boolean, now = Date.now()): void {
+  if (permanent) {
+    db.prepare("UPDATE email_outbox SET status = 'failed', lease_until = NULL WHERE id = ?").run(id);
+    return;
+  }
+  db.prepare(
+    `UPDATE email_outbox SET status = 'pending', attempts = attempts + 1,
+       next_attempt_at = ?, lease_until = NULL WHERE id = ?`,
+  ).run(now + 30_000, id);
 }
 
 export function isSuppressed(db: DatabaseSync, email: string): boolean {

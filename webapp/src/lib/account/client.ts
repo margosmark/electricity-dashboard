@@ -10,6 +10,8 @@
  * `hooks/useAccount.ts` owns the state machine.
  */
 
+import { PRIVACY_POLICY_VERSION, ACCOUNT_TERMS_VERSION } from "@/lib/account/policy";
+
 export class AccountApiError extends Error {
   constructor(
     readonly status: number,
@@ -47,6 +49,10 @@ export type SessionInfo = {
   vapidPublicKey: string | null;
   prefs?: PushPrefs;
   maxAccounts?: number;
+  privacyPolicyVersion?: string | null;
+  accountTermsVersion?: string | null;
+  policyAcceptedAt?: string | null;
+  policyAcceptanceNeeded?: boolean;
 };
 
 export type SyncState = {
@@ -113,11 +119,14 @@ export const login = (email: string, password: string) =>
     updatedAt: string | null;
   }>("/account/login", { email, password });
 
-export const register = (email: string, hasLocalData: boolean) =>
-  post<{
-    ok: true;
-    verificationRequired: true;
-  }>("/account/register", { email, hasLocalData });
+export const register = (email: string, hasLocalData: boolean, policyAccepted = false) =>
+  post<{ ok: true; verificationRequired: true }>("/account/register", {
+    email,
+    hasLocalData,
+    policyAccepted,
+    privacyVersion: PRIVACY_POLICY_VERSION,
+    termsVersion: ACCOUNT_TERMS_VERSION,
+  });
 
 export const requestRecovery = (email: string) =>
   post<{ ok: true; recoveryRequested: true }>("/account/recover", { email });

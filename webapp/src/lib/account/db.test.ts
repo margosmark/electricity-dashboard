@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeAllDbs, deleteAccount, insertAccount, insertSession, openDb, putBlob } from "./db";
+import { ACCOUNT_TERMS_VERSION, PRIVACY_POLICY_VERSION, hasCurrentPolicyAcceptance } from "./policy";
 
 let root: string;
 beforeEach(() => { root = mkdtempSync(join(tmpdir(), "account-db-migrations-")); });
@@ -29,15 +30,50 @@ describe("account database integrity", () => {
     const path = join(root, "legacy.db");
     legacyDatabase(path);
     const db = openDb(path);
-    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(2);
+    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(3);
     expect(db.prepare("SELECT title FROM notify_log WHERE account_id=1").get()).toEqual({ title: "old title" });
     expect(db.prepare("PRAGMA foreign_key_list(notify_log)").all()).toEqual(expect.arrayContaining([
       expect.objectContaining({ table: "accounts", from: "account_id", on_delete: "CASCADE" }),
     ]));
     closeAllDbs();
     const reopened = openDb(path);
-    expect((reopened.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(2);
+    expect((reopened.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(3);
     expect((reopened.prepare("SELECT COUNT(*) AS n FROM notify_log").get() as { n: number }).n).toBe(1);
+  });
+
+  it("adds nullable policy columns idempotently and records an explicit current acceptance", () => {
+    const path = join(root, "policy.db");
+    const db = openDb(path);
+    const columns = (db.prepare("PRAGMA table_info(accounts)").all() as Array<{ name: string }>).map((column) => column.name);
+    expect(columns).toEqual(expect.arrayContaining(["privacy_version", "terms_version", "accepted_at"]));
+    const acceptedAt = Date.now();
+    const accountId = insertAccount(db, {
+      email: "accepted@example.com",
+      passwordHash: "hash",
+      kdfSalt: "salt",
+      recoveryHash: null,
+      privacyVersion: PRIVACY_POLICY_VERSION,
+      termsVersion: ACCOUNT_TERMS_VERSION,
+      acceptedAt,
+    });
+    const row = db.prepare("SELECT privacy_version, terms_version, accepted_at FROM accounts WHERE id=?").get(accountId) as {
+      privacy_version: string;
+      terms_version: string;
+      accepted_at: number;
+    };
+    expect(row).toEqual({
+      privacy_version: PRIVACY_POLICY_VERSION,
+      terms_version: ACCOUNT_TERMS_VERSION,
+      accepted_at: acceptedAt,
+    });
+    expect(hasCurrentPolicyAcceptance({
+      privacyVersion: row.privacy_version,
+      termsVersion: row.terms_version,
+      acceptedAt: row.accepted_at,
+    })).toBe(true);
+    closeAllDbs();
+    const reopened = openDb(path);
+    expect((reopened.prepare("PRAGMA table_info(accounts)").all() as Array<{ name: string }>).filter((column) => column.name === "accepted_at")).toHaveLength(1);
   });
 
   it("deletes all account-associated metadata including the notification log", () => {

@@ -247,9 +247,10 @@ server {
     limit_req_status 429;
     limit_conn acct_conn 10;
     proxy_pass http://$gb_account;
-    access_log /var/log/nginx/access.log acct_safe;
+    access_log /var/log/nginx/access.log gb_noquery;
     # Limit errors include the request line; do not write paths/queries to logs.
     error_log /var/log/nginx/error.log crit;
+    add_header Referrer-Policy "no-referrer" always;
     add_header X-Edge-Location account always;
   }
 

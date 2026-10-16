@@ -20,14 +20,12 @@ import {
   isSuppressed,
   setPasswordHash as writePasswordHash,
   setRecoveryHash,
-  suppressEmail,
 } from "@/lib/account/db";
 import { EMAIL_TOKEN_TTL_MS, type AccountConfig } from "@/lib/account/config";
 import { accountError, accountJson, applySessionCookie, getDb, isConfig, rateLimitError, readJsonSmall, rejectCrossOrigin, requireEnabled } from "@/lib/account/http";
 import { DUMMY_PASSWORD_HASH, hashPassword, hashRecoveryCode, newEmailToken, newRecoveryCode, newSessionToken, normalizeEmail, validatePassword, verifyRecoveryCode } from "@/lib/account/auth";
 import { checkAttempts, recoverAttempts, refundIdentity, spendAttempts } from "@/lib/account/ratelimit";
-import { recoveryEmail, sendAccountEmail } from "@/lib/account/email";
-import { SmtpDeliveryError } from "@/lib/account/smtp";
+import { recoveryEmail, enqueueAccountEmail, drainOutbox } from "@/lib/account/email";
 
 export const dynamic = "force-dynamic";
 
@@ -58,15 +56,14 @@ export async function POST(request: Request): Promise<Response> {
   }
   const token = newEmailToken();
   insertEmailToken(db, { tokenHash: token.hash, purpose: "recovery", accountId: account.id, email: account.email, expiresAt: Date.now() + EMAIL_TOKEN_TTL_MS });
-  try {
-    await sendAccountEmail(cfg, recoveryEmail(cfg, account.email, token.token));
-  } catch (error) {
+  const message = recoveryEmail(cfg, account.email, token.token);
+  if (!enqueueAccountEmail(db, token.hash, message)) {
     deleteEmailToken(db, token.hash);
-    if (error instanceof SmtpDeliveryError && error.permanent) suppressEmail(db, account.email, "permanent_delivery_failure", "smtp");
     spendAttempts(attempts);
     return accountError(503, "email_unavailable");
   }
   refundIdentity(attempts);
+  void drainOutbox(cfg, db);
   return accountJson({ ok: true, recoveryRequested: true }, { status: 202 });
 }
 

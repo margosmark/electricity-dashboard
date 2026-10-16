@@ -20,6 +20,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Bell, BellOff, CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
+import Link from "next/link";
 import { useAccount, type AccountStatus } from "@/hooks/useAccount";
 import { useTranslation } from "@/i18n";
 
@@ -55,6 +56,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
   // Escape closes, exactly like every other overlay in this app. Registered
   // once (not gated on `open`) so there is never a frame where the drawer is
@@ -93,7 +95,9 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
 
   const submitAuth = async (e: FormEvent) => {
     e.preventDefault();
-    const ok = tab === "signup" ? await account.signUp(email) : await account.signIn(email, password);
+    const ok = tab === "signup"
+      ? await account.signUp(email, password, policyAccepted)
+      : await account.signIn(email, password);
     if (ok) {
       setPassword("");
       // Sign-in can END with a question the user has to answer (the
@@ -313,26 +317,44 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   />
                 </div>
                 {tab === "signup" && (
-                  <p role="status" className="border-4 border-edge bg-warn-soft p-3 text-[10px] normal-case">
-                    {t('account.registrationClosed')}
-                  </p>
+                  <>
+                    <label className="flex items-start gap-2 text-[10px] leading-relaxed normal-case">
+                      <input
+                        type="checkbox"
+                        data-testid="account-policy-ack"
+                        checked={policyAccepted}
+                        required
+                        onChange={(e) => setPolicyAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-violet-600"
+                      />
+                      <span>
+                        {t('policy.terms.acknowledgement')} {" "}
+                        <Link href="/privacy" className="underline font-black">{t('policy.terms.privacyLink')}</Link>{" · "}
+                        <Link href="/terms" className="underline font-black">{t('policy.terms.termsLink')}</Link>
+                      </span>
+                    </label>
+                    <p role="status" className="border-4 border-edge bg-warn-soft p-3 text-[10px] normal-case">
+                      {t('account.registrationClosed')}
+                    </p>
+                  </>
                 )}
-                {tab !== "signup" && (
-                  <div>
-                    <label className={FIELD_LABEL} htmlFor="acct-password">{t('account.passwordLabel')}</label>
-                    <input
-                      id="acct-password"
-                      data-testid="account-password-input"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      minLength={1}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={INPUT_CLASS}
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className={FIELD_LABEL} htmlFor="acct-password">
+                    {t('account.passwordLabel')}
+                  </label>
+                  <input
+                    id="acct-password"
+                    data-testid="account-password-input"
+                    type="password"
+                    autoComplete={tab === "signup" ? "new-password" : "current-password"}
+                    required
+                    minLength={15}
+                    maxLength={200}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
                 <button
                   type="submit"
                   data-testid={tab === "signup" ? "account-register" : "account-login"}

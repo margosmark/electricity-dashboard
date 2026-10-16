@@ -25,14 +25,19 @@ import type { AccountConfig } from "./config";
 import { getAccountConfig } from "./config";
 import { openDb, getMeta, setMeta } from "./db";
 import { fanOut } from "./push";
+import { drainOutbox } from "./email";
 
-type ServiceState = { timer: ReturnType<typeof setInterval> | null; running: boolean };
+type ServiceState = {
+  timer: ReturnType<typeof setInterval> | null;
+  outboxTimer: ReturnType<typeof setInterval> | null;
+  running: boolean;
+};
 
 const KEY = "__waveNAccountServices" as const;
 
 function state(): ServiceState {
   const g = globalThis as Record<string, unknown>;
-  if (!g[KEY]) g[KEY] = { timer: null, running: false } satisfies ServiceState;
+  if (!g[KEY]) g[KEY] = { timer: null, outboxTimer: null, running: false } satisfies ServiceState;
   return g[KEY] as ServiceState;
 }
 
@@ -45,19 +50,28 @@ export function ensureAccountServices(): void {
   const cfg = getAccountConfig();
   if (!cfg.enabled) return;
   const st = state();
-  if (st.timer) return;
+  const db = openDb(cfg.dbPath);
+  if (st.timer && st.outboxTimer) return;
   void checkRates(cfg);
   st.timer = setInterval(() => {
     void checkRates(cfg);
   }, cfg.ratesPollMs);
+  if (cfg.smtp) {
+    void drainOutbox(cfg, db);
+    st.outboxTimer = setInterval(() => {
+      void drainOutbox(cfg, db);
+    }, 1_000);
+  }
   // Never hold the process open: the server exits when the runtime says so.
   st.timer.unref?.();
+  st.outboxTimer?.unref?.();
 }
 
 /** Test hook — stop the watcher and forget it was ever started. */
 export function resetAccountServices(): void {
   const st = state();
   if (st.timer) clearInterval(st.timer);
+  if (st.outboxTimer) clearInterval(st.outboxTimer);
   const g = globalThis as Record<string, unknown>;
   delete g[KEY];
 }

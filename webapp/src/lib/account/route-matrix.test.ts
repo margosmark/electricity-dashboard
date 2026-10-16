@@ -523,11 +523,24 @@ beforeAll(async () => {
   delete process.env.VAPID_PRIVATE_KEY;
   resetAccountConfigCache();
 
-  const db = cfgDb();
-  accountId = insertAccount(db, { email: EMAIL, passwordHash: "$argon2id$test-only", kdfSalt: randomBytes(16).toString("base64"), recoveryHash: null });
-  const session = newSessionToken();
-  validToken = session.token;
-  insertSession(db, session.hash, accountId, SESSION_TTL_MS);
+  const res = await registerRoute.POST(
+    new Request(`${BASE}/account/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: BASE },
+      body: JSON.stringify({ email: EMAIL, password: PASSWORD, policyAccepted: true, privacyVersion: "2026-10-16", termsVersion: "2026-10-16" }),
+    }),
+  );
+  expect(res.status, "the matrix fixture must be able to register an account").toBe(201);
+  const setCookie = res.headers.get("set-cookie") ?? "";
+  const match = /acct_session=([^;]*)/.exec(setCookie);
+  expect(match, "register must hand back a session cookie").toBeTruthy();
+  validToken = match![1];
+
+  const row = cfgDb().prepare("SELECT id FROM accounts WHERE email = ?").get(EMAIL) as
+    | { id: number }
+    | undefined;
+  expect(row, "the registered account must be readable back").toBeTruthy();
+  accountId = row!.id;
 });
 
 afterAll(() => {

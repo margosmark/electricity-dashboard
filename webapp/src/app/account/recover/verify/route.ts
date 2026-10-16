@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
   const html = `<!doctype html><meta charset="utf-8"><title>Recover account</title><h1>Recover your account</h1><form method="post" action="/account/recover/verify"><input type="hidden" name="token" value="${safeToken}"><label>New password <input type="password" name="newPassword" minlength="8" required></label><button type="submit">Set password</button></form>`;
   return new Response(html, {
     status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; form-action 'self'" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; form-action 'self'" },
   });
 }
 

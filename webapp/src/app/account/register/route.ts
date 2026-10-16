@@ -9,7 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { findAccountByEmail, insertAccount, insertEmailToken, deleteEmailToken, deleteEmailTokensForEmail, isSuppressed, insertSession, suppressEmail } from "@/lib/account/db";
+import { findAccountByEmail, insertAccount, insertEmailToken, deleteEmailToken, deleteEmailTokensForEmail, isSuppressed, insertSession } from "@/lib/account/db";
 import { type AccountConfig, EMAIL_TOKEN_TTL_MS } from "@/lib/account/config";
 import {
   accountError, accountJson, isConfig, rateLimitError, readJsonSmall,
@@ -25,9 +25,8 @@ import {
   validatePassword,
 } from "@/lib/account/auth";
 import { checkAttempts, refundAttempts, registerAttempts, spendAttempts } from "@/lib/account/ratelimit";
-import { registrationEmail } from "@/lib/account/email";
-import { sendAccountEmail } from "@/lib/account/email";
-import { SmtpDeliveryError } from "@/lib/account/smtp";
+import { acceptanceFromRequest } from "@/lib/account/policy";
+import { registrationEmail, enqueueAccountEmail, drainOutbox } from "@/lib/account/email";
 
 export async function POST(request: Request): Promise<Response> {
   const cfg = requireEnabled();
@@ -36,11 +35,13 @@ export async function POST(request: Request): Promise<Response> {
   if (csrf) return csrf;
   const body = await readJsonSmall(request);
   if (!body.ok) return accountError(body.status, "bad_request", body.error);
-  const value = (body.value ?? {}) as { email?: unknown; password?: unknown; hasLocalData?: unknown };
+  const value = (body.value ?? {}) as { email?: unknown; password?: unknown; hasLocalData?: unknown; policyAccepted?: unknown; privacyVersion?: unknown; termsVersion?: unknown };
   const email = normalizeEmail(value.email);
   if (!email.ok) return accountError(400, "invalid_email", email.error);
+  const acceptance = acceptanceFromRequest(value);
+  if (!acceptance) return accountError(400, "policy_acceptance_required", "Accept the current privacy notice and account terms before registering.");
 
-  if (!cfg.emailVerification) return legacyRegister(request, cfg, email.value, value);
+  if (!cfg.emailVerification) return legacyRegister(request, cfg, email.value, value, acceptance);
 
   if (value.password !== undefined) {
     return accountError(400, "verification_required", "Verify the mailbox before choosing a password.");
@@ -67,16 +68,17 @@ export async function POST(request: Request): Promise<Response> {
     email: email.value,
     hasLocalData: value.hasLocalData === true,
     expiresAt: Date.now() + EMAIL_TOKEN_TTL_MS,
+    privacyVersion: acceptance.privacyVersion,
+    termsVersion: acceptance.termsVersion,
+    acceptedAt: acceptance.acceptedAt,
   });
-  try {
-    await sendAccountEmail(cfg, registrationEmail(cfg, email.value, token.token));
-  } catch (error) {
+  if (!enqueueAccountEmail(db, token.hash, registrationEmail(cfg, email.value, token.token))) {
     deleteEmailToken(db, token.hash);
-    if (error instanceof SmtpDeliveryError && error.permanent) suppressEmail(db, email.value, "permanent_delivery_failure", "smtp");
     spendAttempts(attempts);
     return accountError(503, "email_unavailable");
   }
   refundAttempts(attempts);
+  void drainOutbox(cfg, db);
   return accountJson({ ok: true, verificationRequired: true }, { status: 202 });
 }
 
@@ -86,6 +88,7 @@ async function legacyRegister(
   cfg: AccountConfig,
   emailValue: string,
   value: { password?: unknown; hasLocalData?: unknown },
+  acceptance: { privacyVersion: string | null; termsVersion: string | null; acceptedAt: number | null },
 ): Promise<Response> {
   const password = validatePassword(value.password);
   if (!password.ok) return accountError(400, "invalid_password", password.error);
@@ -110,6 +113,9 @@ async function legacyRegister(
     kdfSalt: randomBytes(16).toString("base64"),
     recoveryHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null,
     emailVerifiedAt: Date.now(),
+    privacyVersion: acceptance.privacyVersion,
+    termsVersion: acceptance.termsVersion,
+    acceptedAt: acceptance.acceptedAt,
   });
   refundAttempts(attempts);
   const session = newSessionToken();

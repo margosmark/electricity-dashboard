@@ -202,7 +202,8 @@ export async function sendTransactionalEmail(cfg: AccountConfig, message: Transa
     await command(reader, `RCPT TO:<${to}>`, smtp.timeoutMs, [250, 251]);
     await command(reader, "DATA", smtp.timeoutMs, [354]);
     socket.write(wireMessage(smtp, message));
-    await readReply(reader, smtp.timeoutMs);
+    const finalReply = await readReply(reader, smtp.timeoutMs);
+    if (finalReply.code !== 250) throw new SmtpDeliveryError(finalReply.code, finalReply.code >= 500);
     await command(reader, "QUIT", smtp.timeoutMs, [221, 250]);
   } catch (error) {
     if (error instanceof SmtpDeliveryError) throw error;

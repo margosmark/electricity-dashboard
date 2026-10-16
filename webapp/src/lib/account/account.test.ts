@@ -115,7 +115,11 @@ const post = (url: string, body: unknown, cookie?: string, headers: Record<strin
       ...(cookie ? { cookie } : {}),
       ...headers,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(
+      url.endsWith("/account/register") && body && typeof body === "object" && !("policyAccepted" in body)
+        ? { ...(body as Record<string, unknown>), policyAccepted: true, privacyVersion: "2026-10-16", termsVersion: "2026-10-16" }
+        : body,
+    ),
   });
 
 const put = (url: string, body: unknown, cookie?: string) =>
@@ -142,15 +146,18 @@ async function register(
   password = "correct-horse-battery",
   _hasLocalData = false,
 ): Promise<{ res: Response; cookie: string; body: Record<string, unknown> }> {
-  const db = openDb(process.env.ACCT_DB_PATH!);
-  const kdfSalt = randomBytes(16).toString("base64");
-  const recoveryCode = _hasLocalData ? newRecoveryCode() : null;
-  const accountId = insertAccount(db, { email, passwordHash: await hashPassword(password), kdfSalt, recoveryHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null });
-  const session = newSessionToken();
-  insertSession(db, session.hash, accountId, getAccountConfig().sessionTtlMs);
-  const body = { ok: true, email, kdfSalt, recoveryCode, hasBlob: false, rev: 0 };
-  const res = new Response(JSON.stringify(body), { status: 201, headers: { "set-cookie": `acct_session=${session.token}; Path=/; HttpOnly` } });
-  return { res, cookie: asCookie(session.token)!, body };
+  const res = await registerRoute.POST(
+    post(`${BASE}/account/register`, {
+      email,
+      password,
+      hasLocalData,
+      policyAccepted: true,
+      privacyVersion: "2026-10-16",
+      termsVersion: "2026-10-16",
+    }),
+  );
+  const body = (await res.json()) as Record<string, unknown>;
+  return { res, cookie: asCookie(sessionCookie(res))!, body };
 }
 
 const validIv = () => randomBytes(12).toString("base64");
@@ -246,11 +253,32 @@ describe("registration verification gate", () => {
     expect(await known.json()).toEqual(await unknown.json());
   });
 
-  it("rejects malformed email without persisting an attacker-supplied password", async () => {
-    const bad = await registerRoute.POST(post(`${BASE}/account/register`, { email: "not-an-email", password: "attacker-owned-password" }));
-    expect(bad.status).toBe(400);
-    expect(((await bad.json()) as { error: string }).error).toBe("invalid_email");
+  it("rejects an explicit unchecked policy acknowledgement before registration can proceed", async () => {
+    const res = await registerRoute.POST(post(`${BASE}/account/register`, {
+      email: "mark@example.com",
+      policyAccepted: false,
+    }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "policy_acceptance_required" });
     expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
+  });
+
+  it("does not reveal whether an address already has an account", async () => {
+    await register("known@example.com");
+    const known = await registerRoute.POST(post(`${BASE}/account/register`, { email: "KNOWN@example.com" }));
+    const unknown = await registerRoute.POST(post(`${BASE}/account/register`, { email: "unknown@example.com" }));
+    expect(known.status).toBe(unknown.status);
+    expect(await known.json()).toEqual(await unknown.json());
+  });
+
+
+  it("refuses a duplicate e-mail with 409", async () => {
+    await register();
+    const again = await registerRoute.POST(
+      post(`${BASE}/account/register`, { email: "MARK@example.com", password: "correct-horse-battery" }),
+    );
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { error: string }).error).toBe("email_taken");
   });
 
   it("refuses a cross-site registration", async () => {

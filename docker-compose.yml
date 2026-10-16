@@ -1,3 +1,11 @@
+secrets:
+  acct_smtp_username:
+    file: ${ACCT_SMTP_USERNAME_FILE:-./.account/secrets/smtp-username}
+  acct_smtp_password:
+    file: ${ACCT_SMTP_PASSWORD_FILE:-./.account/secrets/smtp-password}
+  acct_smtp_events_secret:
+    file: ${ACCT_SMTP_EVENTS_SECRET_FILE:-./.account/secrets/smtp-events-secret}
+
 services:
   # ------------------------------------------------------------------
   # electricity.markarslan.ca on .110 — four containers, one host port.
@@ -140,15 +148,15 @@ services:
       # the approved host secret mechanism; no values belong in this file.
       ACCT_EMAIL_VERIFICATION: ${ACCT_EMAIL_VERIFICATION:-true}
       ACCT_SMTP_HOST: ${ACCT_SMTP_HOST:-}
-      ACCT_SMTP_PORT: ${ACCT_SMTP_PORT:-587}
-      ACCT_SMTP_TLS_MODE: ${ACCT_SMTP_TLS_MODE:-starttls}
-      ACCT_SMTP_USERNAME: ${ACCT_SMTP_USERNAME:-}
-      ACCT_SMTP_PASSWORD: ${ACCT_SMTP_PASSWORD:-}
-      ACCT_SMTP_HELO: ${ACCT_SMTP_HELO:-electricity.markarslan.ca}
+      ACCT_SMTP_PORT: ${ACCT_SMTP_PORT:-}
+      ACCT_SMTP_TLS_MODE: ${ACCT_SMTP_TLS_MODE:-}
+      ACCT_SMTP_USERNAME_FILE: /run/secrets/acct_smtp_username
+      ACCT_SMTP_PASSWORD_FILE: /run/secrets/acct_smtp_password
+      ACCT_SMTP_EVENTS_SECRET_FILE: /run/secrets/acct_smtp_events_secret
+      ACCT_SMTP_HELO: ${ACCT_SMTP_HELO:-}
       ACCT_SMTP_FROM: ${ACCT_SMTP_FROM:-}
       ACCT_SMTP_REPLY_TO: ${ACCT_SMTP_REPLY_TO:-}
-      ACCT_SMTP_EVENTS_SECRET: ${ACCT_SMTP_EVENTS_SECRET:-}
-      ACCT_SMTP_TIMEOUT_MS: ${ACCT_SMTP_TIMEOUT_MS:-15000}
+      ACCT_SMTP_TIMEOUT_MS: ${ACCT_SMTP_TIMEOUT_MS:-}
       # Push is optional: without these three the account server still runs
       # sync and reports pushConfigured:false instead of failing to boot.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
@@ -158,6 +166,13 @@ services:
       # accounts.db is user data (ciphertext, but still theirs) — see the
       # backup story in OPERATIONS.md.
       - ${ACCT_DATA_DIR:?set ACCT_DATA_DIR to an external uid-1001 directory - see OPERATIONS.md}:/data
+    secrets:
+      - source: acct_smtp_username
+        target: acct_smtp_username
+      - source: acct_smtp_password
+        target: acct_smtp_password
+      - source: acct_smtp_events_secret
+        target: acct_smtp_events_secret
     depends_on:
       - energy-dashboard
 

@@ -66,6 +66,8 @@ export type AccountStatus = {
   vapidPublicKey: string | null;
   prefs: PushPrefs | null;
   subscriptionCount: number;
+  /** Existing accounts need a visible notice rather than a silent migration. */
+  policyAcceptanceNeeded: boolean;
 };
 
 const INITIAL: AccountStatus = {
@@ -82,6 +84,7 @@ const INITIAL: AccountStatus = {
   vapidPublicKey: null,
   prefs: null,
   subscriptionCount: 0,
+  policyAcceptanceNeeded: false,
 };
 
 /** How often the auto-push checks whether the dataset moved. */
@@ -269,6 +272,7 @@ export function useAccount(options: Options = {}) {
         vapidPublicKey: info.vapidPublicKey ?? null,
         prefs: info.prefs ?? null,
         subscriptionCount: 0,
+        policyAcceptanceNeeded: Boolean(info.policyAcceptanceNeeded),
       });
 
       if (authed && hasKey) {
@@ -437,12 +441,12 @@ export function useAccount(options: Options = {}) {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
+    async (email: string, password: string, policyAccepted = false): Promise<boolean> => {
       void password;
       setBusy(true);
       busyRef.current = true;
       try {
-        await api.register(email, sync.hasLocalData());
+        await api.register(email, sync.hasLocalData(), policyAccepted);
         say("ok", "Check your e-mail to verify the mailbox, then choose the password there.");
         return true;
       } catch (e) {
@@ -454,7 +458,7 @@ export function useAccount(options: Options = {}) {
         busyRef.current = false;
       }
     },
-    [say],
+    [say, sync],
   );
 
   const signOut = useCallback(async () => {

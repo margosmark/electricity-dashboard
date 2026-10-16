@@ -1,5 +1,13 @@
 import type { AccountConfig } from "./config";
-import { sendTransactionalEmail, type TransactionalMessage } from "./smtp";
+import {
+  claimEmailOutbox,
+  deleteEmailToken,
+  enqueueEmailOutbox,
+  markEmailOutboxSent,
+  retryEmailOutbox,
+  suppressEmail,
+} from "./db";
+import { sendTransactionalEmail, SmtpDeliveryError, type TransactionalMessage } from "./smtp";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char);
@@ -68,4 +76,28 @@ export function validateEmailConfig(env: Record<string, string | undefined>): Em
     throw new Error("Live email credential mount must be a readable regular file with mode 0600 or stricter.");
   }
   return { mode, provider, from, credentialFile };
+/** Persist before returning; delivery is retried independently of the request. */
+export function enqueueAccountEmail(
+  db: Parameters<typeof claimEmailOutbox>[0],
+  tokenHash: string,
+  message: TransactionalMessage,
+): boolean {
+  return enqueueEmailOutbox(db, { tokenHash, to: message.to, subject: message.subject, text: message.text, html: message.html });
+}
+
+/** Deliver one durable row. It intentionally does not log message data. */
+export async function drainOutbox(cfg: AccountConfig, db: Parameters<typeof claimEmailOutbox>[0]): Promise<void> {
+  const row = claimEmailOutbox(db);
+  if (!row || !cfg.smtp) return;
+  try {
+    await sendAccountEmail(cfg, { to: row.to_address, subject: row.subject, text: row.text, html: row.html });
+    markEmailOutboxSent(db, row.id);
+  } catch (error) {
+    const permanent = error instanceof SmtpDeliveryError && error.permanent;
+    retryEmailOutbox(db, row.id, permanent);
+    if (permanent) {
+      deleteEmailToken(db, row.token_hash);
+      suppressEmail(db, row.to_address, "permanent_delivery_failure", "smtp");
+    }
+  }
 }
