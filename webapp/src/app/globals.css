@@ -923,6 +923,50 @@ body {
   padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
 }
 
+/* ---------------------------------------------------------------------------
+ * t_82a4dc08 — no text may push the document sideways.
+ *
+ * At a 200% root font a single French word inside a flex or grid child is
+ * wider than the column it sits in — measured: "consommation" is 402px wide
+ * at root 32 inside a 222px header row — and every flex/grid item is floored
+ * at its min-content by `min-width: auto`. The box therefore grows past the
+ * viewport instead of wrapping, and the page pans horizontally. Measured on
+ * the build this landed on, seeded page, locale fr: documentElement scrollWidth
+ * exceeded clientWidth by +112 (390px) / +75 (427px) at 200% text, by
+ * +100 / +70 / +33 (360 / 390 / 427) at default text, and the money tab sat
+ * +14 at 200% with NO border-box offender at all — pure text ink painting
+ * past its box, which only real line breaking can stop.
+ *
+ * `anywhere` does the two things a per-element patch cannot: it collapses the
+ * min-content floor that flex/grid automatic minimums read, and it lets text
+ * break when even the collapsed box is still too narrow — so content wraps
+ * inside its container instead of extending the scrollable area. It engages
+ * only where content would otherwise overflow: intrinsic (max-content)
+ * sizing is unchanged, so layout at default text is essentially unchanged.
+ * Measured by diffing every element's rect on the seeded page at root 16
+ * across 360/390/768/1280 in both locales (5,468 elements per cell, before
+ * vs after): zero padding changes, and geometry changes in exactly three
+ * places — the fr best-choice-chip at 360/390 (the defect itself: 431x44
+ * becomes 302x50 as its label wraps instead of panning the page), one dt/dd
+ * pair in the overview plan summary at fr 768 (+/-4px, inside a
+ * justify-between row that was ALREADY sitting on its min-content floor),
+ * and two spans inside the efficiency trend chip at en 360 (1px of text
+ * rounding). Every other cell is identical.
+ *
+ * Tables are exempt on purpose. A wide data surface must stay wide and
+ * scroll inside its own overflow-x container rather than break every cell:
+ * measured money-table scrollWidth 1010 vs clientWidth 724 at 390, which
+ * would collapse to the container width and wrap its columns if cells
+ * inherited the rule (the table keeps its own `min-w-[680px]` contract).
+ */
+body {
+  overflow-wrap: anywhere;
+}
+
+body table {
+  overflow-wrap: normal;
+}
+
 /**
  * Coarse pointers get double-tap-to-zoom on anything scrollable unless we say
  * otherwise — which reads as a 300 ms lag on every tap of a phone.

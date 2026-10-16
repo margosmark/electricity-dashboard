@@ -21,11 +21,12 @@ import { seedMarkShaped } from './mark-seed';
  *     rules cover left/right/bottom only, so the sticky strip slid under
  *     the status bar in the standalone PWA (viewport-fit: cover).
  *
- * What is deliberately NOT asserted: document-level overflow for fr + 200%
- * text. That overflow (measured +112px at 390) comes from Overview panel
- * content (heatmap min-w, heading rows), outside the nav's box — tracked as
- * follow-up card t_82a4dc08. Nav-box containment IS still asserted in every
- * cell, both locales.
+ * Document-level overflow is asserted in EVERY cell of this spec since
+ * t_82a4dc08 landed (it used to exempt fr <768 at 100% text, fr at 200% text
+ * and the 844x390 landscape state — all three measured red from panel
+ * content, not from the strip). The panel-content spec carries the wider
+ * matrix (empty ledger, money tab, the wide-surface and page-shell guards);
+ * this one keeps its strip contract.
  *
  * Every parameter is guarded (locale labels, applied font size, selected
  * tab, seam value), so a silently-unapplied parameter can't produce a vacuous
@@ -253,17 +254,9 @@ for (const locale of ['en', 'fr'] as Locale[]) {
 
     for (const vp of widths) {
       await page.setViewportSize(vp);
-      // Document-level overflow is asserted where it is a NAV-scoped claim:
-      // always for en, and for fr only ≥768. Below 768 the SEEDED fr page has
-      // a persistent panel overflow that is not the strip's: the Overview
-      // `best-choice-chip` button carries a whitespace-nowrap span, so its
-      // French label runs 431px wide — measured docScroll +100/+70/+33 at
-      // 360/390/427 (nav itself spans 0..vw in every one of those cells, and
-      // ≥768 is clean: measured ovr 0). Tracked as t_82a4dc08.
-      const docAsserted = locale === 'en' || vp.width >= 768;
       // Shrink transients (recharts settling) must not masquerade as — or
       // mask — a real page pan; persistent overflow still times out red.
-      if (docAsserted) await waitForLayoutSettle(page);
+      await waitForLayoutSettle(page);
       const s = await snapshotStrip(page);
       expect(s, `strip rendered at ${vp.width}`).not.toBeNull();
       const at = `${vp.width}×${vp.height} ${locale}`;
@@ -275,14 +268,12 @@ for (const locale of ['en', 'fr'] as Locale[]) {
       );
       expect(s!.labelFontSize, 'root font not scaled in this test').toBe(12);
 
-      // OVERFLOW: the strip may not make the page pan horizontally (scoped as
-      // above — fr <768 is the chip, t_82a4dc08, and its nav box is asserted
-      // right below regardless).
-      if (docAsserted) {
-        expect(s!.docScroll, `${at}: document scrollWidth vs clientWidth`).toBeLessThanOrEqual(
-          s!.vw + 1,
-        );
-      }
+      // OVERFLOW: the strip may not make the page pan horizontally. The fr
+      // <768 exemption this used to carry was the toolbar chip's nowrap span
+      // (t_82a4dc08), now fixed and gated there.
+      expect(s!.docScroll, `${at}: document scrollWidth vs clientWidth`).toBeLessThanOrEqual(
+        s!.vw + 1,
+      );
       expect(s!.navLeft, `${at}: nav left edge not past the viewport`).toBeGreaterThanOrEqual(-1);
       expect(s!.navRight, `${at}: nav right edge not past the viewport`).toBeLessThanOrEqual(
         s!.vw + 1,
@@ -337,17 +328,15 @@ for (const locale of ['en', 'fr'] as Locale[]) {
         expect(s!.navRight, `${at}: nav right edge`).toBeLessThanOrEqual(s!.vw + 1);
         // Touch height still holds as the strip's content grows.
         expect(s!.pillMinHeight, `${at}: touch height floor`).toBeGreaterThanOrEqual(44);
-        if (locale === 'en') {
-          // (Settle first: a resize/font step can leave a chart a frame wide
-          // — measured t0 1134 at 360, clean by +300ms. fr+200% has the known
-          // panel-content overflow, t_82a4dc08, and is deliberately not
-          // asserted at document level.)
-          await waitForLayoutSettle(page);
-          const settled = await snapshotStrip(page);
-          expect(settled!.docScroll, `${at}: no page pan at scale (en)`).toBeLessThanOrEqual(
-            settled!.vw + 1,
-          );
-        }
+        // Settle first: a resize/font step can leave a chart a frame wide —
+        // measured t0 1134 at 360, clean by +300ms. fr at 200% used to carry
+        // a PERSISTENT panel-content overflow here (t_82a4dc08); it is fixed,
+        // so both locales are asserted.
+        await waitForLayoutSettle(page);
+        const settled = await snapshotStrip(page);
+        expect(settled!.docScroll, `${at}: no page pan at scale`).toBeLessThanOrEqual(
+          settled!.vw + 1,
+        );
 
         await page.screenshot({ path: test.info().outputPath(`scale-${vp.width}-${root}-${locale}.png`) });
       }
@@ -375,17 +364,11 @@ test('rotation keeps the page still and the active pill in the strip', async ({ 
     await applyTextScale(page, root);
     for (const vp of states) {
       await page.setViewportSize(vp);
-      // Doc-level pan asserted on the PORTRAIT states. The 844×390 landscape
-      // state carries a known pre-existing money-panel content leak —
-      // div[tab-panel-money] content measured 841px inside its 748px box
-      // (document scrollWidth 889, nav itself clean at 0..844), and the SAME
-      // leak shows on the deployed origin build as div[money-table]
-      // sw=1010 vs cw=724 — panel content, tracked as t_82a4dc08. The strip
-      // is still gated there through its own box: pre-fix the nav alone made
-      // this state read scrollW 852 with navRight 852, and navRight ≤ vw is
+      // Doc-level pan asserted in EVERY state, landscape included: the
+      // money-panel content leak that used to make 844x390 read 889
+      // (document) is fixed (t_82a4dc08), and the strip's own box was already
       // asserted in every state below.
-      const docAsserted = vp.width < 768;
-      if (docAsserted) await waitForLayoutSettle(page);
+      await waitForLayoutSettle(page);
       await waitForActiveInStrip(page);
       const s = await snapshotStrip(page);
       const at = `${vp.width}×${vp.height} @ root ${root}px`;
@@ -395,9 +378,7 @@ test('rotation keeps the page still and the active pill in the strip', async ({ 
       expect(s!.activeInStrip, `${at}: active pill in view after rotation`).toBe(true);
       expect(s!.navLeft, `${at}: nav left edge`).toBeGreaterThanOrEqual(-1);
       expect(s!.navRight, `${at}: nav right edge`).toBeLessThanOrEqual(s!.vw + 1);
-      if (docAsserted) {
-        expect(s!.docScroll, `${at}: no page pan`).toBeLessThanOrEqual(s!.vw + 1);
-      }
+      expect(s!.docScroll, `${at}: no page pan`).toBeLessThanOrEqual(s!.vw + 1);
       expect(s!.escapes, `${at}: labels inside pills`).toEqual([]);
     }
 

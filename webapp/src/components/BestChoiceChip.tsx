@@ -80,7 +80,13 @@ export default function BestChoiceChip({ comparison, userPlan, days, onJump, act
       } hover:translate-y-0.5 active:translate-y-1 active:shadow-none`}
     >
       <Award size={14} strokeWidth={4} aria-hidden="true" className="shrink-0" />
-      <span className="whitespace-nowrap">{short}</span>
+      {/* t_82a4dc08: this span used to be whitespace-nowrap, which pinned the
+          button's min-content at its own line width — the French label then
+          measured 431px in a 358px toolbar row and panned the whole document
+          (+100/+70/+33 at 360/390/427, seeded page, default text). The label
+          now wraps inside the chip instead; `min-w-0` lets the flex item drop
+          below its content width so the break can actually happen. */}
+      <span className="min-w-0">{short}</span>
       <ArrowRight size={12} strokeWidth={4} aria-hidden="true" className="shrink-0 opacity-50" />
     </button>
   );
