@@ -219,7 +219,58 @@ Losing the file costs the server copy only: any device that still holds its loca
 
 There is no active email recovery sender. The provider-agnostic outbound boundary currently has no adapter and registration does not deliver mail or accept/store a password. Future recovery email must use a purpose-bound, one-use verification token and may not claim to restore E2EE data.
 
-**Account ceiling.** `ACCT_MAX_ACCOUNTS` (default 10) remains a defense-in-depth bound; self-registration is currently closed pending verified email. Account requests are still edge-limited and rate limited in-process. The registration endpoint does not reveal whether an address is already registered.
+**Mailbox verification, SMTP contract and rollback.** Public registration and
+password recovery are mailbox-proofed before a password verifier or session is
+created. The account server requires a complete SMTP contract in its approved
+secret mechanism (never in git, cards or chat):
+
+| Variable | Contract |
+| --- | --- |
+| `ACCT_SMTP_HOST` / `ACCT_SMTP_PORT` | relay host and port; default port is 587 |
+| `ACCT_SMTP_TLS_MODE` | `starttls` (default) or `implicit`; certificate verification is always on |
+| `ACCT_SMTP_HELO` | stable deployment hostname used in EHLO |
+| `ACCT_SMTP_USERNAME` / `ACCT_SMTP_PASSWORD` | optional SMTP AUTH pair, injected as secrets together |
+| `ACCT_SMTP_FROM` | exact aligned From mailbox on the dedicated sender subdomain |
+| `ACCT_SMTP_REPLY_TO` | monitored Reply-To mailbox |
+| `ACCT_SMTP_EVENTS_SECRET` | HMAC secret for signed relay bounce/complaint POSTs to `/account/smtp-events` |
+
+`ACCT_EMAIL_VERIFICATION_ENABLED` defaults to `false` and is independent of
+`ACCT_ENABLED`. When either flag is false, email-dependent registration,
+recovery and verification routes return indistinguishable 404s without creating
+accounts, sessions, tokens or outbox rows. When it is true, the complete SMTP
+contract is required; missing or invalid SMTP configuration fails closed with
+`503 email_unavailable`. The link GET is scanner-safe; only the explicit
+verification POST consumes its one-use, 30-minute, purpose-bound token. Tokens
+are SHA-256 hashed at rest and never logged. A relay's permanent SMTP failure
+or a signed bounce/complaint adds the address to the suppression table without
+exposing it to the caller. Signed events use `HMAC-SHA256(timestamp + "." + rawBody)`,
+a five-minute clock window, and a replay table.
+
+The sender must have strict DKIM/DMARC alignment and the Reply-To must be
+monitored before public enablement. The external release gate is Mark's
+non-secret provisioning attestation; this code candidate does not claim a
+controlled-mailbox send until that attestation and staging proof exist.
+
+To roll back, set `ACCT_ENABLED=false` and recreate only `account-server`; all
+account paths return indistinguishable 404s and no email is sent. To disable
+mail while retaining an already-enabled account database, remove the SMTP
+secret set and restart: registration/recovery return `503 email_unavailable`,
+while existing sign-in/sync behavior remains available. Do not delete the
+ciphertext database during an SMTP incident.
+
+**Passwords and E2EE boundary.** A recovery link can set a new authentication
+verifier, but the stored blob (encrypted with the old password) is dropped —
+mailbox proof recovers the *account*, not the data; re-sync from a device that
+still has it. A recovery event never returns or derives the blob data key.
+
+**VAPID rotation.** Replacing `VAPID_PRIVATE_KEY` invalidates every existing
+subscription silently (pushes fail and are dropped as dead on a 410). After a
+rotation, sign in → Notifications → turn off, then on, on each device.
+
+**Account ceiling.** `ACCT_MAX_ACCOUNTS` (default 10) bounds registration —
+registration is deliberately unauthenticated (no invite loop), so the cap plus
+the attempt budget below are what actually bound it. Hitting it returns `403
+account_limit`.
 
 **Attempt budget.** `login`, `recover` and `register` refuse after a bounded
 number of attempts (token buckets per e-mail, per trusted ingress address and

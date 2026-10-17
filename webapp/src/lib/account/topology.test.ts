@@ -129,14 +129,12 @@ describe("the edge split for /account", () => {
     const account = locationBlock("/account");
     expect(account).toContain("proxy_pass http://$gb_account;");
     expect(account).toContain("add_header X-Edge-Location account always;");
-    expect(account).toContain("client_max_body_size 6m;");
-    expect(account).toContain("proxy_request_buffering on;");
-    expect(account).toContain("limit_req zone=acct_public burst=20 nodelay;");
-    expect(account).toContain("limit_conn acct_conn 10;");
-    expect(account).toContain("access_log /var/log/nginx/access.log acct_safe;");
-    expect(edge).toContain("log_format acct_safe '[$time_local] \"$request_method $uri\" $status';");
+    expect(account).toContain("access_log /var/log/nginx/access.log gb_noquery;");
     expect(account).toContain("error_log /var/log/nginx/error.log crit;");
-    expect(edge).toContain("zone=acct_public:10m rate=60r/m");
+    expect(account).toContain('add_header Referrer-Policy "no-referrer" always;');
+    expect(account).not.toContain("$request");
+    // The routing block is not where the denial lives — /account/internal is
+    // its own, longer prefix, so nginx picks it first.
     expect(account).not.toContain("deny all");
   });
 
@@ -165,6 +163,7 @@ describe("which process is given which secret", () => {
     expect(account).toContain("ACCT_DATA_DIR: /data");
     expect(account).toContain("ACCT_DATA_DIR_HOST: ${ACCT_DATA_DIR:?set ACCT_DATA_DIR");
     expect(account).toContain("ACCT_REPO_HOST_DIR: ${ACCT_REPO_HOST_DIR:-${PWD}}");
+    expect(account).toContain("ACCT_EMAIL_VERIFICATION_ENABLED: ${ACCT_EMAIL_VERIFICATION_ENABLED:-false}");
     expect(account).toContain("ACCT_DB_PATH: /data/accounts.db");
     expect(account).toContain("VAPID_PUBLIC_KEY:");
     expect(account).toContain("VAPID_PRIVATE_KEY:");
@@ -174,6 +173,9 @@ describe("which process is given which secret", () => {
     // disjoint secret sets.
     expect(account).not.toMatch(/\bGB_CLIENT_(ID|SECRET)\b/);
     expect(account).not.toContain("tokens.json");
+    // The empty placeholder keeps `docker compose up` startable while both
+    // feature flags are off; the config loader rejects it as a secret value.
+    expect(compose).toContain("./ops/account/empty-secret");
   });
 
   it("the shim may announce 'data changed' but holds no account database", () => {

@@ -25,6 +25,7 @@ import {
 } from "./sync";
 import { buildBackupDocument, parseBackup, serializeBackup, BACKUP_SCHEMA, BACKUP_VERSION, EXAMPLE_DATA_KEY } from "@/lib/backup";
 import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import { BILLING_DAY_KEY, ENERGY_KEY_V2, LEGACY_ENERGY_KEY } from "@/lib/storage";
 
 const ROWS = [
   { timestamp: 1704067200, usage_kwh: 1.5 },
@@ -33,9 +34,15 @@ const ROWS = [
 
 function seedLocal(overrides: Record<string, string> = {}) {
   localStorage.clear();
-  localStorage.setItem("energy_data", JSON.stringify(ROWS));
+  localStorage.setItem(ENERGY_KEY_V2, JSON.stringify({
+    version: 2,
+    uploadedAt: "2026-01-01T00:00:00.000Z",
+    source: "v2-fixture",
+    points: ROWS,
+  }));
   localStorage.setItem("billing_day", "7");
   localStorage.setItem("extra_charges", JSON.stringify({ hstPct: "13" }));
+  localStorage.setItem("plan_timeline", "[]");
   localStorage.setItem(PLAN_STORAGE_KEY, "ULO");
   localStorage.setItem(EXAMPLE_DATA_KEY, "1");
   for (const [k, v] of Object.entries(overrides)) {
@@ -68,12 +75,14 @@ describe("readLocalDocument", () => {
   });
 
   it("returns null for a corrupt profile rather than pushing garbage at a sync", () => {
-    seedLocal({ energy_data: "{not json" });
+    seedLocal({ [ENERGY_KEY_V2]: "{not json" });
     expect(readLocalDocument()).toBeNull();
   });
 
   it("returns null when the readings are empty — restoring them would wipe data", () => {
-    seedLocal({ energy_data: "[]" });
+    seedLocal({
+      [ENERGY_KEY_V2]: JSON.stringify({ version: 2, uploadedAt: "2026-01-01T00:00:00.000Z", source: "v2-fixture", points: [] }),
+    });
     expect(readLocalDocument()).toBeNull();
   });
 });
@@ -119,8 +128,20 @@ describe("applyDocument", () => {
     expect(written.sort()).toEqual(
       // `plan_timeline` is Wave P's field: it rides the same document, so a
       // device pull restores the plan periods as well (rebase onto main).
-      ["billing_day", "energy_data", "energy_data_is_example", "extra_charges", "plan_timeline", PLAN_STORAGE_KEY].sort(),
+      [BILLING_DAY_KEY, ENERGY_KEY_V2, "energy_data_is_example", "extra_charges", "plan_timeline", PLAN_STORAGE_KEY].sort(),
     );
+  });
+
+  it("applies remote data to v2 and removes a conflicting stale legacy copy", () => {
+    seedLocal();
+    localStorage.setItem(LEGACY_ENERGY_KEY, JSON.stringify([{ timestamp: 1, usage_kwh: 999 }]));
+    const doc = buildBackupDocument({ energyData: ROWS, billingDay: 9 });
+
+    applyDocument(doc);
+
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2)!)).toMatchObject({ version: 2, points: ROWS });
+    expect(localStorage.getItem(LEGACY_ENERGY_KEY)).toBeNull();
+    expect(hasLocalData()).toBe(true);
   });
 });
 
@@ -142,7 +163,7 @@ describe("documentFingerprint", () => {
       { [PLAN_STORAGE_KEY]: "Tiered" },
       { extra_charges: JSON.stringify({ hstPct: "14" }) },
       { [EXAMPLE_DATA_KEY]: "" },
-      { energy_data: JSON.stringify([...ROWS, { timestamp: 1704074400, usage_kwh: 3 }]) },
+      { [ENERGY_KEY_V2]: JSON.stringify({ version: 2, uploadedAt: "2026-01-01T00:00:00.000Z", source: "v2-fixture", points: [...ROWS, { timestamp: 1704074400, usage_kwh: 3 }] }) },
     ];
     for (const mutation of mutations) {
       seedLocal(mutation);
@@ -164,6 +185,7 @@ describe("revision bookkeeping + wipe", () => {
 
   it("removes the dataset, the revision AND the derived key on logout", () => {
     seedLocal();
+    localStorage.setItem(LEGACY_ENERGY_KEY, JSON.stringify(ROWS));
     setLocalRev(3);
     localStorage.setItem(ACCOUNT_KEY_ITEM, "Zm9vYmFy");
 

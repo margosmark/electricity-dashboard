@@ -20,15 +20,28 @@
  *    this process, so `X-Edge-Location: account` and `x-gb-process: account`
  *    must pair — the same falsifiable contract the app/shim split has.
  *
- * Nothing here is a secret by itself; it only reads secrets that the
- * deployment chose to give this process.
+ * Nothing here is a secret by itself; it only reads secret files that the
+ * deployment chose to mount into this process. Secret values are never
+ * accepted from environment variables.
  */
 
 import { resolve, relative, isAbsolute, join } from "node:path";
-import { realpathSync, statSync } from "node:fs";
-import { validateEmailConfig } from "./email";
+import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs";
 
 export const SESSION_COOKIE = "acct_session";
+export const EMAIL_TOKEN_TTL_MS = 30 * 60 * 1000;
+export const SMTP_EVENT_MAX_SKEW_MS = 5 * 60 * 1000;
+
+/** RFC hostname syntax used for the SMTP EHLO argument. */
+export function isValidHelo(value: string): boolean {
+  if (value.length < 1 || value.length > 253 || /[\r\n]/.test(value)) return false;
+  const labels = value.split(".");
+  return labels.every((label) =>
+    label.length >= 1 && label.length <= 63 &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label),
+  );
+}
+
 /** Deliberately identical to Wave K's `gb_session` contract (90-day sliding). */
 export const SESSION_TTL_MS = 60 * 1000 * 60 * 24 * 90;
 
@@ -43,6 +56,7 @@ export const SESSION_TTL_MS = 60 * 1000 * 60 * 24 * 90;
 export const MAX_SYNC_BYTES = 5 * 1024 * 1024;
 
 const DEFAULT_PUBLIC_ORIGIN = "https://electricity.markarslan.ca";
+/** Internal-only: how often to re-check the app's rate payload for a change. */
 const DEFAULT_RATES_POLL_MS = 6 * 60 * 60 * 1000;
 
 export type AccountConfig = {
@@ -69,16 +83,58 @@ export type AccountConfig = {
   ratesUrl: string;
   ratesPollMs: number;
   /**
-   * A ceiling on accounts is a defense-in-depth limit for later verified
-   * registration. Open self-registration is closed until mailbox verification
-   * is implemented and enabled; this does not authorize account creation.
+   * Hard ceiling on registered accounts (family scale, not a product).
+   *
+   * Registration is closed until mailbox verification is enabled; this does
+   * not authorize account creation.
+   *
+   * NOTE (round-1 review, M2): the Pangolin PIN gate is NOT counted on here.
+   * Measured from the public internet on 2026-10-07 with no cookies, `GET /`
+   * answered 200 straight through with no challenge, so the first lock is not
+   * observable from outside and this cap plus the per-source attempt budget
+   * (`lib/account/ratelimit.ts`) are what actually bound the endpoint.
    */
   maxAccounts: number;
+  /** Public registration/recovery must prove mailbox control first. */
+  emailVerificationEnabled: boolean;
+  /** Null until the deployment supplies a complete SMTP sender contract. */
+  smtp: {
+    host: string;
+    port: number;
+    tlsMode: "implicit" | "starttls";
+    username: string;
+    password: string;
+    helo: string;
+    from: string;
+    replyTo: string;
+    timeoutMs: number;
+    eventsSecret: string;
+  } | null;
 };
 
 function str(name: string, fallback = ""): string {
   const v = process.env[name];
   return v === undefined || v === "" ? fallback : v.trim();
+}
+
+/** Read a 0400-mounted secret without putting its value in process.env. */
+function secretFile(name: string): string | null {
+  const file = str(name);
+  if (!file) return null;
+  try {
+    const mode = statSync(file).mode & 0o777;
+    if ((mode & 0o077) !== 0 || (mode & 0o400) === 0) return null;
+    const value = readFileSync(file, "utf8").replace(/\r?\n$/, "");
+    return value.length > 0 && !/[\r\n]/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function mailbox(value: string): { address: string; domain: string } | null {
+  const match = /^([^<>\s@]+)@([^<>\s@]+)$/.exec(value);
+  if (!match || /[\r\n]/.test(value)) return null;
+  return { address: value, domain: match[2].toLowerCase() };
 }
 
 let cached: AccountConfig | null = null;
@@ -97,6 +153,41 @@ export function getAccountConfig(): AccountConfig {
   const publicKey = str("VAPID_PUBLIC_KEY");
   const privateKey = str("VAPID_PRIVATE_KEY");
   const subject = str("VAPID_SUBJECT", "mailto:ops@markarslan.ca");
+  const smtpHost = str("ACCT_SMTP_HOST");
+  const smtpFrom = str("ACCT_SMTP_FROM");
+  const smtpPort = Number(str("ACCT_SMTP_PORT"));
+  const tlsMode = str("ACCT_SMTP_TLS_MODE").toLowerCase();
+  const smtpReplyTo = str("ACCT_SMTP_REPLY_TO");
+  const from = mailbox(smtpFrom);
+  const replyTo = mailbox(smtpReplyTo);
+  const originHost = (() => {
+    try { return new URL(str("ACCT_PUBLIC_ORIGIN", DEFAULT_PUBLIC_ORIGIN)).hostname.toLowerCase(); } catch { return ""; }
+  })();
+  const username = secretFile("ACCT_SMTP_USERNAME_FILE");
+  const password = secretFile("ACCT_SMTP_PASSWORD_FILE");
+  const eventsSecret = secretFile("ACCT_SMTP_EVENTS_SECRET_FILE");
+  const timeoutMs = Number(str("ACCT_SMTP_TIMEOUT_MS"));
+  const completeSmtpContract = Boolean(
+    smtpHost && Number.isInteger(smtpPort) && smtpPort > 0 && smtpPort <= 65535 &&
+    (tlsMode === "starttls" || tlsMode === "implicit") &&
+    username && password && eventsSecret && from && replyTo &&
+    from.domain === originHost && replyTo.domain === from.domain &&
+    isValidHelo(str("ACCT_SMTP_HELO")) && Number.isInteger(timeoutMs) && timeoutMs > 0,
+  );
+  const smtp = completeSmtpContract
+    ? {
+        host: smtpHost,
+        port: smtpPort,
+        tlsMode: tlsMode as "implicit" | "starttls",
+        username: username!,
+        password: password!,
+        helo: str("ACCT_SMTP_HELO"),
+        from: from!.address,
+        replyTo: replyTo!.address,
+        timeoutMs,
+        eventsSecret: eventsSecret!,
+      }
+    : null;
 
   const dataDir = "/data";
   cached = {
@@ -123,6 +214,8 @@ export function getAccountConfig(): AccountConfig {
     ratesUrl: str("ACCT_RATES_URL", "http://energy-dashboard:3000/api/rates"),
     ratesPollMs: Number(str("ACCT_RATES_POLL_MS", String(DEFAULT_RATES_POLL_MS))) || DEFAULT_RATES_POLL_MS,
     maxAccounts: Number(str("ACCT_MAX_ACCOUNTS", "10")) || 10,
+    emailVerificationEnabled: str("ACCT_EMAIL_VERIFICATION_ENABLED", "false").toLowerCase() === "true",
+    smtp,
   };
   return cached;
 }
@@ -130,6 +223,17 @@ export function getAccountConfig(): AccountConfig {
 /** Test hook — env changes must be observable. */
 export function resetAccountConfigCache(): void {
   cached = null;
+}
+
+/**
+ * Is this process the account server?
+ *
+ * Read from the environment on purpose (see the module header): this is the
+ * one answer nginx cannot forge, because the two containers run the same
+ * image and differ only in their env.
+ */
+export function isAccountProcess(): boolean {
+  return str("ACCT_ENABLED", "false").toLowerCase() === "true";
 }
 
 export function assertHostDataLocation(hostDataDir: string, hostRepoDir: string): void {
@@ -151,6 +255,39 @@ export function assertSecureDataDir(directory: string): void {
   if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o077) !== 0) {
     throw new Error("Account storage unavailable: ACCT_DATA_DIR must be owned by the account process uid and have mode 0700 or stricter.");
   }
+}
+
+/**
+ * Validate deployment e-mail intent without loading or logging secret
+ * contents (main's fail-fast contract, kept local so the candidate's sender
+ * abstraction in ./email stays mock-able in isolation).
+ *
+ * NOTE: `ACCT_EMAIL_*` is a *provider-intent* contract distinct from the
+ * SMTP sender contract above (`ACCT_SMTP_*`); a live mode refuses to boot
+ * rather than half-send.
+ */
+export type EmailMode = "off" | "test" | "live";
+export type EmailConfig = { mode: EmailMode; provider: "postmark" | "resend" | null; from: string | null; credentialFile: string | null };
+
+export function validateEmailConfig(env: Record<string, string | undefined>): EmailConfig {
+  const mode = (env.ACCT_EMAIL_MODE ?? "off").trim().toLowerCase();
+  if (mode !== "off" && mode !== "test" && mode !== "live") throw new Error("Invalid ACCT_EMAIL_MODE; use off, test, or live.");
+  if (mode !== "live") return { mode, provider: null, from: null, credentialFile: null };
+
+  const provider = (env.ACCT_EMAIL_PROVIDER ?? "").trim().toLowerCase();
+  if (provider !== "postmark" && provider !== "resend") throw new Error("Live email requires ACCT_EMAIL_PROVIDER=postmark or resend.");
+  const from = (env.ACCT_EMAIL_FROM ?? "").trim();
+  if (!from || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) throw new Error("Live email requires a valid ACCT_EMAIL_FROM address.");
+  const credentialFile = (env.ACCT_EMAIL_API_KEY_FILE ?? "").trim();
+  if (!credentialFile) throw new Error("Live email requires ACCT_EMAIL_API_KEY_FILE pointing to a secret mount.");
+  try {
+    const stat = statSync(credentialFile);
+    accessSync(credentialFile, constants.R_OK);
+    if (!stat.isFile() || (stat.mode & 0o077) !== 0) throw new Error();
+  } catch {
+    throw new Error("Live email credential mount must be a readable regular file with mode 0600 or stricter.");
+  }
+  return { mode, provider, from, credentialFile };
 }
 
 export function assertAccountDataDir(cfg: AccountConfig): void {

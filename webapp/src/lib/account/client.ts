@@ -10,6 +10,8 @@
  * `hooks/useAccount.ts` owns the state machine.
  */
 
+import { PRIVACY_POLICY_VERSION, ACCOUNT_TERMS_VERSION } from "@/lib/account/policy";
+
 export class AccountApiError extends Error {
   constructor(
     readonly status: number,
@@ -47,6 +49,10 @@ export type SessionInfo = {
   vapidPublicKey: string | null;
   prefs?: PushPrefs;
   maxAccounts?: number;
+  privacyPolicyVersion?: string | null;
+  accountTermsVersion?: string | null;
+  policyAcceptedAt?: string | null;
+  policyAcceptanceNeeded?: boolean;
 };
 
 export type SyncState = {
@@ -113,8 +119,29 @@ export const login = (email: string, password: string) =>
     updatedAt: string | null;
   }>("/account/login", { email, password });
 
-export const register = (email: string) =>
-  post<{ ok: true; status: "verification_pending"; detail: string }>("/account/register", { email });
+export const register = (email: string, hasLocalData: boolean, policyAccepted = false) =>
+  post<{ ok: true; verificationRequired: true }>("/account/register", {
+    email,
+    hasLocalData,
+    policyAccepted,
+    privacyVersion: PRIVACY_POLICY_VERSION,
+    termsVersion: ACCOUNT_TERMS_VERSION,
+  });
+
+export const requestRecovery = (email: string) =>
+  post<{ ok: true; recoveryRequested: true }>("/account/recover", { email });
+
+export const verifyRegistration = (token: string, password: string) =>
+  post<{ ok: true; email: string; kdfSalt: string; recoveryCode: string | null; hasBlob: boolean; rev: number }>(
+    "/account/verify",
+    { token, password },
+  );
+
+export const verifyRecovery = (token: string, newPassword: string) =>
+  post<{ ok: true; email: string; kdfSalt: string; hadBlob: boolean; blobDropped: boolean; blobDroppedReason: string | null; hasBlob: false; rev: 0 }>(
+    "/account/recover/verify",
+    { token, newPassword },
+  );
 
 export const logout = () => post<{ ok: boolean }>("/account/logout");
 

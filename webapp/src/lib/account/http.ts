@@ -104,18 +104,25 @@ export function requireEnabled(): AccountConfig | NextResponse {
  * forbids. "Invisible, not broken" has to hold for every method, not just
  * the one the handler implements.
  *
- * So every `/account/*` route re-exports this as the verbs it does not
- * implement (`export { wrongMethod as GET, … } from "@/lib/account/http"`):
- * the same `404` body `requireEnabled()` answers while the feature is off,
- * and an honest `405` — naming the refused method — once it is on. `HEAD`
- * needs no export of its own: Next serves it from the route's `GET`, stub
- * or real, which is why `GET` must be stubbed wherever it is missing.
+ * So every `/account/*` route re-exports one of these shared stubs for the
+ * verbs it does not implement: ordinary account routes use `wrongMethod`,
+ * while registration/recovery/mailbox routes use `wrongEmailMethod` so the
+ * independent mailbox flag is carried to every verb. `HEAD` needs no export
+ * of its own: Next serves it from the route's `GET`, stub or real, which is
+ * why `GET` must be stubbed wherever it is missing.
  *
  * `request` is read only so the enabled-path answer can name the method;
  * Next calls every export as `(request, context)`.
  */
 export function wrongMethod(request: Request): NextResponse {
   if (!getAccountConfig().enabled) return accountError(404, "not_found");
+  return accountError(405, "method_not_allowed", `${request.method} is not supported on this route.`);
+}
+
+/** Method stub for routes that only exist when mailbox verification is on. */
+export function wrongEmailMethod(request: Request): NextResponse {
+  const cfg = getAccountConfig();
+  if (!cfg.enabled || !cfg.emailVerificationEnabled) return accountError(404, "not_found");
   return accountError(405, "method_not_allowed", `${request.method} is not supported on this route.`);
 }
 
@@ -371,6 +378,30 @@ export async function readJsonCapped(request: Request, maxBytes = MAX_SYNC_BYTES
 /** Read a small JSON body (credentials, prefs) under a 64 KB cap. */
 export function readJsonSmall(request: Request): Promise<CappedRead> {
   return readJsonCapped(request, 64 * 1024);
+}
+
+/** Bounded raw text read for signed webhook bodies; never buffers untrusted input. */
+export async function readTextCapped(request: Request, maxBytes = 64 * 1024): Promise<{ ok: true; value: string } | { ok: false; status: number }> {
+  const body = request.body;
+  if (!body) return { ok: false, status: 400 };
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      if (total + value.byteLength > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, status: 413 };
+      }
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } catch {
+    return { ok: false, status: 400 };
+  }
+  return { ok: true, value: Buffer.concat(chunks).toString("utf8") };
 }
 
 /** Pull a string field out of a parsed body without trusting its type. */

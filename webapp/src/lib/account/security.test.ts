@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertHostDataLocation, assertSecureDataDir } from "./config";
 import { validateLoginPassword, validatePassword, MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "./auth";
-import { validateEmailConfig } from "./email";
+import { validateEmailConfig } from "./config";
 
 describe("E2EE passphrase policy", () => {
   it("requires a 15-character new passphrase and returns actionable rejection feedback", () => {

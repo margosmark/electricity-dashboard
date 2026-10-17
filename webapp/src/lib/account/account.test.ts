@@ -13,20 +13,38 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach, vi } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 
 import { resetAccountConfigCache, getAccountConfig, MAX_SYNC_BYTES } from "./config";
-import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS, insertAccount, insertSession } from "./db";
+import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS, insertAccount } from "./db";
 import { resetAccountServices } from "./services";
 import { resetRateLimits, LIMITS } from "./ratelimit";
 import { decide, inQuietHours, localDayStart } from "./push";
-import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, hashRecoveryCode, newRecoveryCode, newSessionToken, normalizeRecoveryCode } from "./auth";
+import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, newRecoveryCode, normalizeRecoveryCode } from "./auth";
+
+const emailTestState = vi.hoisted(() => ({ tokens: [] as string[] }));
+vi.mock("@/lib/account/email", () => ({
+  registrationEmail: (_cfg: unknown, email: string, token: string) => {
+    emailTestState.tokens.push(token);
+    return { to: email, subject: "verify", text: token, html: token };
+  },
+  recoveryEmail: (_cfg: unknown, email: string, token: string) => {
+    emailTestState.tokens.push(token);
+    return { to: email, subject: "recover", text: token, html: token };
+  },
+  enqueueAccountEmail: vi.fn(() => true),
+  drainOutbox: vi.fn(),
+}));
 
 import * as sessionRoute from "@/app/account/session/route";
 import * as registerRoute from "@/app/account/register/route";
+import * as recoverRoute from "@/app/account/recover/route";
+import * as verifyRoute from "@/app/account/verify/route";
+import * as recoveryVerifyRoute from "@/app/account/recover/verify/route";
+import * as smtpEventsRoute from "@/app/account/smtp-events/route";
 import * as loginRoute from "@/app/account/login/route";
 import * as logoutRoute from "@/app/account/logout/route";
 import * as syncRoute from "@/app/account/sync/route";
@@ -41,9 +59,19 @@ const BASE = "https://electricity.markarslan.ca";
 const RECOVERY_PATTERN = /^[0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5}-[0-9A-Z]{5}$/;
 
 let dbDir: string;
+let smtpUsernameFile: string;
+let smtpPasswordFile: string;
+let smtpEventsFile: string;
 
 beforeAll(() => {
   dbDir = mkdtempSync(join(tmpdir(), "wave-n-"));
+  smtpUsernameFile = join(dbDir, "smtp-username");
+  smtpPasswordFile = join(dbDir, "smtp-password");
+  smtpEventsFile = join(dbDir, "smtp-events-secret");
+  for (const file of [smtpUsernameFile, smtpPasswordFile, smtpEventsFile]) {
+    writeFileSync(file, "test-secret", { mode: 0o400 });
+    chmodSync(file, 0o400);
+  }
   process.env.ACCT_ENABLED = "true";
   process.env.ACCT_DATA_DIR = dbDir;
   process.env.ACCT_DATA_DIR_HOST = dbDir;
@@ -52,6 +80,17 @@ beforeAll(() => {
   process.env.ACCT_PUBLIC_ORIGIN = BASE;
   process.env.ACCT_INTERNAL_TOKEN = "internal-token-for-tests";
   process.env.ACCT_MAX_ACCOUNTS = "10";
+  process.env.ACCT_EMAIL_VERIFICATION_ENABLED = "true";
+  process.env.ACCT_SMTP_HOST = "smtp.example.test";
+  process.env.ACCT_SMTP_PORT = "587";
+  process.env.ACCT_SMTP_TLS_MODE = "starttls";
+  process.env.ACCT_SMTP_HELO = "electricity.markarslan.ca";
+  process.env.ACCT_SMTP_FROM = "accounts@electricity.markarslan.ca";
+  process.env.ACCT_SMTP_REPLY_TO = "support@electricity.markarslan.ca";
+  process.env.ACCT_SMTP_TIMEOUT_MS = "1000";
+  process.env.ACCT_SMTP_USERNAME_FILE = smtpUsernameFile;
+  process.env.ACCT_SMTP_PASSWORD_FILE = smtpPasswordFile;
+  process.env.ACCT_SMTP_EVENTS_SECRET_FILE = smtpEventsFile;
   process.env.ACCT_RATES_URL = "http://127.0.0.1:1/api/rates";
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
@@ -70,6 +109,7 @@ afterAll(() => {
   delete process.env.ACCT_PUBLIC_ORIGIN;
   delete process.env.ACCT_INTERNAL_TOKEN;
   delete process.env.ACCT_MAX_ACCOUNTS;
+  for (const key of ["ACCT_EMAIL_VERIFICATION_ENABLED", "ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE"]) delete process.env[key];
   delete process.env.ACCT_RATES_URL;
   rmSync(dbDir, { recursive: true, force: true });
 });
@@ -88,6 +128,7 @@ beforeEach(() => {
   // stale buckets would make the rate-limit cases pass or fail for the wrong
   // reason (and would let one test's failures leak into the next one's).
   resetRateLimits();
+  emailTestState.tokens.length = 0;
 });
 
 afterEach(() => {
@@ -113,7 +154,11 @@ const post = (url: string, body: unknown, cookie?: string, headers: Record<strin
       ...(cookie ? { cookie } : {}),
       ...headers,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(
+      url.endsWith("/account/register") && body && typeof body === "object" && !("policyAccepted" in body)
+        ? { ...(body as Record<string, unknown>), policyAccepted: true, privacyVersion: "2026-10-16", termsVersion: "2026-10-16" }
+        : body,
+    ),
   });
 
 const put = (url: string, body: unknown, cookie?: string) =>
@@ -140,15 +185,24 @@ async function register(
   password = "correct-horse-battery",
   _hasLocalData = false,
 ): Promise<{ res: Response; cookie: string; body: Record<string, unknown> }> {
-  const db = openDb(process.env.ACCT_DB_PATH!);
-  const kdfSalt = randomBytes(16).toString("base64");
-  const recoveryCode = _hasLocalData ? newRecoveryCode() : null;
-  const accountId = insertAccount(db, { email, passwordHash: await hashPassword(password), kdfSalt, recoveryHash: recoveryCode ? await hashRecoveryCode(recoveryCode) : null });
-  const session = newSessionToken();
-  insertSession(db, session.hash, accountId, getAccountConfig().sessionTtlMs);
-  const body = { ok: true, email, kdfSalt, recoveryCode, hasBlob: false, rev: 0 };
-  const res = new Response(JSON.stringify(body), { status: 201, headers: { "set-cookie": `acct_session=${session.token}; Path=/; HttpOnly` } });
-  return { res, cookie: asCookie(session.token)!, body };
+  const res = await registerRoute.POST(
+    post(`${BASE}/account/register`, {
+      email,
+      hasLocalData: _hasLocalData,
+      policyAccepted: true,
+      privacyVersion: "2026-10-16",
+      termsVersion: "2026-10-16",
+    }),
+  );
+  if (res.status === 202) {
+    const token = emailTestState.tokens.pop();
+    expect(token).toMatch(/^[A-Za-z0-9_-]{40,64}$/);
+    const verified = await verifyRoute.POST(post(`${BASE}/account/verify`, { token, password }));
+    const body = (await verified.json()) as Record<string, unknown>;
+    return { res: verified, cookie: asCookie(sessionCookie(verified))!, body };
+  }
+  const body = (await res.json()) as Record<string, unknown>;
+  return { res, cookie: asCookie(sessionCookie(res))!, body };
 }
 
 const validIv = () => randomBytes(12).toString("base64");
@@ -159,6 +213,104 @@ const encryptLikeABrowser = (plaintext: string) => randomBytes(Math.ceil(plainte
  * ========================================================================== */
 
 describe("the feature flag", () => {
+  it("keeps email-dependent routes invisible when email verification is disabled", async () => {
+    const smtpKeys = ["ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE"];
+    const saved = Object.fromEntries(smtpKeys.map((key) => [key, process.env[key]]));
+    const savedEmailVerification = process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+    // Omit the variable entirely: the default must be the same hard-disabled
+    // behavior as an explicit false, even when SMTP mounts are absent.
+    delete process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+    for (const key of smtpKeys) delete process.env[key];
+    resetAccountConfigCache();
+    try {
+      const register = await registerRoute.POST(post(`${BASE}/account/register`, { email: "off@example.com" }));
+      const recover = await (await import("@/app/account/recover/route")).POST(post(`${BASE}/account/recover`, { email: "off@example.com" }));
+      const verify = await verifyRoute.POST(post(`${BASE}/account/verify`, { token: "A".repeat(40), password: "correct password" }));
+      expect(register.status).toBe(404);
+      expect(recover.status).toBe(404);
+      expect(verify.status).toBe(404);
+      const db = openDb(process.env.ACCT_DB_PATH!);
+      expect((db.prepare("SELECT COUNT(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
+      expect((db.prepare("SELECT COUNT(*) AS n FROM email_tokens").get() as { n: number }).n).toBe(0);
+      expect((db.prepare("SELECT COUNT(*) AS n FROM email_outbox").get() as { n: number }).n).toBe(0);
+    } finally {
+      if (savedEmailVerification === undefined) delete process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+      else process.env.ACCT_EMAIL_VERIFICATION_ENABLED = savedEmailVerification;
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      resetAccountConfigCache();
+    }
+  });
+
+  it("keeps all email-dependent routes invisible when the account server is disabled", async () => {
+    const savedEnabled = process.env.ACCT_ENABLED;
+    const savedEmailVerification = process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+    delete process.env.ACCT_ENABLED;
+    process.env.ACCT_EMAIL_VERIFICATION_ENABLED = "true";
+    resetAccountConfigCache();
+    try {
+      const register = await registerRoute.POST(post(`${BASE}/account/register`, { email: "account-off@example.com" }));
+      const recover = await (await import("@/app/account/recover/route")).POST(post(`${BASE}/account/recover`, { email: "account-off@example.com" }));
+      const verify = await verifyRoute.POST(post(`${BASE}/account/verify`, { token: "B".repeat(40), password: "correct password" }));
+      expect(register.status).toBe(404);
+      expect(recover.status).toBe(404);
+      expect(verify.status).toBe(404);
+    } finally {
+      if (savedEnabled === undefined) delete process.env.ACCT_ENABLED;
+      else process.env.ACCT_ENABLED = savedEnabled;
+      if (savedEmailVerification === undefined) delete process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+      else process.env.ACCT_EMAIL_VERIFICATION_ENABLED = savedEmailVerification;
+      resetAccountConfigCache();
+    }
+  });
+
+  it("returns the same 404 for supported, wrong-method, and OPTIONS email probes when verification is off", async () => {
+    const saved = process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+    process.env.ACCT_EMAIL_VERIFICATION_ENABLED = "false";
+    resetAccountConfigCache();
+    try {
+      const probes = [
+        registerRoute.POST(post(`${BASE}/account/register`, { email: "off-method@example.com" })),
+        registerRoute.OPTIONS(new Request(`${BASE}/account/register`, { method: "OPTIONS" })),
+        recoverRoute.POST(post(`${BASE}/account/recover`, { email: "off-method@example.com" })),
+        recoverRoute.OPTIONS(new Request(`${BASE}/account/recover`, { method: "OPTIONS" })),
+        verifyRoute.POST(post(`${BASE}/account/verify`, { token: "A".repeat(40), password: "correct password" })),
+        verifyRoute.OPTIONS(new Request(`${BASE}/account/verify`, { method: "OPTIONS" })),
+        recoveryVerifyRoute.POST(post(`${BASE}/account/recover/verify`, { token: "A".repeat(40), newPassword: "correct password" })),
+        recoveryVerifyRoute.OPTIONS(new Request(`${BASE}/account/recover/verify`, { method: "OPTIONS" })),
+        smtpEventsRoute.POST(post(`${BASE}/account/smtp-events`, {})),
+        smtpEventsRoute.OPTIONS(new Request(`${BASE}/account/smtp-events`, { method: "OPTIONS" })),
+      ];
+      for (const res of await Promise.all(probes)) {
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: "not_found" });
+      }
+    } finally {
+      if (saved === undefined) delete process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+      else process.env.ACCT_EMAIL_VERIFICATION_ENABLED = saved;
+      resetAccountConfigCache();
+    }
+  });
+
+  it("fails closed when email verification is enabled without the full SMTP contract", async () => {
+    const passwordFile = process.env.ACCT_SMTP_PASSWORD_FILE!;
+    delete process.env.ACCT_SMTP_PASSWORD_FILE;
+    resetAccountConfigCache();
+    try {
+      const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "incomplete@example.com" }));
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: "email_unavailable" });
+      const db = openDb(process.env.ACCT_DB_PATH!);
+      expect((db.prepare("SELECT COUNT(*) AS n FROM email_tokens").get() as { n: number }).n).toBe(0);
+      expect((db.prepare("SELECT COUNT(*) AS n FROM email_outbox").get() as { n: number }).n).toBe(0);
+    } finally {
+      process.env.ACCT_SMTP_PASSWORD_FILE = passwordFile;
+      resetAccountConfigCache();
+    }
+  });
+
   it("404s every account route when this process is not the account server", async () => {
     delete process.env.ACCT_ENABLED;
     resetAccountConfigCache();
@@ -228,10 +380,10 @@ describe("the feature flag", () => {
  * ========================================================================== */
 
 describe("registration verification gate", () => {
-  it("returns a generic verification-pending response without creating an account or session", async () => {
+  it("rejects an embedded password before any account work, without creating an account or session", async () => {
     const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "mark@example.com", password: "attacker-owned-password" }));
-    expect(res.status).toBe(202);
-    expect(await res.json()).toMatchObject({ ok: true, status: "verification_pending" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "verification_required" });
     expect(res.headers.get("set-cookie")).toBeNull();
     expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
   });
@@ -244,16 +396,51 @@ describe("registration verification gate", () => {
     expect(await known.json()).toEqual(await unknown.json());
   });
 
-  it("rejects malformed email without persisting an attacker-supplied password", async () => {
-    const bad = await registerRoute.POST(post(`${BASE}/account/register`, { email: "not-an-email", password: "attacker-owned-password" }));
-    expect(bad.status).toBe(400);
-    expect(((await bad.json()) as { error: string }).error).toBe("invalid_email");
+  it("rejects an explicit unchecked policy acknowledgement before registration can proceed", async () => {
+    const res = await registerRoute.POST(post(`${BASE}/account/register`, {
+      email: "mark@example.com",
+      policyAccepted: false,
+    }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "policy_acceptance_required" });
     expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
+  });
+
+  it("does not reveal whether an address already has an account", async () => {
+    await register("known@example.com");
+    const known = await registerRoute.POST(post(`${BASE}/account/register`, { email: "KNOWN@example.com" }));
+    const unknown = await registerRoute.POST(post(`${BASE}/account/register`, { email: "unknown@example.com" }));
+    expect(known.status).toBe(unknown.status);
+    expect(await known.json()).toEqual(await unknown.json());
+  });
+
+
+  it("does not disclose a duplicate e-mail from the verification request", async () => {
+    await register();
+    const again = await registerRoute.POST(
+      post(`${BASE}/account/register`, { email: "MARK@example.com" }),
+    );
+    expect(again.status).toBe(202);
+    expect(await again.json()).toEqual({ ok: true, verificationRequired: true });
   });
 
   it("refuses a cross-site registration", async () => {
     const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "x@example.com" }, undefined, { origin: "https://evil.example" }));
     expect(res.status).toBe(403);
+  });
+
+  it("enforces the family-scale account ceiling", async () => {
+    process.env.ACCT_MAX_ACCOUNTS = "1";
+    resetAccountConfigCache();
+    await register("first@example.com");
+    const second = await registerRoute.POST(post(`${BASE}/account/register`, { email: "second@example.com" }));
+    expect(second.status).toBe(202);
+    const token = emailTestState.tokens.pop()!;
+    const verified = await verifyRoute.POST(post(`${BASE}/account/verify`, { token, password: "correct-horse-battery" }));
+    expect(verified.status).toBe(403);
+    expect(((await verified.json()) as { error: string }).error).toBe("account_limit");
+    process.env.ACCT_MAX_ACCOUNTS = "10";
+    resetAccountConfigCache();
   });
 });
 
@@ -309,6 +496,29 @@ describe("login", () => {
     expect(row.password_hash).not.toContain("correct-horse-battery");
     // The blob salt is a different value: the two KDFs never share inputs.
     expect(row.kdf_salt).not.toBe(row.password_hash);
+  });
+
+  it("does not create a session for a legacy unverified account, then permits explicit mailbox migration", async () => {
+    await register("legacy@example.com", "legacy-password");
+    const db = openDb(getAccountConfig().dbPath);
+    db.prepare("UPDATE accounts SET email_verified_at = NULL").run();
+    db.prepare("DELETE FROM sessions").run();
+    const sessionsBefore = (db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as { n: number }).n;
+
+    const blocked = await loginRoute.POST(post(`${BASE}/account/login`, { email: "legacy@example.com", password: "legacy-password" }));
+    expect(blocked.status).toBe(401);
+    expect(await blocked.json()).toEqual({ error: "invalid_credentials", detail: "That e-mail address and password do not match." });
+    expect(sessionCookie(blocked)).toBeNull();
+    expect((db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as { n: number }).n).toBe(sessionsBefore);
+
+    const migrationRequest = await registerRoute.POST(post(`${BASE}/account/register`, { email: "legacy@example.com" }));
+    expect(migrationRequest.status).toBe(202);
+    const token = emailTestState.tokens.pop();
+    expect(token).toMatch(/^[A-Za-z0-9_-]{40,64}$/);
+    const migrated = await verifyRoute.POST(post(`${BASE}/account/verify`, { token, password: "legacy-password" }));
+    expect(migrated.status).toBe(200);
+    expect(sessionCookie(migrated)).toBeTruthy();
+    expect((db.prepare("SELECT email_verified_at FROM accounts WHERE email=?").get("legacy@example.com") as { email_verified_at: number | null }).email_verified_at).not.toBeNull();
   });
 });
 
@@ -458,23 +668,20 @@ describe("logout", () => {
 describe("recover", () => {
   it("accepts the recovery code, replaces the verifier, and DROPS the unreadable blob", async () => {
     const { cookie, body } = await register("r@example.com", "correct-horse-battery", true);
-    const code = body.recoveryCode as string;
+    expect(body.recoveryCode).toMatch(RECOVERY_PATTERN);
     await syncRoute.PUT(put(`${BASE}/account/sync`, { iv: validIv(), data: encryptLikeABrowser("old"), baseRev: 0 }, cookie));
 
     const recovery = await import("@/app/account/recover/route");
-    const out = await recovery.POST(
-      post(`${BASE}/account/recover`, {
-        email: "r@example.com",
-        recoveryCode: code,
-        newPassword: "a-brand-new-password",
-      }),
-    );
+    const requested = await recovery.POST(post(`${BASE}/account/recover`, { email: "r@example.com" }));
+    expect(requested.status).toBe(202);
+    const token = emailTestState.tokens.pop()!;
+    const out = await recoveryVerifyRoute.POST(post(`${BASE}/account/recover/verify`, { token, newPassword: "a-brand-new-password" }));
     expect(out.status).toBe(200);
     const payload = (await out.json()) as { blobDropped: boolean; recoveryCode: string; blobDroppedReason: string };
     expect(payload.blobDropped).toBe(true);
     expect(payload.blobDroppedReason).toMatch(/encrypted with the old password/);
-    // A spent code must be replaced, not left valid.
-    expect(payload.recoveryCode).not.toBe(code);
+    // Mailbox proof recovery never returns a reusable recovery code.
+    expect(payload.recoveryCode).toBeUndefined();
 
     // The old password is dead, the new one works.
     const old = await loginRoute.POST(
@@ -515,8 +722,8 @@ describe("recover", () => {
         }),
       ),
     );
-    expect(badCode.status).toBe(401);
-    expect(unknown.status).toBe(401);
+    expect(badCode.status).toBe(400);
+    expect(unknown.status).toBe(400);
     expect((await badCode.json()) as unknown).toEqual((await unknown.json()) as unknown);
   });
 });
@@ -934,7 +1141,7 @@ describe("attempt budget", () => {
     expect((await badLogin("recovers@example.com")).status).toBe(401);
   });
 
-  it("budgets /account/recover and /account/register too", async () => {
+  it("requires mailbox proof before recovery or registration rate-limit work", async () => {
     await register("recovery-budget@example.com", "correct-horse-battery", true);
     const recover = () =>
       import("@/app/account/recover/route").then((m) =>
@@ -946,18 +1153,18 @@ describe("attempt budget", () => {
           }),
         ),
       );
-    for (let i = 0; i < LIMITS.recoverIdentity.capacity; i++) {
-      expect((await recover()).status).toBe(401);
+    for (let i = 0; i < LIMITS.recoverIdentity.capacity + 1; i++) {
+      expect((await recover()).status).toBe(400);
     }
-    expect((await recover()).status).toBe(429);
 
-    // Every valid address gets the same generic pending response, including existing addresses.
+    // Registration with an embedded password is rejected before account work.
     const duplicate = () =>
-      registerRoute.POST(post(`${BASE}/account/register`, { email: "recovery-budget@example.com" }));
-    for (let i = 0; i < LIMITS.registerGlobal.capacity; i++) {
-      expect((await duplicate()).status).toBe(202);
+      registerRoute.POST(
+        post(`${BASE}/account/register`, { email: "recovery-budget@example.com", password: "correct-horse-battery" }),
+      );
+    for (let i = 0; i < LIMITS.registerGlobal.capacity + 1; i++) {
+      expect((await duplicate()).status).toBe(400);
     }
-    expect((await duplicate()).status).toBe(429);
   });
 });
 
