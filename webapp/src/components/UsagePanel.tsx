@@ -90,7 +90,7 @@ export default function UsagePanel({
   const { t, locale } = useTranslation();
   const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
   return (
-    <div id={embedded ? 'overview-usage' : 'panel-usage'} role={embedded ? undefined : 'tabpanel'} aria-labelledby={embedded ? undefined : 'tab-usage'} className="space-y-6 md:space-y-10" data-testid="overview-usage">
+    <div id={embedded ? 'overview-usage' : 'panel-usage'} role={embedded ? undefined : 'tabpanel'} aria-labelledby={embedded ? undefined : 'tab-usage'} className="space-y-6 md:space-y-10" data-testid={embedded ? 'overview-usage' : 'tab-panel-usage'}>
       {/* Are the rates this chart prices with still the current ones? */}
       <RateStalenessBanner result={staleness} />
 

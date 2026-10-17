@@ -60,6 +60,8 @@ export type OverviewPanelProps = {
   latestPeriod: AxisPeriod | null;
   /** Source-derived always-on baseline for the same data window. */
   floor?: AlwaysOnFloor | null;
+  /** Classic view keeps Usage as its own historical destination. */
+  showUsage?: boolean;
 };
 
 export default function OverviewPanel({
@@ -80,6 +82,7 @@ export default function OverviewPanel({
   rateMismatch = false,
   latestPeriod,
   floor,
+  showUsage = true,
 }: OverviewPanelProps) {
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
@@ -447,8 +450,12 @@ export default function OverviewPanel({
       )}
 
       {/* 4. Which file / feed this is, and whether it is connected. */}
-      <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
-      <UsagePanel {...usage} embedded />
+      {showUsage && (
+        <>
+          <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
+          <UsagePanel {...usage} embedded />
+        </>
+      )}
     </div>
   );
 }
