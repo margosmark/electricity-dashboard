@@ -548,6 +548,11 @@ describe('dark ledger slabs — fixed slabs pin their ink, pastels get theme tok
       'components/AppErrorBoundary.tsx',
       'components/BackupControls.tsx',
       'components/AccountControls.tsx',
+      // The rewind of the same two historical files under /classic carries
+      // the same grandfathered slab markup (ab2a892 blobs), so the
+      // relocation must not regress the walk back onto them.
+      'components/classic/BackupControls.tsx',
+      'components/classic/AccountControls.tsx',
       'lib/heatmapSplit.ts',
     ]);
     const offenders = files
