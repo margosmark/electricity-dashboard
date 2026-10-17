@@ -387,7 +387,7 @@ export function openDb(path: string): DatabaseSync {
       try { db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`); } catch { /* already exists */ }
     }
     migrateNotifyCascade(db);
-    db.exec("PRAGMA user_version = 3;"); 
+    db.exec("PRAGMA user_version = 3;");
     db.exec("COMMIT;");
   } catch (error) {
     db.exec("ROLLBACK;");
