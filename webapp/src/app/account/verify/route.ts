@@ -12,9 +12,10 @@ import {
   getBlob,
   insertAccount,
   insertSession,
+  setEmailVerifiedAt,
 } from "@/lib/account/db";
 import { accountError, accountJson, applySessionCookie, getDb, isConfig, readJsonSmall, readTextCapped, rejectCrossOrigin, requireEnabled } from "@/lib/account/http";
-import { hashPassword, hashToken, hashRecoveryCode, newRecoveryCode, newSessionToken, validatePassword } from "@/lib/account/auth";
+import { hashPassword, hashToken, hashRecoveryCode, newRecoveryCode, newSessionToken, validatePassword, verifyPassword } from "@/lib/account/auth";
 
 export async function GET(_request: Request): Promise<Response> {
   void _request;
@@ -55,8 +56,33 @@ export async function POST(request: Request): Promise<Response> {
     return accountError(400, "invalid_verification");
   }
   if (findAccountByEmail(db, pending.email)) {
-    consumeEmailToken(db, tokenHash);
-    return accountError(400, "invalid_verification");
+    // A token with an account_id is the explicit mailbox migration path for a
+    // pre-verification account. It must prove the existing password as well as
+    // the mailbox; replacing the password here would strand any E2EE blob
+    // encrypted from that password.
+    if (pending.account_id === null) {
+      consumeEmailToken(db, tokenHash);
+      return accountError(400, "invalid_verification");
+    }
+    const legacy = findAccountByEmail(db, pending.email);
+    if (!legacy || legacy.id !== pending.account_id || legacy.email_verified_at !== null || !(await verifyPassword(legacy.password_hash, password.value))) {
+      return accountError(400, "invalid_verification");
+    }
+    if (!consumeEmailToken(db, tokenHash)) return accountError(400, "invalid_verification");
+    setEmailVerifiedAt(db, legacy.id);
+    const session = newSessionToken();
+    insertSession(db, session.hash, legacy.id, cfg.sessionTtlMs);
+    const blob = getBlob(db, legacy.id);
+    const res = accountJson({
+      ok: true,
+      email: legacy.email,
+      kdfSalt: legacy.kdf_salt,
+      recoveryCode: null,
+      hasBlob: Boolean(blob),
+      rev: blob?.rev ?? 0,
+    }, { status: 200 });
+    applySessionCookie(res, session.token, Math.floor(cfg.sessionTtlMs / 1000));
+    return res;
   }
   const count = (db.prepare("SELECT COUNT(*) AS n FROM accounts").get() as { n: number }).n;
   if (count >= cfg.maxAccounts) return accountError(403, "account_limit");
@@ -85,7 +111,7 @@ export async function POST(request: Request): Promise<Response> {
   return res;
 }
 
-export { wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as DELETE, wrongMethod as OPTIONS } from "@/lib/account/http";
+export { wrongEmailMethod as PUT, wrongEmailMethod as PATCH, wrongEmailMethod as DELETE, wrongEmailMethod as OPTIONS } from "@/lib/account/http";
 
 async function readFormSmall(request: Request): Promise<{ ok: true; value: unknown } | { ok: false; status: number; error: string }> {
   const body = await readTextCapped(request, 64 * 1024);

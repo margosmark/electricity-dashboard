@@ -53,9 +53,34 @@ export async function POST(request: Request): Promise<Response> {
   if (!verdict.allowed) return rateLimitError(verdict.retryAfterSeconds);
   const db = getDb(cfg);
   deleteEmailTokensForEmail(db, email.value, "registration");
-  const duplicate = Boolean(findAccountByEmail(db, email.value));
+  const duplicateAccount = findAccountByEmail(db, email.value);
+  const duplicate = Boolean(duplicateAccount);
   const suppressed = isSuppressed(db, email.value);
   if (duplicate || suppressed) {
+    // A pre-mailbox account is deliberately not silently grandfathered in.
+    // Repeating registration is the explicit migration path: prove control of
+    // the mailbox, then `/account/verify` marks this existing row verified.
+    // Verified duplicates and suppressed addresses retain the same generic
+    // response and produce no token.
+    if (duplicateAccount && duplicateAccount.email_verified_at === null && !suppressed) {
+      const token = newEmailToken();
+      insertEmailToken(db, {
+        tokenHash: token.hash,
+        purpose: "registration",
+        accountId: duplicateAccount.id,
+        email: duplicateAccount.email,
+        hasLocalData: value.hasLocalData === true,
+        expiresAt: Date.now() + EMAIL_TOKEN_TTL_MS,
+        privacyVersion: acceptance.privacyVersion,
+        termsVersion: acceptance.termsVersion,
+        acceptedAt: acceptance.acceptedAt,
+      });
+      if (!enqueueAccountEmail(db, token.hash, registrationEmail(cfg, duplicateAccount.email, token.token))) {
+        deleteEmailToken(db, token.hash);
+      } else {
+        void drainOutbox(cfg, db);
+      }
+    }
     spendAttempts(attempts);
     return accountJson({ ok: true, verificationRequired: true }, { status: 202 });
   }
@@ -82,4 +107,4 @@ export async function POST(request: Request): Promise<Response> {
   return accountJson({ ok: true, verificationRequired: true }, { status: 202 });
 }
 
-export { wrongMethod as GET, wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as DELETE, wrongMethod as OPTIONS } from "@/lib/account/http";
+export { wrongEmailMethod as GET, wrongEmailMethod as PUT, wrongEmailMethod as PATCH, wrongEmailMethod as DELETE, wrongEmailMethod as OPTIONS } from "@/lib/account/http";

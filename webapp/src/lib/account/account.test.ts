@@ -41,8 +41,10 @@ vi.mock("@/lib/account/email", () => ({
 
 import * as sessionRoute from "@/app/account/session/route";
 import * as registerRoute from "@/app/account/register/route";
+import * as recoverRoute from "@/app/account/recover/route";
 import * as verifyRoute from "@/app/account/verify/route";
 import * as recoveryVerifyRoute from "@/app/account/recover/verify/route";
+import * as smtpEventsRoute from "@/app/account/smtp-events/route";
 import * as loginRoute from "@/app/account/login/route";
 import * as logoutRoute from "@/app/account/logout/route";
 import * as syncRoute from "@/app/account/sync/route";
@@ -264,6 +266,34 @@ describe("the feature flag", () => {
     }
   });
 
+  it("returns the same 404 for supported, wrong-method, and OPTIONS email probes when verification is off", async () => {
+    const saved = process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+    process.env.ACCT_EMAIL_VERIFICATION_ENABLED = "false";
+    resetAccountConfigCache();
+    try {
+      const probes = [
+        registerRoute.POST(post(`${BASE}/account/register`, { email: "off-method@example.com" })),
+        registerRoute.OPTIONS(new Request(`${BASE}/account/register`, { method: "OPTIONS" })),
+        recoverRoute.POST(post(`${BASE}/account/recover`, { email: "off-method@example.com" })),
+        recoverRoute.OPTIONS(new Request(`${BASE}/account/recover`, { method: "OPTIONS" })),
+        verifyRoute.POST(post(`${BASE}/account/verify`, { token: "A".repeat(40), password: "correct password" })),
+        verifyRoute.OPTIONS(new Request(`${BASE}/account/verify`, { method: "OPTIONS" })),
+        recoveryVerifyRoute.POST(post(`${BASE}/account/recover/verify`, { token: "A".repeat(40), newPassword: "correct password" })),
+        recoveryVerifyRoute.OPTIONS(new Request(`${BASE}/account/recover/verify`, { method: "OPTIONS" })),
+        smtpEventsRoute.POST(post(`${BASE}/account/smtp-events`, {})),
+        smtpEventsRoute.OPTIONS(new Request(`${BASE}/account/smtp-events`, { method: "OPTIONS" })),
+      ];
+      for (const res of await Promise.all(probes)) {
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: "not_found" });
+      }
+    } finally {
+      if (saved === undefined) delete process.env.ACCT_EMAIL_VERIFICATION_ENABLED;
+      else process.env.ACCT_EMAIL_VERIFICATION_ENABLED = saved;
+      resetAccountConfigCache();
+    }
+  });
+
   it("fails closed when email verification is enabled without the full SMTP contract", async () => {
     const passwordFile = process.env.ACCT_SMTP_PASSWORD_FILE!;
     delete process.env.ACCT_SMTP_PASSWORD_FILE;
@@ -466,6 +496,29 @@ describe("login", () => {
     expect(row.password_hash).not.toContain("correct-horse-battery");
     // The blob salt is a different value: the two KDFs never share inputs.
     expect(row.kdf_salt).not.toBe(row.password_hash);
+  });
+
+  it("does not create a session for a legacy unverified account, then permits explicit mailbox migration", async () => {
+    await register("legacy@example.com", "legacy-password");
+    const db = openDb(getAccountConfig().dbPath);
+    db.prepare("UPDATE accounts SET email_verified_at = NULL").run();
+    db.prepare("DELETE FROM sessions").run();
+    const sessionsBefore = (db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as { n: number }).n;
+
+    const blocked = await loginRoute.POST(post(`${BASE}/account/login`, { email: "legacy@example.com", password: "legacy-password" }));
+    expect(blocked.status).toBe(401);
+    expect(await blocked.json()).toEqual({ error: "invalid_credentials", detail: "That e-mail address and password do not match." });
+    expect(sessionCookie(blocked)).toBeNull();
+    expect((db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as { n: number }).n).toBe(sessionsBefore);
+
+    const migrationRequest = await registerRoute.POST(post(`${BASE}/account/register`, { email: "legacy@example.com" }));
+    expect(migrationRequest.status).toBe(202);
+    const token = emailTestState.tokens.pop();
+    expect(token).toMatch(/^[A-Za-z0-9_-]{40,64}$/);
+    const migrated = await verifyRoute.POST(post(`${BASE}/account/verify`, { token, password: "legacy-password" }));
+    expect(migrated.status).toBe(200);
+    expect(sessionCookie(migrated)).toBeTruthy();
+    expect((db.prepare("SELECT email_verified_at FROM accounts WHERE email=?").get("legacy@example.com") as { email_verified_at: number | null }).email_verified_at).not.toBeNull();
   });
 });
 

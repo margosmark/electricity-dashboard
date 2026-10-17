@@ -675,12 +675,10 @@ describe("the surface on disk and the contract table describe the same thing", (
     }
   });
 
-  it("uses the shared wrongMethod for every stub — never a hand-rolled 404 or 405", () => {
+  it("uses a shared method stub for every route — never a hand-rolled 404 or 405", () => {
     for (const { route, stub } of SURFACE) {
       for (const s of stub) {
-        expect(s.fn, `${route} stubs ${s.verb} with ${s.fn}, not lib/account/http#wrongMethod`).toBe(
-          "wrongMethod",
-        );
+        expect(["wrongMethod", "wrongEmailMethod"], `${route} stubs ${s.verb} with ${s.fn}`).toContain(s.fn);
       }
     }
   });

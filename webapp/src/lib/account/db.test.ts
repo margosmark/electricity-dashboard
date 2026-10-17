@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { claimEmailOutbox, closeAllDbs, deleteAccount, enqueueEmailOutbox, insertAccount, insertSession, markEmailOutboxSent, openDb, putBlob, retryEmailOutbox } from "./db";
+import { claimEmailOutbox, closeAllDbs, deleteAccount, EMAIL_OUTBOX_MAX_AGE_MS, EMAIL_OUTBOX_MAX_ATTEMPTS, enqueueEmailOutbox, insertAccount, insertSession, markEmailOutboxSent, openDb, putBlob, retryEmailOutbox } from "./db";
 import { ACCOUNT_TERMS_VERSION, PRIVACY_POLICY_VERSION, hasCurrentPolicyAcceptance } from "./policy";
 
 let root: string;
@@ -116,6 +116,27 @@ describe("account database integrity", () => {
     const retry = claimEmailOutbox(db, Date.now() + 5)!;
     retryEmailOutbox(db, retry.id, false, Date.now() + 6);
     expect(db.prepare("SELECT status, text, html FROM email_outbox WHERE id=?").get(retry.id)).toEqual(expect.objectContaining({ status: "pending", text: message.text, html: message.html }));
+
+    let now = Date.now() + 7;
+    for (let attempt = 1; attempt < EMAIL_OUTBOX_MAX_ATTEMPTS; attempt++) {
+      const claimed = claimEmailOutbox(db, now + 30_001);
+      expect(claimed).not.toBeNull();
+      retryEmailOutbox(db, claimed!.id, false, now);
+      now += 30_001;
+    }
+    expect(db.prepare("SELECT status, attempts, text, html FROM email_outbox WHERE id=?").get(retry.id)).toEqual({
+      status: "failed",
+      attempts: EMAIL_OUTBOX_MAX_ATTEMPTS,
+      text: "",
+      html: "",
+    });
+
+    expect(enqueueEmailOutbox(db, { tokenHash: "expired-hash", ...message })).toBe(true);
+    const expired = claimEmailOutbox(db, Date.now() + 10)!;
+    expect(expired).not.toBeNull();
+    const expiry = expired.created_at + EMAIL_OUTBOX_MAX_AGE_MS;
+    expect(claimEmailOutbox(db, expiry + 1)).toBeNull();
+    expect(db.prepare("SELECT status, text, html FROM email_outbox WHERE id=?").get(expired.id)).toEqual({ status: "failed", text: "", html: "" });
   });
 });
 

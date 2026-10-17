@@ -83,6 +83,15 @@ export type EmailOutboxRow = {
   sent_at: number | null;
 };
 
+/**
+ * A verification/recovery link expires after 30 minutes, so retaining its
+ * bearer-bearing MIME body beyond that point has no delivery value. Five
+ * transient attempts (the initial send plus four requeues) is enough to ride
+ * out a short relay interruption without retaining a link indefinitely.
+ */
+export const EMAIL_OUTBOX_MAX_ATTEMPTS = 5;
+export const EMAIL_OUTBOX_MAX_AGE_MS = 30 * 60 * 1000;
+
 export type SessionRow = {
   token_hash: string;
   account_id: number;
@@ -456,6 +465,11 @@ export function setRecoveryHash(db: DatabaseSync, accountId: number, hash: strin
   db.prepare("UPDATE accounts SET recovery_hash = ? WHERE id = ?").run(hash, accountId);
 }
 
+/** Mark a legacy account as mailbox-proven after its explicit migration link. */
+export function setEmailVerifiedAt(db: DatabaseSync, accountId: number, verifiedAt = Date.now()): void {
+  db.prepare("UPDATE accounts SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL").run(verifiedAt, accountId);
+}
+
 /* --------------------------------------------------------------------------
  * Mailbox-proof tokens and suppression state.
  * Only SHA-256(token) is stored; the clear token exists in the request/email
@@ -536,6 +550,9 @@ export function enqueueEmailOutbox(
 
 /** Claim one row; stale leases are recoverable after a process restart. */
 export function claimEmailOutbox(db: DatabaseSync, now = Date.now()): EmailOutboxRow | null {
+  // Recover rows left pending/sending by an outage or process restart, but do
+  // not let an expired link remain claimable with its bearer-bearing payload.
+  pruneEmailOutbox(db, now);
   const row = db.prepare(
     `SELECT * FROM email_outbox
      WHERE (status = 'pending' AND next_attempt_at <= ?)
@@ -558,14 +575,31 @@ export function markEmailOutboxSent(db: DatabaseSync, id: number, now = Date.now
 }
 
 export function retryEmailOutbox(db: DatabaseSync, id: number, permanent: boolean, now = Date.now()): void {
-  if (permanent) {
-    db.prepare("UPDATE email_outbox SET status = 'failed', text = '', html = '', lease_until = NULL WHERE id = ?").run(id);
+  const row = db.prepare("SELECT attempts, created_at FROM email_outbox WHERE id = ?").get(id) as
+    | { attempts: number; created_at: number }
+    | undefined;
+  if (!row) return;
+  const nextAttempts = row.attempts + 1;
+  const exhausted = nextAttempts >= EMAIL_OUTBOX_MAX_ATTEMPTS;
+  const expired = now - row.created_at >= EMAIL_OUTBOX_MAX_AGE_MS;
+  if (permanent || exhausted || expired) {
+    db.prepare("UPDATE email_outbox SET status = 'failed', attempts = ?, text = '', html = '', lease_until = NULL WHERE id = ?").run(nextAttempts, id);
     return;
   }
   db.prepare(
     `UPDATE email_outbox SET status = 'pending', attempts = attempts + 1,
        next_attempt_at = ?, lease_until = NULL WHERE id = ?`,
   ).run(now + 30_000, id);
+}
+
+/** Terminalize pending/sending rows whose retry budget or link lifetime ended. */
+export function pruneEmailOutbox(db: DatabaseSync, now = Date.now()): void {
+  db.prepare(
+    `UPDATE email_outbox
+        SET status = 'failed', text = '', html = '', lease_until = NULL
+      WHERE status IN ('pending', 'sending')
+        AND (attempts >= ? OR created_at + ? <= ?)`,
+  ).run(EMAIL_OUTBOX_MAX_ATTEMPTS, EMAIL_OUTBOX_MAX_AGE_MS, now);
 }
 
 export function isSuppressed(db: DatabaseSync, email: string): boolean {

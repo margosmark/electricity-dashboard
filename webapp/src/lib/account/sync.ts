@@ -18,11 +18,17 @@ import {
   BACKUP_VERSION,
   EXAMPLE_DATA_KEY,
   parseBackup,
-  storageValuesFromBackup,
   serializeBackup,
   type BackupDocument,
 } from "@/lib/backup";
 import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import {
+  BILLING_DAY_KEY,
+  ENERGY_KEY_V2,
+  LEGACY_ENERGY_KEY,
+  loadEnergyData,
+  saveEnergyData,
+} from "@/lib/storage";
 
 /**
  * The dataset keys a sync moves, and the one bookkeeping key it owns.
@@ -33,11 +39,13 @@ import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
  * 409-and-ask. It is not sensitive: a revision number, not a credential.
  */
 export const SYNC_DATASET_KEYS = [
-  "energy_data",
-  "billing_day",
+  ENERGY_KEY_V2,
+  LEGACY_ENERGY_KEY,
+  BILLING_DAY_KEY,
   "extra_charges",
   PLAN_STORAGE_KEY,
   EXAMPLE_DATA_KEY,
+  "plan_timeline",
 ] as const;
 
 export const SYNC_REV_KEY = "account_sync_rev";
@@ -132,17 +140,22 @@ function readJson<T>(raw: string | null): T | null {
  * banner of a sync.
  */
 export function readLocalDocument(now: Date = new Date()): BackupDocument | null {
-  const energyRaw = safeGet(localStorage, "energy_data");
-  if (energyRaw === null) return null;
+  // The account feature must follow the same versioned storage contract as the
+  // dashboard. In particular, current profiles have no legacy `energy_data`
+  // key to read. `loadEnergyData` also gives an old profile one safe migration
+  // path, without allowing a corrupt payload to become an empty upload.
+  const energy = loadEnergyData();
+  if (!energy.ok || energy.value === null) return null;
 
   const candidate = {
     schema: BACKUP_SCHEMA,
     version: BACKUP_VERSION,
     exportedAt: now.toISOString(),
     payload: {
-      energy_data: readJson<unknown>(energyRaw) ?? [],
-      billing_day: Number(safeGet(localStorage, "billing_day") ?? 1),
+      energy_data: energy.value.points,
+      billing_day: Number(safeGet(localStorage, BILLING_DAY_KEY) ?? 1),
       extra_charges: readJson<unknown>(safeGet(localStorage, "extra_charges")) ?? {},
+      plan_timeline: readJson<unknown>(safeGet(localStorage, "plan_timeline")) ?? [],
       selected_plan: safeGet(localStorage, PLAN_STORAGE_KEY) ?? undefined,
       energy_data_is_example: safeGet(localStorage, EXAMPLE_DATA_KEY) === "1",
     },
@@ -154,8 +167,24 @@ export function readLocalDocument(now: Date = new Date()): BackupDocument | null
 
 /** Apply a document the server handed back. Every key is written or cleared. */
 export function applyDocument(doc: BackupDocument): { written: string[] } {
-  const values = storageValuesFromBackup(doc);
-  const written: string[] = [];
+  // `storageValuesFromBackup` is intentionally a backup/import representation
+  // and names the historical `energy_data` field. Account sync writes through
+  // the live storage service instead, so a remote apply cannot leave a stale
+  // v2 payload beside a newly-written legacy payload.
+  const savedEnergy = saveEnergyData(doc.payload.energy_data, {
+    source: "account-sync",
+    uploadedAt: doc.exportedAt || new Date().toISOString(),
+  });
+  if (!savedEnergy.ok) return { written: [] };
+
+  const values: Record<string, string> = {
+    billing_day: String(doc.payload.billing_day),
+    extra_charges: JSON.stringify(doc.payload.extra_charges),
+    plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
+    ...(doc.payload.selected_plan !== undefined ? { [PLAN_STORAGE_KEY]: doc.payload.selected_plan } : {}),
+    [EXAMPLE_DATA_KEY]: doc.payload.energy_data_is_example === true ? "1" : "",
+  };
+  const written: string[] = [ENERGY_KEY_V2];
   for (const [key, value] of Object.entries(values)) {
     if (value === "") safeRemove(localStorage, key);
     else safeSet(localStorage, key, value);
@@ -222,5 +251,6 @@ export function wipeLocalDataset(): { removed: string[] } {
 
 /** Does this browser hold a dataset a sync could move? */
 export function hasLocalData(): boolean {
-  return safeGet(localStorage, "energy_data") !== null;
+  const result = loadEnergyData();
+  return result.ok && result.value !== null && result.value.points.length > 0;
 }

@@ -81,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
   return res;
 }
 
-export { wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as DELETE, wrongMethod as OPTIONS } from "@/lib/account/http";
+export { wrongEmailMethod as PUT, wrongEmailMethod as PATCH, wrongEmailMethod as DELETE, wrongEmailMethod as OPTIONS } from "@/lib/account/http";
 
 async function readFormSmall(request: Request): Promise<{ ok: true; value: unknown } | { ok: false; status: number; error: string }> {
   const body = await readTextCapped(request, 64 * 1024);

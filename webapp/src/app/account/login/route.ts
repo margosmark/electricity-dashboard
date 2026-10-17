@@ -73,6 +73,15 @@ export async function POST(request: Request): Promise<Response> {
   // handed back. The IP and global buckets keep their state on purpose.
   refundIdentity(attempts);
 
+  // Rows created before mailbox verification have a NULL marker. Once the
+  // gate is enabled, accepting their password here would be an unverified
+  // account bypass. Return the same non-enumerating answer as a bad password
+  // and leave the explicit re-registration/migration flow to issue the
+  // mailbox proof link; importantly, no session row or cookie is created.
+  if (cfg.emailVerificationEnabled && account.email_verified_at === null) {
+    return accountError(401, "invalid_credentials", "That e-mail address and password do not match.");
+  }
+
   pruneSessions(db);
   const session = newSessionToken();
   insertSession(db, session.hash, account.id, cfg.sessionTtlMs);

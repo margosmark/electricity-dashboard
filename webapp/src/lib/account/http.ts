@@ -104,18 +104,25 @@ export function requireEnabled(): AccountConfig | NextResponse {
  * forbids. "Invisible, not broken" has to hold for every method, not just
  * the one the handler implements.
  *
- * So every `/account/*` route re-exports this as the verbs it does not
- * implement (`export { wrongMethod as GET, … } from "@/lib/account/http"`):
- * the same `404` body `requireEnabled()` answers while the feature is off,
- * and an honest `405` — naming the refused method — once it is on. `HEAD`
- * needs no export of its own: Next serves it from the route's `GET`, stub
- * or real, which is why `GET` must be stubbed wherever it is missing.
+ * So every `/account/*` route re-exports one of these shared stubs for the
+ * verbs it does not implement: ordinary account routes use `wrongMethod`,
+ * while registration/recovery/mailbox routes use `wrongEmailMethod` so the
+ * independent mailbox flag is carried to every verb. `HEAD` needs no export
+ * of its own: Next serves it from the route's `GET`, stub or real, which is
+ * why `GET` must be stubbed wherever it is missing.
  *
  * `request` is read only so the enabled-path answer can name the method;
  * Next calls every export as `(request, context)`.
  */
 export function wrongMethod(request: Request): NextResponse {
   if (!getAccountConfig().enabled) return accountError(404, "not_found");
+  return accountError(405, "method_not_allowed", `${request.method} is not supported on this route.`);
+}
+
+/** Method stub for routes that only exist when mailbox verification is on. */
+export function wrongEmailMethod(request: Request): NextResponse {
+  const cfg = getAccountConfig();
+  if (!cfg.enabled || !cfg.emailVerificationEnabled) return accountError(404, "not_found");
   return accountError(405, "method_not_allowed", `${request.method} is not supported on this route.`);
 }
 

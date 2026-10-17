@@ -61,4 +61,4 @@ export async function POST(request: Request): Promise<Response> {
   return accountJson({ ok: true, recoveryRequested: true }, { status: 202 });
 }
 
-export { wrongMethod as GET, wrongMethod as PUT, wrongMethod as PATCH, wrongMethod as DELETE, wrongMethod as OPTIONS } from "@/lib/account/http";
+export { wrongEmailMethod as GET, wrongEmailMethod as PUT, wrongEmailMethod as PATCH, wrongEmailMethod as DELETE, wrongEmailMethod as OPTIONS } from "@/lib/account/http";

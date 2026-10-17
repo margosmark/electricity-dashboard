@@ -47,6 +47,7 @@ import { ACCOUNT_KEY_ITEM, SYNC_REV_KEY } from "@/lib/account/sync";
 import { buildBackupDocument, serializeBackup, EXAMPLE_DATA_KEY } from "@/lib/backup";
 import { EMPTY_EXTRA_CHARGES } from "@/lib/energy";
 import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import { ENERGY_KEY_V2 } from "@/lib/storage";
 
 /* ------------------------------------------------------------------ *
  * Fixtures
@@ -83,7 +84,12 @@ function sessionInfo(over: Partial<SessionInfo> = {}): SessionInfo {
 
 function seedLocal(overrides: Record<string, string> = {}) {
   localStorage.clear();
-  localStorage.setItem("energy_data", JSON.stringify(ROWS));
+  localStorage.setItem(ENERGY_KEY_V2, JSON.stringify({
+    version: 2,
+    uploadedAt: "2026-01-01T00:00:00.000Z",
+    source: "v2-fixture",
+    points: ROWS,
+  }));
   localStorage.setItem("billing_day", "7");
   localStorage.setItem("extra_charges", JSON.stringify({ hstPct: "13" }));
   localStorage.setItem(PLAN_STORAGE_KEY, "ULO");
@@ -247,7 +253,7 @@ describe("the sign-in drawer", () => {
       SYNC_REV_KEY,
       "account_upload_declined",
       "billing_day",
-      "energy_data",
+      ENERGY_KEY_V2,
       "extra_charges",
       EXAMPLE_DATA_KEY,
     ]);
@@ -279,7 +285,7 @@ describe("a device with data and an empty account", () => {
     expect(localStorage.getItem("account_upload_declined")).toBe("1");
     expect(putSync).not.toHaveBeenCalled();
     // Nothing was removed, nothing was uploaded.
-    expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(ROWS);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(ROWS);
   });
 
   it("uploads ciphertext only — the readings never leave this browser readable", async () => {
@@ -344,7 +350,7 @@ describe("two devices have moved the same data", () => {
     expect(prompt.textContent).toMatch(/revision 3/);
     expect(putSync).not.toHaveBeenCalled();
     expect(getSync).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(ROWS);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(ROWS);
   });
 
   it("'This device' wins by uploading against the server's revision", async () => {
@@ -356,7 +362,7 @@ describe("two devices have moved the same data", () => {
     expect(putSync.mock.calls[0][0].baseRev).toBe(3);
     await vi.waitFor(() => expect(localStorage.getItem(SYNC_REV_KEY)).toBe("4"));
     expect(screen.queryByTestId("account-conflict-prompt")).toBeNull();
-    expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(ROWS);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(ROWS);
   });
 
   it("'Account copy' replaces what is in this browser, after decrypting it", async () => {
@@ -377,7 +383,7 @@ describe("two devices have moved the same data", () => {
 
     await vi.waitFor(() => expect(getSync).toHaveBeenCalledTimes(1));
     await vi.waitFor(() =>
-      expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(OTHER_ROWS),
+      expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(OTHER_ROWS),
     );
     expect(localStorage.getItem("billing_day")).toBe("13");
     expect(localStorage.getItem(SYNC_REV_KEY)).toBe("3");
@@ -416,7 +422,7 @@ describe("signing out", () => {
 
     await vi.waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
     expect(putSync).not.toHaveBeenCalled(); // nothing dirty, so nothing re-uploaded
-    expect(localStorage.getItem("energy_data")).toBeNull();
+    expect(localStorage.getItem(ENERGY_KEY_V2)).toBeNull();
     expect(localStorage.getItem(ACCOUNT_KEY_ITEM)).toBeNull();
     expect(localStorage.getItem(SYNC_REV_KEY)).toBeNull();
     const message = await screen.findByTestId("account-message");
@@ -437,7 +443,7 @@ describe("signing out", () => {
     expect(message).toMatch(/left in the browser/i);
 
     // The data survived. This is the assertion the whole card rests on.
-    expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(ROWS);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(ROWS);
     expect(localStorage.getItem("billing_day")).toBe("13");
     expect(localStorage.getItem(ACCOUNT_KEY_ITEM)).toBe(KEY_B64);
   });
@@ -451,7 +457,7 @@ describe("signing out", () => {
     await vi.waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
     const message = await screen.findByTestId("account-message");
     expect(message.textContent).toMatch(/still signed in on this device/i);
-    expect(JSON.parse(localStorage.getItem("energy_data") ?? "[]")).toEqual(ROWS);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) ?? "{}").points).toEqual(ROWS);
     expect(localStorage.getItem(ACCOUNT_KEY_ITEM)).toBe(KEY_B64);
   });
 });
@@ -544,7 +550,7 @@ describe("the explicit backup button", () => {
   });
 
   it("says there is nothing to back up on an empty device instead of uploading noise", async () => {
-    seedLocal({ energy_data: "", billing_day: "", extra_charges: "" });
+    seedLocal({ [ENERGY_KEY_V2]: "", billing_day: "", extra_charges: "" });
     seedSignedInDevice();
     localStorage.setItem(SYNC_REV_KEY, "2");
     fetchSession.mockResolvedValue(
