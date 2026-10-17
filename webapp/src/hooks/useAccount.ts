@@ -441,7 +441,10 @@ export function useAccount(options: Options = {}) {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, policyAccepted = false): Promise<boolean> => {
+    // `password` stays accepted-but-void: classic's historical verbatim
+    // AccountControls still calls signUp(email), and set-password moved into
+    // the mailbox-verification flow. Making it optional changes no behavior.
+    async (email: string, password = "", policyAccepted = false): Promise<boolean> => {
       void password;
       setBusy(true);
       busyRef.current = true;
