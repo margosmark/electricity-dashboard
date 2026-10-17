@@ -724,18 +724,6 @@ export function putBlob(
   }
 }
 
-/** Delete an account and all associated metadata in one transaction. */
-export function deleteAccount(db: DatabaseSync, accountId: number): void {
-  db.exec("BEGIN IMMEDIATE;");
-  try {
-    db.prepare("DELETE FROM accounts WHERE id = ?").run(accountId);
-    db.exec("COMMIT;");
-  } catch (error) {
-    db.exec("ROLLBACK;");
-    throw error;
-  }
-}
-
 export function deleteBlob(db: DatabaseSync, accountId: number): void {
   db.prepare("DELETE FROM blobs WHERE account_id = ?").run(accountId);
 }

@@ -53,7 +53,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
 import { SESSION_COOKIE, SESSION_TTL_MS, resetAccountConfigCache } from "./config";
-import { closeAllDbs, findSession, insertAccount, insertSession, openDb } from "./db";
+import { closeAllDbs, findSession, insertSession, openDb } from "./db";
 import { resetAccountServices } from "./services";
 import { resetRateLimits } from "./ratelimit";
 import { hashToken, newSessionToken } from "./auth";
@@ -84,6 +84,7 @@ vi.mock("@/lib/account/email", () => ({
 
 const BASE = "https://electricity.markarslan.ca";
 const EMAIL = "matrix@example.com";
+const PASSWORD = "correct horse battery staple";
 const INTERNAL_TOKEN = "matrix-internal-token";
 const DAY_MS = 24 * 60 * 60 * 1000;
 

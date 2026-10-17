@@ -19,11 +19,11 @@ import { join } from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 
 import { resetAccountConfigCache, getAccountConfig, MAX_SYNC_BYTES } from "./config";
-import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS, insertAccount, insertSession } from "./db";
+import { closeAllDbs, openDb, getMeta, DEFAULT_PUSH_PREFS, insertAccount } from "./db";
 import { resetAccountServices } from "./services";
 import { resetRateLimits, LIMITS } from "./ratelimit";
 import { decide, inQuietHours, localDayStart } from "./push";
-import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, hashRecoveryCode, newRecoveryCode, newSessionToken, normalizeRecoveryCode } from "./auth";
+import { ARGON2_OPTIONS, DUMMY_PASSWORD_HASH, hashPassword, newRecoveryCode, normalizeRecoveryCode } from "./auth";
 
 const emailTestState = vi.hoisted(() => ({ tokens: [] as string[] }));
 vi.mock("@/lib/account/email", () => ({
@@ -188,7 +188,7 @@ async function register(
   const res = await registerRoute.POST(
     post(`${BASE}/account/register`, {
       email,
-      hasLocalData,
+      hasLocalData: _hasLocalData,
       policyAccepted: true,
       privacyVersion: "2026-10-16",
       termsVersion: "2026-10-16",
@@ -380,10 +380,10 @@ describe("the feature flag", () => {
  * ========================================================================== */
 
 describe("registration verification gate", () => {
-  it("returns a generic verification-pending response without creating an account or session", async () => {
+  it("rejects an embedded password before any account work, without creating an account or session", async () => {
     const res = await registerRoute.POST(post(`${BASE}/account/register`, { email: "mark@example.com", password: "attacker-owned-password" }));
-    expect(res.status).toBe(202);
-    expect(await res.json()).toMatchObject({ ok: true, status: "verification_pending" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "verification_required" });
     expect(res.headers.get("set-cookie")).toBeNull();
     expect((openDb(process.env.ACCT_DB_PATH!).prepare("SELECT count(*) AS n FROM accounts").get() as { n: number }).n).toBe(0);
   });

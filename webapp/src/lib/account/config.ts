@@ -26,8 +26,7 @@
  */
 
 import { resolve, relative, isAbsolute, join } from "node:path";
-import { readFileSync, realpathSync, statSync } from "node:fs";
-import { validateEmailConfig } from "./email";
+import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs";
 
 export const SESSION_COOKIE = "acct_session";
 export const EMAIL_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -116,11 +115,6 @@ export type AccountConfig = {
 function str(name: string, fallback = ""): string {
   const v = process.env[name];
   return v === undefined || v === "" ? fallback : v.trim();
-}
-
-function positiveInt(name: string, fallback: number): number {
-  const value = Number(str(name, String(fallback)));
-  return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
 /** Read a 0400-mounted secret without putting its value in process.env. */
@@ -261,6 +255,39 @@ export function assertSecureDataDir(directory: string): void {
   if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o077) !== 0) {
     throw new Error("Account storage unavailable: ACCT_DATA_DIR must be owned by the account process uid and have mode 0700 or stricter.");
   }
+}
+
+/**
+ * Validate deployment e-mail intent without loading or logging secret
+ * contents (main's fail-fast contract, kept local so the candidate's sender
+ * abstraction in ./email stays mock-able in isolation).
+ *
+ * NOTE: `ACCT_EMAIL_*` is a *provider-intent* contract distinct from the
+ * SMTP sender contract above (`ACCT_SMTP_*`); a live mode refuses to boot
+ * rather than half-send.
+ */
+export type EmailMode = "off" | "test" | "live";
+export type EmailConfig = { mode: EmailMode; provider: "postmark" | "resend" | null; from: string | null; credentialFile: string | null };
+
+export function validateEmailConfig(env: Record<string, string | undefined>): EmailConfig {
+  const mode = (env.ACCT_EMAIL_MODE ?? "off").trim().toLowerCase();
+  if (mode !== "off" && mode !== "test" && mode !== "live") throw new Error("Invalid ACCT_EMAIL_MODE; use off, test, or live.");
+  if (mode !== "live") return { mode, provider: null, from: null, credentialFile: null };
+
+  const provider = (env.ACCT_EMAIL_PROVIDER ?? "").trim().toLowerCase();
+  if (provider !== "postmark" && provider !== "resend") throw new Error("Live email requires ACCT_EMAIL_PROVIDER=postmark or resend.");
+  const from = (env.ACCT_EMAIL_FROM ?? "").trim();
+  if (!from || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) throw new Error("Live email requires a valid ACCT_EMAIL_FROM address.");
+  const credentialFile = (env.ACCT_EMAIL_API_KEY_FILE ?? "").trim();
+  if (!credentialFile) throw new Error("Live email requires ACCT_EMAIL_API_KEY_FILE pointing to a secret mount.");
+  try {
+    const stat = statSync(credentialFile);
+    accessSync(credentialFile, constants.R_OK);
+    if (!stat.isFile() || (stat.mode & 0o077) !== 0) throw new Error();
+  } catch {
+    throw new Error("Live email credential mount must be a readable regular file with mode 0600 or stricter.");
+  }
+  return { mode, provider, from, credentialFile };
 }
 
 export function assertAccountDataDir(cfg: AccountConfig): void {

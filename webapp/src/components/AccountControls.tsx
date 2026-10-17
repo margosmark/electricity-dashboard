@@ -338,23 +338,23 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                     </p>
                   </>
                 )}
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="acct-password">
-                    {t('account.passwordLabel')}
-                  </label>
-                  <input
-                    id="acct-password"
-                    data-testid="account-password-input"
-                    type="password"
-                    autoComplete={tab === "signup" ? "new-password" : "current-password"}
-                    required
-                    minLength={15}
-                    maxLength={200}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
-                </div>
+                {tab !== "signup" && (
+                  <div>
+                    <label className={FIELD_LABEL} htmlFor="acct-password">
+                      {t('account.passwordLabel')}
+                    </label>
+                    <input
+                      id="acct-password"
+                      data-testid="account-password-input"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                )}
                 <button
                   type="submit"
                   data-testid={tab === "signup" ? "account-register" : "account-login"}
@@ -399,38 +399,6 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   required
                   value={recoveryEmail}
                   onChange={(e) => setRecoveryEmail(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </div>
-              <div>
-                <label className={FIELD_LABEL} htmlFor="rec-code">
-                  {t('account.recoveryCodeLabel')}
-                </label>
-                <input
-                  id="rec-code"
-                  data-testid="account-recover-code"
-                  type="text"
-                  required
-                  autoComplete="one-time-code"
-                  value={recoveryCodeInput}
-                  onChange={(e) => setRecoveryCodeInput(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </div>
-              <div>
-                <label className={FIELD_LABEL} htmlFor="rec-password">
-                  {t('account.newPasswordLabel')}
-                </label>
-                <input
-                  id="rec-password"
-                  data-testid="account-recover-password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={15}
-                  maxLength={200}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
                   className={INPUT_CLASS}
                 />
               </div>

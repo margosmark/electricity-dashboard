@@ -15,6 +15,8 @@ const message: TransactionalMessage = { to: "owner@example.test", subject: "test
 function smtpConfig(port: number, tlsMode: "implicit" | "starttls") {
   return {
     enabled: true,
+    hostDataDir: "",
+    hostRepoDir: "",
     dbPath: ":memory:",
     publicOrigin: "https://electricity.markarslan.ca",
     sessionTtlMs: 1,

@@ -67,6 +67,8 @@ beforeAll(() => {
   }
   Object.assign(process.env, {
     ACCT_ENABLED: "true",
+    ACCT_DATA_DIR_HOST: dir,
+    ACCT_REPO_HOST_DIR: join(dir, "repo"),
     ACCT_DB_PATH: dbPath,
     ACCT_PUBLIC_ORIGIN: BASE,
     ACCT_EMAIL_VERIFICATION_ENABLED: "true",
@@ -97,7 +99,7 @@ afterAll(() => {
   closeAllDbs();
   resetAccountServices();
   resetAccountConfigCache();
-  for (const key of ["ACCT_ENABLED", "ACCT_DB_PATH", "ACCT_PUBLIC_ORIGIN", "ACCT_EMAIL_VERIFICATION_ENABLED", "ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE", "ACCT_RATES_URL"]) delete process.env[key];
+  for (const key of ["ACCT_ENABLED", "ACCT_DATA_DIR_HOST", "ACCT_REPO_HOST_DIR", "ACCT_DB_PATH", "ACCT_PUBLIC_ORIGIN", "ACCT_EMAIL_VERIFICATION_ENABLED", "ACCT_SMTP_HOST", "ACCT_SMTP_PORT", "ACCT_SMTP_TLS_MODE", "ACCT_SMTP_HELO", "ACCT_SMTP_FROM", "ACCT_SMTP_REPLY_TO", "ACCT_SMTP_TIMEOUT_MS", "ACCT_SMTP_USERNAME_FILE", "ACCT_SMTP_PASSWORD_FILE", "ACCT_SMTP_EVENTS_SECRET_FILE", "ACCT_RATES_URL"]) delete process.env[key];
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -122,7 +124,7 @@ describe("verified registration and mailbox recovery", () => {
     expect(scannedHtml).not.toContain(token);
     expect(findEmailToken(db, pending!.token_hash)?.used_at).toBeNull();
 
-    const verified = await verifyRoute.POST(post("/account/verify", { token, password: "correct horse battery" }));
+    const verified = await verifyRoute.POST(post("/account/verify", { token, password: "correct horse battery staple" }));
     expect(verified.status).toBe(201);
     expect(verified.headers.get("set-cookie")).toContain("acct_session=");
     const account = findAccountByEmail(db, "owner@example.test");
@@ -139,7 +141,7 @@ describe("verified registration and mailbox recovery", () => {
     const knownStart = await registerRoute.POST(post("/account/register", { email: "known@example.test" }));
     expect(knownStart.status).toBe(202);
     const knownToken = latestToken();
-    expect((await verifyRoute.POST(post("/account/verify", { token: knownToken, password: "known password" }))).status).toBe(201);
+    expect((await verifyRoute.POST(post("/account/verify", { token: knownToken, password: "known-password-2026" }))).status).toBe(201);
 
     const known = await registerRoute.POST(post("/account/register", { email: "known@example.test" }));
     const unknown = await registerRoute.POST(post("/account/register", { email: "unknown@example.test" }));
@@ -158,7 +160,7 @@ describe("verified registration and mailbox recovery", () => {
     const started = await registerRoute.POST(post("/account/register", { email: "recover@example.test", hasLocalData: true }));
     expect(started.status).toBe(202);
     const registrationToken = latestToken();
-    expect((await verifyRoute.POST(post("/account/verify", { token: registrationToken, password: "old password" }))).status).toBe(201);
+    expect((await verifyRoute.POST(post("/account/verify", { token: registrationToken, password: "old-password-2026" }))).status).toBe(201);
     const db = openDb(dbPath);
     const account = findAccountByEmail(db, "recover@example.test")!;
     putBlob(db, account.id, { iv: Buffer.from("123456789012").toString("base64"), data: Buffer.from("ciphertext").toString("base64"), baseRev: 0 });
@@ -172,13 +174,13 @@ describe("verified registration and mailbox recovery", () => {
     expect(scannedHtml).toContain("location.hash");
     expect(scannedHtml.includes(token)).toBe(false);
 
-    const recovered = await recoveryVerifyRoute.POST(post("/account/recover/verify", { token, newPassword: "new password" }));
+    const recovered = await recoveryVerifyRoute.POST(post("/account/recover/verify", { token, newPassword: "new-password-2026" }));
     const payload = await json(recovered);
     expect(recovered.status).toBe(200);
     expect(payload.blobDropped).toBe(true);
     expect(getBlob(db, account.id)).toBeNull();
     expect(payload).not.toHaveProperty("data");
-    expect((await recoveryVerifyRoute.POST(post("/account/recover/verify", { token, newPassword: "third password" }))).status).toBe(400);
+    expect((await recoveryVerifyRoute.POST(post("/account/recover/verify", { token, newPassword: "third-password-2026" }))).status).toBe(400);
   });
 
   it("authenticates signed bounce events, suppresses the mailbox, and rejects replay", async () => {
