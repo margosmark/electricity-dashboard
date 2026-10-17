@@ -31,11 +31,13 @@ import { getProcessIdentity } from "@/lib/greenbutton/config";
  *
  * WHY IT IS HERE NOW: this page is the sole custodian of the user's meter
  * readings (`energy_data_v2` in localStorage), and it renders THIRD-PARTY HTML
- * ON ITS OWN ORIGIN — `next.config.ts` rewrites `/oeb-rates-page` straight to
- * `www.oeb.ca`. Anything that can inject markup or script into that OEB page
- * would otherwise execute same-origin, with direct read access to the
- * readings. `X-Frame-Options` does nothing for this: it is not clickjacking,
- * it is same-origin execution. CSP is the control that contains it.
+ * ON ITS OWN ORIGIN — the `/oeb-rates-page` route handler
+ * (src/app/oeb-rates-page/route.ts, formerly a next.config rewrite) serves
+ * `www.oeb.ca`'s HTML at this origin. Anything that can inject markup or
+ * script into that OEB page would otherwise execute same-origin, with
+ * direct read access to the readings. `X-Frame-Options` does nothing for
+ * this: it is not clickjacking, it is same-origin execution. CSP is the
+ * control that contains it.
  *
  * WHAT THIS POLICY ACTUALLY BUYS — stated plainly, because it is weaker than
  * the textbook version and pretending otherwise would be worse than having none.
@@ -95,9 +97,9 @@ import { getProcessIdentity } from "@/lib/greenbutton/config";
  * only — see lib/openMeteo.ts). Everything else, including the custodian's ESPI
  * feed, is same-origin via /greenbutton/usage.
  *
- * The OEB rewrite inherits this policy (headers apply on `/:path*`), which is
- * the point: third-party HTML rendered here is then held to `default-src
- * 'self'` and cannot load script, frames or connections from our origin.
+ * The OEB route handler inherits this policy (headers apply on `/:path*`),
+ * which is the point: third-party HTML served here is then held to `default-
+ * src 'self'` and cannot load script, frames or connections from our origin.
  */
 function buildCsp(upgradeInsecureRequests: boolean): string {
   return [
