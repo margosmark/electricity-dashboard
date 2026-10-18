@@ -27,13 +27,14 @@ import TabNav from './TabNav';
 import Dashboard from './Dashboard';
 import DualHeatmap from './DualHeatmap';
 import BillAccrualCurve from './BillAccrualCurve';
-import PlanSwitchTimeline from './PlanSwitchTimeline';
+import PlanSwitchTimeline, { savingDescription } from './PlanSwitchTimeline';
 import { saveEnergyData } from '@/lib/storage';
 import BestChoiceChip from './BestChoiceChip';
 import VerdictLine from './VerdictLine';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
 import { buildHeatmapData, parseUsageSummaries, processRawData, type RateSet } from '@/lib/energy';
 import { projectMonthBill } from '@/lib/billProjection';
+import { setLocale, t } from '@/i18n';
 
 const OEB_FIXTURE = fs.readFileSync(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/oebRates.fixture.html'),
@@ -899,6 +900,23 @@ describe('Wave R 4d — the card answers its own question', () => {
  * ========================================================================== */
 
 describe('Wave R 4c — the plan-switch decision timeline', () => {
+  it('gives positive and negative signed callouts distinct, directionally correct meanings', () => {
+    const translate = (key: string, params?: Record<string, string | number>) => `${key}:${params?.amount}`;
+    expect(savingDescription(5.55, translate)).toBe('switchTimeline.potentialSaving:$5.55');
+    expect(savingDescription(-5.55, translate)).toBe('switchTimeline.actualCheaper:$5.55');
+    expect(savingDescription(0, translate)).toBe('switchTimeline.potentialSaving:$0.00');
+  });
+
+  it('localizes positive and negative meanings in English and French', () => {
+    setLocale('en');
+    expect(savingDescription(5.55, t)).toContain('Potential amount saved by switching');
+    expect(savingDescription(-5.55, t)).toContain('actual plan was cheaper');
+    setLocale('fr');
+    expect(savingDescription(5.55, t)).toContain('potentiellement économisé');
+    expect(savingDescription(-5.55, t)).toContain('était moins chère');
+    setLocale('en');
+  });
+
   const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
   const summaries = parseUsageSummaries(
     fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
@@ -910,7 +928,7 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
     expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
   });
 
-  it('draws one segment per billing period, coloured by its detected plan', () => {
+  it('draws one segment per billing period, coloured by its detected plan', async () => {
     expect(summaries.length).toBeGreaterThan(1);
     render(<PlanSwitchTimeline summaries={summaries} allData={[]} />);
 
@@ -921,9 +939,23 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
       const segment = screen.getByTestId(`switch-segment-${summary.startDate}`);
       expect(segment).toHaveAttribute('data-plan', 'TOU'); // the fixture is TOU
       expect(segment).toHaveAttribute('data-counted', 'false'); // no readings supplied
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.startDate));
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.endDate));
+      expect(segment).toHaveAttribute('tabindex', '0');
     }
 
-    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/table below/i);
+    const anchors = screen.getAllByTestId('switch-month-anchor');
+    expect(anchors.length).toBeGreaterThan(1);
+    expect(anchors.every((anchor) => /\d{4}/.test(anchor.textContent ?? ''))).toBe(true);
+    expect(screen.getAllByTestId('switch-period-detail')).toHaveLength(summaries.length);
+    const details = screen.getByText('View full billing-period dates').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    await userEvent.setup().click(screen.getByText('View full billing-period dates'));
+    expect(details).toHaveAttribute('open');
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/positive amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/negative amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/green means/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/gray means/i);
     expect(screen.getByRole('heading', { name: 'Plan-switch decision timeline' })).toBeInTheDocument();
   });
 
