@@ -33,6 +33,7 @@ import BestChoiceChip from './BestChoiceChip';
 import VerdictLine from './VerdictLine';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
 import { buildHeatmapData, parseUsageSummaries, processRawData, type RateSet } from '@/lib/energy';
+import { buildSwitchReport } from '@/lib/planTimeline';
 import { projectMonthBill } from '@/lib/billProjection';
 import { setLocale, t } from '@/i18n';
 
@@ -921,6 +922,57 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
   const summaries = parseUsageSummaries(
     fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
   );
+
+  it('renders signed callouts from a populated report, including an untrusted model', () => {
+    const withTotal = (summary: (typeof summaries)[number], amount: number, plan?: 'TOU' | 'Tiered') => ({
+      ...summary,
+      items: summary.items.map((item) => {
+        if (item.note === 'Total Electricity Charges') return { ...item, amount };
+        if (plan === 'Tiered' && /peak/i.test(item.note)) return { ...item, note: 'Tiered' };
+        return item;
+      }),
+    });
+    const fixtureSummaries = [
+      withTotal(summaries[0], 10_000),
+      withTotal(summaries[1], 0, 'Tiered'),
+      withTotal(summaries[2], 10_000),
+    ];
+    const readings = fixtureSummaries.flatMap((summary, index) => {
+      const periodRaw: { timestamp: number; usage_kwh: number }[] = [];
+      for (let day = 0; day < summary.days; day++) {
+        const date = new Date(`${summary.startDate}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + day);
+        for (let hour = 0; hour < 24; hour++) {
+          date.setUTCHours(hour);
+          periodRaw.push({ timestamp: Math.floor(date.getTime() / 1000), usage_kwh: 1.5 });
+        }
+      }
+      const tieredWins: RateSet = index === 1
+        ? {
+            ...RATES,
+            tou: { offPeak: 100, midPeak: 100, onPeak: 100 },
+            tiered: { ...RATES.tiered, tier1: 0.1, tier2: 0.1 },
+            ulo: { overnight: 100, weekendOffPeak: 100, midPeak: 100, onPeak: 100 },
+          }
+        : RATES;
+      return processRawData(periodRaw, [tieredWins]);
+    });
+    const report = buildSwitchReport(fixtureSummaries, readings, []);
+    expect(report.rows[1].plan).toBe('Tiered');
+    expect(report.rows[1].saving).toBeLessThan(0);
+    expect(report.rows[2].saving).toBeGreaterThan(0);
+    expect(report.rows[2].counted).toBe(false);
+
+    render(<PlanSwitchTimeline summaries={fixtureSummaries} allData={readings} />);
+    const negative = screen.getByTestId(`switch-bubble-${fixtureSummaries[1].startDate}`);
+    const untrustedPositive = screen.getByTestId(`switch-bubble-${fixtureSummaries[2].startDate}`);
+    expect(negative).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[1].saving!).toFixed(2)}`));
+    expect(negative).toHaveAttribute('aria-label', expect.stringContaining('actual plan was cheaper'));
+    expect(untrustedPositive).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[2].saving!).toFixed(2)}`));
+    expect(untrustedPositive).toHaveAttribute('data-counted', 'false');
+    expect(untrustedPositive).toHaveTextContent(/untrusted/i);
+    expect(untrustedPositive).toHaveAttribute('aria-label', expect.stringContaining('Potential amount saved'));
+  });
 
   it('says what is missing when there are no bills yet', () => {
     render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
