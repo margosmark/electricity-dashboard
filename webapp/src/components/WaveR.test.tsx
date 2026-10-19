@@ -1025,6 +1025,7 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
 
   it('draws one segment per billing period, coloured by its detected plan', async () => {
     expect(summaries.length).toBeGreaterThan(1);
+    setLocale('en');
     render(<PlanSwitchTimeline summaries={summaries} allData={[]} />);
 
     const card = screen.getByTestId('plan-switch-timeline');

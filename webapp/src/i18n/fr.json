@@ -45,7 +45,7 @@
   "account.recoveryRequest": "Si cette boîte peut recevoir des courriels, un lien de récupération est en route. Ouvrez-le pour choisir un nouveau mot de passe.",
   "account.recoverySaved": "Je l'ai enregistré",
   "account.recoveryTitle": "Conservez ce code de récupération",
-  "account.registrationClosed": "La création de compte est fermée jusqu'à la configuration de la vérification par courriel et de la politique concrète de conservation. Vous ne choisirez une phrase secrète qu'après avoir prouvé que cette adresse vous appartient.",
+  "account.registrationClosed": "La création de compte est fermée jusqu'à la configuration de la vérification par courriel. Vous ne choisirez une phrase secrète qu'après avoir prouvé que cette adresse vous appartient.",
   "account.setPassword": "Définir le nouveau mot de passe",
   "account.signIn": "Se connecter",
   "account.signOut": "Se déconnecter",
