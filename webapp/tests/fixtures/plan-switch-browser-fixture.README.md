@@ -1,6 +1,6 @@
 Plan-Switch synthetic browser fixture
 
-The committed billing-period rows in `plan-switch-browser-periods.json` are derived from the existing public synthetic ESPI fixture `usage-summary-synthetic.xml`; the helper deterministically adjusts only synthetic totals/plan notes and generates hourly readings in memory. No private billing export or customer data is used.
+The helper preserves the fixture periods' declared kWh, distributes that synthetic usage deterministically over hourly readings, and reconciles synthetic charge/tax/credit lines to the same readings and explicit fixture rate schedule. The resulting report must classify all three known periods as modeled and counted within the $1 model tolerance; the two switch bubbles remain signed (the middle switch is negative, the final switch positive). No private billing export or customer data is used.
 
 Usage in a Playwright spec/script (from `webapp/`):
 
@@ -12,4 +12,4 @@ Usage in a Playwright spec/script (from `webapp/`):
 
 The helper seeds app storage and intercepts `/api/rates` with the fixture's explicit deterministic rate schedule, so QA gets the same signed report on a production preview without mutating application code. Run against a fresh browser context. For the genuine empty state, use a separate fresh context and do not call the seed helper. Set `oeo_locale` and the theme control through the app UI or localStorage before navigation for the requested locale/theme matrix.
 
-The supporting unit test is `webapp/src/lib/planSwitchBrowserFixture.test.ts`; it checks generated point count, both signs, the untrusted label state, and populated segment count. It does not replace independent production-browser QA.
+The supporting unit test is `webapp/src/lib/planSwitchBrowserFixture.test.ts`; it checks generated point count and kWh, both signed bubbles, trust/count totals and populated segment count. It does not replace independent production-browser QA.

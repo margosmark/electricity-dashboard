@@ -12,9 +12,23 @@ describe('synthetic populated Plan-Switch browser fixture', () => {
 
     const readings = processRawData(points, planSwitchFixtureRates);
     const report = buildSwitchReport(summaries, readings, []);
+
+    expect(report.rows).toHaveLength(3);
+    expect(report.known).toBe(3);
+    expect(report.modeled).toBe(3);
+    expect(report.counted).toBe(3);
+    expect(report.untrusted).toBe(0);
+    expect(report.rows.every((row) => Math.abs(row.modelDelta ?? Infinity) <= 1)).toBe(true);
+    for (const summary of summaries) {
+      const measured = points
+        .filter((point) => point.timestamp >= summary.start && point.timestamp < summary.start + summary.duration)
+        .reduce((sum, point) => sum + point.usage_kwh, 0);
+      expect(measured).toBeCloseTo(summary.consumption?.scaled ?? 0, 6);
+    }
     expect(report.rows[1].saving).toBeLessThan(0);
     expect(report.rows[2].saving).toBeGreaterThan(0);
-    expect(report.rows[2].counted).toBe(false);
+    expect(report.rows[1].counted).toBe(true);
+    expect(report.rows[2].counted).toBe(true);
     const timeline = buildSwitchTimeline(report);
     expect(timeline.segments).toHaveLength(3);
     expect(timeline.segments.filter((segment) => segment.saving !== null).length).toBeGreaterThanOrEqual(2);
