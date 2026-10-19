@@ -22,6 +22,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import type { FocusEvent } from 'react';
 import { GitBranch } from 'lucide-react';
 import { buildSwitchReport } from '@/lib/planTimeline';
 import { buildSwitchTimeline, type SwitchTimeline } from '@/lib/switchTimeline';
@@ -100,6 +101,28 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
 
   const anchors = monthAnchors(model);
 
+  // Keep keyboard focus on a signed saving callout visible inside the
+  // horizontally scrollable chart. Use an immediate, minimal scroll so the
+  // focus indicator is not left clipped while preserving touch scrolling.
+  function revealFocusedBubble(event: FocusEvent<HTMLDivElement>) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.matches('[data-testid^="switch-bubble-"]')) return;
+    const viewport = event.currentTarget;
+    const viewportRect = viewport.getBoundingClientRect();
+    const visibleLeft = viewportRect.left + viewport.clientLeft;
+    const visibleRight = visibleLeft + viewport.clientWidth;
+    const bubbleRect = target.getBoundingClientRect();
+    let delta = 0;
+    if (bubbleRect.width > viewport.clientWidth) {
+      delta = bubbleRect.left - visibleLeft;
+    } else if (bubbleRect.left < visibleLeft) {
+      delta = bubbleRect.left - visibleLeft;
+    } else if (bubbleRect.right > visibleRight) {
+      delta = bubbleRect.right - visibleRight;
+    }
+    if (delta !== 0) viewport.scrollLeft += delta;
+  }
+
   if (model.segments.length === 0) {
     return (
       <section
@@ -139,7 +162,7 @@ export function PlanSwitchTimeline({ summaries, allData }: PlanSwitchTimelinePro
         </div>
       </div>
 
-      <div className="overflow-x-auto pt-8 pb-2" data-testid="switch-timeline-bar">
+      <div className="overflow-x-auto pt-8 pb-2" data-testid="switch-timeline-bar" onFocusCapture={revealFocusedBubble}>
         <div className="min-w-[560px]">
           <div className="relative h-6" aria-label={t('switchTimeline.dateAxis')}>
             {anchors.map((anchor) => (

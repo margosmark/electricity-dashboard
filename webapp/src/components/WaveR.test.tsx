@@ -972,6 +972,39 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
     expect(untrustedPositive).toHaveAttribute('data-counted', 'false');
     expect(untrustedPositive).toHaveTextContent(/untrusted/i);
     expect(untrustedPositive).toHaveAttribute('aria-label', expect.stringContaining('Potential amount saved'));
+
+    // Focus must reveal the full label when it extends past either edge of
+    // the scrollport, regardless of which signed callout receives focus.
+    const viewport = screen.getByTestId('switch-timeline-bar');
+    Object.defineProperty(viewport, 'clientWidth', { configurable: true, value: 349 });
+    Object.defineProperty(viewport, 'clientLeft', { configurable: true, value: 0 });
+    vi.spyOn(viewport, 'getBoundingClientRect').mockReturnValue({
+      left: 100, right: 449, top: 0, bottom: 100, width: 349, height: 100, x: 100, y: 0,
+      toJSON: () => ({}),
+    });
+    for (const bubble of [negative, untrustedPositive]) {
+      const rect = vi.spyOn(bubble, 'getBoundingClientRect');
+      viewport.scrollLeft = 100;
+      rect.mockReturnValue({
+        left: 90, right: 180, top: 0, bottom: 20, width: 90, height: 20, x: 90, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(90);
+      expect(document.activeElement).toBe(bubble);
+      expect(bubble.className).toContain('focus-visible:outline');
+
+      bubble.blur();
+      viewport.scrollLeft = 0;
+      rect.mockReturnValue({
+        left: 400, right: 460, top: 0, bottom: 20, width: 60, height: 20, x: 400, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(11);
+      expect(document.activeElement).toBe(bubble);
+      rect.mockRestore();
+    }
   });
 
   it('says what is missing when there are no bills yet', () => {
