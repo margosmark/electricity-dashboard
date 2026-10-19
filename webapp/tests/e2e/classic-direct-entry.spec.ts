@@ -14,14 +14,14 @@ test.describe('Classic direct entry', () => {
   for (const locale of ['en', 'fr'] as const) {
     test(`empty Plans guidance distinguishes usage from bill history (${locale})`, async ({ page }) => {
       await page.addInitScript((value) => localStorage.setItem('oeo_locale', value), locale);
-      const response = await page.goto('/classic');
+      const response = await page.goto('/classic#tab=plans');
       expect(response?.status()).toBe(200);
       const dialog = page.getByRole('dialog');
       if (await dialog.isVisible()) {
         await dialog.getByRole('button', { name: /cancel|annuler/i }).click();
         await expect(dialog).toBeHidden();
       }
-      await page.getByTestId('tab-plans').click({ force: true });
+      await expect(page.getByTestId('tab-plans')).toHaveAttribute('aria-selected', 'true');
       const empty = page.getByTestId('switch-timeline-empty');
       await expect(empty).toBeVisible();
       await expect(empty).toContainText(locale === 'en' ? 'Usage-only analysis already works' : 'L’analyse de la consommation fonctionne déjà');
