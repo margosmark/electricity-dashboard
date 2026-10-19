@@ -1009,7 +1009,17 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
 
   it('says what is missing when there are no bills yet', () => {
     render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
-    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/No billing periods yet/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/Usage-only analysis already works/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/export that contains bills/);
+    expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
+  });
+
+  it('explains the usage-only and bill-export distinction in French', () => {
+    setLocale('fr');
+    render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
+    const empty = screen.getByTestId('switch-timeline-empty');
+    expect(empty).toHaveTextContent(/L’analyse de la consommation fonctionne déjà/);
+    expect(empty).toHaveTextContent(/export contenant des factures/);
     expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
   });
 

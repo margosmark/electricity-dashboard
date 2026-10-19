@@ -1090,7 +1090,7 @@
   "switchTimeline.dateAxis": "Billing-period dates; labels mark months and years",
   "switchTimeline.days_one": "{days} day",
   "switchTimeline.days_other": "{days} days",
-  "switchTimeline.emptyNote": "No billing periods yet — upload an export with bills to draw the switch history.",
+  "switchTimeline.emptyNote": "Usage-only analysis already works with your readings. To see bill-period history and compare plan costs, upload an export that contains bills.",
   "switchTimeline.eyebrow": "The audit trail, as a picture",
   "switchTimeline.footnote": "A positive amount is the modelled amount potentially saved by switching to this period’s cheapest alternative. A negative amount means your actual plan was cheaper than that alternative by the shown amount. Green means the period is counted/modelled in this report; gray means it is untrusted and not counted. Segment widths are proportional to real days. Month labels anchor the date axis; focus or point to a segment for its full billing-period dates. Every figure is also in the table below.",
   "switchTimeline.gapReason": "No bill we hold covers these days.",

@@ -1090,7 +1090,7 @@
   "switchTimeline.dateAxis": "Dates des périodes de facturation; les repères indiquent les mois et les années",
   "switchTimeline.days_one": "{days} jour",
   "switchTimeline.days_other": "{days} jours",
-  "switchTimeline.emptyNote": "Aucune période de facturation pour l’instant — téléversez un export contenant des factures pour dresser l’historique des changements.",
+  "switchTimeline.emptyNote": "L’analyse de la consommation fonctionne déjà avec vos relevés. Pour consulter l’historique des périodes de facturation et comparer les coûts des grilles, téléversez un export contenant des factures.",
   "switchTimeline.eyebrow": "La piste d’audit, en images",
   "switchTimeline.footnote": "Un montant positif est l’économie potentielle modélisée en passant à la grille de rechange la moins chère pour cette période. Un montant négatif signifie que votre grille réelle était moins chère que cette grille de rechange du montant indiqué. Le vert signifie que la période est comptée/modélisée dans ce rapport; le gris signifie qu’elle n’est pas fiable et n’est pas comptée. La largeur des segments est proportionnelle aux vrais jours. Les repères mensuels situent les dates; placez le pointeur ou le focus sur un segment pour afficher les dates complètes de la période. Chaque chiffre figure aussi dans le tableau ci-dessous.",
   "switchTimeline.gapReason": "Aucune facture en notre possession ne couvre ces jours.",
