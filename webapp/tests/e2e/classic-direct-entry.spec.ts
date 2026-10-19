@@ -17,8 +17,11 @@ test.describe('Classic direct entry', () => {
       const response = await page.goto('/classic');
       expect(response?.status()).toBe(200);
       const dialog = page.getByRole('dialog');
-      if (await dialog.isVisible()) await dialog.locator('button').last().click();
-      await page.getByTestId('tab-plans').click();
+      if (await dialog.isVisible()) {
+        await dialog.getByRole('button', { name: /cancel|annuler/i }).click();
+        await expect(dialog).toBeHidden();
+      }
+      await page.getByTestId('tab-plans').click({ force: true });
       const empty = page.getByTestId('switch-timeline-empty');
       await expect(empty).toBeVisible();
       await expect(empty).toContainText(locale === 'en' ? 'Usage-only analysis already works' : 'L’analyse de la consommation fonctionne déjà');
