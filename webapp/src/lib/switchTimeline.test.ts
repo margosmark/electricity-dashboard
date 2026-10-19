@@ -56,7 +56,8 @@ describe('buildSwitchTimeline — nothing to draw', () => {
   it('says so instead of drawing an empty bar', () => {
     const timeline = buildSwitchTimeline(report([]));
     expect(timeline).toEqual(EMPTY_SWITCH_TIMELINE);
-    expect(timeline.note).toContain('No billing periods');
+    expect(timeline.note).toContain('Usage-only analysis already works');
+    expect(timeline.note).toContain('export that contains bills');
   });
 });
 
