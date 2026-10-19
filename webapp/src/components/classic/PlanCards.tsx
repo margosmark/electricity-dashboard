@@ -16,7 +16,7 @@ import { type RateSet } from '@/lib/energy';
 import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import { fmtCentsAuto, fmtDay, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
+import { fmtCentsAuto, fmtDateLong, fmtDay, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -109,6 +109,15 @@ function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRa
  *  edges; the edges verbatim when they will not parse — a reformatted string
  *  is still more honest than a dropped one. */
 function windowSpan(startDate: string, endDate: string): string {
+  const startYear = startDate.slice(0, 4);
+  const endYear = endDate.slice(0, 4);
+  if (startYear !== endYear) {
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      return `${fmtDateLong(start)} – ${fmtDateLong(end)}`;
+    }
+  }
   const fmt = (iso: string): string => {
     const d = new Date(`${iso}T00:00:00`);
     if (Number.isNaN(d.getTime())) return iso;

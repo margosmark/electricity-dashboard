@@ -132,6 +132,17 @@ describe('Dashboard', () => {
     expect(billingInput).toBeInTheDocument();
   });
 
+  it('labels plan verdict and cards with the same visible date span', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
+    const plans = within(screen.getByTestId('tab-panel-plans'));
+    const scopes = plans.getAllByTestId('plan-card-scope');
+    expect(scopes).toHaveLength(3);
+    for (const scope of scopes) expect(scope).toHaveTextContent('Dec 31 – Dec 31 on screen');
+    expect(plans.getByTestId('verdict-line')).toHaveTextContent(/1 day on screen/i);
+  });
+
   it('renders date inputs', async () => {
     await renderLoaded();
     const dateInputs = document.querySelectorAll('input[type="date"]');

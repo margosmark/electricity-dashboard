@@ -2,21 +2,16 @@
 
 /**
  * Persistent staleness banner: shown when the OEB page carries an
- * effectiveDate newer than the shipped /api/rates set. Never dismissible —
- * the whole point is that it stays until the rates file is updated (that is
- * also what the weekly cron nudges about).
+ * effectiveDate newer than the rates currently used by this dashboard.
  *
- * Contains: deep-link editing hint (GitHub edit URL for the rates file) and
- * a computed sample impact — the last ~30 days of the user's own readings
- * repriced under the incoming set, per plan.
+ * Contains source/effective dates and an optional sample impact. Rate
+ * publication is maintained separately; this notice offers no update action.
  */
 
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { StalenessResult } from '@/hooks/useRateStaleness';
 import { fmtCentsAuto, fmtKwh, fmtMoney, fmtSignedMoney, useTranslation } from '@/i18n';
 
-export const RATES_FILE_EDIT_URL =
-  'https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts';
 
 const money = (n: number) => (n < 0 ? `-${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
@@ -63,8 +58,6 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
               {money(impact.costCurrent)} → {money(impact.costNew)} ({fmtSignedMoney(impact.delta)})
             </span>
             {' · '}
-            {/* The canonical plan id stays: this is the operator's own
-                rates-file triage line, and Wave C's test pins "TOU +$1.40". */}
             {impact.perPlan
               .map((p) => `${p.plan} ${fmtSignedMoney(p.delta)}`)
               .join(' · ')}
@@ -77,17 +70,6 @@ export default function RateStalenessBanner({ result }: { result: StalenessResul
           </p>
         )}
       </div>
-
-      <a
-        href={RATES_FILE_EDIT_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-testid="banner-edit-link"
-        className="inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors"
-      >
-        {t('staleness.editLink')}
-        <ExternalLink size={14} strokeWidth={4} />
-      </a>
     </div>
   );
 }

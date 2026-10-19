@@ -817,6 +817,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           onOpenMoney={() => selectTab('money')}
           onOpenPlans={() => selectTab('plans')}
           rateMismatch={Boolean(staleness.stale)}
+          staleness={staleness}
           latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
           floor={floor}
           usage={{
@@ -871,10 +872,10 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           comparison={comparison}
           userPlan={userPlan}
           setUserPlan={setUserPlan}
-          days={windowDays}
+          days={viewRange ? daysBetweenDayKeys(viewRange.start, viewRange.end) : 0}
           activeRateSet={activeRateSet}
-          startDate={startDate}
-          endDate={endDate}
+          startDate={viewRange?.start ?? startDate}
+          endDate={viewRange?.end ?? endDate}
           wfh={wfh}
           shiftAnalysis={shiftAnalysis}
           verification={verification}
