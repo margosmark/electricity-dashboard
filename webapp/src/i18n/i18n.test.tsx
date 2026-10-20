@@ -65,10 +65,10 @@ describe('i18n catalogs', () => {
 
   it('preserves the root registration-closed copy exactly', () => {
     expect(en['account.registrationClosed']).toBe(
-      'Registration is closed until mailbox verification is configured. You will choose a passphrase only after proving control of your email address.',
+      'Registration is closed until mailbox verification and the concrete retention policy are configured. You will choose a passphrase only after proving control of your email address.',
     );
     expect(fr['account.registrationClosed']).toBe(
-      "La création de compte est fermée jusqu'à la configuration de la vérification par courriel. Vous ne choisirez une phrase secrète qu'après avoir prouvé que cette adresse vous appartient.",
+      "La création de compte est fermée jusqu'à la configuration de la vérification par courriel et de la politique concrète de conservation. Vous ne choisirez une phrase secrète qu'après avoir prouvé que cette adresse vous appartient.",
     );
   });
 
