@@ -20,6 +20,10 @@
 
 import { useEffect } from "react";
 
+export function shouldWarmRateCache(storage: Pick<Storage, "getItem">): boolean {
+  return storage.getItem("energy_data_v2") !== null;
+}
+
 export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") return;
@@ -28,6 +32,9 @@ export default function ServiceWorkerRegister() {
     let disposed = false;
 
     const warmRates = () => {
+      // An empty dashboard cannot price anything. Avoid a rates request until
+      // this browser has household readings; imports fetch rates on demand.
+      if (!shouldWarmRateCache(localStorage)) return;
       // Fires through the controlling worker, whose fetch handler caches it.
       fetch("/api/rates").catch(() => {});
     };

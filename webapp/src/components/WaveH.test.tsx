@@ -127,7 +127,16 @@ afterEach(() => {
  * 1. Sample / demo data button
  * ========================================================================== */
 
-describe('Wave H 1 — Try with example data', () => {
+describe('Wave H 1 — sample data', () => {
+  it('does not request rate data on a fresh root load with no readings', async () => {
+    stubFetch();
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(vi.mocked(fetch).mock.calls.filter((call: unknown[]) => String(call[0]) === '/api/rates')).toHaveLength(0);
+  });
+
   it('offers itself on the empty upload screen, labelled as not real usage', async () => {
     stubFetch();
     render(<Dashboard />);
@@ -178,6 +187,12 @@ describe('Wave H 1 — Try with example data', () => {
     );
     expect(startInput.value).toBe(format(new Date(1704067200 * 1000), 'yyyy-MM-dd'));
     expect(endInput.value).toBe(format(new Date(1704070800 * 1000), 'yyyy-MM-dd'));
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Plans' }));
+    const scopes = screen.getAllByTestId('plan-card-scope');
+    expect(scopes).toHaveLength(3);
+    expect(scopes[0]).toHaveTextContent(format(new Date(`${startInput.value}T00:00:00`), 'MMM d'));
+    expect(screen.getByTestId('verdict-line')).toHaveAttribute('data-window-days', '1');
   });
 
   it('explains a failed download instead of opening an empty dashboard', async () => {

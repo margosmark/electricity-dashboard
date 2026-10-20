@@ -519,6 +519,20 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.queryByTestId('accrual-chart')).not.toBeInTheDocument();
   });
 
+  it('localizes the empty billing-period note after switching to French', () => {
+    setLocale('en');
+    setLocale('fr');
+    const view = render(
+      <BillAccrualCurve rows={[]} plan="Tiered" period={null} projection={projectMonthBill([], 'Tiered', oct(10))} today={oct(10)} />,
+    );
+    expect(screen.getByTestId('accrual-empty')).toHaveTextContent(
+      'Aucune période de facturation ouverte à accumuler pour l’instant.',
+    );
+    expect(screen.getByTestId('accrual-empty')).not.toHaveTextContent('No open billing period');
+    view.unmount();
+    setLocale('en');
+  });
+
   it('accrues the open period and prints every number the chart draws', () => {
     const rows = hourly(oct(1), 10);
     render(
@@ -1009,12 +1023,23 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
 
   it('says what is missing when there are no bills yet', () => {
     render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
-    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/No billing periods yet/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/Usage-only analysis already works/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/export that contains bills/);
+    expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
+  });
+
+  it('explains the usage-only and bill-export distinction in French', () => {
+    setLocale('fr');
+    render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
+    const empty = screen.getByTestId('switch-timeline-empty');
+    expect(empty).toHaveTextContent(/L’analyse de la consommation fonctionne déjà/);
+    expect(empty).toHaveTextContent(/export contenant des factures/);
     expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
   });
 
   it('draws one segment per billing period, coloured by its detected plan', async () => {
     expect(summaries.length).toBeGreaterThan(1);
+    setLocale('en');
     render(<PlanSwitchTimeline summaries={summaries} allData={[]} />);
 
     const card = screen.getByTestId('plan-switch-timeline');

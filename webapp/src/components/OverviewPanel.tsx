@@ -29,8 +29,8 @@ import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
 import { daysBetweenDayKeys } from '@/lib/dateSpan';
 import UsagePanel, { type UsagePanelProps } from '@/components/UsagePanel';
-import { RATES_FILE_EDIT_URL } from '@/components/RateStalenessBanner';
 import type { AxisPeriod } from '@/lib/billingAxis';
+import type { StalenessResult } from '@/hooks/useRateStaleness';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -56,6 +56,7 @@ export type OverviewPanelProps = {
   usage: Omit<UsagePanelProps, 'embedded'>;
   importReview: boolean;
   rateMismatch?: boolean;
+  staleness?: StalenessResult;
   /** Latest file-backed billing window, never a mockup month. */
   latestPeriod: AxisPeriod | null;
   /** Source-derived always-on baseline for the same data window. */
@@ -80,6 +81,7 @@ export default function OverviewPanel({
   usage,
   importReview,
   rateMismatch = false,
+  staleness,
   latestPeriod,
   floor,
   showUsage = true,
@@ -216,7 +218,6 @@ export default function OverviewPanel({
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={onOpenPlans} className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.comparePlans')}</button>
-            <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.rateSchedule')}</a>
           </div>
         </div>
 
@@ -228,7 +229,13 @@ export default function OverviewPanel({
           {rateMismatch || importReview ? <ul className="divide-y divide-edge-muted">
             {rateMismatch && <li className="py-3 first:pt-0">
               <p className="text-sm font-medium">{t('staleness.title')}</p>
-              <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('staleness.editLink')}</a>
+              {staleness?.stale && <p data-testid="overview-rate-dates" className="mt-1 text-xs text-ink-3">
+                {t('staleness.datesA')}{' '}
+                <span>{staleness.stale.oebEffectiveDate}</span>
+                {' — '}
+                {t('staleness.datesB')}{' '}
+                <span>{staleness.stale.shippedEffectiveDate}</span>
+              </p>}
             </li>}
             {importReview && <li className="py-3 last:pb-0">
               <p className="text-sm font-medium">{t('overview.importReviewBody')}</p>

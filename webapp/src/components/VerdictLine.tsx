@@ -30,7 +30,6 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
   const verdict = buildVerdict(comparison, userPlan, days);
   if (!verdict) return null;
   const deltaVsCheapest = verdict.currentCost - verdict.costs[verdict.best];
-  const worseVsCurrent = verdict.costs[verdict.worst] - verdict.currentCost;
   const cheapestLabel = t(`planShort.${verdict.best}`);
 
   /* The reference's own rule: "slabs do not flood colour — verdicts are
@@ -42,7 +41,13 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
     <p
       data-testid="verdict-line"
       data-best-plan={verdict.best}
+      data-current-plan={userPlan}
+      data-current-cost={verdict.currentCost}
+      data-best-cost={verdict.costs[verdict.best]}
+      data-delta={deltaVsCheapest}
+      data-direction={deltaVsCheapest > 0.005 ? 'cheaper-option' : 'already-best'}
       data-already-best={String(verdict.alreadyBest)}
+      data-window-days={verdict.days}
       className="quiet-plan-callout px-4 md:px-6 py-3 text-ink font-semibold uppercase text-[11px] md:text-sm"
     >
       <span className="block mb-1.5">
@@ -64,9 +69,6 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
         )}{' '}
         {t('verdict.cheapestBaseline')}
       </span>{' '}
-      {worseVsCurrent > 0.005 && (
-        <span>{fmtMoney0(worseVsCurrent)} {t('verdict.worse')}</span>
-      )}{' '}
       {verdict.alreadyBest ? (
         <span className="font-medium normal-case text-[10px] md:text-xs">
           {t('verdict.nothingToSwitch', { count: verdict.days, days: verdict.days })}
