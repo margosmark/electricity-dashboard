@@ -281,6 +281,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const { locale } = useTranslation();
   const [rawData, setRawData] = useState<DataPoint[]>([]);
   const [rateHistory, setRateHistory] = useState<RateSet[]>([]);
+  const rateRequestStartedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [parsing, setParsing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -889,11 +890,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // computed from an empty rate set.
       if (mounted && !loadedReadings) setLoading(false);
 
-      try {
-        const res = await fetch("/api/rates");
-        const json = await res.json();
-        if (mounted) setRateHistory(json.historicalRates || []);
-      } catch { /* rate fetch failure degrades to empty history; math returns [] */ }
+      if (loadedReadings) {
+        rateRequestStartedRef.current = true;
+        try {
+          const res = await fetch("/api/rates");
+          const json = await res.json();
+          if (mounted) setRateHistory(json.historicalRates || []);
+        } catch { /* rate fetch failure degrades to empty history; math returns [] */ }
+      }
 
       if (mounted && loadedReadings) setLoading(false);
 
@@ -1015,6 +1019,21 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // staleness.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A first-time visitor needs no rate schedule. If they later load readings,
+  // request it then; stored readings are fetched by the bootstrap above.
+  useEffect(() => {
+    if (rawData.length === 0 || rateRequestStartedRef.current) return;
+    rateRequestStartedRef.current = true;
+    let active = true;
+    void fetch("/api/rates")
+      .then((res) => res.json())
+      .then((json) => {
+        if (active) setRateHistory(json.historicalRates || []);
+      })
+      .catch(() => { /* rate fetch failure degrades to empty history; math returns [] */ });
+    return () => { active = false; };
+  }, [rawData]);
 
   /**
    * Accept ONE file (the historical path, unchanged) or 2+ files at once.

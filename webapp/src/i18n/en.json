@@ -45,7 +45,7 @@
   "account.recoveryRequest": "If that mailbox can receive mail, a recovery link is on its way. Open it to choose a new password.",
   "account.recoverySaved": "I have saved it",
   "account.recoveryTitle": "Save this recovery code",
-  "account.registrationClosed": "Registration is closed until mailbox verification and the concrete retention policy are configured. You will choose a passphrase only after proving control of your email address.",
+  "account.registrationClosed": "Registration is closed until mailbox verification is configured. You will choose a passphrase only after proving control of your email address.",
   "account.setPassword": "Set new password",
   "account.signIn": "Sign in",
   "account.signOut": "Sign out",

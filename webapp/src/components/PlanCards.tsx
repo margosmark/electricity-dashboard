@@ -182,7 +182,12 @@ export default function PlanCards({
                 or commodity alone. It is the cost of the window on screen,
                 commodity only — the same scope the Overview banner declares —
                 so the card declares it too. */}
-            <div className="text-3xl md:text-4xl mb-1 md:mb-2 font-semibold tabular-nums text-ink">
+            <div
+              data-testid="plan-card-cost"
+              data-plan-id={plan.id}
+              data-cost={comparison?.[plan.id] ?? ''}
+              className="text-3xl md:text-4xl mb-1 md:mb-2 font-semibold tabular-nums text-ink"
+            >
               {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div
