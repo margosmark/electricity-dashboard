@@ -254,7 +254,7 @@ describe('Truth in UI — plan cards', () => {
     render(<VerdictLine comparison={comparison} userPlan="Tiered" days={30} />);
     const lineNode = screen.getByTestId('verdict-line');
     expect(lineNode).toHaveTextContent('Current plan $2,132 vs $1,946 (5¢ Overnight, cheapest) ▲$186 more');
-    expect(lineNode).toHaveTextContent('$634 worse');
+    expect(lineNode).not.toHaveTextContent(/\$634 worse/);
     expect(screen.getByTestId('verdict-delta')).toHaveTextContent('▲$186');
   });
 });
