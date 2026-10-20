@@ -519,6 +519,20 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.queryByTestId('accrual-chart')).not.toBeInTheDocument();
   });
 
+  it('localizes the empty billing-period note after switching to French', () => {
+    setLocale('en');
+    setLocale('fr');
+    const view = render(
+      <BillAccrualCurve rows={[]} plan="Tiered" period={null} projection={projectMonthBill([], 'Tiered', oct(10))} today={oct(10)} />,
+    );
+    expect(screen.getByTestId('accrual-empty')).toHaveTextContent(
+      'Aucune période de facturation ouverte à accumuler pour l’instant.',
+    );
+    expect(screen.getByTestId('accrual-empty')).not.toHaveTextContent('No open billing period');
+    view.unmount();
+    setLocale('en');
+  });
+
   it('accrues the open period and prints every number the chart draws', () => {
     const rows = hourly(oct(1), 10);
     render(

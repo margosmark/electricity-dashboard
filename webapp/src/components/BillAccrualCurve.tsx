@@ -373,7 +373,7 @@ export default function BillAccrualCurve({
           {t('accrual.isMyBillOnPace')}
         </h3>
         <p data-testid="accrual-empty" className="text-[11px] md:text-sm font-bold normal-case text-ink-2">
-          {curve.note}
+          {t('accrual.emptyNote')}
         </p>
         {rateNotice}
       </section>
