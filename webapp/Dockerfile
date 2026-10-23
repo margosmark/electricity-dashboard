@@ -1,5 +1,13 @@
 # Stage 1: Build the application
-FROM node:26-alpine AS builder
+#
+# CVE-2026-111497 (Node2Shell) — pinned 2026-10-23. This base image carries the
+# Brotli decoder OOB write fixed in Node 26.12.1. The tag is PINNED to the exact
+# patch release on purpose: the floating `node:26-alpine` tag resolved to the
+# vulnerable 26.12.0 build between its bump and the 26.12.1 release, so a rebuild
+# in that window shipped a remotely-exploitable runtime with nothing in the
+# diff to show for it. Bump this version DELIBERATELY, in its own commit, with a
+# comment naming the reason — never by loosening it back to a floating tag.
+FROM node:26.12.1-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
@@ -24,7 +32,14 @@ ENV GIT_SHA=$GIT_SHA
 RUN npm run build
 
 # Stage 2: Run the application
-FROM node:26-alpine AS runner
+#
+# CVE-2026-111497 (Node2Shell) — pinned 2026-10-23. The RUNNER stage executes the
+# untrusted input path (HTTP request bodies), so it is the stage that carries the
+# Brotli decoder OOB write fixed in Node 26.12.1. It is pinned to the same exact
+# patch release as the builder above: the two stages must never drift apart, or a
+# rebuild could ship a patched builder and a vulnerable runtime. Bump DELIBERATELY
+# in its own commit, with a comment naming the reason.
+FROM node:26.12.1-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
