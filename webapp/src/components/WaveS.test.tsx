@@ -424,8 +424,11 @@ describe('Wave S 4 — OVERVIEW: strip numbers + the card', () => {
     expect(index('overview-bill-focus')).toBe(2);
     expect(index('rate-by-month')).toBe(3);
     expect(index('overview-plan-attention')).toBe(4);
-    expect(index('totals-strip')).toBe(5);
-    expect(index('efficiency-card')).toBe(6);
+    // The analytics door sits WITH the decision surfaces, before detail —
+    // it is how you leave the answer screen for the analysis.
+    expect(index('overview-analytics-cta-row')).toBe(5);
+    expect(index('totals-strip')).toBe(6);
+    expect(index('efficiency-card')).toBe(7);
     expect(within(screen.getByTestId('overview-plan-summary')).getByTestId('best-choice-banner')).toBeInTheDocument();
   });
 

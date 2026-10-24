@@ -52,10 +52,10 @@ describe('Dashboard', () => {
     expect(screen.getByText(/preparing optimizer/i)).toBeInTheDocument();
   });
 
-  it('renders the three-tab strip after loading, Overview selected', async () => {
+  it('renders the four-tab strip after loading, Overview selected', async () => {
     await renderLoaded();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Plans', 'Money']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Analytics', 'Plans', 'Money']);
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
   });
@@ -178,11 +178,48 @@ describe('Dashboard', () => {
   it('shows the usage analysis inside Overview', async () => {
     await renderLoaded();
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+    // Each analysis group is framed by the question it answers — in the
+    // Overview embed as well as the Analytics destination.
+    expect(screen.getByText('When do you use power?')).toBeInTheDocument();
+    expect(screen.getByText('How does weather relate to usage?')).toBeInTheDocument();
+    expect(screen.getByText('Which days were unusual?')).toBeInTheDocument();
     expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
     expect(screen.getByText(/Weekly Routine Heatmap/i)).toBeInTheDocument();
     // The chart is embedded, not exposed as a fourth tab panel.
     expect(screen.getByTestId('tab-panel-overview')).toContainElement(screen.getByTestId('overview-usage'));
-    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-analytics')).not.toBeInTheDocument();
+  });
+
+  it('routes the overview analytics call to the real Analytics panel', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await user.click(screen.getByTestId('overview-analytics-cta'));
+    expect(screen.getByRole('tab', { name: 'Analytics' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('tab-panel-analytics')).toBeInTheDocument();
+    // The analytics destination keeps the full analysis reachable.
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+    expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
+  });
+
+  it('empty Analytics explains how to add data without rendering empty visualizations', async () => {
+    Storage.prototype.getItem = vi.fn(() => null);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument());
+    // Dismiss the Link Data screen: what remains must be calm and specific.
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    // Fresh Overview: a next action and the Analytics door, and NOTHING
+    // empty-chart shaped — no embed, no heatmap, no zero grids.
+    expect(screen.getByTestId('overview-analytics-cta')).toBeInTheDocument();
+    expect(screen.queryByTestId('overview-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Analytics' }));
+    expect(screen.getByTestId('analytics-empty-state')).toBeInTheDocument();
+    expect(screen.getByText(/Import or try sample data/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Usage Anomalies/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Weekly Routine Heatmap/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('temp-band-card')).not.toBeInTheDocument();
   });
 
   it('shows always-on floor help modal', async () => {
@@ -353,7 +390,7 @@ describe('Dashboard', () => {
 
     // Overview is the default and the only panel on screen.
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
-    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-analytics')).not.toBeInTheDocument();
 
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);

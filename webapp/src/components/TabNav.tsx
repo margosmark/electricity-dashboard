@@ -22,13 +22,13 @@
 'use client';
 
 import { useRef, type ReactNode } from 'react';
-import { Banknote, Gauge, Scale } from 'lucide-react';
+import { Banknote, Gauge, Scale, TrendingUp } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
 import { useTranslation } from '@/i18n';
 
 const ICONS: Record<TabId, typeof Gauge> = {
   overview: Gauge,
-
+  analytics: TrendingUp,
   plans: Scale,
   money: Banknote,
 };
@@ -103,7 +103,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
           aria-label={t('tabnav.aria')}
           aria-orientation="horizontal"
           onKeyDown={onKeyDown}
-          className="flex min-w-0 flex-1 gap-2 overflow-x-auto md:gap-3"
+          className="flex min-w-0 flex-1 gap-1 overflow-x-auto md:gap-3"
         >
           {TABS.map((tab, index) => {
           const Icon = ICONS[tab.id];
@@ -126,7 +126,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
               tabIndex={selected ? 0 : -1}
               title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-xs whitespace-nowrap transition-all ${
+              className={`inline-flex min-h-11 min-w-[64px] flex-1 md:flex-none items-center justify-center gap-1 md:gap-2 px-1.5 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-[10px] md:text-xs whitespace-nowrap transition-all ${
                 selected
                   ? 'bg-card text-ink border-b-2 border-b-accent'
                   : 'bg-inset text-ink-2 hover:text-ink'

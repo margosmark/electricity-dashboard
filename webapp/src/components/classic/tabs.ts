@@ -79,10 +79,16 @@ export function tabFromHash(hash: string | null | undefined): TabId | null {
   if (!hash) return null;
   const match = /^#tab=([a-z]+)$/.exec(hash.trim());
   if (!match) return null;
+  // The quiet variant renamed this destination `analytics`; a link shared
+  // from there must open the classic panel that holds the same analysis.
+  if (match[1] === 'analytics') return 'usage';
   return isTabId(match[1]) ? match[1] : null;
 }
 
 /** Storage read, validated — a corrupt value degrades to the default tab. */
 export function tabFromStorage(raw: string | null | undefined): TabId {
+  // Shared storage key: a quiet build remembers `analytics`, which is this
+  // variant's `usage` — same analysis, two names.
+  if (raw === 'analytics') return 'usage';
   return isTabId(raw) ? raw : DEFAULT_TAB;
 }

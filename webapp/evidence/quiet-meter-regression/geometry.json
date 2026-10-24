@@ -1,16 +1,16 @@
 {
   "task": "t_f6c32622",
-  "generatedAt": "2026-10-15T20:15:48.157Z",
+  "generatedAt": "2026-10-24T04:47:10.062Z",
   "servedBuild": {
-    "sha": "efe1e4f6672355349ae280cb6fa197243351bd08",
-    "buildId": "oxaN0sPwNpcOxte2xxxi5"
+    "sha": "unknown",
+    "buildId": "UWuKPnIB5hHxomWK9K4h7"
   },
-  "gitHead": "efe1e4f6672355349ae280cb6fa197243351bd08",
+  "gitHead": "unknown",
   "screenshots": [
-    "/home/hermes/electricity-dashboard/.worktrees/t_ae772d16/webapp/evidence/quiet-meter-regression/overview-1440-light.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_ae772d16/webapp/evidence/quiet-meter-regression/overview-1440-dark.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_ae772d16/webapp/evidence/quiet-meter-regression/overview-390-light.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_ae772d16/webapp/evidence/quiet-meter-regression/overview-390-dark.png"
+    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-light.png",
+    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-dark.png",
+    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-light.png",
+    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-dark.png"
   ],
   "geometry": {
     "1440x900-light": {
@@ -35,7 +35,7 @@
     }
   },
   "consoleErrorExemptions": [
-    "no-account-backend: Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3216/account/session",
-    "no-account-backend: Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3216/account/notify"
+    "no-account-backend: Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3212/account/session",
+    "no-account-backend: Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3212/account/notify"
   ]
 }

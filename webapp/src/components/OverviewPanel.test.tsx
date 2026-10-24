@@ -33,6 +33,8 @@ const usage = {
   userPlan: 'TOU' as const,
   startDate: '2026-10-01',
   filteredData: [],
+  hasData: false,
+  onImport: vi.fn(),
 };
 const projection = {
   ready: false,
@@ -71,6 +73,7 @@ describe('Overview actionable attention items', () => {
         efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
         onOpenMoney={vi.fn()}
         onOpenPlans={vi.fn()}
+        onOpenAnalytics={vi.fn()}
         importReview
         rateMismatch
         staleness={{
@@ -125,9 +128,10 @@ describe('Overview actionable attention items', () => {
         efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
         onOpenMoney={vi.fn()}
         onOpenPlans={vi.fn()}
+        onOpenAnalytics={vi.fn()}
         importReview={false}
         latestPeriod={null}
-        usage={{ ...usage, processedData: monthlyRows }}
+        usage={{ ...usage, processedData: monthlyRows, hasData: true }}
       />,
     );
     expect(screen.queryByText(/lower than last month/i)).not.toBeInTheDocument();

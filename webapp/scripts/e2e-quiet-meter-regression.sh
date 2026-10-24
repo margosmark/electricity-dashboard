@@ -2,7 +2,8 @@
 # QUIET METER behavioural regression — the ONE command for t_f6c32622.
 #
 # Runs the real production build in a browser and holds the redesign to its
-# behavioural contract: the three-tab strip (no Usage tab) with ARIA keyboard
+# behavioural contract: the four-tab strip (Overview / Analytics / Plans /
+# Money — no Usage tab, `#tab=usage` lands on Analytics) with ARIA keyboard
 # navigation, both themes painting without console/page errors, the Overview's
 # source-derived figures (argmin verdict, inline provisional marker, the
 # 0,2,…,14 rate grid with focusable marks and a semantic companion table),

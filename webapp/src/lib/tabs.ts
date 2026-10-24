@@ -12,7 +12,7 @@
  * what makes the browser back button walk the tabs instead of leaving the app.
  */
 
-export const TAB_IDS = ['overview', 'plans', 'money'] as const;
+export const TAB_IDS = ['overview', 'analytics', 'plans', 'money'] as const;
 
 export type TabId = (typeof TAB_IDS)[number];
 
@@ -41,6 +41,15 @@ export const TABS: readonly TabDef[] = [
   },
 
   {
+    // Quiet Meter progressive disclosure: the dense usage analytics live
+    // HERE, behind a destination that says what question it answers, so
+    // Overview stays a calm decision screen instead of a dashboard wall.
+    id: 'analytics',
+    label: 'Analytics',
+    title: 'Analytics',
+    description: 'Explore when you use power, unusual days, and how weather relates to usage.',
+  },
+  {
     id: 'plans',
     label: 'Plans',
     title: 'Plans & Track Record',
@@ -58,7 +67,7 @@ export function isTabId(value: unknown): value is TabId {
   return typeof value === 'string' && (TAB_IDS as readonly string[]).includes(value);
 }
 
-/** `usage` → `#tab=usage`. */
+/** `plans` → `#tab=plans`. */
 export function tabHash(tab: TabId): string {
   return `#tab=${tab}`;
 }
@@ -74,10 +83,18 @@ export function tabFromHash(hash: string | null | undefined): TabId | null {
   if (!hash) return null;
   const match = /^#tab=([a-z]+)$/.exec(hash.trim());
   if (!match) return null;
+  // Legacy deep links (and the /classic strip, which shares the storage
+  // key) spell this destination `usage` — they land on Analytics rather
+  // than silently degrading to Overview.
+  if (match[1] === 'usage') return 'analytics';
   return isTabId(match[1]) ? match[1] : null;
 }
 
 /** Storage read, validated — a corrupt value degrades to the default tab. */
 export function tabFromStorage(raw: string | null | undefined): TabId {
+  // A remembered `usage` (older quiet builds / the classic strip) keeps its
+  // meaning: the user was looking at their usage analysis, which is now the
+  // Analytics tab.
+  if (raw === 'usage') return 'analytics';
   return isTabId(raw) ? raw : DEFAULT_TAB;
 }

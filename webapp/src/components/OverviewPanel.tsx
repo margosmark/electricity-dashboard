@@ -50,6 +50,8 @@ export type OverviewPanelProps = {
   /** Wired by Dashboard: the mini-line jumps to the MONEY tab. */
   onOpenMoney: () => void;
   onOpenPlans: () => void;
+  /** Wired by Dashboard: the Analytics CTA jumps to the ANALYTICS tab. */
+  onOpenAnalytics: () => void;
   /** Green Button / file-status chip, wired by Dashboard. */
   fileStatus?: React.ReactNode;
   /** Existing usage and insight tools, retained below the decision summary. */
@@ -77,6 +79,7 @@ export default function OverviewPanel({
   efficiency,
   onOpenMoney,
   onOpenPlans,
+  onOpenAnalytics,
   fileStatus,
   usage,
   importReview,
@@ -245,6 +248,25 @@ export default function OverviewPanel({
         </div>
       </section>
 
+
+      {/* The intentional door to the dense analytics: Overview stays a
+          decision screen, and the usage analysis lives one deliberate step
+          away. Shown with OR without data — on a fresh install it is how
+          the dismissed Link Data screen gets back in. */}
+      <section className="quiet-card p-4 md:p-5 flex flex-wrap items-center justify-between gap-3" data-testid="overview-analytics-cta-row">
+        <div className="min-w-[200px]">
+          <h2 className="text-base font-semibold">{t('overview.analyticsCtaTitle')}</h2>
+          <p className="mt-1 text-xs text-ink-3 normal-case">{t('overview.analyticsCtaBody')}</p>
+        </div>
+        <button
+          type="button"
+          data-testid="overview-analytics-cta"
+          onClick={onOpenAnalytics}
+          className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium"
+        >
+          {t('overview.analyticsCta')}
+        </button>
+      </section>
 
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
@@ -456,8 +478,12 @@ export default function OverviewPanel({
         <EfficiencyCard report={efficiency} onOpenMoney={onOpenMoney} />
       )}
 
-      {/* 4. Which file / feed this is, and whether it is connected. */}
-      {showUsage && (
+      {/* 4. Which file / feed this is, and whether it is connected.
+          The embed is data-gated: with no readings loaded there is nothing
+          to analyse, and an empty chart/heatmap here would violate the
+          calm-first Overview contract — the Analytics tab carries the
+          specific "add data" explanation instead. */}
+      {showUsage && usage.hasData && (
         <>
           <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
           <UsagePanel {...usage} embedded />
