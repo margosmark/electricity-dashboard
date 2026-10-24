@@ -249,6 +249,95 @@ test.describe('tab strip @ 780×360 landscape', () => {
 });
 
 /**
+ * Combined accessibility/resilience contract: keyboard selection and visible
+ * focus under reduced motion, plus zoom/breakpoint/safe-area guards. Safe-area
+ * values are zero in headless Chromium, so pin the viewport-fit declaration
+ * and the app's documented 40px bottom clearance floor rather than claiming
+ * hardware inset simulation.
+ */
+for (const locale of LOCALES) {
+  for (const theme of THEMES) {
+    test.describe(`tab strip accessibility @ ${locale} / ${theme}`, () => {
+      test.use({
+        viewport: { width: 320, height: 720 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3,
+        reducedMotion: 'reduce',
+      });
+
+      test('keyboard, reduced motion, 200% text scale, breakpoint and safe-area', async ({ page }) => {
+        await blockOptionalWeather(page);
+        await selectLocale(page, locale);
+        await selectTheme(page, theme);
+        await seedMarkShaped(page);
+        const nav = page.getByTestId('tab-nav');
+        await expect(nav).toBeVisible();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        const tabs = nav.getByRole('tab');
+        await expect(tabs).toHaveCount(4);
+        await tabs.nth(0).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(tabs.nth(1)).toBeFocused();
+        await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+        await page.keyboard.press('End');
+        await expect(tabs.nth(3)).toBeFocused();
+        await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true');
+        await page.keyboard.press('ArrowLeft');
+        await expect(tabs.nth(2)).toBeFocused();
+        await page.keyboard.press('Home');
+        await expect(tabs.nth(0)).toBeFocused();
+        const focusStyle = await tabs.nth(0).evaluate((tab) => ({
+          outlineStyle: getComputedStyle(tab).outlineStyle,
+          outlineWidth: getComputedStyle(tab).outlineWidth,
+          transitionProperty: getComputedStyle(tab).transitionProperty,
+        }));
+        expect(focusStyle.outlineStyle, 'keyboard focus remains visible').not.toBe('none');
+        expect(parseFloat(focusStyle.outlineWidth), 'focus indicator has visible width').toBeGreaterThanOrEqual(2);
+        expect(focusStyle.transitionProperty, 'reduced motion disables tab transitions').toBe('none');
+
+        // Simulate 200% text scaling without relying on a browser-specific zoom
+        // shortcut; verify the tab strip remains viewport-bounded and retains
+        // usable touch targets.
+        await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+        const mobile = await nav.evaluate((element) => ({
+          navRect: element.getBoundingClientRect().toJSON(),
+          viewportWidth: document.documentElement.clientWidth,
+          tablist: element.querySelector<HTMLElement>('[role="tablist"]')?.getBoundingClientRect().toJSON(),
+          targets: [...element.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => ({
+            width: tab.getBoundingClientRect().width,
+            height: tab.getBoundingClientRect().height,
+          })),
+          bodyBottomPadding: getComputedStyle(document.body).paddingBottom,
+          viewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+        }));
+        expect(mobile.navRect.right, 'tab strip stays within the mobile viewport')
+          .toBeLessThanOrEqual(mobile.viewportWidth);
+        expect(mobile.tablist?.right, 'tablist stays within the mobile viewport')
+          .toBeLessThanOrEqual(mobile.viewportWidth);
+        expect(mobile.targets.every((target) => target.width >= 44 && target.height >= 44),
+          'all tab targets stay at least 44×44 CSS px').toBe(true);
+        expect(mobile.viewport, 'installed app opts into device safe areas').toContain('viewport-fit=cover');
+        expect(parseFloat(mobile.bodyBottomPadding), 'content clears the home-indicator floor')
+          .toBeGreaterThanOrEqual(40);
+
+        // Exercise the md breakpoint on the same locale/theme state.
+        await page.setViewportSize({ width: 768, height: 720 });
+        const desktop = await nav.evaluate((element) => ({
+          width: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          gap: getComputedStyle(element.querySelector('[role="tablist"]')!).columnGap,
+        }));
+        expect(desktop.documentWidth, 'no page-level horizontal overflow at tablet breakpoint')
+          .toBeLessThanOrEqual(desktop.width);
+        expect(desktop.gap, 'md breakpoint applies desktop tab spacing at the 200% text scale').toBe('24px');
+      });
+    });
+  }
+}
+
+/**
  * The rule's token, both themes — the value the branch's D1 test pins
  * (`border-b-2 border-edge`, opaque surface, no blur). Asserting 2px is
  * deliberate: `origin/main` still ships `border-b-4 border-edge` with

@@ -121,7 +121,7 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               tabIndex={selected ? 0 : -1}
               title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs whitespace-nowrap transition-all ${
+              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs whitespace-nowrap transition-all motion-reduce:transition-none ${
                 selected
                   ? 'bg-inv text-accent-yellow shadow-hard-blue-3'
                   : 'bg-card text-ink-3 hover:text-ink hover:bg-hover'
