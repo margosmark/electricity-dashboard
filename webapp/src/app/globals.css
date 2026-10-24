@@ -884,6 +884,17 @@ nav[data-testid="tab-nav"] [role="tab"][aria-selected="true"] {
   color: var(--ink) !important;
 }
 
+/* The hover affordance has to be !important too: the base rule above pins
+   every tab's colour, so the non-important `.hover:text-ink` utility on the
+   button always lost the cascade and hovering an inactive tab painted ZERO
+   change (t_656e635d — verified live: hovered Analytics computed colour ==
+   Plans, both rgb(84,92,106)). `:not([aria-selected="true"])` keeps the
+   selected tab on its own rule, so hover lifts the inactive label/icon to
+   the same ink the selected tab already uses. */
+nav[data-testid="tab-nav"] [role="tab"]:hover:not([aria-selected="true"]) {
+  color: var(--ink) !important;
+}
+
 /* Preserve the touch-target contract even where legacy utilities specified a
    smaller height; this also makes hidden icon-only actions usable on phones. */
 button,
