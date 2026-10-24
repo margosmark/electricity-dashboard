@@ -20,6 +20,19 @@ test.describe('Classic direct entry', () => {
     expect(runtimeErrors).toEqual([]);
   });
 
+  test('the quiet variant’s `analytics` vocabulary lands on classic Usage', async ({ page }) => {
+    // Both variants share the `oeo_active_tab` key and the `#tab=` vocabulary,
+    // and spell the analysis destination differently (quiet: analytics,
+    // classic: usage). Either statement must open classic's Usage panel —
+    // a shared link or a remembered tab must never degrade to Overview.
+    await page.goto('/classic#tab=analytics');
+    await expect(page.getByTestId('tab-usage')).toHaveAttribute('aria-selected', 'true');
+
+    await page.addInitScript(() => localStorage.setItem('oeo_active_tab', 'analytics'));
+    await page.goto('/classic');
+    await expect(page.getByTestId('tab-usage')).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('/classic round-trip preserves the exact versioned energy payload', async ({ page }) => {
     const runtimeErrors: string[] = [];
     page.on('pageerror', (error) => runtimeErrors.push(error.message));

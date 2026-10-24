@@ -22,13 +22,13 @@
 'use client';
 
 import { useRef, type ReactNode } from 'react';
-import { Banknote, Gauge, Scale } from 'lucide-react';
+import { Banknote, Gauge, Scale, TrendingUp } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
 import { useTranslation } from '@/i18n';
 
 const ICONS: Record<TabId, typeof Gauge> = {
   overview: Gauge,
-
+  analytics: TrendingUp,
   plans: Scale,
   money: Banknote,
 };
@@ -96,6 +96,17 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
         offset, and at gap-1 it ate 4 of the 4px gap — the blue band welded
         itself to the next pill. gap-2 leaves 8 − 3 = 5px of clear air; the
         360px fit still holds (4 × 76px + 3 × 8px = 328px).
+
+        QA-1 (t_9991d1f2): `min-w-0` + `flex-1` gave the strip a flex basis of
+        ZERO, so flex-wrap never sent the shell tools to their own row — the
+        tools always fit beside the strip's basis and starved its box instead
+        (1024 EN: 164px box for 448px of tabs; 1440: Money painted 18 of 98px
+        with clicks falling through to the date input). `md:min-w-max` makes
+        the strip's hypothetical width its CONTENT width: below xl the row now
+        wraps the tools under the strip whenever 4 tabs + tools don't fit, and
+        at xl's `flex-nowrap` the strip keeps at least its content box while
+        the tools (flex-wrap, min-w-0) absorb the squeeze. Below md nothing
+        changes — tabs are `flex-1` there and shrink to the 360px contract.
       */}
       <div className="flex flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
         <div
@@ -103,7 +114,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
           aria-label={t('tabnav.aria')}
           aria-orientation="horizontal"
           onKeyDown={onKeyDown}
-          className="flex min-w-0 flex-1 gap-2 overflow-x-auto md:gap-3"
+          className="flex min-w-0 flex-1 gap-1 overflow-x-auto md:gap-3 md:min-w-max"
         >
           {TABS.map((tab, index) => {
           const Icon = ICONS[tab.id];
@@ -126,7 +137,7 @@ export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
               tabIndex={selected ? 0 : -1}
               title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-xs whitespace-nowrap transition-all ${
+              className={`inline-flex min-h-11 min-w-[64px] flex-1 md:flex-none items-center justify-center gap-1 md:gap-2 px-1.5 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-[10px] md:text-xs whitespace-nowrap transition-all ${
                 selected
                   ? 'bg-card text-ink border-b-2 border-b-accent'
                   : 'bg-inset text-ink-2 hover:text-ink'

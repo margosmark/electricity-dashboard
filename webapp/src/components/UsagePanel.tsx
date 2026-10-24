@@ -57,6 +57,21 @@ export type UsagePanelProps = ChartViewProps & {
   temps: HourlyTempsState;
   /** Rendered as a section inside the Overview tab after relocation. */
   embedded?: boolean;
+  /**
+   * Whether ANY readings are loaded. Without them the panel explains how to
+   * add data instead of rendering empty charts, zero grids and orphan axes —
+   * the calm-Overview contract's other half (the Overview tab hides this
+   * panel entirely when there is nothing to show).
+   */
+  hasData: boolean;
+  /** Opens the import front door from the empty state's call to action. */
+  onImport: () => void;
+  /**
+   * Which destination identity a STANDALONE render carries: the quiet
+   * Analytics tab (default) or the classic-variant Usage panel, whose tab
+   * strip still spells this destination `usage` and owns those element ids.
+   */
+  panel?: 'analytics' | 'usage';
 };
 
 /**
@@ -79,6 +94,9 @@ export default function UsagePanel({
   processedData,
   temps,
   embedded = false,
+  hasData,
+  onImport,
+  panel = 'analytics',
   ...chart
 }: UsagePanelProps) {
   const bandReport = useMemo(
@@ -90,13 +108,54 @@ export default function UsagePanel({
   const { t, locale } = useTranslation();
   const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
   return (
-    <div id={embedded ? 'overview-usage' : 'panel-usage'} role={embedded ? undefined : 'tabpanel'} aria-labelledby={embedded ? undefined : 'tab-usage'} className="space-y-6 md:space-y-10" data-testid={embedded ? 'overview-usage' : 'tab-panel-usage'}>
+    <div
+      id={embedded ? 'overview-usage' : panel === 'usage' ? 'panel-usage' : 'panel-analytics'}
+      role={embedded ? undefined : 'tabpanel'}
+      aria-labelledby={embedded ? undefined : panel === 'usage' ? 'tab-usage' : 'tab-analytics'}
+      className="space-y-6 md:space-y-10"
+      data-testid={embedded ? 'overview-usage' : panel === 'usage' ? 'tab-panel-usage' : 'tab-panel-analytics'}
+    >
+      {/* What this destination is for, in the homeowner's own question —
+          the frame that lets the dense views below be progressive
+          disclosure instead of a wall. Rendered in Overview too, so the
+          embedded copy is labelled the same way. */}
+      <header className="bg-card p-5 md:p-8 rounded-xl md:rounded-2xl border-4 border-edge">
+        <h2 className="text-xl md:text-3xl font-black">{t('analytics.title')}</h2>
+        <p className="mt-2 normal-case font-bold text-ink-2">{t('analytics.intro')}</p>
+      </header>
+
+      {!hasData ? (
+        /* No readings: say so specifically and offer the way in. Empty
+           charts, zero grids and orphan axes are worse than no chart. */
+        <section data-testid="analytics-empty-state" className="bg-card p-5 md:p-8 rounded-xl md:rounded-2xl border-2 border-edge">
+          <h3 className="font-black text-lg md:text-xl">{t('analytics.noData')}</h3>
+          <p className="mt-2 normal-case font-bold text-ink-2">{t('analytics.noDataHint')}</p>
+          <button
+            type="button"
+            onClick={onImport}
+            className="mt-4 min-h-11 px-5 py-3 bg-inv text-inv-ink rounded-xl border-2 border-edge font-black uppercase text-xs hover:bg-hover focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
+          >
+            {t('analytics.import')}
+          </button>
+        </section>
+      ) : (
+        <>
+      {/* 1. WHEN — the readings themselves, over time and by hour. */}
+      <section aria-labelledby="analytics-when-heading">
+        <h3 id="analytics-when-heading" className="mb-3 text-lg md:text-2xl font-black">{t('analytics.when.title')}</h3>
+        <p className="mb-4 normal-case font-bold text-ink-2">{t('analytics.when.body')}</p>
+
       {/* Are the rates this chart prices with still the current ones? */}
       <RateStalenessBanner result={staleness} />
 
       <ChartView {...chart} />
+      </section>
 
       {/* Wave T: same readings, binned by the temperature of that hour. */}
+      {/* 2. WEATHER — the same readings against the temperature outside. */}
+      <section aria-labelledby="analytics-weather-heading">
+        <h3 id="analytics-weather-heading" className="mb-3 text-lg md:text-2xl font-black">{t('analytics.weather.title')}</h3>
+        <p className="mb-4 normal-case font-bold text-ink-2">{t('analytics.weather.body')}</p>
       <TempBandCard
         report={bandReport}
         status={temps.status}
@@ -104,6 +163,13 @@ export default function UsagePanel({
         source={temps.source}
         spanLabel={spanLabel}
       />
+      </section>
+
+      {/* 3. UNUSUAL — the days that broke the pattern, the weekday routine
+          and the year-over-year shape. */}
+      <section aria-labelledby="analytics-unusual-heading">
+      <h3 id="analytics-unusual-heading" className="mb-3 text-lg md:text-2xl font-black">{t('analytics.unusual.title')}</h3>
+      <p className="mb-4 normal-case font-bold text-ink-2">{t('analytics.unusual.body')}</p>
 
       {/* Spec §3.5, with the polarity carried by an explicit data attribute:
           LIGHT keeps the yellow flood (nothing else on that view is yellow);
@@ -173,6 +239,9 @@ export default function UsagePanel({
       <DualHeatmap heatmapData={heatmapData} />
 
       <YearOverYearPanel processedData={processedData} />
+      </section>
+      </>
+      )}
     </div>
   );
 }

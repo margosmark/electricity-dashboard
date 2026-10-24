@@ -9,9 +9,12 @@
  *
  * What it holds the redesign to, and HOW each claim is made:
  *
- *  - Tab contract        — exactly Overview / Plans / Money exist as tabs; no
- *                          Usage tab; selecting one swaps exactly its panel;
- *                          arrow/Home/End keys move focus AND selection.
+ *  - Tab contract        — exactly Overview / Analytics / Plans / Money exist
+ *                          as tabs; no Usage tab; selecting one swaps exactly
+ *                          its panel; arrow/Home/End keys move focus AND
+ *                          selection; the Overview analytics door routes to
+ *                          the Analytics panel; the retired `#tab=usage`
+ *                          deep link lands on Analytics.
  *  - Themes              — the radiogroup repaints html[data-theme], the page
  *                          background actually changes, the choice survives a
  *                          reload, and NO console/page error is raised.
@@ -32,8 +35,12 @@
  *                          semantic <table> whose rows correspond 1:1 with the
  *                          marks in order.
  *  - Attention surface   — no attention item in a clean state; the conditional
- *                          rate alert state renders exactly one item, and every
- *                          rendered alert/attention item owns a remedy control.
+ *                          rate alert state renders exactly one item carrying
+ *                          both effective dates. Neither surface offers a fix
+ *                          action by design (rate publication is maintained
+ *                          separately, and the unit suite forbids external
+ *                          rates URLs) — the Money alert keeps the ordering
+ *                          decomposition → alert → pace.
  *  - Money ordering      — when the rate alert state exists, the alert sits
  *                          AFTER the bill decomposition and BEFORE the pace.
  *  - 390×844 geometry    — no document horizontal overflow and no interactive
@@ -142,7 +149,7 @@ async function setTheme(page: Page, theme: 'light' | 'dark') {
   await page.waitForTimeout(200);
 }
 
-async function selectTab(page: Page, name: 'Overview' | 'Plans' | 'Money') {
+async function selectTab(page: Page, name: 'Overview' | 'Analytics' | 'Plans' | 'Money') {
   await page.getByRole('tab', { name }).click();
   await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
   await page.getByTestId(`tab-panel-${name.toLowerCase()}`).waitFor();
@@ -150,29 +157,31 @@ async function selectTab(page: Page, name: 'Overview' | 'Plans' | 'Money') {
 
 /* ============================================================ 1. tab strip */
 
-test('tab strip offers exactly Overview / Plans / Money, and no Usage tab', async ({ page }) => {
+test('tab strip offers exactly Overview / Analytics / Plans / Money, and no Usage tab', async ({ page }) => {
   test.setTimeout(120_000);
   const watched = watchErrors(page);
   await loadSeededDashboard(page);
 
   const tabs = page.getByTestId('tab-nav').getByRole('tab');
-  await expect(tabs).toHaveCount(3);
-  expect(await tabs.allInnerTexts()).toEqual(['Overview', 'Plans', 'Money']);
+  await expect(tabs).toHaveCount(4);
+  expect(await tabs.allInnerTexts()).toEqual(['Overview', 'Analytics', 'Plans', 'Money']);
 
   // "No Usage tab" is a DOM claim, not a copy claim: nothing in the strip
-  // offers it, and the element id the old tab used to own does not exist.
-  await expect(page.getByTestId('tab-nav').getByRole('tab', { name: /usage/i })).toHaveCount(0);
+  // offers it, and the element id the old tab used to own does not exist —
+  // the analysis destination is now called Analytics.
+  await expect(page.getByTestId('tab-nav').getByRole('tab', { name: /^usage$/i })).toHaveCount(0);
   expect(await page.locator('#tab-usage, #panel-usage').count()).toBe(0);
 
-  // A deep link that still speaks the retired name must not resurrect it.
-  // Cold load (reload, not a same-document hash change) — that is the shape
-  // a shared link actually arrives in.
+  // A deep link that still speaks the retired name must land on its
+  // successor — Analytics — never resurrect the old tab or fall back to
+  // Overview. Cold load (reload, not a same-document hash change) — that is
+  // the shape a shared link actually arrives in.
   await page.goto('/#tab=usage');
   await page.reload();
-  await page.getByTestId('tab-panel-overview').waitFor();
-  await expect(page.getByTestId('tab-panel-plans')).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
-  expect(await page.evaluate(() => location.hash)).toBe('#tab=overview');
+  await page.getByTestId('tab-panel-analytics').waitFor();
+  await expect(page.getByTestId('tab-panel-overview')).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Analytics' })).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => location.hash)).toBe('#tab=analytics');
 
   expectNoAppErrors(watched, 'tab strip');
 });
@@ -182,7 +191,7 @@ test('selecting a tab swaps exactly its panel, and keys walk the strip', async (
   const watched = watchErrors(page);
   await loadSeededDashboard(page);
 
-  for (const name of ['Overview', 'Plans', 'Money'] as const) {
+  for (const name of ['Overview', 'Analytics', 'Plans', 'Money'] as const) {
     const id = name.toLowerCase();
     await selectTab(page, name);
     const tab = page.getByTestId(`tab-${id}`);
@@ -205,6 +214,9 @@ test('selecting a tab swaps exactly its panel, and keys walk the strip', async (
   await selectTab(page, 'Overview');
   await page.getByTestId('tab-overview').focus();
   await page.keyboard.press('ArrowRight');
+  await expect(page.getByTestId('tab-analytics')).toBeFocused();
+  await expect(page.getByTestId('tab-analytics')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowRight');
   await expect(page.getByTestId('tab-plans')).toBeFocused();
   await expect(page.getByTestId('tab-plans')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowRight');
@@ -221,6 +233,33 @@ test('selecting a tab swaps exactly its panel, and keys walk the strip', async (
   await expect(page.getByTestId('tab-panel-overview')).toBeVisible();
 
   expectNoAppErrors(watched, 'tab keyboard');
+});
+
+test('the Overview analytics door routes to the Analytics panel and back', async ({ page }) => {
+  test.setTimeout(120_000);
+  const watched = watchErrors(page);
+  await loadSeededDashboard(page);
+
+  // The door is on Overview itself, in the decision flow — always visible,
+  // because that is how you reach the analysis from the answer screen.
+  const cta = page.getByTestId('overview-analytics-cta');
+  await expect(cta).toBeVisible();
+  await cta.click();
+
+  await expect(page.getByRole('tab', { name: 'Analytics' })).toHaveAttribute('aria-selected', 'true');
+  const panel = page.getByTestId('tab-panel-analytics');
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(() => location.hash)).toBe('#tab=analytics');
+  // Exactly one panel: the door swaps Overview out, it does not stack.
+  expect(await page.locator('[role="tabpanel"]').count()).toBe(1);
+
+  // The destination is the real analysis, framed by its own questions —
+  // not an empty chart shell.
+  await expect(panel.getByText('When do you use power?')).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Usage Anomalies' })).toBeVisible();
+  await expect(page.getByTestId('chart-view')).toBeVisible();
+
+  expectNoAppErrors(watched, 'analytics door');
 });
 
 /* ============================================================== 2. themes */
@@ -493,8 +532,10 @@ test('Overview: Your plan / Needs attention — argmin verdict, remedies only wh
   expect(worstLabel).toBe(NAMES[ranked[ranked.length - 1][0] as 'TOU' | 'Tiered' | 'ULO']);
   expect(bestLabel).toBe(NAMES[ranked[0][0] as 'TOU' | 'Tiered' | 'ULO']);
 
-  // Every rendered attention item owns a remedy control (none here, but the
-  // contract is exercised for whichever items ARE rendered in the next test).
+  // Every rendered attention item is held to its contract in the rate-alert
+  // test below (the clean state here renders none, so this loop is vacuous —
+  // but stays as the guard for whichever items ARE rendered, e.g. imports,
+  // which must keep their /import remedy).
   const items = attention.locator('li');
   for (let i = 0; i < (await items.count()); i++) {
     expect(await items.nth(i).locator('a[href], button').count()).toBeGreaterThan(0);
@@ -505,7 +546,7 @@ test('Overview: Your plan / Needs attention — argmin verdict, remedies only wh
 
 /* ================================================= 4. alert state + Money */
 
-test('rate-alert state: exactly one attention item with a remedy, and Money orders it correctly', async ({ page }) => {
+test('rate-alert state: exactly one attention item with both rate dates, and Money orders it correctly', async ({ page }) => {
   test.setTimeout(120_000);
   const watched = watchErrors(page);
   await loadSeededDashboard(page);
@@ -544,20 +585,34 @@ test('rate-alert state: exactly one attention item with a remedy, and Money orde
   await page.getByTestId('tab-panel-money').waitFor({ timeout: 60_000 });
   await selectTab(page, 'Overview');
 
-  // Overview attention: exactly one real condition, and it owns a remedy.
+  // Overview attention: exactly one real condition, stated with BOTH dates —
+  // the fix-it link was deliberately removed (#124; the unit suite fails any
+  // external rates URL here), so this item is informational and the remedy
+  // for the same condition is Money's alert, asserted below.
   const attention = page.getByTestId('overview-attention');
   await expect(attention.locator('li')).toHaveCount(1);
-  const remedy = attention.locator('li').first().locator('a[href], button').first();
-  await expect(remedy).toBeVisible();
-  expect(await remedy.getAttribute('href')).toContain('rates');
+  const dates = attention.getByTestId('overview-rate-dates');
+  await expect(dates).toBeVisible();
+  expect(await dates.innerText()).toContain('2099-01-01');
+  expect(await dates.innerText()).toContain('2026-05-01');
+  expect(
+    await attention.locator('a[href*="github"], a[href*="/api/rates"]').count(),
+    'no external rates URL on the attention surface',
+  ).toBe(0);
 
-  // Money: the alert renders, is announced, and is ordered
-  // decomposition → alert → pace.
+  // Money: the alert renders, is announced, states both dates — and by
+  // design carries no fix action of its own (see RateStalenessBanner) —
+  // and it is ordered decomposition → alert → pace.
   await selectTab(page, 'Money');
   const alert = page.getByTestId('money-rate-alert');
   await expect(alert).toBeVisible();
   await expect(alert.getByRole('alert')).toBeVisible();
-  await expect(alert.locator('a[href], button').first()).toBeVisible();
+  await expect(alert.getByTestId('banner-dates')).toContainText('2099-01-01');
+  await expect(alert.getByTestId('banner-dates')).toContainText('2026-05-01');
+  expect(
+    await alert.locator('a[href], button').count(),
+    'the banner offers no fix action (rate publication is maintained separately)',
+  ).toBe(0);
 
   const order = await page.evaluate(() =>
     [...document.querySelectorAll('[data-testid="tab-panel-money"] [data-testid]')]
@@ -657,7 +712,7 @@ test('390×844 dark/light: no horizontal overflow, every target ≥44px, four sc
         measured.scrollWidth,
         `${viewport.width} ${theme}: document overflow`,
       ).toBeLessThanOrEqual(measured.clientWidth + 1);
-      expect(measured.tabs, `${viewport.width} ${theme}: three tabs in the strip`).toBe(3);
+      expect(measured.tabs, `${viewport.width} ${theme}: four tabs in the strip`).toBe(4);
       expect(measured.undersized, `${viewport.width} ${theme}: targets under 44px`).toEqual([]);
 
       geometry[`${viewport.width}x${viewport.height}-${theme}`] = {

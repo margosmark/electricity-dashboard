@@ -379,7 +379,7 @@ describe('Wave H 3 — semantics and labels', () => {
     // Wave R: the CHART/INSIGHTS toggle is now an ARIA tab strip — selected
     // state replaces pressed state, and exactly one tab is selected.
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
     const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
     expect(selected).toHaveLength(1);
     expect(selected[0]).toBe(screen.getByRole('tab', { name: 'Overview' }));

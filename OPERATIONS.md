@@ -381,6 +381,23 @@ alone cannot resurrect the push/PR reds — but there is still no CI
 budget, so leave the workflow disabled until Actions minutes are topped
 up. The `husky` pre-commit hook runs on every local commit.
 
+### Local previews carry the same stamp
+
+A local production-mode preview built with a bare `npm run build` answers
+`{"sha":"unknown"}` at `/api/version`, so no exact-SHA claim about it can be
+checked (seen in QA, 2026-10-24). Build the preview the way the image is
+built:
+
+```bash
+cd webapp && PORT=3210 npm run preview   # exports GIT_SHA=$(git rev-parse HEAD), builds, serves
+curl -s http://127.0.0.1:3210/api/version   # → {"sha":"<the commit you built>",…}
+```
+
+`webapp/scripts/preview-prod.sh` does the export, so the served preview
+names its own commit. Do not weaken CSP or run `next dev` to make a preview
+work — build it in production mode and read `/api/version` to prove which
+build answered.
+
 ## Known sharp edges
 
 - **Port collision:** 3939 is the host port; if another service takes it,

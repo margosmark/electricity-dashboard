@@ -1,7 +1,7 @@
 /**
  * Ontario Energy Optimizer - Interaction Fix Edition
  *
- * Flow: Overview ➔ Usage ➔ Plans & Track Record ➔ Money & What-If.
+ * Flow: Overview ➔ Analytics ➔ Plans & Track Record ➔ Money & What-If.
  *
  * Wave R — this file is the SHELL: state and handlers live in
  * src/hooks/useDashboard.ts, the tab strip in TabNav, and the content of each
@@ -816,6 +816,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           efficiency={efficiency}
           onOpenMoney={() => selectTab('money')}
           onOpenPlans={() => selectTab('plans')}
+          onOpenAnalytics={() => setActiveTab('analytics')}
           rateMismatch={Boolean(staleness.stale)}
           staleness={staleness}
           latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
@@ -825,6 +826,8 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
             zoomLevel, zoomTarget, goBack, navigatePeriod,
             setZoomLevelAndClear, activeChartData, handleBarClick,
             selectionCost, userPlan, startDate, filteredData,
+            hasData: processedData.length > 0,
+            onImport: () => { setParseIssue(null); setShowUploadModal(true); },
           }}
           importReview={refusalNotes.length > 0 || Boolean(parseIssue)}
           showUsage={variant !== 'classic'}
@@ -846,6 +849,34 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
       )}
 
 
+      {/* Quiet Meter progressive disclosure: the dense usage analytics are
+          their own destination, framed by the question each group answers.
+          Overview keeps the embedded copy for the decision path; this is
+          the deliberate way in (and, with no data loaded, the specific
+          "add data" explanation the calm Overview cannot carry). */}
+      {activeTab === 'analytics' && (
+        <UsagePanel
+          staleness={staleness}
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          processedData={processedData}
+          temps={temps}
+          zoomLevel={zoomLevel}
+          zoomTarget={zoomTarget}
+          goBack={goBack}
+          navigatePeriod={navigatePeriod}
+          setZoomLevelAndClear={setZoomLevelAndClear}
+          activeChartData={activeChartData}
+          handleBarClick={handleBarClick}
+          selectionCost={selectionCost}
+          userPlan={userPlan}
+          startDate={startDate}
+          filteredData={filteredData}
+          hasData={processedData.length > 0}
+          onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
+        />
+      )}
+
       {variant === 'classic' && activeTab === 'usage' && (
         <UsagePanel
           staleness={staleness}
@@ -864,6 +895,9 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           userPlan={userPlan}
           startDate={startDate}
           filteredData={filteredData}
+          hasData={processedData.length > 0}
+          onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
+          panel="usage"
         />
       )}
 

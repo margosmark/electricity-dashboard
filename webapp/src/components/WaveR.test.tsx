@@ -93,7 +93,7 @@ describe('Wave R 1 — the tab strip', () => {
     expect(list).toHaveAttribute('aria-orientation', 'horizontal');
 
     const tabs = within(list).getAllByRole('tab');
-    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-plans', 'tab-money']);
+    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-analytics', 'tab-plans', 'tab-money']);
     // Only the SELECTED tab carries aria-controls: the other three panels are
     // not in the DOM, and an aria-controls naming an id nothing renders is the
     // dangling reference axe dings as aria-valid-attr-value (t_d5cc9a2d —
@@ -154,8 +154,8 @@ describe('Wave R 1 — the tab strip', () => {
 
     screen.getByRole('tab', { name: 'Overview' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(onChange).toHaveBeenLastCalledWith('plans');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Plans' }));
+    expect(onChange).toHaveBeenLastCalledWith('analytics');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Analytics' }));
 
     await user.keyboard('{ArrowLeft}');
     expect(onChange).toHaveBeenLastCalledWith('overview');
@@ -421,7 +421,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     await renderLoaded();
     expect(screen.queryByRole('button', { name: 'CHART' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'INSIGHTS' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
   });
 });
 
