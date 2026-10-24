@@ -16,6 +16,9 @@
 import { describe, it, expect, afterEach, vi, MockInstance } from 'vitest';
 
 import { GET, CACHED_MAX_AGE_MS, __resetUpstreamCacheForTests } from './route';
+// PM fold (t_9991d1f2): the unavailable page's copy and /api/rates must name
+// the SAME last-verified date — imported from the one constant both read.
+import { GET as ratesGET, RATES_LAST_CHECKED } from '@/app/api/rates/route';
 
 type MockedFetch = MockInstance<typeof fetch>;
 
@@ -82,7 +85,7 @@ describe('/oeb-rates-page transport (route handler)', () => {
     expect(target).toBe(UPSTREAM_URL);
   });
 
-  it('streams the upstream BODY through unchanged', async () => {
+  it('passes the upstream BODY through unchanged', async () => {
     mockUpstream(streamedResponse('<table>FOO</table>', FAT_UPSTREAM_HEADERS));
     const res = await GET(probeRequest());
     await expect(res.text()).resolves.toBe('<table>FOO</table>');
@@ -177,6 +180,20 @@ describe('/oeb-rates-page upstream DNS failure', () => {
     expect(body).toContain('has not fetched the page recently enough');
     // No rate values at all: the empty state must not look like rates.
     expect(body).not.toMatch(/¢|kWh|off-?peak/i);
+  });
+
+  it('names the SAME last-verified date in its copy that /api/rates publishes', async () => {
+    // The duplicate-source defect the PM fold (t_9991d1f2) closes: the
+    // unavailable page inlined "2026-10-02" while /api/rates read
+    // RATES_LAST_CHECKED, so a bump would leave the error page silently
+    // lying. Both now import the one constant — and this pin fails if they
+    // ever diverge again.
+    __resetUpstreamCacheForTests();
+    dnsFailure();
+    const body = await (await GET(probeRequest())).text();
+    const payload = (await (await ratesGET()).json()) as { lastChecked: string };
+    expect(payload.lastChecked).toBe(RATES_LAST_CHECKED);
+    expect(body).toContain(`were last verified on ${RATES_LAST_CHECKED}.`);
   });
 
   it('never 500s, however many times the upstream stays unreachable', async () => {

@@ -49,6 +49,10 @@
  */
 
 import { OEB_RATES_URL } from '@/lib/oebRates';
+// The unavailable-page copy names the SAME last-verified date /api/rates
+// publishes. Importing the constant (PM fold, t_9991d1f2) keeps one source:
+// a bump that changes one and not the other was previously invisible.
+import { RATES_LAST_CHECKED } from '@/app/api/rates/route';
 
 /** Pass these through upstream if the browser sent them — nothing else. */
 const FORWARDED_REQUEST_HEADERS = ['user-agent', 'accept'] as const;
@@ -169,7 +173,7 @@ function unavailableDocument(lastFetchedAt: number | null): string {
 <p>The Ontario Energy Board&rsquo;s rate schedule (www.oeb.ca) cannot be reached right now,
 so this page has nothing to show. ${last}</p>
 <p>This dashboard&rsquo;s own shipped rate sets are unaffected — they are published at
-<a href="/api/rates">/api/rates</a> and were last verified on 2026-10-02.</p>
+<a href="/api/rates">/api/rates</a> and were last verified on ${RATES_LAST_CHECKED}.</p>
 </main></body></html>`;
 }
 
