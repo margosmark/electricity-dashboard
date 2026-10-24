@@ -3,20 +3,28 @@ import { seedMarkShaped } from './mark-seed';
 
 /**
  * Analytics IA release-gate acceptance (t_8032308e item 3) — the criteria QA
- * could not verify when the parent E2E spec was missing from the candidate.
+ * could not verify when the parent E2E spec was absent from the candidate
+ * (QA CHANGES 2026-10-24: "keyboard/hash/history, accessible tab semantics,
+ * shared-data/import, and Plans/Money period-basis criteria remain
+ * unverified… the parent E2E task's acceptance spec is not present").
  *
- * Scope note: this candidate is the CURRENT-MAIN three-tab IA
- * (Overview / Plans / Money — src/lib/tabs.ts TAB_IDS). The Analytics
- * progressive-disclosure card is a separate line; nothing here asserts an
- * Analytics tab. These are the four surfaces QA listed as unverified:
- *   1. tab keyboard focus / hash / direct-entry / back-forward,
- *   2. accessible tab semantics (roving tabindex + ARIA wiring),
- *   3. shared-data / import behaviour,
- *   4. Plans & Money period/basis truth,
- * plus the 360 px tab-fit gap (UX measured 10/13; three labels failed).
+ * Rides WITH the candidate: this file is committed on the retest candidate
+ * (492d1aeb + the /oeb-rates-page degradation fix), so QA reviews the exact
+ * tree its evidence came from.
  *
- * Chart-bar geometry is deliberately NOT re-verified here: UX already proved
- * 4/4 across EN/FR × light/dark with real rendered marks. Do not re-open it.
+ * Covers, in EN and FR:
+ *   1. fresh Overview after Link Data dismissal (CTA present, no chart marks)
+ *      and CTA → Analytics with hash + browser back/forward,
+ *   2. tab keyboard focus / hash / direct-entry / history,
+ *   3. accessible tab semantics (roving tabindex + ARIA wiring),
+ *   4. shared-data / import failure honesty,
+ *   5. the 360/390/1440 tab-fit and document-overflow gap (UX measured
+ *      10/13 with three failing labels).
+ *
+ * Deliberately NOT re-verified: chart-bar geometry across EN/FR × light/dark
+ * — UX already proved 4/4 with real rendered marks (PM ruling 2026-10-24).
+ * Plans/Money period-basis truth is held by the Vitest Wave-P/Wave-T units
+ * and quiet-meter-regression.spec.ts, which this candidate also runs.
  *
  * Run against a production-mode server:
  *   SMOKE_BASE_URL=http://127.0.0.1:3210 npx playwright test \
@@ -25,7 +33,7 @@ import { seedMarkShaped } from './mark-seed';
 
 const VIEWPORTS = [360, 390, 1440] as const;
 const LOCALES = ['en', 'fr'] as const;
-const TAB_IDS = ['overview', 'plans', 'money'] as const;
+const TAB_IDS = ['overview', 'analytics', 'plans', 'money'] as const;
 
 async function selectLocale(page: Page, locale: (typeof LOCALES)[number]) {
   await page.addInitScript((tag) => localStorage.setItem('oeo_locale', tag), locale);
@@ -39,6 +47,30 @@ async function dismissLinkData(page: Page) {
 }
 
 for (const locale of LOCALES) {
+  test(`[${locale}] fresh Overview: CTA no charts, CTA navigates with history`, async ({ page }) => {
+    await selectLocale(page, locale);
+    await page.goto('/');
+    await dismissLinkData(page);
+
+    // The first screen is calm: the Analytics entry point is present and no
+    // chart marks render on the empty Overview.
+    await expect(page.getByTestId('tab-panel-overview')).toBeVisible();
+    await expect(page.getByTestId('overview-analytics-cta')).toBeVisible();
+    await expect(page.getByTestId('rate-chart-svg')).toHaveCount(0);
+    await expect(page.getByTestId('rate-chart-bar')).toHaveCount(0);
+
+    // CTA → Analytics, hash follows, back/forward walk the tabs.
+    await page.getByTestId('overview-analytics-cta').click();
+    await expect(page.getByTestId('tab-panel-analytics')).toBeVisible();
+    await expect(page).toHaveURL(/#tab=analytics$/);
+    await page.goBack();
+    await expect(page.getByTestId('tab-panel-overview')).toBeVisible();
+    await expect(page).not.toHaveURL(/#tab=analytics$/);
+    await page.goForward();
+    await expect(page.getByTestId('tab-panel-analytics')).toBeVisible();
+    await expect(page).toHaveURL(/#tab=analytics$/);
+  });
+
   test(`[${locale}] tab keyboard focus, hash and browser history`, async ({ page }) => {
     await selectLocale(page, locale);
     await page.goto('/');
@@ -49,11 +81,15 @@ for (const locale of LOCALES) {
     await expect(page.getByTestId('tab-panel-money')).toBeVisible();
     await expect(page.getByTestId('tab-money')).toHaveAttribute('aria-selected', 'true');
 
-    // Keyboard: focus the strip, walk with arrows, Home/End to the ends.
+    // Keyboard: focus the strip, walk with arrows (Overview → Analytics →
+    // Plans), Home/End to the ends.
     await page.getByTestId('tab-overview').focus();
     await expect(page.getByTestId('tab-overview')).toBeFocused();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('tab-plans')).toBeVisible();
+    await expect(page.getByTestId('tab-panel-analytics')).toBeVisible();
+    await expect(page.getByTestId('tab-analytics')).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByTestId('tab-panel-plans')).toBeVisible();
     await expect(page.getByTestId('tab-plans')).toBeFocused();
     await page.keyboard.press('End');
     await expect(page.getByTestId('tab-panel-money')).toBeVisible();
@@ -97,9 +133,7 @@ for (const locale of LOCALES) {
     expect(selected, 'one tab is aria-selected').toBeTruthy();
     expect(selected!.tabIndex, 'the selected tab is the tabbable stop').toBe('0');
     for (const r of roving) {
-      const controls = await page
-        .getByTestId(r.id!)
-        .getAttribute('aria-controls');
+      const controls = await page.getByTestId(r.id!).getAttribute('aria-controls');
       if (r.selected === 'true') {
         expect(controls, `${r.id} aria-controls a rendered panel`).toBeTruthy();
         await expect(page.locator(`#${controls}`)).toBeVisible();
@@ -120,10 +154,10 @@ for (const locale of LOCALES) {
 
 test('shared-data / import: a malformed payload fails honestly, not silently', async ({ page }) => {
   // The POSITIVE import path (paste → merge/replace → dashboard reflects it,
-  // plus the ?d= deep link) is already covered end-to-end by import.spec.ts.
-  // What the QA unverified-set needs is the negative half: shared data that
-  // does NOT parse must surface an honest, recoverable error rather than
-  // crashing or silently dropping the payload.
+  // plus the ?d= deep link) is covered end-to-end by import.spec.ts, which
+  // this candidate also runs. What QA's unverified set needs is the negative
+  // half: shared data that does NOT parse must surface an honest,
+  // recoverable error rather than crashing or silently dropping the payload.
   await page.goto('/import');
   await expect(page.getByTestId('import-paste')).toBeVisible();
   await expect(page.getByTestId('import-load')).toBeVisible();
@@ -170,20 +204,29 @@ for (const width of VIEWPORTS) {
       ).toEqual([]);
       // The tablist must not scroll horizontally at the mobile widths, where a
       // scrolling strip would be the overflow symptom. At xl the shell sets
-      // `flex-nowrap` on the tablist, so longer French labels can make the
-      // STRIP itself exceed its box even while every label fits and the
-      // DOCUMENT stays overflow-free (measured: fr/1440 stripScroll 83px,
-      // documentWidth == width). The document assertion above is the real
-      // no-overflow guarantee, so the strip-scroll check is mobile-scoped.
+      // `flex-nowrap`, so longer French labels can make the STRIP itself
+      // exceed its box even while every label fits and the DOCUMENT stays
+      // overflow-free. The document assertion above is the real no-overflow
+      // guarantee, so the strip-scroll check is mobile-scoped.
       if (width < 1280) {
         expect(geometry.stripScroll, `${width}px tablist overflow`).toBeLessThanOrEqual(1);
       }
 
       if (locale === 'en') {
-        expect(geometry.tabs.map((tab) => tab.label)).toEqual(['Overview', 'Plans', 'Money']);
+        expect(geometry.tabs.map((tab) => tab.label)).toEqual([
+          'Overview',
+          'Analytics',
+          'Plans',
+          'Money',
+        ]);
       } else {
         // French labels must actually differ (locale seeding worked).
-        expect(geometry.tabs.map((tab) => tab.label)).not.toEqual(['Overview', 'Plans', 'Money']);
+        expect(geometry.tabs.map((tab) => tab.label)).not.toEqual([
+          'Overview',
+          'Analytics',
+          'Plans',
+          'Money',
+        ]);
       }
     });
   }
