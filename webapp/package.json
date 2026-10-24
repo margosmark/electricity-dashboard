@@ -7,6 +7,7 @@
     "build": "next build",
     "prebuild": "node scripts/bump-sw-version.mjs && node scripts/bump-build-info.mjs",
     "start": "next start",
+    "preview": "bash scripts/preview-prod.sh",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

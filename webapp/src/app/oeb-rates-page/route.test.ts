@@ -15,7 +15,7 @@
 // @vitest-environment node
 import { describe, it, expect, afterEach, vi, MockInstance } from 'vitest';
 
-import { GET } from './route';
+import { GET, CACHED_MAX_AGE_MS, __resetUpstreamCacheForTests } from './route';
 
 type MockedFetch = MockInstance<typeof fetch>;
 
@@ -139,5 +139,111 @@ describe('/oeb-rates-page transport (route handler)', () => {
     expect(res.headers.get('x-drupal-cache')).toBeNull();
     expect(res.headers.get('cache-control')).toBe('no-store');
     await expect(res.text()).resolves.toBe('<!doctype html>');
+  });
+});
+
+/**
+ * Upstream failure degrades gracefully (production defect 2026-10-24: an
+ * OEB-side DNS outage — `getaddrinfo EAI_AGAIN www.oeb.ca` — 500'd every
+ * hit on this user-facing path). These tests simulate the DNS failure by
+ * rejecting the upstream fetch exactly the way undici does, and pin both
+ * accepted degraded shapes: a timestamped saved copy, or an honest empty
+ * state. Never a 500, and never a stale schedule presented as current.
+ */
+describe('/oeb-rates-page upstream DNS failure', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    __resetUpstreamCacheForTests();
+  });
+
+  function dnsFailure(): void {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('fetch failed'));
+  }
+
+  function mockUpstream(response: Response): void {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(response);
+  }
+
+  it('answers 200 with an honest empty state when there is no cached copy', async () => {
+    __resetUpstreamCacheForTests();
+    dnsFailure();
+    const res = await GET(probeRequest());
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-oeb-rates-source')).toBe('unavailable');
+    const body = await res.text();
+    expect(body).toContain('Rate schedule temporarily unavailable');
+    expect(body).toContain('cannot be reached right now');
+    expect(body).toContain('has not fetched the page recently enough');
+    // No rate values at all: the empty state must not look like rates.
+    expect(body).not.toMatch(/¢|kWh|off-?peak/i);
+  });
+
+  it('never 500s, however many times the upstream stays unreachable', async () => {
+    dnsFailure();
+    for (let i = 0; i < 3; i += 1) {
+      await expect(GET(probeRequest())).resolves.toSatisfy((res: Response) => res.status === 200);
+    }
+  });
+
+  it('serves the last-known-good copy with its exact fetch time on the banner', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-24T12:00:00.000Z'));
+    mockUpstream(
+      streamedResponse(
+        '<!doctype html><html><head><title>OEB</title></head><body><table>TARIFF</table></body></html>',
+        FAT_UPSTREAM_HEADERS,
+      ),
+    );
+    await GET(probeRequest());
+
+    dnsFailure();
+    vi.setSystemTime(new Date('2026-10-24T12:05:00.000Z'));
+    const res = await GET(probeRequest());
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-oeb-rates-source')).toBe('cached');
+    expect(res.headers.get('x-oeb-rates-fetched-at')).toBe('2026-10-24T12:00:00.000Z');
+    // Upstream headers still never leak, degraded or not.
+    expect(res.headers.has('content-security-policy')).toBe(false);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+
+    const body = await res.text();
+    // The saved copy still carries the upstream body the staleness check parses…
+    expect(body).toContain('<table>TARIFF</table>');
+    // …and the banner names itself and its age, so nothing stale reads as current.
+    expect(body).toContain('Saved copy.');
+    expect(body).toContain('2026-10-24T12:00:00.000Z');
+    expect(body).toContain('id="oeb-saved-copy-notice"');
+    // Injected at the top of the document, after </head>.
+    expect(body.indexOf('oeb-saved-copy-notice')).toBeLessThan(body.indexOf('<table>'));
+  });
+
+  it('serves the empty state once the saved copy is older than the max age', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-24T12:00:00.000Z'));
+    mockUpstream(streamedResponse('<!doctype html><html><body><table>TARIFF</table></body></html>', FAT_UPSTREAM_HEADERS));
+    await GET(probeRequest());
+
+    dnsFailure();
+    vi.setSystemTime(new Date(Date.parse('2026-10-24T12:00:00.000Z') + CACHED_MAX_AGE_MS + 60_000));
+    const res = await GET(probeRequest());
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-oeb-rates-source')).toBe('unavailable');
+    const body = await res.text();
+    expect(body).toContain('Rate schedule temporarily unavailable');
+    expect(body).toContain('2026-10-24T12:00:00.000Z'); // the too-old copy's time, named
+    expect(body).not.toContain('<table>TARIFF</table>'); // and not served as rates
+  });
+
+  it('does not treat a non-2xx upstream answer as a cacheable copy', async () => {
+    mockUpstream(streamedResponse('<html>Service unavailable</html>', {}, 503));
+    await GET(probeRequest());
+    dnsFailure();
+    const res = await GET(probeRequest());
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-oeb-rates-source')).toBe('unavailable');
+    await expect(res.text()).resolves.not.toContain('Service unavailable');
   });
 });
