@@ -46,21 +46,25 @@ function check(name, ok, detail) {
 
 const flat = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
-/** Painted text only: the RSC payload inside <script> carries the server's
- *  English render and would make a French page look untranslated. */
-function paintedText() {
-  const PAINTED = (el) => !/^(script|style|template|noscript)$/i.test(el.tagName || '');
-  const parts = [];
-  for (const el of [document.body, ...document.body.querySelectorAll('*')].filter(PAINTED)) {
-    for (const node of el.childNodes) {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) parts.push(node.textContent);
-    }
-  }
-  return parts.join(' ');
-}
-
-/** Read the preflight's own facts out of the DOM. */
+/** Read the preflight's own facts out of the DOM.
+ *  NOTE: this whole function is serialised into the page by `page.evaluate`,
+ *  so every helper it uses must be declared INSIDE it — `flat` and the
+ *  painted-text walker above live in Node and are undefined in the browser. */
 function readState() {
+  const flat = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+
+  /** Painted text only: the RSC payload inside <script> carries the server's
+   *  English render and would make a French page look untranslated. */
+  const paintedText = () => {
+    const PAINTED = (el) => !/^(script|style|template|noscript)$/i.test(el.tagName || '');
+    const parts = [];
+    for (const el of [document.body, ...document.body.querySelectorAll('*')].filter(PAINTED)) {
+      for (const node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) parts.push(node.textContent);
+      }
+    }
+    return parts.join(' ');
+  };
   const rows = [...document.querySelectorAll('[data-testid^="preflight-check-"][data-state]')];
   return {
     checks: rows.map((row) => ({
@@ -81,6 +85,16 @@ function readState() {
       flat(li.textContent),
     ),
     readOnly: flat(document.querySelector('[data-testid="preflight-readonly"]')?.textContent || ''),
+    // Geometry: a report nobody can scroll to is not a report. `min-h-screen`
+    // means the page is at least a viewport tall, so height is measured from
+    // the last painted element rather than assumed.
+    overflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    pageHeight: document.documentElement.scrollHeight,
+    contentBottom: (() => {
+      const inner = document.querySelector('main > div');
+      const last = inner ? inner.lastElementChild : null;
+      return last ? Math.ceil(last.getBoundingClientRect().bottom + 40) : 0;
+    })(),
     painted: paintedText(),
   };
 }
@@ -121,6 +135,14 @@ async function shot(browser, locale) {
   await page.waitForFunction((l) => document.documentElement.lang === l, locale, { timeout: 30_000 });
 
   const state = await page.evaluate(readState);
+  // `min-h-screen` pins the page to the viewport, so a taller-than-content
+  // viewport paints a blank band under the last line. Resize to the measured
+  // content and re-read the geometry, so the screenshot is the page and
+  // nothing else.
+  if (state.contentBottom && state.contentBottom !== state.pageHeight) {
+    await page.setViewportSize({ width: 1440, height: state.contentBottom });
+    Object.assign(state, await page.evaluate(readState));
+  }
   const shotPath = path.join(OUT, `account-preflight-${locale}.png`);
   await page.screenshot({ path: shotPath, fullPage: true });
   await ctx.close();
@@ -174,6 +196,21 @@ async function shot(browser, locale) {
         state.readOnly.slice(0, 70),
       );
       check(`${locale}: painted real content`, state.painted.length > 800, `${state.painted.length} chars`);
+      check(
+        `${locale}: no horizontal overflow at 1440px`,
+        state.overflowPx === 0,
+        `scrollWidth-clientWidth=${state.overflowPx}px, page ${state.pageHeight}px tall`,
+      );
+      // `contentBottom` already includes main's own 32px bottom padding; the
+      // only thing allowed below it is the app-wide
+      // `body { padding-bottom: max(2.5rem, safe-area) }` = 40px. A viewport
+      // taller than the content is what paints a big empty band, so fail
+      // above 40 + a little slack.
+      check(
+        `${locale}: screenshot is the content, not a blank band`,
+        state.pageHeight - state.contentBottom >= 0 && state.pageHeight - state.contentBottom <= 48,
+        `page ${state.pageHeight}px vs content ${state.contentBottom}px (+${state.pageHeight - state.contentBottom}px)`,
+      );
 
       // Secrecy: no SMTP detail may reach a human, in either language.
       const painted = state.painted;

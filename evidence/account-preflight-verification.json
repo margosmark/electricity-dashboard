@@ -1,0 +1,280 @@
+{
+  "base": "http://127.0.0.1:3219/",
+  "url": "http://127.0.0.1:3219/account/preflight",
+  "locales": {
+    "en": {
+      "checks": [
+        {
+          "id": "smtp",
+          "state": "pending",
+          "label": "SMTP provisioning (ACCT_SMTP_*)",
+          "badge": "pending",
+          "detail": "SMTP is not provisioned. There is no sender contract, so no verification or recovery mail could be delivered."
+        },
+        {
+          "id": "accountEnabled",
+          "state": "pending",
+          "label": "Account feature (ACCT_ENABLED)",
+          "badge": "pending",
+          "detail": "The account feature is switched off, so every /account/ route answers 404 on purpose."
+        },
+        {
+          "id": "emailVerification",
+          "state": "pending",
+          "label": "Email verification (ACCT_EMAIL_VERIFICATION_ENABLED)",
+          "badge": "pending",
+          "detail": "Email verification is switched off, so registration cannot be opened."
+        }
+      ],
+      "verdict": "Account activation stays fail-closed until SMTP is live. Nothing is broken here: without working email delivery this deployment deliberately refuses to activate accounts, so the guard you are looking at is doing its job.",
+      "verdictRole": "status",
+      "dataReady": "false",
+      "checklistItems": [
+        "SMTP is provisioned end to end — host, port, TLS mode, HELO, sender and reply-to on this domain, the credential file mounts and a timeout — so the sender contract config.ts requires is complete.",
+        "A real message has been delivered to a real mailbox and read there. Configuration alone is not proof that email works.",
+        "ACCT_EMAIL_VERIFICATION_ENABLED is explicitly true, so mailbox ownership is proven before anyone chooses a password.",
+        "ACCT_ENABLED is explicitly true on the account container, with the data directory mounted outside the repository and mode-checked, so the account process can boot.",
+        "The published retention policy is concrete enough to enforce — registration stays disabled until it is.",
+        "A written rollback: who flips the two flags back, and what happens to any account created in the meantime.",
+        "Explicit, recorded authorization to activate — a separate decision that this page neither makes nor grants."
+      ],
+      "readOnly": "Read-only: this page reads configuration and changes no flag, no SMTP setting, no credential and no account.",
+      "overflowPx": 0,
+      "pageHeight": 1245,
+      "contentBottom": 1205,
+      "screenshot": "account-preflight-en.png",
+      "paintedChars": 1849
+    },
+    "fr": {
+      "checks": [
+        {
+          "id": "smtp",
+          "state": "pending",
+          "label": "Provisionnement SMTP (ACCT_SMTP_*)",
+          "badge": "en attente",
+          "detail": "SMTP n'est pas provisionné. Aucun contrat d'envoi n'existe, donc aucun courriel de vérification ou de récupération ne pourrait être livré."
+        },
+        {
+          "id": "accountEnabled",
+          "state": "pending",
+          "label": "Fonctionnalité de compte (ACCT_ENABLED)",
+          "badge": "en attente",
+          "detail": "La fonctionnalité de compte est désactivée : chaque route /account/ répond 404 volontairement."
+        },
+        {
+          "id": "emailVerification",
+          "state": "pending",
+          "label": "Vérification du courriel (ACCT_EMAIL_VERIFICATION_ENABLED)",
+          "badge": "en attente",
+          "detail": "La vérification du courriel est désactivée : l'inscription ne peut pas être ouverte."
+        }
+      ],
+      "verdict": "L'activation du compte reste bloquée tant que le courriel SMTP n'est pas en service. Rien n'est cassé ici : sans livraison de courriel fonctionnelle, ce déploiement refuse délibérément d'activer des comptes — la protection affichée fait exactement son travail.",
+      "verdictRole": "status",
+      "dataReady": "false",
+      "checklistItems": [
+        "SMTP est provisionné de bout en bout — hôte, port, mode TLS, HELO, expéditeur et réponse sur ce domaine, montages des fichiers d'identifiants et délai d'attente — de sorte que le contrat d'envoi exigé par config.ts est complet.",
+        "Un message réel a été livré dans une vraie boîte de réception et lu sur place. La configuration seule ne prouve pas que le courriel fonctionne.",
+        "ACCT_EMAIL_VERIFICATION_ENABLED est explicitement à true, si bien que la propriété de la boîte de réception est prouvée avant que quiconque choisisse un mot de passe.",
+        "ACCT_ENABLED est explicitement à true sur le conteneur de compte, avec le répertoire de données monté hors du dépôt et vérifié par ses droits, de sorte que le processus de compte puisse démarrer.",
+        "La politique de conservation publiée est assez concrète pour être appliquée — l'inscription reste désactivée jusqu'à ce qu'elle le soit.",
+        "Un retour arrière écrit : qui remet les deux indicateurs dans leur état antérieur, et ce qu'il advient des comptes créés entre-temps.",
+        "Une autorisation explicite et consignée pour activer — une décision distincte que cette page ne prend pas et n'accorde pas."
+      ],
+      "readOnly": "Lecture seule : cette page lit la configuration et ne modifie aucun indicateur, aucun réglage SMTP, aucune référence et aucun compte.",
+      "overflowPx": 0,
+      "pageHeight": 1364,
+      "contentBottom": 1324,
+      "screenshot": "account-preflight-fr.png",
+      "paintedChars": 2242
+    }
+  },
+  "counts": {
+    "locales": 2,
+    "checksPerLocale": 3,
+    "checklistItemsPerLocale": 7,
+    "assertions": 35,
+    "failures": 0,
+    "screenshots": [
+      "account-preflight-en.png",
+      "account-preflight-fr.png"
+    ]
+  },
+  "checks": [
+    {
+      "name": "en: exactly the three prerequisites are on screen",
+      "ok": true,
+      "detail": "smtp,accountEnabled,emailVerification"
+    },
+    {
+      "name": "en: every prerequisite states pass/pending (no silent failure)",
+      "ok": true,
+      "detail": "smtp=pending/pending accountEnabled=pending/pending emailVerification=pending/pending"
+    },
+    {
+      "name": "en: the deployment's own state reads pending on all three",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "en: verdict is a role=status banner",
+      "ok": true,
+      "detail": "status"
+    },
+    {
+      "name": "en: fail-closed statement is painted",
+      "ok": true,
+      "detail": "Account activation stays fail-closed until SMTP is live. Nothing is broken here: without w"
+    },
+    {
+      "name": "en: 7 checklist items",
+      "ok": true,
+      "detail": "7"
+    },
+    {
+      "name": "en: read-only statement present",
+      "ok": true,
+      "detail": "Read-only: this page reads configuration and changes no flag, no SMTP "
+    },
+    {
+      "name": "en: painted real content",
+      "ok": true,
+      "detail": "1849 chars"
+    },
+    {
+      "name": "en: no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "scrollWidth-clientWidth=0px, page 1245px tall"
+    },
+    {
+      "name": "en: screenshot is the content, not a blank band",
+      "ok": true,
+      "detail": "page 1245px vs content 1205px (+40px)"
+    },
+    {
+      "name": "en: no email address painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en: no connection string / URL painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en: no SMTP host painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en: no SMTP field name painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en: no raw catalog key painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en: screenshot written",
+      "ok": true,
+      "detail": "account-preflight-en.png 167321 bytes"
+    },
+    {
+      "name": "fr: exactly the three prerequisites are on screen",
+      "ok": true,
+      "detail": "smtp,accountEnabled,emailVerification"
+    },
+    {
+      "name": "fr: every prerequisite states pass/pending (no silent failure)",
+      "ok": true,
+      "detail": "smtp=pending/en attente accountEnabled=pending/en attente emailVerification=pending/en attente"
+    },
+    {
+      "name": "fr: the deployment's own state reads pending on all three",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "fr: verdict is a role=status banner",
+      "ok": true,
+      "detail": "status"
+    },
+    {
+      "name": "fr: fail-closed statement is painted",
+      "ok": true,
+      "detail": "L'activation du compte reste bloquée tant que le courriel SMTP n'est pas en service. Rien "
+    },
+    {
+      "name": "fr: 7 checklist items",
+      "ok": true,
+      "detail": "7"
+    },
+    {
+      "name": "fr: read-only statement present",
+      "ok": true,
+      "detail": "Lecture seule : cette page lit la configuration et ne modifie aucun in"
+    },
+    {
+      "name": "fr: painted real content",
+      "ok": true,
+      "detail": "2242 chars"
+    },
+    {
+      "name": "fr: no horizontal overflow at 1440px",
+      "ok": true,
+      "detail": "scrollWidth-clientWidth=0px, page 1364px tall"
+    },
+    {
+      "name": "fr: screenshot is the content, not a blank band",
+      "ok": true,
+      "detail": "page 1364px vs content 1324px (+40px)"
+    },
+    {
+      "name": "fr: no email address painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fr: no connection string / URL painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fr: no SMTP host painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fr: no SMTP field name painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fr: no raw catalog key painted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fr: screenshot written",
+      "ok": true,
+      "detail": "account-preflight-fr.png 192235 bytes"
+    },
+    {
+      "name": "fr verdict differs from en verdict",
+      "ok": true,
+      "detail": "220 vs 260 chars"
+    },
+    {
+      "name": "fr checklist differs from en checklist",
+      "ok": true,
+      "detail": "7/7 differ"
+    },
+    {
+      "name": "both states are identically pending across locales",
+      "ok": true,
+      "detail": "smtp=pending accountEnabled=pending emailVerification=pending"
+    }
+  ]
+}
