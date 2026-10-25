@@ -8,6 +8,14 @@
  *   modal  — the explanatory card inside "Link Data", where someone who has
  *            no XML export is deciding what to do.
  *
+ * When the utility has NOT issued credentials the modal does not show an
+ * error, a dead button or an empty control: it shows the WAITING STATE —
+ * what is pending, in homeowner language, plus the day-one connection
+ * journey (what you'll need, what you'll do, what happens after) so the
+ * wait reads as a state with a next step rather than a broken feature
+ * (t_10f231ed). The chip stays hidden in that state by design: the toolbar
+ * owes the user nothing about a feature that does not exist yet.
+ *
  * The component never holds a credential: connect is a full-page navigation
  * to the shim's /greenbutton/start, and everything after that rides the
  * HttpOnly session cookie.
@@ -69,21 +77,82 @@ export function GreenButtonSync({
   status, syncing, message, onConnect, onSync, onDisconnect, onDismissMessage, variant = "chip",
 }: Props) {
   const { t } = useTranslation();
-  // Not configured: the feature does not exist for this deployment yet.
+  // Not configured: the utility has not issued credentials, so the journey
+  // cannot complete. This card is the only place that says so — it must read
+  // as a STATE (what is pending, what still works, what happens next), never
+  // as an error or a dead control.
   if (!status?.configured) {
     if (variant === "modal") {
       return (
         <div
           data-testid="gb-unconfigured"
           data-gb-state="unconfigured"
-          className="mt-4 md:mt-6 border-2 border-dashed border-edge/40 rounded-xl md:rounded-2xl p-4 text-left"
+          className="mt-4 md:mt-6 border-2 border-dashed border-edge/40 rounded-xl md:rounded-2xl p-4 md:p-5 text-left"
         >
-          <div className="text-[11px] md:text-xs font-black uppercase text-ink-3">
-            {t("gb.liveSyncTitle")}
+          <div className="flex items-center gap-2">
+            <Link2 size={16} strokeWidth={4} />
+            <span className="text-[11px] md:text-xs font-black uppercase text-ink-3">
+              {t("gb.liveSyncTitle")}
+            </span>
           </div>
-          <p className="mt-1 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
-            {t("gb.notSwitchedOn")}
+
+          <p
+            className="mt-2 text-xs md:text-sm font-bold text-ink normal-case"
+            data-testid="gb-waiting-headline"
+          >
+            {t("gb.waiting.headline")}
           </p>
+          <p
+            className="mt-1 text-[10px] md:text-xs font-bold text-ink-2 normal-case"
+            data-testid="gb-waiting-pending"
+          >
+            {t("gb.waiting.pending")}
+          </p>
+          {/* The "this is not broken" half: what keeps working today. */}
+          <p
+            className="mt-2 text-[10px] md:text-xs font-bold text-ink-2 normal-case"
+            data-testid="gb-waiting-works"
+          >
+            {t("gb.waiting.worksToday")}
+          </p>
+
+          {/* Day-one connection journey — the wait, plus the three things a
+              homeowner will actually meet when it lifts. Kept inside this
+              card so it travels with the state it explains; ordered list
+              because the sequence is the point. */}
+          <div className="mt-3 border-t-2 border-edge/40 pt-3" data-testid="gb-journey">
+            <div className="text-[11px] md:text-xs font-black uppercase tracking-[0.08em] text-ink-3">
+              {t("gb.journey.title")}
+            </div>
+            <ol className="mt-2 space-y-2">
+              {[
+                { n: 1, label: t("gb.journey.need.label"), body: t("gb.journey.need.body") },
+                { n: 2, label: t("gb.journey.do.label"), body: t("gb.journey.do.body") },
+                { n: 3, label: t("gb.journey.after.label"), body: t("gb.journey.after.body") },
+              ].map((step) => (
+                <li
+                  key={step.n}
+                  className="flex gap-2"
+                  data-testid={`gb-journey-step-${step.n}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-edge/40 bg-card text-[10px] font-black text-ink-2"
+                  >
+                    {step.n}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[10px] md:text-xs font-black uppercase text-ink">
+                      {step.label}
+                    </span>
+                    <span className="block text-[10px] md:text-xs font-bold text-ink-2 normal-case">
+                      {step.body}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       );
     }
