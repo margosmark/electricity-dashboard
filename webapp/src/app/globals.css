@@ -56,6 +56,15 @@
   --on-dark: #ffffff; /* stable ink for fixed dark-color slabs */
   --accent-soft: #fefce8; /* the soft tint panels (was bg-yellow-50/100) */
 
+  /* The focus ring's ink (`:focus-visible`, see the ring rule at the bottom
+     of this file). The ACCENT cannot carry it in light: #c7f000 measures
+     1.22:1 on this canvas (#f6f6f3) and 1.32:1 on the card — an invisible
+     focus indicator, which is what the redesign shipped until t_5f6b2315.
+     Ink reads on the page (16.7:1), the card (18.1:1) and the yellow chip
+     (11.8:1); where a focused control sits on a black slab the 2px --page
+     gap inside the outline carries the indicator instead. */
+  --focus-ring: #14161a;
+
   /* The accent FAMILY used as text on an inverted chip (`--inv`). The chip is
      black in light and a light chip in dark, so the same pastel cannot serve
      both: light needs the -400 (bright on black), dark needs the -700 (dark
@@ -287,6 +296,11 @@
      (11.7:1), which is a gain, not a compromise. */
   --accent: #e4ff57;
   --accent-ink: #0a0c10;
+  /* The focus ring's ink here (light uses --ink, t_5f6b2315): the accent is
+     the READABLE choice on this canvas — #e4ff57 is 17.5:1 on --page
+     (#0a0c10) and 16.5:1 on the card, where the light theme's ink would be
+     1.08:1 and the indicator would vanish. */
+  --focus-ring: #e4ff57;
   /* The tinted sub-surface (money delta summary rows, open-period tail,
      plan callouts). At 12% it mixed to rgb(42,48,33) — an olive the MUTED
      ink steps could not clear AA on: ink-3 measured 4.32:1 and ink-4
@@ -624,23 +638,11 @@ body {
   min-height: 44px;
 }
 
-/* ---------------------------------------------------------------------------
- * Wave H item 3 — one focus ring for the whole app.
- *
- * The design language is white chips, yellow chips AND black chips, so a
- * single-colour outline always loses on one of them. This ring is two-tone:
- * a white edge flush with the element (reads on black) plus a blue halo
- * outside it (reads on white and on yellow). Unlayered CSS beats Tailwind's
- * layered utilities, so it wins over the hard offset shadows while focused
- * and disappears again on blur — the neobrutalist shadow comes back intact.
- *
- * This is the standing gate documented in ARCHITECTURE.md → Accessibility.
- * ------------------------------------------------------------------------- */
-:focus-visible {
-  outline: 3px solid #ffffff;
-  outline-offset: 0;
-  box-shadow: 0 0 0 6px #2563eb;
-}
+/* The Wave H focus ring (3px white edge + 6px blue halo) retired with the
+   neobrutalist shadows in the Quiet Meter redesign; its successor — the
+   2px / 2px `--focus-ring` outline — lives with the Quiet Meter chrome at
+   the bottom of this file, and journey.spec.ts measures it on the painted
+   page in both themes. */
 
 /* Wave H item 4 — the chart shimmer (see ChartView's ChartSkeleton). */
 @keyframes skeleton-sweep {
@@ -918,9 +920,34 @@ button {
   box-shadow: none;
 }
 
-/* App-wide focused controls use the accent ring instead of a blue halo. */
+/* --------------------------------------------------------------------------- *
+ * Wave H item 3 → Quiet Meter: ONE focus ring for the whole app.
+ *
+ * Geometry: a 2px `--page` gap flush with the element, then the 2px
+ * `--focus-ring` outline (outline-offset: 2px) — the ring breathes instead
+ * of hugging the border the way the neobrutalist 3px/6px ring did. Two
+ * layers, two jobs: the gap reads against the element it surrounds, the
+ * outline reads against whatever the element sits on.
+ *
+ * The ink is a per-theme token because NO single colour survives both
+ * canvases: the accent is 1.22:1 on the light page (#c7f000 on #f6f6f3 —
+ * the invisible indicator #110 shipped, and what journey.spec.ts used to
+ * wave through on a stale geometry match) and ink is 1.08:1 on the dark one.
+ * Light gets ink (16.7:1 on page, 18.1:1 on card), dark keeps the accent
+ * (17.5:1 / 16.5:1); both clear the 3:1 non-text floor the standing gate
+ * asks for. journey.spec.ts measures that budget on the PAINTED page — every
+ * tab stop, both themes — so a token swap that loses a surface fails there,
+ * and WaveH.test.tsx pins the rule text here.
+ *
+ * Unlayered + !important: it outranks Tailwind's layered utilities (the
+ * `focus-visible:outline-none` / `ring-4` exceptions in LocaleToggle and
+ * EfficiencyCard lose to it, so the app keeps ONE ring) and the hard offset
+ * shadows while focused; on blur it disappears and the surface comes back.
+ *
+ * Standing gate: ARCHITECTURE.md → Accessibility → "Focus is always visible".
+ * ------------------------------------------------------------------------- */
 :focus-visible {
-  outline: 2px solid var(--accent) !important;
+  outline: 2px solid var(--focus-ring) !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--page) !important;
 }
@@ -992,6 +1019,7 @@ body {
     --edge: #000000;
     --edge-muted: rgba(0, 0, 0, 0.4);
     --ink: #000000;
+    --focus-ring: #000000; /* 20.1:1 on the printed --page #f8fafc */
     --ink-2: #475569;
     --ink-3: #59677a;
     --ink-4: #5f6d80;

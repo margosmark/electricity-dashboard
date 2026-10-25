@@ -426,9 +426,20 @@ describe('Wave H 3 — semantics and labels', () => {
 
   it('keeps the standing focus/print gates in globals.css', () => {
     const css = fs.readFileSync(path.join(WEBAPP, 'src/app/globals.css'), 'utf8');
-    // One ring that reads on white, yellow AND black chips.
-    expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #ffffff/);
-    expect(css).toMatch(/box-shadow:\s*0 0 0 6px #2563eb/);
+    // One ring that reads on white, yellow AND black chips: the Quiet
+    // Meter ring is a 2px `--focus-ring` outline at a 2px offset with the
+    // `--page` gap inside it, and the ink is a per-theme token because the
+    // accent cannot carry it in light (#c7f000 is 1.22:1 on #f6f6f3 — an
+    // invisible indicator; t_5f6b2315). The PAINTED budget in both themes
+    // is journey.spec.ts's "focus ring reads on every surface" walk.
+    expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
+    expect(css).toMatch(/:focus-visible\s*{[^}]*box-shadow:\s*0 0 0 2px var\(--page\)/);
+    expect(css).toMatch(/--focus-ring:\s*#14161a/);
+    expect(css).toMatch(/--focus-ring:\s*#e4ff57/);
+    // The retired neobrutalist ring must stay retired: if it comes back it
+    // OUTRANKS nothing (the live rule is !important) and the app would paint
+    // two competing indicators.
+    expect(css).not.toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #ffffff/);
     expect(css).toMatch(/\.seg\s*{[^}]*min-height:\s*44px/);
     // Print contract for InsightsView.
     expect(css).toMatch(/@media print/);

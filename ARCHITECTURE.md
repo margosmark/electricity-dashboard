@@ -158,12 +158,18 @@ a test that fails if it regresses — `src/components/WaveH.test.tsx` for DOM
 behaviour, `tests/e2e/journey.spec.ts` for anything that needs real CSS
 cascade or real event dispatch (focus rings, `@media print`, crash dispatch).
 
-**1. Focus is always visible.** One rule in `globals.css`: a white edge plus a
-blue halo (`:focus-visible`), chosen because the design language has white,
-yellow *and* black chips and a single-colour outline always loses on one of
-them. Any interactive element must be Tab-reachable and must show that ring;
-a `div` with `onClick` must carry `role="button"`, `tabIndex={0}` and an
-Enter/Space handler (the plan cards are the worked example).
+**1. Focus is always visible.** One rule in `globals.css`: a 2px `--focus-ring`
+outline at a 2px offset, with the 2px `--page` gap inside it (Quiet Meter; the
+neobrutalist white-edge-plus-blue-halo ring retired with the redesign). The ink
+is a per-theme token — ink in light, the accent in dark — because no single
+colour reads on both canvases: the accent is 1.22:1 on the light page and ink is
+1.08:1 on the dark one, i.e. an invisible indicator in each case. Any interactive
+element must be Tab-reachable and must show that ring; a `div` with `onClick`
+must carry `role="button"`, `tabIndex={0}` and an Enter/Space handler (the plan
+cards are the worked example). The budget — DRAWN, and ≥3:1 against whatever the
+element sits on — is measured on the painted page in both themes by
+`tests/e2e/journey.spec.ts` ("focus ring reads on every surface"), not asserted
+against one era's hex values.
 
 **2. Escape closes the top overlay.** The listener lives in `Dashboard.tsx`
 and walks the stack top-down: always-on floor help → UsagePoint picker →
