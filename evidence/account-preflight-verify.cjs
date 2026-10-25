@@ -29,7 +29,17 @@
 const path = require('node:path');
 const fs = require('node:fs');
 
-const { chromium } = require('@playwright/test');
+// Playwright lives in `webapp/node_modules`; `evidence/` sits outside it, so a
+// bare require only resolves when NODE_PATH happens to be set. Fall back to the
+// worktree's own copy the way dark-mode-verify.cjs does — otherwise the command
+// in this file's own header fails with MODULE_NOT_FOUND.
+const { chromium } = (() => {
+  try {
+    return require('@playwright/test');
+  } catch {
+    return require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test'));
+  }
+})();
 
 const BASE = process.env.PREFLIGHT_BASE_URL || 'http://127.0.0.1:3219/';
 const CHROMIUM = process.env.PREFLIGHT_CHROMIUM || '/usr/bin/chromium';

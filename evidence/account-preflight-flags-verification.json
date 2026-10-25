@@ -1,0 +1,135 @@
+{
+  "base": {
+    "ref": "origin/main",
+    "sha": "128e3fa5fb9dc960ce1b71c15d0f2d3edb166b8a"
+  },
+  "after": {
+    "branch": "electricity/t_9beb09f2-greenlit-account-activation-preflight-ex",
+    "head": "db105bcea2c7b48bc8f523291f7dfad7c97d8a22",
+    "dirty": false,
+    "driftOutsideEvidence": []
+  },
+  "flags": [
+    "ACCT_ENABLED",
+    "ACCT_EMAIL_VERIFICATION_ENABLED"
+  ],
+  "files": {
+    "docker-compose.yml": {
+      "existsBefore": true,
+      "existsAfter": true,
+      "sha256Before": "1d9bf2b66ea791c657404850bf76ff079bb84ef00088633ea00c8cef4209fc8d",
+      "sha256After": "1d9bf2b66ea791c657404850bf76ff079bb84ef00088633ea00c8cef4209fc8d",
+      "flagLinesBefore": [
+        {
+          "line": 138,
+          "flag": "ACCT_ENABLED",
+          "text": "      ACCT_ENABLED: ${ACCT_ENABLED:-false}"
+        },
+        {
+          "line": 152,
+          "flag": "ACCT_EMAIL_VERIFICATION_ENABLED",
+          "text": "      ACCT_EMAIL_VERIFICATION_ENABLED: ${ACCT_EMAIL_VERIFICATION_ENABLED:-false}"
+        }
+      ],
+      "flagLinesAfter": [
+        {
+          "line": 138,
+          "flag": "ACCT_ENABLED",
+          "text": "      ACCT_ENABLED: ${ACCT_ENABLED:-false}"
+        },
+        {
+          "line": 152,
+          "flag": "ACCT_EMAIL_VERIFICATION_ENABLED",
+          "text": "      ACCT_EMAIL_VERIFICATION_ENABLED: ${ACCT_EMAIL_VERIFICATION_ENABLED:-false}"
+        }
+      ]
+    },
+    "ops/edge/topology-test.compose.yml": {
+      "existsBefore": true,
+      "existsAfter": true,
+      "sha256Before": "d520b3690722bd650d41f16c44fbb5a7c7dfbb959b0d1c65eafb41b080c528bf",
+      "sha256After": "d520b3690722bd650d41f16c44fbb5a7c7dfbb959b0d1c65eafb41b080c528bf",
+      "flagLinesBefore": [
+        {
+          "line": 76,
+          "flag": "ACCT_ENABLED",
+          "text": "      ACCT_ENABLED: ${GB_TOPO_ACCT_ENABLED:-false}"
+        }
+      ],
+      "flagLinesAfter": [
+        {
+          "line": 76,
+          "flag": "ACCT_ENABLED",
+          "text": "      ACCT_ENABLED: ${GB_TOPO_ACCT_ENABLED:-false}"
+        }
+      ]
+    }
+  },
+  "counts": {
+    "checks": 12,
+    "failures": 0
+  },
+  "checks": [
+    {
+      "name": "docker-compose.yml: byte-identical (before)",
+      "ok": true,
+      "detail": "1d9bf2b66ea791c657404850bf76ff079bb84ef00088633ea00c8cef4209fc8d → 1d9bf2b66ea791c657404850bf76ff079bb84ef00088633ea00c8cef4209fc8d"
+    },
+    {
+      "name": "docker-compose.yml: the flag assignment lines are unchanged",
+      "ok": true,
+      "detail": "2 line(s) before, 2 after"
+    },
+    {
+      "name": "ops/edge/topology-test.compose.yml: byte-identical (before)",
+      "ok": true,
+      "detail": "d520b3690722bd650d41f16c44fbb5a7c7dfbb959b0d1c65eafb41b080c528bf → d520b3690722bd650d41f16c44fbb5a7c7dfbb959b0d1c65eafb41b080c528bf"
+    },
+    {
+      "name": "ops/edge/topology-test.compose.yml: the flag assignment lines are unchanged",
+      "ok": true,
+      "detail": "1 line(s) before, 1 after"
+    },
+    {
+      "name": "ACCT_ENABLED: a definition exists in the working tree",
+      "ok": true,
+      "detail": "witnessed"
+    },
+    {
+      "name": "ACCT_ENABLED: before/after assignment identical",
+      "ok": true,
+      "detail": "identical"
+    },
+    {
+      "name": "ACCT_EMAIL_VERIFICATION_ENABLED: a definition exists in the working tree",
+      "ok": true,
+      "detail": "witnessed"
+    },
+    {
+      "name": "ACCT_EMAIL_VERIFICATION_ENABLED: before/after assignment identical",
+      "ok": true,
+      "detail": "identical"
+    },
+    {
+      "name": "no untracked .env can override the defaults",
+      "ok": true,
+      "detail": "no .env present in this worktree"
+    },
+    {
+      "name": "SMTP configuration (docker-compose.yml) untouched",
+      "ok": true,
+      "detail": "sha256 1d9bf2b66ea791c6… → 1d9bf2b66ea791c6…; 10 ACCT_SMTP_* line(s) before, 10 after (values not read out)"
+    },
+    {
+      "name": "worktree drift is confined to this card's own evidence files",
+      "ok": true,
+      "detail": "no undeclared drift"
+    },
+    {
+      "name": "this branch's own diff adds or removes no flag assignment",
+      "ok": true,
+      "detail": "0 assignment lines touched"
+    }
+  ],
+  "verdict": "UNCHANGED — both ACCT_* flags and the SMTP configuration are byte-identical before and after."
+}
