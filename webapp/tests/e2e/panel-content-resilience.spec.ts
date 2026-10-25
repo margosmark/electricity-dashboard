@@ -105,6 +105,38 @@ async function applyTextScale(page: Page, rootPx: number) {
   );
 }
 
+/**
+ * The pills carry `transition: all .15s`, so their LABEL font-size eases over
+ * ~150ms after a viewport or root step (md crossing: 10px ⇄ 0.75rem). Reading
+ * it mid-ease yields a fractional value — QA t_d0f94d7a measured 10.014 /
+ * 10.3262 / 11.9373 against the design 10 / 0.75×root, red on Chromium 156
+ * and Chrome 155 alike. Wait for the pill to hold STILL (no running
+ * transition AND the same computed font-size on three consecutive frames)
+ * before the read, so the `pillFont` `toBe` below measures the settled page
+ * and a genuinely wrong size still fails it. This hides nothing.
+ */
+async function waitForPillLabelSettle(page: Page, timeout = 5_000) {
+  await page.waitForFunction(
+    () => {
+      const pill = document.querySelector('[role="tablist"] [role="tab"]') as HTMLElement | null;
+      if (!pill) return false;
+      if (pill.getAnimations().length > 0) return false;
+      const w = window as unknown as { __pillFs?: string; __pillFsStable?: number };
+      const fs = getComputedStyle(pill).fontSize;
+      if (w.__pillFs === undefined) {
+        w.__pillFs = fs;
+        w.__pillFsStable = 0;
+        return false;
+      }
+      w.__pillFsStable = fs === w.__pillFs ? (w.__pillFsStable ?? 0) + 1 : 0;
+      w.__pillFs = fs;
+      return (w.__pillFsStable ?? 0) >= 2;
+    },
+    undefined,
+    { timeout },
+  );
+}
+
 /** In-page numbers the assertions below read. */
 async function pageMetrics(page: Page) {
   return page.evaluate(() => {
@@ -194,6 +226,8 @@ for (const locale of ['en', 'fr'] as Locale[]) {
       ]) {
         await page.setViewportSize(vp);
         await waitForLayoutSettle(page);
+        // The md crossing re-eases the label; read pillFont settled (below).
+        await waitForPillLabelSettle(page);
         const m = await pageMetrics(page);
         const at = `${vp.width} @ root ${root} ${locale} seeded`;
 
@@ -290,6 +324,7 @@ for (const locale of ['en', 'fr'] as Locale[]) {
           undefined,
           { timeout: 8_000 },
         );
+        await waitForPillLabelSettle(page);
         const m = await pageMetrics(page);
         const at = `${vp.width}x${vp.height} @ root ${root} ${locale} money`;
 

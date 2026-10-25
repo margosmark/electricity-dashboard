@@ -204,6 +204,40 @@ async function applyTextScale(page: Page, rootPx: number) {
   );
 }
 
+/**
+ * The pills carry `transition: all .15s`, so their LABEL font-size eases
+ * across a viewport/root step (md crossing: 10px ⇄ 0.75rem) for ~150ms.
+ * Reading it inside that window returns a fractional value — QA t_d0f94d7a
+ * measured 10.014 / 10.0631 / 11.0855 / 11.9373 against the design 10/12
+ * (an easing trace reproduced the failing numbers to ±0.0001), red on both
+ * Chromium 156 and Chrome 155. This waits for the pill to hold STILL —
+ * no running transition AND the same computed font-size on three consecutive
+ * animation frames — so the `toBe` below measures the settled page, never a
+ * transition frame. A size that never reaches the design value still fails
+ * the assertion: this hides nothing, it only removes the clock.
+ */
+async function waitForPillLabelSettle(page: Page, timeout = 5_000) {
+  await page.waitForFunction(
+    () => {
+      const pill = document.querySelector('[role="tablist"] [role="tab"]') as HTMLElement | null;
+      if (!pill) return false;
+      if (pill.getAnimations().length > 0) return false;
+      const w = window as unknown as { __pillFs?: string; __pillFsStable?: number };
+      const fs = getComputedStyle(pill).fontSize;
+      if (w.__pillFs === undefined) {
+        w.__pillFs = fs;
+        w.__pillFsStable = 0;
+        return false;
+      }
+      w.__pillFsStable = fs === w.__pillFs ? (w.__pillFsStable ?? 0) + 1 : 0;
+      w.__pillFs = fs;
+      return (w.__pillFsStable ?? 0) >= 2;
+    },
+    undefined,
+    { timeout },
+  );
+}
+
 /** In-page snapshot of every number the checks below assert on. */
 async function snapshotStrip(page: Page) {
   return page.evaluate(() => {
@@ -304,6 +338,8 @@ for (const locale of ['en', 'fr'] as Locale[]) {
     for (const vp of widths) {
       await page.setViewportSize(vp);
       await waitForLayoutSettle(page);
+      // The md crossing re-eases the label 10⇄12px; read it settled (L below).
+      await waitForPillLabelSettle(page);
       const s = await snapshotStrip(page);
       expect(s, `strip rendered at ${vp.width}`).not.toBeNull();
       const at = `${vp.width}×${vp.height} ${locale}`;
@@ -384,6 +420,7 @@ for (const locale of ['en', 'fr'] as Locale[]) {
         // Reveal is driven by ResizeObserver/resize — poll for its effect
         // rather than sleeping a guessed interval.
         await waitForActiveInStrip(page);
+        await waitForPillLabelSettle(page);
         const s = await snapshotStrip(page);
         const at = `${vp.width} ${root / 16.0 === 2 ? 200 : 150}% ${locale}`;
 
@@ -453,6 +490,7 @@ test('rotation keeps the page still and the active pill in the strip', async ({ 
       // t_82a4dc08, closed by #116 and gated there too.
       await waitForLayoutSettle(page);
       await waitForActiveInStrip(page);
+      await waitForPillLabelSettle(page);
       const s = await snapshotStrip(page);
       const at = `${vp.width}×${vp.height} @ root ${root}px`;
 
