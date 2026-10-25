@@ -903,9 +903,18 @@ button,
 input,
 select,
 summary,
+a[href],
 [role="button"],
 [role="tab"] {
+  min-width: 44px !important;
   min-height: 44px !important;
+}
+
+/* Keep the floor measurable on inline anchors (min-height is ignored on
+   non-replaced inline boxes). Inline flex preserves text-flow participation. */
+a[href] {
+  display: inline-flex;
+  align-items: center;
 }
 
 [data-testid="dashboard-toolbar"] {
