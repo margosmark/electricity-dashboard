@@ -19,12 +19,35 @@ import { seedMarkShaped } from './mark-seed';
  *           both are asserted, because only the per-tab one fails.
  *   INTERACTION every tab selects its labelled panel, in both locales and
  *           themes, on a touch viewport.
+ *   STICKY  at max scroll the strip sits at `top: 0` and the ACTIVE pill is
+ *           inside it (a sticky rule that parks the selected pill out of view
+ *           is worse than no sticky rule). Folded in from #109, which
+ *           asserted it in its own copy of this file — this file's own
+ *           landscape test already called itself "sticky holds" without
+ *           ever checking it.
  *   OVERFLOW no page-level horizontal scroll at any of the three widths.
+ *   A11Y     keyboard selection across the four tabs, a focus ring with real
+ *           width, `transitionProperty === 'none'` under
+ *           `prefers-reduced-motion` (the `motion-reduce` class this
+ *           integration adds to the tab button — main carried the global
+ *           reduced-motion block but never the button's own), plus 200%
+ *           text, the md breakpoint and the safe-area declaration. From
+ *           `a37ca6c`, adapted to the four-tab / no-76px-floor reality.
  *   CONSOLE zero messages across the above.
  *
- * Deliberately NOT asserted here: the strip's rule/sticky styling (owned by
- * the D1 design lane), safe-area insets, 200% text zoom, and keyboard focus
- * behaviour through a sticky transition.
+ * Reconciled with #109's description rather than overwriting it: two things
+ * that description claimed are deliberately NOT carried over as written.
+ * Its fit arithmetic (`4×76 + 32px padding of 345`) rests on the
+ * `min-w-[76px]` floor #114 deleted — that floor overrode flexbox's
+ * min-content minimum and let labels escape their pills (+14px measured) —
+ * and its TOKEN criterion (the rule resolves from `--edge`) is owned by the
+ * D1 lane in mobile-defects.spec.ts, which resolves BOTH tokens at runtime
+ * in both themes instead of pinning the palette the branch was cut against.
+ *
+ * Deliberately NOT asserted here: the strip's rule styling (D1 lane),
+ * pixel-level rendering (tabnav-visual.spec.ts and its 36 snapshots),
+ * safe-area inset GEOMETRY (tabnav-resilience.spec.ts), and document
+ * overflow under scaled text (panel-content-resilience.spec.ts).
  */
 
 const WIDTHS = [360, 390] as const;
@@ -173,6 +196,25 @@ for (const width of WIDTHS) {
             fit.innerWidth,
           );
 
+          // --- STICKY (#109): at max scroll the strip parks at top 0 with the
+          // ACTIVE pill inside it — a sticky rule that parks the selected pill
+          // out of view is worse than no sticky rule. #109 asserted this in
+          // its own copy of this file; folded into main's four-tab walk here
+          // (the branch's own `4×76 + 32px of 345` fit arithmetic is NOT
+          // folded: #114 deleted that min-w-[76px] floor). Scroll back to the
+          // top so the remaining checks and the next cell see a fresh page.
+          await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+          const stuck = await measureStrip(page);
+          expect(stuck.navTop, 'strip pinned to the viewport top').toBe(0);
+          expect(stuck.activeRect, 'the selected pill exists').not.toBeNull();
+          expect(stuck.activeRect!.top, 'active pill top inside the strip').toBeGreaterThanOrEqual(
+            stuck.navRect.top - 0.5,
+          );
+          expect(stuck.activeRect!.bottom, 'active pill bottom inside the strip').toBeLessThanOrEqual(
+            stuck.navRect.bottom + 0.5,
+          );
+          await page.evaluate(() => window.scrollTo(0, 0));
+
           expect(
             consoleSeen.filter((s) => !EXPECTED_GATE_404.test(s)),
             'no console messages across the walk',
@@ -201,9 +243,150 @@ test.describe('tab strip @ 780×360 landscape', () => {
       'no pill clips its label',
     ).toEqual([]);
 
+    // STICKY (#109, folded in): the test's own name promises this — the strip
+    // parks at top 0 with the active pill inside it at max scroll.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const stuck = await measureStrip(page);
+    expect(stuck.navTop, 'strip pinned to the viewport top at max scroll').toBe(0);
+    expect(stuck.activeRect, 'the selected pill exists').not.toBeNull();
+    expect(stuck.activeRect!.bottom, 'active pill bottom inside the strip').toBeLessThanOrEqual(
+      stuck.navRect.bottom + 0.5,
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+
     expect(
       consoleSeen.filter((s) => !EXPECTED_GATE_404.test(s)),
       'no console messages across the walk',
     ).toEqual([]);
   });
 });
+
+/**
+ * A11y / reduced-motion contract — folded in from `a37ca6c`
+ * (`electricity/tabnav-reduced-motion-orphan`) at t_21de1552.
+ *
+ * The orphan's version was cut against the three-tab strip and the
+ * `min-w-[76px]` era, so the pieces that still hold are kept and the two
+ * that main's design has since changed are re-pointed:
+ *   - four tabs (already the IA here) and the keyboard walk over them;
+ *   - `transitionProperty === 'none'` is THE claim this block exists for:
+ *     main ships the global `@media (prefers-reduced-motion: reduce)` block
+ *     but never applied `motion-reduce:transition-none` to the tab button
+ *     itself — that class is part of this integration, and this is its gate;
+ *   - the 44×44 target floor is measured against main's `min-w-[64px]`
+ *     pill (not the deleted 76px floor), and the 200% cell runs the real
+ *     `text-[10px] md:text-xs` scale rather than the orphan's assumption
+ *     that the pill font tracks the root.
+ *
+ * Safe-area values are zero in headless Chromium, so this pins the
+ * viewport-fit declaration and the app's documented 40px bottom clearance
+ * floor instead of claiming hardware inset simulation.
+ */
+for (const locale of LOCALES) {
+  for (const theme of THEMES) {
+    test.describe(`tab strip accessibility @ ${locale} / ${theme}`, () => {
+      test.use({
+        viewport: { width: 320, height: 720 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3,
+        reducedMotion: 'reduce',
+      });
+
+      test('keyboard, reduced motion, 200% text scale, breakpoint and safe-area', async ({
+        page,
+      }) => {
+        await blockOptionalWeather(page);
+        await selectLocale(page, locale);
+        await selectTheme(page, theme);
+        await seedMarkShaped(page);
+        const nav = page.getByTestId('tab-nav');
+        await expect(nav).toBeVisible();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        const tabs = nav.getByRole('tab');
+        await expect(tabs, 'the four-tab IA').toHaveCount(4);
+        await tabs.nth(0).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(tabs.nth(1)).toBeFocused();
+        await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+        await page.keyboard.press('End');
+        await expect(tabs.nth(3)).toBeFocused();
+        await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true');
+        await page.keyboard.press('ArrowLeft');
+        await expect(tabs.nth(2)).toBeFocused();
+        await page.keyboard.press('Home');
+        await expect(tabs.nth(0)).toBeFocused();
+        const focusStyle = await tabs.nth(0).evaluate((tab) => ({
+          outlineStyle: getComputedStyle(tab).outlineStyle,
+          outlineWidth: getComputedStyle(tab).outlineWidth,
+          transitionProperty: getComputedStyle(tab).transitionProperty,
+        }));
+        expect(focusStyle.outlineStyle, 'keyboard focus remains visible').not.toBe('none');
+        expect(
+          parseFloat(focusStyle.outlineWidth),
+          'focus indicator has visible width',
+        ).toBeGreaterThanOrEqual(2);
+        expect(
+          focusStyle.transitionProperty,
+          'reduced motion disables tab transitions',
+        ).toBe('none');
+
+        // Simulate 200% text scaling without relying on a browser-specific
+        // zoom shortcut; the strip must stay viewport-bounded with usable
+        // touch targets.
+        await page.evaluate(() => {
+          document.documentElement.style.fontSize = '200%';
+        });
+        const mobile = await nav.evaluate((element) => ({
+          navRect: element.getBoundingClientRect().toJSON(),
+          viewportWidth: document.documentElement.clientWidth,
+          tablist: element
+            .querySelector<HTMLElement>('[role="tablist"]')
+            ?.getBoundingClientRect()
+            .toJSON(),
+          targets: [...element.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => ({
+            width: tab.getBoundingClientRect().width,
+            height: tab.getBoundingClientRect().height,
+          })),
+          bodyBottomPadding: getComputedStyle(document.body).paddingBottom,
+          viewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+        }));
+        expect(mobile.navRect.right, 'tab strip stays within the mobile viewport').toBeLessThanOrEqual(
+          mobile.viewportWidth,
+        );
+        expect(
+          mobile.tablist?.right,
+          'tablist stays within the mobile viewport',
+        ).toBeLessThanOrEqual(mobile.viewportWidth);
+        expect(
+          mobile.targets.every((target) => target.width >= 44 && target.height >= 44),
+          'all tab targets stay at least 44×44 CSS px',
+        ).toBe(true);
+        expect(mobile.viewport, 'installed app opts into device safe areas').toContain(
+          'viewport-fit=cover',
+        );
+        expect(
+          parseFloat(mobile.bodyBottomPadding),
+          'content clears the home-indicator floor',
+        ).toBeGreaterThanOrEqual(40);
+
+        // Exercise the md breakpoint on the same locale/theme state.
+        await page.setViewportSize({ width: 768, height: 720 });
+        const desktop = await nav.evaluate((element) => ({
+          width: window.innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          gap: getComputedStyle(element.querySelector('[role="tablist"]')!).columnGap,
+        }));
+        expect(
+          desktop.documentWidth,
+          'no page-level horizontal overflow at tablet breakpoint',
+        ).toBeLessThanOrEqual(desktop.width);
+        expect(
+          desktop.gap,
+          'md breakpoint applies desktop tab spacing at the 200% text scale',
+        ).toBe('24px');
+      });
+    });
+  }
+}

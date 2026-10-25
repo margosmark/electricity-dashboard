@@ -152,7 +152,11 @@ export default function ChartView({
               <button type="button" aria-label={t('chart.nextAria')} onClick={() => navigatePeriod('next')} className="no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-accent hover:text-accent-ink active:bg-accent active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none"><ChevronRight size={16} className="md:w-6 md:h-6" strokeWidth={4} /></button>
             </div>
           </div>
-          <div className="no-print flex bg-hover p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-edge text-ink" role="group" aria-label={t('chart.zoomAria')}>
+          {/* `shrink-0` (t_82a4dc08): the row is already under flex pressure at 1280,
+              and a squeezable cluster would pay for it with its labels wrapping to a
+              second line (measured 95x44 -> 86x48 per button once min-content
+              collapsed). The title group is the documented yielder on this row. */}
+          <div className="no-print flex shrink-0 bg-hover p-1 rounded-lg md:rounded-xl border-2 md:border-4 border-edge text-ink" role="group" aria-label={t('chart.zoomAria')}>
              {(['monthly', 'weekly', 'daily'] as const).map((l) => <button key={l} type="button" aria-pressed={zoomLevel === l && !zoomTarget} onClick={() => setZoomLevelAndClear(l)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-black transition-all ${zoomLevel === l && !zoomTarget ? 'bg-inv text-inv-ink' : 'text-ink-2'}`}>{t(`chart.zoom.${l}`)}</button>)}
           </div>
           {/* `shrink-0`: the number is the one thing on this row that must never

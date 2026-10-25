@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
 import {
@@ -8,6 +8,40 @@ import {
   chartHeaderChecks,
 } from './toolbar-geometry.js';
 import { seedMarkShaped } from './mark-seed';
+
+/**
+ * Reconstruct the PRE-FIX chart header row in the live DOM — the
+ * anti-furniture counterfactual both chart-header sweeps below depend on
+ * ("a sweep row that is green on the buggy build is decoration").
+ *
+ * t_82a4dc08 added two protections that make the row survive its utilities
+ * being removed, so a faithful reconstruction has to remove all four parts:
+ * `min-w-0` on the title group (what lets the h2's truncate shrink),
+ * `shrink-0` on the cost block (what stops it absorbing the deficit),
+ * `shrink-0` on the zoom cluster, and the document-level
+ * `overflow-wrap: anywhere` that collapses every other min-content floor on
+ * the row. Measured with only the first two removed: the worst-case
+ * counterfactual reproduced the clip at 2 of 5 swept widths instead of 5,
+ * which is precisely the "this gate cannot see the defect it exists for"
+ * failure this helper exists to prevent.
+ */
+async function reconstructPreFixChartHeader(page: Page, costText?: string) {
+  await page.evaluate((costText) => {
+    document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
+    document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
+    document
+      .querySelector('[data-testid="chart-header-row"] > [role="group"]')
+      ?.classList.remove('shrink-0');
+    document.body.style.overflowWrap = 'normal';
+    if (costText) {
+      const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
+      if (num) num.textContent = costText;
+    }
+    return new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  }, costText ?? null);
+}
 
 /**
  * Layout-regression gate for the toolbar (t_7228c195).
@@ -142,15 +176,8 @@ test.describe('Overview usage card header row (t_fbf590fa)', () => {
     for (const vp of CHART_HEADER_SWEEP) {
       const label = `${vp.width}x${vp.height} pre-fix`;
       await page.setViewportSize(vp);
-      await page.evaluate(
-        () =>
-          new Promise<void>((resolve) => {
-            // Re-assert every iteration: the mutation must survive a resize.
-            document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
-            document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-          }),
-      );
+      // Re-asserted every iteration: the mutation must survive a resize.
+      await reconstructPreFixChartHeader(page);
       const pre = chartHeaderChecks(label, await page.evaluate(measureChartHeaderGeometry));
       for (const c of pre) {
         console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name} — ${c.detail}`);
@@ -234,12 +261,7 @@ test.describe('Overview usage card header row (t_fbf590fa)', () => {
     for (const vp of CHART_HEADER_SWEEP) {
       const label = `${vp.width}x${vp.height} worst-case pre-fix`;
       await page.setViewportSize(vp);
-      await page.evaluate((wide: string) => {
-        document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
-        document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
-        const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
-        if (num) num.textContent = wide;
-      }, WIDE);
+      await reconstructPreFixChartHeader(page, WIDE);
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
       );
