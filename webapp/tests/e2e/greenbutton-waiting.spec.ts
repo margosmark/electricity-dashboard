@@ -278,4 +278,40 @@ test.describe('Green Button credential-waiting state (day-one journey)', () => {
     }
     expect(raw).toContain(FR['gb.authorise']);
   });
+
+  // The classic surface renders its OWN copy of this component
+  // (`components/classic/GreenButtonSync.tsx`) inside /classic's upload
+  // dialog. Same catalog keys, second implementation: reachable there too,
+  // or the change is only half shipped.
+  for (const locale of ['en', 'fr'] as const) {
+    test(`/classic carries the same waiting state (${locale})`, async ({ page }) => {
+      const status = await (await page.request.get('/greenbutton/status')).json();
+      expect(status.configured).toBe(false);
+
+      await page.addInitScript((l) => window.localStorage.setItem('oeo_locale', l), locale);
+      await page.goto('/classic');
+      await expect(page.getByTestId('gb-unconfigured')).toBeVisible({ timeout: 15_000 });
+
+      const C = catalog(locale);
+      const card = page.getByTestId('gb-unconfigured');
+      await expect(card.getByTestId('gb-waiting-headline')).toHaveText(C['gb.waiting.headline']);
+      await expect(card.getByTestId('gb-waiting-works')).toHaveText(C['gb.waiting.worksToday']);
+      for (const step of STEPS) {
+        const li = card.getByTestId(`gb-journey-step-${step.n}`);
+        await expect(li).toBeVisible();
+        for (const key of step.keys) await expect(li).toContainText(C[key]);
+      }
+      await expect(card.getByTestId('gb-connect')).toHaveCount(0);
+      await expect(card.getByRole('alert')).toHaveCount(0);
+
+      const { findings, measured } = await contrastIn(page, '[data-testid="gb-unconfigured"]');
+      expect(measured, 'the classic walk measured nothing').toBeGreaterThanOrEqual(12);
+      expect(findings, JSON.stringify(findings, null, 2)).toEqual([]);
+
+      if (SHOT_DIR) {
+        fs.mkdirSync(SHOT_DIR, { recursive: true });
+        await card.screenshot({ path: path.join(SHOT_DIR, `waiting-classic-${locale}.png`) });
+      }
+    });
+  }
 });
