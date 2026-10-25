@@ -211,6 +211,20 @@ one-time step for this upgrade.
 | Right container answered | response carries `x-gb-process: account` **and** `X-Edge-Location: account` (a mismatch = the split is inverted, H1's failure mode) |
 | Push configured | same payload has `pushConfigured:true` once `VAPID_*` are set; `false` means sync works and notifications are simply inert |
 | Data file | `sudo ls -l "$ACCT_DATA_DIR"` → `accounts.db` once account storage has been explicitly provisioned |
+| Activation preflight (read-only) | `https://electricity.markarslan.ca/account/preflight` → the three prerequisites (SMTP provisioning, `ACCT_ENABLED`, `ACCT_EMAIL_VERIFICATION_ENABLED`) each shown pass/pending, plus the fail-closed statement and the activation checklist |
+
+**Activation preflight.** `/account/preflight` is the read-only answer to
+"why can't this be activated?". It is a **page** served by the account
+container (the same shape as `/account/terms`), not an API route, so every
+`/account/*` route handler still answers the indistinguishable 404 while
+`ACCT_ENABLED` is off — the API contract is untouched. It shows the three
+prerequisites as **pass/pending** (never a silent failure), states in plain
+language that activation stays fail-closed **until SMTP is live**, and lists
+what must be true before activation is even considered. It renders booleans
+only: no SMTP host, address, path or credential appears in either language,
+and it changes no flag, no SMTP setting, no credential and no account —
+`evidence/account-preflight-verify.cjs` asserts all of that against a real
+browser in en and fr.
 
 **Backup.** The external `ACCT_DATA_DIR` holds the SQLite database and WAL. It is user data even though the blob is ciphertext. Configure an encrypted, off-host backup and prove a restore before enabling accounts; a file copy is not an acceptable launch backup plan. SQLite is in WAL mode, so a consistent manual copy requires the account service stopped and the database, `-wal`, and `-shm` files copied together. This release does not configure or claim a retention/backup job.
 
