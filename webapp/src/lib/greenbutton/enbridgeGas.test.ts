@@ -82,13 +82,12 @@ describe('Enbridge gas feed: shape it must accept (requirement 1)', () => {
     expect(feed.groups).toHaveLength(1);
   });
 
-  it('reads the feed clock without shifting the UTC date convention', () => {
-    expect(feed.localTime).toEqual({
-      tzOffset: -18,
-      dstOffset: 3600,
-      dstStartRule: '69AD1E70',
-      dstEndRule: '6AE6E370',
-    });
+  it('drops the feed clock instead of believing an 18-second Ontario', () => {
+    // Enbridge stamps `tzOffset: -18` (Oakville: -18000 seconds) and two unix
+    // instants where DstRuleType bitmaps belong — neither is a clock the app
+    // may date anything with, so the block is dropped and the file's exact
+    // UTC midnight stamps stand as the dates they literally are (AC5).
+    expect(feed.localTime).toBeNull();
   });
 });
 
@@ -387,12 +386,9 @@ describe('AC2/AC4/requirement 5 — the account file is enrichment, never silenc
       meterIntervalLength: 2592000,
       serviceAddress: '1 SYNTHETIC STREET, SYNTHETOWN, ON A1A 1A1',
     });
-    expect(accountFeed.localTime).toEqual({
-      tzOffset: -18,
-      dstOffset: 3600,
-      dstStartRule: '69AD1E70',
-      dstEndRule: '6AE6E370',
-    });
+    // Same clock quirk as the usage file: `tzOffset: -18` + unix-instant
+    // rules describe no zone, so the account file's clock is dropped too.
+    expect(accountFeed.localTime).toBeNull();
   });
 
   it('raises an explicit account-details note instead of parsing to silence', () => {

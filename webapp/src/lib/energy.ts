@@ -2598,6 +2598,22 @@ export function usageUnadjusted(bill: UsageSummary): number | null {
 }
 
 /**
+ * True when `seconds` could be a ZONE's offset, not merely a finite number
+ * inside `isClockOffset`'s ±86400 s magnitude bound.
+ *
+ * Enbridge sends `tzOffset: -18` where Oakville sends -18000: finite, in
+ * range, and read as seconds an 18-second "Ontario" clock whose wall clock
+ * for 2026-01-27T00:00Z is 2026-01-26T23:59:42 — every exact-UTC-midnight
+ * period stamp a day early. Every offset a zone has ever had is a multiple
+ * of 15 minutes, so a value that is not cannot be this dataset's clock. The
+ * block is dropped (the documented fallback: the device's own zone / UTC)
+ * rather than believed — the readings in the same file still import.
+ */
+function isZoneOffset(seconds: number): boolean {
+  return isClockOffset(seconds) && seconds % 900 === 0;
+}
+
+/**
  * The first LocalTimeParameters in an already-parsed document, or null.
  * A block without tzOffset describes no clock, so it is ignored rather than
  * guessed at — and so is one whose offset cannot be a zone: `1e308` seconds
@@ -2605,14 +2621,15 @@ export function usageUnadjusted(bill: UsageSummary): number | null {
  * maths built on it produces instants no calendar can render. The clock is
  * optional metadata with a documented fallback (the device's own zone), so an
  * impossible one is DROPPED, not fatal: the readings in the same file still
- * import (see greenbutton/limits.ts#isClockOffset).
+ * import (see greenbutton/limits.ts#isClockOffset, and `isZoneOffset` above
+ * for the granularity a magnitude bound cannot catch).
  */
 export function parseLocalTimeNode(parsed: unknown): LocalTimeParams | null {
   for (const { node } of collectBillNodes(parsed, new Set(['LocalTimeParameters']))) {
     const tzOffset = billNum(node.tzOffset);
-    if (tzOffset === null || !isClockOffset(tzOffset)) continue;
+    if (tzOffset === null || !isZoneOffset(tzOffset)) continue;
     const dstOffset = billNum(node.dstOffset);
-    if (dstOffset !== null && !isClockOffset(dstOffset)) continue;
+    if (dstOffset !== null && !isZoneOffset(dstOffset)) continue;
     return {
       tzOffset,
       dstOffset,
@@ -2671,6 +2688,21 @@ export function decodeDstRule(rule: string | null | undefined): DstRule | null {
   };
   if (ruleOut.month < 1 || ruleOut.month > 12) return null;
   if (ruleOut.hour > 23) return null;
+  // The layout comment above documents bits 0-11 as seconds-in-hour 0-3599 —
+  // a bound the code never enforced, so `minute = floor(secondsInHour / 60)`
+  // could reach 68 and `dstTransitionAt` would build a wall time no clock has.
+  // And a transition is a wall-clock appointment: no timezone regime on Earth
+  // changes its clocks mid-minute, so a rule whose seconds-of-hour is not a
+  // whole minute is not a transition, it is a number that happens to decode.
+  //
+  // Both bounds are what drop Enbridge's two values (t_cab415ea): `69AD1E70`
+  // carries 3696 s → minute 61, `6AE6E370` carries 880 s → 14:14:40. They
+  // are not DstRuleType bitmaps at all — 1772953200 = 2026-03-08T07:00Z and
+  // 1794564976 = 2026-11-01T06:00Z, unix instants that happen to be the 2026
+  // US transitions — so nothing about them is a rule, and believing them
+  // built an inverted June-only DST window on an 18-second offset.
+  if (secondsInHour > 3599) return null;
+  if (secondsInHour % 60 !== 0) return null;
   return ruleOut;
 }
 
@@ -2758,6 +2790,13 @@ export function resolveZone(params: LocalTimeParams | null | undefined): Dataset
   if (!params) return null;
   const tzOffset = params.tzOffset;
   const dstOffset = params.dstOffset ?? 0;
+  // Defence for a clock that was persisted before this check existed
+  // (useDashboard keeps LocalTimeParameters in localStorage and shape-checks
+  // only): an offset that cannot be a zone is refused here too, so the
+  // fallback — the device's own zone / UTC — is what the caller gets instead
+  // of an 18-second "Ontario" clock that dates every midnight stamp a day
+  // early (Enbridge, hazard 2 of the gas epic).
+  if (!isZoneOffset(tzOffset) || !isZoneOffset(dstOffset)) return null;
   const startRule = decodeDstRule(params.dstStartRule);
   const endRule = decodeDstRule(params.dstEndRule);
   const cache = new Map<number, ZoneTransitions>();
@@ -2846,15 +2885,67 @@ const BILL_INFO_NOTE =
   /\busage\b|meter read|days in bill|loss factor|read date|due date|post date|balance forward|amount due/;
 
 /**
+ * A line that states a PRICE, not a charge: Enbridge's `Gas Supply Rate ¢/m3`
+ * carries amount 204037 with its own powerOfTenMultiplier -4 → 20.4037 CENTS
+ * per cubic metre, while the dollar lines beside it are × 10^-3. Fed to a
+ * dollar bucket it would be summed as $20.40 and lose the unit its own note
+ * declares. Any `¢/…` note is a unit price: display-only, never a bucket,
+ * never a total — its `Total Gas Supply Rate ¢/m3 (net)` wording would
+ * otherwise satisfy /^total\b/ and overwrite the stated bill total.
+ */
+const UNIT_PRICE_NOTE = /¢\s*\//;
+
+/**
+ * Enbridge's gas bill vocabulary, keyed off the note VERBATIM (lowercased).
+ * `itemKind` stays ignored — see BillLineItem.itemKind for why no published
+ * code list can be trusted. Matching is exact on purpose: these are the
+ * utility's own strings, and an unknown wording still falls through to the
+ * loose rules below and is listed in `other`, never guessed into a bucket we
+ * would then double-count (the existing contract — see classifyBillLine).
+ *
+ * `Gas Service Provider Supply Charge ($)` is `info`, not `commodity`: it
+ * restates `Gas Supply Charge` byte-for-byte in all ten periods (84.74 =
+ * 84.74 in P1), and the canonical identity counts supply ONCE —
+ * `Gas Supply Charge + Gas Delivery Variable Charge + Gas Cost Adjustment ($)
+ * + Customer charge + HST ($) = Total Gas Charges ($)` holds 10/10 to the
+ * cent, while adding the restatement too is the superseded 6-term form that
+ * double counts (246.63 against the stated 161.89 in P1) and must appear in
+ * no test and no UI (AC8, t_e2898d1b / comment 661). Display-only: it still
+ * renders in the bill's line list, it just never enters a sum.
+ */
+const GAS_LINE_CLASS: ReadonlyMap<string, BillLineClass> = new Map([
+  ['gas supply charge', 'commodity'],
+  ['gas service provider supply charge ($)', 'info'],
+  ['gas delivery variable charge', 'delivery'],
+  ['gas transportation charge ($)', 'delivery'],
+  ['transportation to enbridge (lvb)', 'delivery'],
+  ['customer charge', 'delivery'],
+  ['gas federal carbon charge', 'regulatory'],
+  ['gas cost adjustment ($)', 'regulatory'],
+  ['gas service provider admin fee ($)', 'regulatory'],
+  ['hst ($)', 'tax'],
+  ['total gas charges ($)', 'total'],
+  ['payments received ($)', 'credit'],
+]);
+
+/**
  * Group a line for display and reconciliation. The note is the utility's own
- * wording (Oakville: "Off Peak-Summer", "H.S.T. # 000000000", "Delivery"),
- * so matching stays loose on purpose: an unknown wording falls through to
- * `other` and is still listed verbatim, never silently folded into a total
- * we would then double-count.
+ * wording (Oakville: "Off Peak-Summer", "H.S.T. # 000000000", "Delivery";
+ * Enbridge: "Gas Delivery Variable Charge", "Customer charge"), so matching
+ * stays loose on purpose: an unknown wording falls through to `other` and is
+ * still listed verbatim, never silently folded into a total we would then
+ * double-count. The two Enbridge-specific passes (unit price, then the exact
+ * gas vocabulary above) run first because their notes collide with the loose
+ * rules: a rate line contains "supply", `Total Gas Supply Rate ¢/m3 (net)`
+ * starts with "total", and a negative `Gas Cost Adjustment ($)` looks like a
+ * credit but is a regulatory charge the feed itself counts in its total.
  */
 export function classifyBillLine(item: BillLineItem): BillLineClass {
-  const note = item.note.toLowerCase();
+  const note = item.note.trim().toLowerCase();
+  if (UNIT_PRICE_NOTE.test(note)) return 'info';
   if (BILL_INFO_NOTE.test(note)) return 'info';
+  const gas = GAS_LINE_CLASS.get(note);
+  if (gas !== undefined) return gas;
   if (/^total\b|total electricity/.test(note)) return 'total';
   if (/h\.?s\.?t\.?|g\.?s\.?t\.?|\btax\b/.test(note)) return 'tax';
   if (item.amount !== null && item.amount < 0) return 'credit';
