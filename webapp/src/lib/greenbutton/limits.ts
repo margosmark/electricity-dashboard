@@ -29,7 +29,20 @@
  *    regression pin (t_941b3ceb) parses 130 000 sibling entries — that shape
  *    must keep working, so the ceiling sits above it.
  *  - readings … 500 000. The largest real document carries 17 539.
- * The four are independent on purpose: `<entry/>` is eight bytes, so a byte
+ *  - bill periods … 1 200 `<UsageSummary>` / `<ElectricPowerUsageSummary>`
+ *    blocks. The real feeds this repo holds carry 10 (Enbridge gas) and 3
+ *    (Oakville usage-summary exports); 1 200 is a century of monthly bills.
+ *    The measured hostile shape (t_96e1cda0) carried 11 747 blocks placed
+ *    OUTSIDE every `<entry>`, which the four dims above admitted because they
+ *    counted only `entry` and `IntervalReading` — and each block is a rendered
+ *    card (measured 141 DOM nodes each), so this dim is the render budget.
+ *  - bill lines … 8 000 `costAdditionalDetailLastPeriod` items in the
+ *    document, and 500 inside ONE period. The largest real document carries
+ *    370 (Enbridge, 37 per period); the measured hostile shape put 20 000 in
+ *    a single bill (render: 1 613 ms / 80 063 DOM nodes). Totals are SUMMED
+ *    from these lines (`billTotals`), so an over-budget bill is refused as a
+ *    whole — never truncated into a bill that adds up differently.
+ * The six are independent on purpose: `<entry/>` is eight bytes, so a byte
  * cap alone would wave 1.7 million of them through, while a counting cap alone
  * would not stop one enormous text node.
  *
@@ -82,14 +95,41 @@ export const MAX_ENTRIES = 200_000;
 /** Aggregate `<IntervalReading>` elements across the whole document. */
 export const MAX_READINGS = 500_000;
 
+/**
+ * Aggregate bill blocks (`UsageSummary` / `ElectricPowerUsageSummary`)
+ * across the WHOLE document, wherever they appear — the measured hostile
+ * shape parked 11 747 of them outside every `<entry>`, where the entry and
+ * reading counts never see them, and every block becomes a rendered card.
+ */
+export const MAX_BILL_PERIODS = 1_200;
+
+/**
+ * Aggregate `costAdditionalDetailLastPeriod` line items across the whole
+ * document. The flat pre-parse scan has no per-period context, so this is the
+ * document-wide half of the line budget; {@link MAX_BILL_LINES_PER_PERIOD} is
+ * the per-bill half, judged where the period is known (energy.ts).
+ */
+export const MAX_BILL_LINES = 8_000;
+
+/** Line items ONE billing period may hold (real: 37; hostile: 20 000). */
+export const MAX_BILL_LINES_PER_PERIOD = 500;
+
 export type DocumentStats = {
   bytes: number;
   depth: number;
   entries: number;
   readings: number;
+  billPeriods: number;
+  billLines: number;
 };
 
-export type BudgetDim = keyof DocumentStats;
+/**
+ * A dimension a refusal can name. The first six are measured by
+ * {@link measureDocument}; `billLinesPerPeriod` is judged after the parse,
+ * where one period's own line count is known, and is named the same way so
+ * every budget refusal renders through one copy path.
+ */
+export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod';
 
 /** The three sentences a refusal is shown with. One source of copy. */
 export type RefusalCopy = {
@@ -154,10 +194,13 @@ export function isGreenButtonRefusal(value: unknown): value is GreenButtonRefusa
  * The scanner — one pass, no allocation
  * ========================================================================== */
 
-/** The two element names whose COUNTS are the resource budget. */
-const COUNTED: Record<string, 'entries' | 'readings'> = {
+/** The element names whose COUNTS are the resource budget. */
+const COUNTED: Record<string, 'entries' | 'readings' | 'billPeriods' | 'billLines'> = {
   entry: 'entries',
   IntervalReading: 'readings',
+  UsageSummary: 'billPeriods',
+  ElectricPowerUsageSummary: 'billPeriods',
+  costAdditionalDetailLastPeriod: 'billLines',
 };
 
 /** `espi:entry` / `entry` → `entry` (the parser runs with removeNSPrefix). */
@@ -201,7 +244,8 @@ function endOfMarkup(text: string, from: number): number {
 }
 
 /**
- * Bytes, depth, entries and readings in ONE linear scan of the raw text.
+ * Bytes, depth, entries, readings and the two bill counts in ONE linear scan
+ * of the raw text.
  *
  * The scan is deliberately conservative-cheap: it is the pre-parse estimate,
  * not the security boundary. fast-xml-parser's own `maxNestedTags` (set to
@@ -211,7 +255,14 @@ function endOfMarkup(text: string, from: number): number {
  * text is not an element.
  */
 export function measureDocument(text: string): DocumentStats {
-  const stats: DocumentStats = { bytes: text.length, depth: 0, entries: 0, readings: 0 };
+  const stats: DocumentStats = {
+    bytes: text.length,
+    depth: 0,
+    entries: 0,
+    readings: 0,
+    billPeriods: 0,
+    billLines: 0,
+  };
   let depth = 0;
   let i = 0;
   const n = text.length;
@@ -253,8 +304,8 @@ export function measureDocument(text: string): DocumentStats {
 }
 
 /**
- * The three sentences a budget refusal is shown with: one headline for all
- * four dimensions (the detail names the one that broke), and the two hints a
+ * The three sentences a budget refusal is shown with: one headline for every
+ * dimension (the detail names the one that broke), and the two hints a
  * person can act on. Read through `t()` where the refusal is built, so the copy
  * is translated on the fr page and the whole app shows the same words.
  */
@@ -268,14 +319,22 @@ function budgetCopy(detail: string): RefusalCopy {
 
 /** One dimension's refusal, with the numbers it judged. */
 function dimRefusal(dim: BudgetDim, measured: number, limit: number): BudgetRefusal {
-  const detail =
-    dim === 'bytes'
-      ? t('parse.refuseBytes', { measured, limit: Math.round(limit / (1024 * 1024)) })
-      : dim === 'depth'
-        ? t('parse.refuseDepth', { measured, limit })
-        : dim === 'entries'
-          ? t('parse.refuseEntries', { measured, limit })
-          : t('parse.refuseReadings', { measured, limit });
+  let detail: string;
+  if (dim === 'bytes') {
+    detail = t('parse.refuseBytes', { measured, limit: Math.round(limit / (1024 * 1024)) });
+  } else if (dim === 'depth') {
+    detail = t('parse.refuseDepth', { measured, limit });
+  } else if (dim === 'entries') {
+    detail = t('parse.refuseEntries', { measured, limit });
+  } else if (dim === 'readings') {
+    detail = t('parse.refuseReadings', { measured, limit });
+  } else if (dim === 'billPeriods') {
+    detail = t('parse.refuseBillPeriods', { measured, limit });
+  } else if (dim === 'billLinesPerPeriod') {
+    detail = t('parse.refuseBillLinesPerPeriod', { measured, limit });
+  } else {
+    detail = t('parse.refuseBillLines', { measured, limit });
+  }
   return { dim, measured, limit, ...budgetCopy(detail) };
 }
 
@@ -285,6 +344,10 @@ export function budgetRefusal(stats: DocumentStats): BudgetRefusal | null {
   if (stats.depth > MAX_DOCUMENT_DEPTH) return dimRefusal('depth', stats.depth, MAX_DOCUMENT_DEPTH);
   if (stats.entries > MAX_ENTRIES) return dimRefusal('entries', stats.entries, MAX_ENTRIES);
   if (stats.readings > MAX_READINGS) return dimRefusal('readings', stats.readings, MAX_READINGS);
+  if (stats.billPeriods > MAX_BILL_PERIODS) {
+    return dimRefusal('billPeriods', stats.billPeriods, MAX_BILL_PERIODS);
+  }
+  if (stats.billLines > MAX_BILL_LINES) return dimRefusal('billLines', stats.billLines, MAX_BILL_LINES);
   return null;
 }
 
@@ -303,7 +366,14 @@ export function inspectDocument(text: string): {
 } {
   if (text.length > MAX_DOCUMENT_BYTES) {
     return {
-      stats: { bytes: text.length, depth: 0, entries: 0, readings: 0 },
+      stats: {
+        bytes: text.length,
+        depth: 0,
+        entries: 0,
+        readings: 0,
+        billPeriods: 0,
+        billLines: 0,
+      },
       refusal: dimRefusal('bytes', text.length, MAX_DOCUMENT_BYTES),
     };
   }
@@ -329,6 +399,34 @@ export function assertDocumentBudget(text: string): DocumentStats {
     });
   }
   return stats;
+}
+
+/**
+ * The per-bill half of the line budget, judged where the period is known.
+ *
+ * {@link measureDocument} is a flat scan of raw text: it can count every
+ * `costAdditionalDetailLastPeriod` in the document but cannot say which
+ * period they belong to, and the document-wide {@link MAX_BILL_LINES} alone
+ * would let ONE bill hold all 8 000 of them — a single card whose rows are
+ * the render cost the dim exists to bound. `parseUsageSummaryNodes` calls
+ * this with the block's own line count before it parses a single line.
+ *
+ * A refusal is fatal to the whole import, deliberately: `billTotals` SUMS
+ * these lines, so keeping the first 500 would render a bill whose totals no
+ * longer match its own rows.
+ */
+export function assertBillLinesPerPeriod(measured: number): void {
+  if (measured <= MAX_BILL_LINES_PER_PERIOD) return;
+  const refusal = dimRefusal('billLinesPerPeriod', measured, MAX_BILL_LINES_PER_PERIOD);
+  throw new GreenButtonRefusal({
+    code: 'budget',
+    dim: refusal.dim,
+    measured: refusal.measured,
+    limit: refusal.limit,
+    headline: refusal.headline,
+    detail: refusal.detail,
+    hints: refusal.hints,
+  });
 }
 
 /* ==========================================================================

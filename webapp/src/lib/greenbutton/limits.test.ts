@@ -25,7 +25,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   MAX_BILL_DOLLARS,
+  MAX_BILL_LINES,
+  MAX_BILL_LINES_PER_PERIOD,
   MAX_BILL_MEASUREMENT,
+  MAX_BILL_PERIODS,
   MAX_CLOCK_OFFSET_S,
   MAX_DOCUMENT_BYTES,
   MAX_DOCUMENT_DEPTH,
@@ -33,6 +36,7 @@ import {
   MAX_READINGS,
   MAX_UNIT_PRICE_DOLLARS,
   assertBillDollars,
+  assertBillLinesPerPeriod,
   assertBillMeasurement,
   assertDeclaredBillScale,
   assertDocumentBudget,
@@ -46,9 +50,11 @@ import {
 } from './limits';
 import { BILL_AMOUNT_SCALE, parseGreenButtonFeed, parseGreenButtonUsagePoints } from '@/lib/energy';
 import { diagnoseGreenButtonDocument } from '@/lib/parseDiagnostic';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 function stats(o: Partial<DocumentStats>): DocumentStats {
-  return { bytes: 0, depth: 0, entries: 0, readings: 0, ...o };
+  return { bytes: 0, depth: 0, entries: 0, readings: 0, billPeriods: 0, billLines: 0, ...o };
 }
 
 /** The refusal a document produces through the app's own funnel, or null. */
@@ -99,6 +105,34 @@ describe('measureDocument — one pass over the raw text', () => {
     expect(withHref.entries).toBe(1);
   });
 
+  it('counts bill blocks and bill lines, wherever they appear', () => {
+    // The F1 shape (t_96e1cda0): bill blocks parked OUTSIDE every <entry>,
+    // where the entry and reading counts never see them.
+    const { billPeriods, billLines, entries } = measureDocument(
+      FEED(
+        '<espi:UsageSummary/>' +
+          '<espi:ElectricPowerUsageSummary/>' +
+          '<UsageSummary><costAdditionalDetailLastPeriod/></UsageSummary>' +
+          '<costAdditionalDetailLastPeriod/>' +
+          '<espi:entry/>',
+      ),
+    );
+    expect(billPeriods).toBe(3);
+    expect(billLines).toBe(2);
+    expect(entries).toBe(1);
+  });
+
+  it('counts bill blocks and lines inside markup as nothing at all', () => {
+    const { billPeriods, billLines } = measureDocument(
+      FEED(
+        '<!-- <UsageSummary><costAdditionalDetailLastPeriod/></UsageSummary> -->' +
+          '<content><![CDATA[<UsageSummary/><costAdditionalDetailLastPeriod/>]]></content>',
+      ),
+    );
+    expect(billPeriods).toBe(0);
+    expect(billLines).toBe(0);
+  });
+
   it('counts bytes as the length of the text it was handed', () => {
     expect(measureDocument('').bytes).toBe(0);
     expect(measureDocument('<feed/>').bytes).toBe(7);
@@ -115,6 +149,10 @@ describe('budgetRefusal — the edges, dimension by dimension', () => {
     expect(budgetRefusal(stats({ entries: MAX_ENTRIES + 1 }))?.dim).toBe('entries');
     expect(budgetRefusal(stats({ readings: MAX_READINGS }))).toBeNull();
     expect(budgetRefusal(stats({ readings: MAX_READINGS + 1 }))?.dim).toBe('readings');
+    expect(budgetRefusal(stats({ billPeriods: MAX_BILL_PERIODS }))).toBeNull();
+    expect(budgetRefusal(stats({ billPeriods: MAX_BILL_PERIODS + 1 }))?.dim).toBe('billPeriods');
+    expect(budgetRefusal(stats({ billLines: MAX_BILL_LINES }))).toBeNull();
+    expect(budgetRefusal(stats({ billLines: MAX_BILL_LINES + 1 }))?.dim).toBe('billLines');
   });
 
   it('names the biggest dimension first, and carries the numbers it judged', () => {
@@ -235,6 +273,117 @@ describe('a hostile document is refused through the app, before it is parsed', (
     expect(s.readings).toBe(100_000);
     expect(elapsed).toBeLessThan(3000);
   }, 120_000);
+});
+
+/* ==========================================================================
+ * The bill half of the budget — periods and line items (sec F1, t_96e1cda0)
+ * ==========================================================================
+ *
+ * The four dims above bound `<entry>` and `<IntervalReading`; the measured
+ * hostile shape (t_96e1cda0) rode in on the half they never counted: 11 747
+ * `<UsageSummary>` blocks OUTSIDE every `<entry>` (admitted: entries counted
+ * = 1) parsed to 11 748 rendered periods, and ONE bill with 20 000 line
+ * items rendered 1 613 ms / 80 063 DOM nodes. The pre-parse scan now counts
+ * both, and the per-bill line ceiling is judged where the period is known.
+ */
+
+describe('the bill budget — periods and line items are counted too', () => {
+  const SUMMARY = (fields: string) =>
+    '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>1704067200</espi:start>' +
+    '<espi:duration>2678400</espi:duration></espi:billingPeriod>' +
+    fields +
+    '</espi:UsageSummary></content></entry>';
+  const LINE =
+    '<espi:costAdditionalDetailLastPeriod><espi:amount>100</espi:amount><espi:note>Delivery</espi:note></espi:costAdditionalDetailLastPeriod>';
+
+  it('refuses 1 201 bill blocks parked outside every <entry>, before the parse', () => {
+    // The F1 shape: tiny in bytes (15 KB), invisible to the entry and
+    // reading counts, 1 201 rendered cards if it ever reached the panel.
+    const xml = FEED('<espi:UsageSummary/>'.repeat(MAX_BILL_PERIODS + 1));
+    expect(xml.length).toBeLessThan(MAX_DOCUMENT_BYTES);
+
+    // The scan refuses it BEFORE the parser is handed the text.
+    expect(inspectDocument(xml).refusal?.dim).toBe('billPeriods');
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billPeriods');
+    expect(refusal?.measured).toBe(MAX_BILL_PERIODS + 1);
+    expect(refusal?.limit).toBe(MAX_BILL_PERIODS);
+    expect(refusal?.detail).toMatch(/billing-period blocks/);
+    expect(refusal?.detail).toMatch(/Nothing from this file was imported/);
+    expect(refusal?.headline).toBeTruthy();
+  }, 120_000);
+
+  it('refuses a document past the document-wide line allowance, before the parse', () => {
+    const xml = FEED('<costAdditionalDetailLastPeriod/>'.repeat(MAX_BILL_LINES + 1));
+    expect(xml.length).toBeLessThan(MAX_DOCUMENT_BYTES);
+    expect(inspectDocument(xml).refusal?.dim).toBe('billLines');
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billLines');
+    expect(refusal?.measured).toBe(MAX_BILL_LINES + 1);
+    expect(refusal?.limit).toBe(MAX_BILL_LINES);
+  }, 120_000);
+
+  it('refuses ONE period holding more lines than a bill may carry', () => {
+    // This document passes every pre-parse dimension (1 block, 501 lines),
+    // so it is the per-bill half that stops it — the flat scan cannot tell
+    // which period the lines belong to, and 501 in ONE card is the render
+    // cost the dim exists to bound.
+    const xml = FEED(SUMMARY(LINE.repeat(MAX_BILL_LINES_PER_PERIOD + 1)));
+    expect(inspectDocument(xml).refusal).toBeNull();
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billLinesPerPeriod');
+    expect(refusal?.measured).toBe(MAX_BILL_LINES_PER_PERIOD + 1);
+    expect(refusal?.limit).toBe(MAX_BILL_LINES_PER_PERIOD);
+    expect(refusal?.detail).toMatch(/One billing period/);
+    expect(refusal?.detail).toMatch(/Nothing from this file was imported/);
+  }, 120_000);
+
+  it('keeps a period AT the line ceiling importable, and judges only the count', () => {
+    expect(() => assertBillLinesPerPeriod(MAX_BILL_LINES_PER_PERIOD)).not.toThrow();
+    try {
+      assertBillLinesPerPeriod(MAX_BILL_LINES_PER_PERIOD + 1);
+      throw new Error('unreachable');
+    } catch (e) {
+      expect(isGreenButtonRefusal(e)).toBe(true);
+      if (!isGreenButtonRefusal(e)) throw e;
+      expect(e.code).toBe('budget');
+      expect(e.measured).toBe(MAX_BILL_LINES_PER_PERIOD + 1);
+      expect(e.limit).toBe(MAX_BILL_LINES_PER_PERIOD);
+    }
+
+    const xml = FEED(SUMMARY(LINE.repeat(MAX_BILL_LINES_PER_PERIOD)));
+    const feed = parseGreenButtonFeed(xml);
+    expect(feed.summaries).toHaveLength(1);
+    expect(feed.summaries[0].items).toHaveLength(MAX_BILL_LINES_PER_PERIOD);
+    expect(assertDocumentBudget(xml).billPeriods).toBe(1);
+    expect(assertDocumentBudget(xml).billLines).toBe(MAX_BILL_LINES_PER_PERIOD);
+  }, 60_000);
+
+  it('keeps the real fixtures inside every bill dimension — the control', () => {
+    // Without this, "refuse everything" would pass every assertion above.
+    const fixtures = (name: string) => readFileSync(join(__dirname, `../../../tests/fixtures/${name}`), 'utf8');
+
+    const gas = assertDocumentBudget(fixtures('enbridge-gas-synthetic.xml'));
+    expect(gas.billPeriods).toBe(10); // the real Enbridge feed's 10 periods
+    expect(gas.billLines).toBe(370); // …and its 37 lines per period
+    expect(gas.billPeriods).toBeLessThanOrEqual(MAX_BILL_PERIODS);
+    const gasFeed = parseGreenButtonFeed(fixtures('enbridge-gas-synthetic.xml'));
+    expect(gasFeed.summaries).toHaveLength(10);
+    for (const s of gasFeed.summaries) {
+      expect(s.items.length).toBeLessThanOrEqual(MAX_BILL_LINES_PER_PERIOD);
+    }
+
+    const oakville = assertDocumentBudget(fixtures('usage-summary-synthetic.xml'));
+    expect(oakville.billPeriods).toBe(3);
+    expect(oakville.billLines).toBe(63);
+    expect(parseGreenButtonFeed(fixtures('usage-summary-synthetic.xml')).summaries).toHaveLength(3);
+  }, 60_000);
 });
 
 describe('the diagnostics explain a refusal instead of guessing', () => {
