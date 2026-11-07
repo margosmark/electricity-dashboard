@@ -30,7 +30,9 @@ import { useEstimateLedger, type OpenClaim } from '@/hooks/useEstimateLedger';
 import { usePlanTimeline } from '@/hooks/usePlanTimeline';
 import { planAnnotations } from '@/lib/planTimeline';
 import { buildAxisStacks, periodDeltaRows, planOverlay, type PlanId } from '@/lib/moneyViz';
+import { isGasFeed } from '@/lib/gasBillUi';
 import MoneyStackedChart from '@/components/MoneyStackedChart';
+import GasMoneyTable from '@/components/GasMoneyTable';
 import OpenPeriodPanel from '@/components/OpenPeriodPanel';
 import PeriodDeltaTable from '@/components/PeriodDeltaTable';
 import HourCostHistogram from '@/components/HourCostHistogram';
@@ -110,6 +112,11 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
   );
 
   const hasBill = summaries.length > 0;
+  // Commodity 7: the electric money stack (plan columns, the payable column
+  // that double-counts HST on gas, the kWh usage mode, the ¢/kWh histogram,
+  // the "Total electricity charges" delta rows, the waterfall's electric
+  // captions) never runs on gas data — epic DoD 4/6/7.
+  const isGas = isGasFeed(summaries);
 
   return (
     <section
@@ -147,6 +154,8 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
             {t('money.emptyBlurb')}
           </p>
         </div>
+      ) : isGas ? (
+        <GasMoneyTable summaries={summaries} />
       ) : (
         <>
           <OpenPeriodPanel

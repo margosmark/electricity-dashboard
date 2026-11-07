@@ -30,6 +30,7 @@ import { PlanTimelineEditor } from '@/components/classic/PlanTimelineEditor';
 import SwitchTrackRecord from '@/components/classic/SwitchTrackRecord';
 import HindsightPanel from '@/components/classic/HindsightPanel';
 import { ActualBillPanel } from '@/components/classic/ActualBillPanel';
+import { isGasFeed } from '@/lib/gasBillUi';
 import { fmtNumber, fmtPercent, useTranslation } from '@/i18n';
 
 export type PlansPanelProps = {
@@ -70,6 +71,21 @@ export default function PlansPanel({
   allData,
 }: PlansPanelProps) {
   const { t } = useTranslation();
+  // Commodity 7: no plan to compare against (epic DoD 4) — the tab shows
+  // ONLY the actual bill, same as the modern skin.
+  if (isGasFeed(summaries)) {
+    return (
+      <div
+        id="panel-plans"
+        role="tabpanel"
+        aria-labelledby="tab-plans"
+        className="space-y-6 md:space-y-10"
+        data-testid="tab-panel-plans"
+      >
+        <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />
+      </div>
+    );
+  }
   return (
     <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}

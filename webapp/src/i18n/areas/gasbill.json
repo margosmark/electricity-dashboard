@@ -30,7 +30,9 @@
     "gasBill.factsTitle": "Bill facts",
     "gasBill.daysNote": "the feed's own line; the period label above uses the billing period, which is one day shorter",
     "gasBill.rateUnit": "¢/m³",
-    "gasBill.m3Unit": "m³"
+    "gasBill.m3Unit": "m³",
+    "gasBill.analyticsTitle": "Hourly analysis does not apply to a gas bill",
+    "gasBill.analyticsBody": "This dataset is a natural-gas bill: monthly billing periods, not hourly readings. The heatmap, TOU windows, temperature bins and kWh charts are electricity views and are not shown here — the bill is on the {plans} tab and the money tables on {money}."
   },
   "fr": {
     "gasBill.commodity": "Gaz naturel",
@@ -63,6 +65,8 @@
     "gasBill.factsTitle": "Faits sur la facture",
     "gasBill.daysNote": "ligne propre du fichier ; l'étiquette de période ci-dessus utilise la période de facturation, qui est d'un jour plus courte",
     "gasBill.rateUnit": "¢/m³",
-    "gasBill.m3Unit": "m³"
+    "gasBill.m3Unit": "m³",
+    "gasBill.analyticsTitle": "L'analyse horaire ne s'applique pas à une facture de gaz",
+    "gasBill.analyticsBody": "Cet ensemble de données est une facture de gaz naturel : des périodes de facturation mensuelles, pas des relevés horaires. La carte thermique, les fenêtres TOU, les tranches par température et les graphiques en kWh sont des vues d'électricité et ne sont pas affichés ici — la facture se trouve dans l'onglet {plans} et les tableaux financiers dans l'onglet {money}."
   }
 }

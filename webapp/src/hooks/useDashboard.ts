@@ -134,6 +134,28 @@ export function readStoredBillFeed(): BillFeed {
   }
 }
 
+/**
+ * Rows a document actually gave us, for the import gate.
+ *
+ * An Enbridge gas extract carries no electric `DataPoint`s at all — its data
+ * lives in commodity-7 `volume` series (the five IntervalBlocks) and in the
+ * billing summaries — so gating on `g.readings` alone rejects every gas file
+ * with "produced no readable rows" even though the parse succeeded. Electric
+ * feeds are unaffected: their series are not `volume`, so this counts exactly
+ * what `g.readings` counts for them.
+ */
+export const countUsableRows = (gs: UsagePointGroup[]): number =>
+  gs.reduce(
+    (n, g) =>
+      n +
+      g.readings.length +
+      (g.series ?? []).reduce(
+        (m, s) => m + (s.status === "volume" ? s.readings.length : 0),
+        0,
+      ),
+    0,
+  );
+
 /** Persist; a storage failure must never break the UI. */
 export function writeStoredBillFeed(feed: BillFeed): void {
   try {
@@ -634,7 +656,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // second storage channel). Non-gas feeds pass through untouched.
     const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
-    if (incoming === 0) return { ok: false, code: "no_readings" };
+    if (countUsableRows(groups) === 0) return { ok: false, code: "no_readings" };
 
     // Held until the rows below are actually committed (a multi-meter pick
     // can still be cancelled) and then folded in — a sync never deletes a
@@ -1058,9 +1080,6 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const files = Array.from(fileList);
     setParsing(true);
 
-    const countReadings = (gs: UsagePointGroup[]) =>
-      gs.reduce((n, g) => n + g.readings.length, 0);
-
     const parseOne = (file: File): Promise<MergeFileChoice> =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1105,7 +1124,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             return;
           }
           const groups = feed.groups;
-          const readings = countReadings(groups);
+          // The gate counts gas volume rows too — see countUsableRows.
+          const readings = countUsableRows(groups);
           // Commodity 7 enrichment (gas bill surfaces) — same one-pass rule
           // as ingestFeedXml: decide interval-block ownership and supplier
           // labels with the whole file in hand, store them ON the summaries.
@@ -1138,7 +1158,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setParseIssue(null);
     Promise.all(files.map(parseOne))
       .then((results) => {
-        const total = results.reduce((n, r) => n + countReadings(r.groups), 0);
+        const total = results.reduce((n, r) => n + countUsableRows(r.groups), 0);
         if (total === 0) {
           // Nothing readable: keep the modal open and say exactly why, and
           // drop the bills parsed out of the same unreadable batch.

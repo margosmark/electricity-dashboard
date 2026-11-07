@@ -25,6 +25,7 @@ import {
   getFilteredForZoom,
   resolveZone,
 } from '@/lib/energy';
+import { isGasFeed } from '@/lib/gasBillUi';
 import { buildEfficiency } from '@/lib/statistics';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
@@ -718,6 +719,8 @@ export default function Dashboard() {
              <Settings2 size={16} className="text-ink-3" />
              <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-ink font-black" />
           </div>
+          {/* Commodity 7: nothing on a gas feed prices a plan (DoD 4). */}
+          {!isGasFeed(billFeed.summaries) && (
           <div data-testid="plan-switcher" className="bg-hover p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
                   accessible name. A label like "Select Time-of-Use plan" hides
@@ -731,6 +734,7 @@ export default function Dashboard() {
                   carries the canonical id. */}
               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-inv text-inv-ink shadow-lg' : 'text-ink hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
+          )}
           {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
               the language of the answer belongs beside the answer. A real
               <button> in the tab order with aria-pressed and a localized
@@ -827,6 +831,7 @@ export default function Dashboard() {
           userPlan={userPlan}
           startDate={startDate}
           filteredData={filteredData}
+          gas={isGasFeed(billFeed.summaries)}
         />
       )}
 

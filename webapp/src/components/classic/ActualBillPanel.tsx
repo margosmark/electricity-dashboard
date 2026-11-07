@@ -41,6 +41,9 @@ import {
   type ProcessedPoint,
   type UsageSummary,
 } from '@/lib/energy';
+// Commodity 7: recognition + the shared gas period card (classic theme).
+import { isGasFeed, isGasSummary } from '@/lib/gasBillUi';
+import GasBillPeriodCard from '@/components/GasBillPeriodCard';
 // Wave U — the receipt translates. The utility's line NOTES (item.note) stay
 // canonical inside `BillLineItem` (classification and every check read them
 // raw); what the panel PRINTS is the localized view of them via `billNoteText`
@@ -191,6 +194,10 @@ function PeriodCard({
 }) {
   const { t } = useTranslation();
   const { summary, totals } = rec;
+  // Commodity 7 renders the shared gas card in the classic skin too — none
+  // of the electric machinery (verdict, kWh crosscheck, bucket grid) runs on
+  // a gas bill. See GasBillPeriodCard / UX spec t_860756c3.
+  if (isGasSummary(summary)) return <GasBillPeriodCard rec={rec} classic />;
   const periodKwh = billedKwh(summary) ?? summary.consumption?.scaled ?? 0;
   const verdict = commodityVerdict(rec);
   const delta = rec.delta;
@@ -369,6 +376,8 @@ function PeriodCard({
 export function ActualBillPanel({ summaries, allData, plan }: Props) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string>('all');
+  // Gas feeds never render electric chrome (see the modern panel's note).
+  const isGas = isGasFeed(summaries);
 
   const recs = useMemo(
     () => reconcileBillingPeriods(summaries, allData, plan),
@@ -381,17 +390,19 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
   // per-line notes below — one fit, one truth, two places to read it.
   const decompositions = useMemo(
     () =>
-      (['delivery', 'regulatory'] as const)
-        .map((line) => chargeDecomposition(summaries, allData, line))
-        .filter((d): d is ChargeDecomposition => d !== null),
+      isGas
+        ? []
+        : (['delivery', 'regulatory'] as const)
+            .map((line) => chargeDecomposition(summaries, allData, line))
+            .filter((d): d is ChargeDecomposition => d !== null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
-    [summaries, allData, t],
+    [summaries, allData, t, isGas],
   );
 
   if (summaries.length === 0) return null;
 
   const shown = selected === 'all' ? recs : recs.filter((r) => r.summary.startDate === selected);
-  const anyMismatch = recs.some((r) => commodityVerdict(r) === 'off');
+  const anyMismatch = !isGas && recs.some((r) => commodityVerdict(r) === 'off');
 
   return (
     <section
@@ -408,9 +419,11 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
           </div>
           <h2 className="text-2xl md:text-4xl italic font-black">{t('actualBill.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
-          {t('actualBill.blurb')}
-        </div>
+        {!isGas && (
+          <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
+            {t('actualBill.blurb')}
+          </div>
+        )}
       </div>
 
       {summaries.length > 1 && (

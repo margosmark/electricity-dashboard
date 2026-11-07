@@ -545,6 +545,8 @@
   "freshness.years_one": "il y a 1 an",
   "freshness.years_other": "il y a {count} ans",
   "gasBill.adjustmentNote": "usage × facteur d'ajustement atmosphérique de {factor}",
+  "gasBill.analyticsBody": "Cet ensemble de données est une facture de gaz naturel : des périodes de facturation mensuelles, pas des relevés horaires. La carte thermique, les fenêtres TOU, les tranches par température et les graphiques en kWh sont des vues d'électricité et ne sont pas affichés ici — la facture se trouve dans l'onglet {plans} et les tableaux financiers dans l'onglet {money}.",
+  "gasBill.analyticsTitle": "L'analyse horaire ne s'applique pas à une facture de gaz",
   "gasBill.asReported": "tel que rapporté par le fichier",
   "gasBill.badgeMonthly": "mensuel",
   "gasBill.billedVolume": "Volume facturé",

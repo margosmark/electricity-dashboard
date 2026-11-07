@@ -72,6 +72,8 @@ export type UsagePanelProps = ChartViewProps & {
    * strip still spells this destination `usage` and owns those element ids.
    */
   panel?: 'analytics' | 'usage';
+  /** Commodity 7: the whole panel is hourly/electric — render the skip card. */
+  gas?: boolean;
 };
 
 /**
@@ -97,6 +99,7 @@ export default function UsagePanel({
   hasData,
   onImport,
   panel = 'analytics',
+  gas = false,
   ...chart
 }: UsagePanelProps) {
   const bandReport = useMemo(
@@ -107,6 +110,32 @@ export default function UsagePanel({
   // language switch (fmtDate reads the module locale for month names).
   const { t, locale } = useTranslation();
   const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
+  // Commodity 7 (UX spec t_860756c3 principle 4): every view here is an
+  // hourly/electricity view — heatmap, TOU cost, temperature bins, kWh
+  // year-over-year. Gas never enters them; the panel says so explicitly.
+  if (gas) {
+    return (
+      <div
+        id={embedded ? 'overview-usage' : panel === 'usage' ? 'panel-usage' : 'panel-analytics'}
+        role={embedded ? undefined : 'tabpanel'}
+        aria-labelledby={embedded ? undefined : panel === 'usage' ? 'tab-usage' : 'tab-analytics'}
+        className="space-y-6 md:space-y-10"
+        data-testid={embedded ? 'overview-usage' : panel === 'usage' ? 'tab-panel-usage' : 'tab-panel-analytics'}
+      >
+        <section
+          data-testid="gas-analytics-skip"
+          className="bg-card border border-edge rounded-xl md:rounded-2xl p-4 md:p-6 max-w-3xl"
+        >
+          <h2 className="text-[10px] md:text-xs tracking-[0.2em] text-ink-4 font-semibold uppercase">
+            {t('gasBill.analyticsTitle')}
+          </h2>
+          <p className="mt-3 text-[10px] md:text-xs text-ink-3 normal-case font-medium leading-relaxed">
+            {t('gasBill.analyticsBody', { plans: t('tab.plans'), money: t('tab.money') })}
+          </p>
+        </section>
+      </div>
+    );
+  }
   return (
     <div
       id={embedded ? 'overview-usage' : panel === 'usage' ? 'panel-usage' : 'panel-analytics'}

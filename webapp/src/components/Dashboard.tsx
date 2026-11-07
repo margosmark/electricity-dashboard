@@ -25,6 +25,7 @@ import {
   getFilteredForZoom,
   resolveZone,
 } from '@/lib/energy';
+import { isGasFeed } from '@/lib/gasBillUi';
 import { buildEfficiency } from '@/lib/statistics';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
@@ -745,6 +746,9 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
              <Settings2 size={16} className="text-ink-3" />
              <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-ink font-black" />
           </div>
+          {/* Commodity 7: a plan switcher prices electricity — on a gas feed
+              nothing here is used, so it never shows (epic DoD 4). */}
+          {!isGasFeed(billFeed.summaries) && (
           <div data-testid="plan-switcher" className="bg-hover p-1 rounded-lg border border-edge-muted flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
                   accessible name. A label like "Select Time-of-Use plan" hides
@@ -758,6 +762,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
                   carries the canonical id. */}
               {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 rounded-md text-[10px] font-medium transition-colors ${userPlan === p ? 'bg-card text-ink border border-edge' : 'text-ink-2 hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
+          )}
           {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
               the language of the answer belongs beside the answer. A real
               <button> in the tab order with aria-pressed and a localized
@@ -806,6 +811,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
       {activeTab === 'overview' && (
         <OverviewPanel
           comparison={comparison}
+          gas={isGasFeed(billFeed.summaries)}
           userPlan={userPlan}
           days={windowDays}
           totals={totals}
@@ -828,6 +834,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
             selectionCost, userPlan, startDate, filteredData,
             hasData: processedData.length > 0,
             onImport: () => { setParseIssue(null); setShowUploadModal(true); },
+            gas: isGasFeed(billFeed.summaries),
           }}
           importReview={refusalNotes.length > 0 || Boolean(parseIssue)}
           showUsage={variant !== 'classic'}
@@ -874,6 +881,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           filteredData={filteredData}
           hasData={processedData.length > 0}
           onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
+          gas={isGasFeed(billFeed.summaries)}
         />
       )}
 
@@ -898,6 +906,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           hasData={processedData.length > 0}
           onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
           panel="usage"
+          gas={isGasFeed(billFeed.summaries)}
         />
       )}
 

@@ -545,6 +545,8 @@
   "freshness.years_one": "1 year ago",
   "freshness.years_other": "{count} years ago",
   "gasBill.adjustmentNote": "usage × {factor} atmospheric adjustment factor",
+  "gasBill.analyticsBody": "This dataset is a natural-gas bill: monthly billing periods, not hourly readings. The heatmap, TOU windows, temperature bins and kWh charts are electricity views and are not shown here — the bill is on the {plans} tab and the money tables on {money}.",
+  "gasBill.analyticsTitle": "Hourly analysis does not apply to a gas bill",
   "gasBill.asReported": "as reported by the feed",
   "gasBill.badgeMonthly": "monthly",
   "gasBill.billedVolume": "Billed volume",
