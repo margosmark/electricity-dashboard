@@ -9,10 +9,11 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { parseGreenButtonFeed, type UsagePointGroup } from '@/lib/energy';
-import { countUsableRows } from './useDashboard';
+import { parseGreenButtonFeed, type UsagePointGroup, type UsageSummary } from '@/lib/energy';
+import { isGasFeed } from '@/lib/gasBillUi';
+import { countUsableRows, readStoredBillFeed, USAGE_SUMMARIES_KEY } from './useDashboard';
 
 const read = (name: string): string =>
   readFileSync(join(__dirname, '../../tests/fixtures', name), 'utf8');
@@ -39,5 +40,58 @@ describe('countUsableRows — what the import gate may count', () => {
     // Stripping the series leaves only summaries — no rows to chart.
     const stripped = feed.groups.map((g) => ({ ...g, series: [] }));
     expect(countUsableRows(stripped)).toBe(0);
+  });
+});
+
+/* ==========================================================================
+ * readStoredBillFeed — summaries stored BEFORE the gas wave (ERR-4887C2)
+ * ========================================================================== */
+
+/** The electric fixture as pre-wave storage held it: every field but `volume`. */
+const storedWithoutVolume = (): UsageSummary[] =>
+  parseGreenButtonFeed(read('usage-summary-synthetic.xml')).summaries.map((s) => {
+    const legacy: Record<string, unknown> = { ...s };
+    delete legacy.volume;
+    return legacy as unknown as UsageSummary;
+  });
+
+describe('readStoredBillFeed — legacy summaries with no `volume` key', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('honours the type on read: a missing key comes back null, not undefined', () => {
+    const stored = storedWithoutVolume();
+    expect(stored.length).toBeGreaterThan(0);
+    expect('volume' in stored[0]).toBe(false); // the shape storage really holds
+    localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(stored));
+
+    const feed = readStoredBillFeed();
+    expect(feed.summaries).toHaveLength(stored.length);
+    expect(feed.summaries.every((s) => s.volume === null)).toBe(true);
+    expect(feed.summaries.some((s) => s.volume === undefined)).toBe(false);
+  });
+
+  it('the summary itself survives the read (only the type is repaired)', () => {
+    const stored = storedWithoutVolume();
+    localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(stored));
+
+    const feed = readStoredBillFeed();
+    expect(feed.summaries.map((s) => s.start)).toEqual(stored.map((s) => s.start));
+    expect(feed.summaries.map((s) => s.items.length)).toEqual(
+      stored.map((s) => s.items.length),
+    );
+    // Recognition over what storage returned must not throw — this is the
+    // crash path (summaries.some(isGasSummary)) that took the dashboard down.
+    expect(() => isGasFeed(feed.summaries)).not.toThrow();
+    expect(isGasFeed(feed.summaries)).toBe(false);
+  });
+
+  it('a stored gas feed (parser-written, volume present) is unchanged', () => {
+    const gas = parseGreenButtonFeed(read('enbridge-gas-synthetic.xml')).summaries;
+    localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(gas));
+
+    const feed = readStoredBillFeed();
+    expect(feed.summaries).toHaveLength(gas.length);
+    expect(feed.summaries.every((s) => s.volume !== null)).toBe(true);
+    expect(isGasFeed(feed.summaries)).toBe(true);
   });
 });

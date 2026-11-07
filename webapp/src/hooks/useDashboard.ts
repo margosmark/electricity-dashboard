@@ -122,9 +122,16 @@ export function readStoredBillFeed(): BillFeed {
     const summaries = raw ? (JSON.parse(raw) as UsageSummary[]) : [];
     const localTime = clock ? (JSON.parse(clock) as LocalTimeParams) : null;
     if (!Array.isArray(summaries)) return EMPTY_BILL_FEED;
-    const clean = summaries.filter(
-      (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
-    );
+    // `volume` was added to UsageSummary by the Enbridge wave: anything
+    // stored earlier has NO key for it, and the type says `volume: BillMeasurement
+    // | null`. Default it on read so a missing key reads as null, never
+    // undefined — `undefined !== null` is the trap that crashed isGasSummary
+    // on every pre-wave dashboard (ERR-4887C2).
+    const clean = summaries
+      .filter(
+        (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
+      )
+      .map((s) => ({ ...s, volume: s.volume ?? null }));
     const okClock =
       localTime && typeof localTime.tzOffset === "number" ? localTime : null;
     if (clean.length === 0 && !okClock) return EMPTY_BILL_FEED;
