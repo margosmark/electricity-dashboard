@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
@@ -701,5 +703,126 @@ describe('Link Data fresh modal', () => {
     expect(beats(json, greenButton)).toBe(true);
     expect(beats(greenButton, example)).toBe(true);
     expect(beats(example, cancel)).toBe(true);
+  });
+});
+
+/* ==========================================================================
+ * Defect R1 (QA t_13978aee): the Enbridge gas import commits BILL SUMMARIES
+ * and ZERO electric DataPoints — `energy_data_v2.points = 0`,
+ * `usage_summaries = 10`. The init gate used to ask only "are there points?",
+ * so every reload concluded "nothing to show" and reopened the first-run
+ * modal over data that was already in storage, on quiet AND classic.
+ *
+ * The whole point of these tests is the SECOND mount: storage has to PERSIST
+ * between two renders, which is why this block puts the real Storage methods
+ * back (the file-wide beforeEach swaps them for spies) instead of stubbing
+ * localStorage. Fixture: SYNTHETIC only (tests/fixtures/).
+ * ========================================================================== */
+describe('summary-only reload (defect R1)', () => {
+  const USAGE_XML = readFileSync(
+    join(__dirname, '../../tests/fixtures/enbridge-gas-synthetic.xml'),
+    'utf8',
+  );
+
+  // Captured at collection time, before any beforeEach/test body has had the
+  // chance to replace the prototypes with spies.
+  const realStorage = {
+    get: Storage.prototype.getItem,
+    set: Storage.prototype.setItem,
+    remove: Storage.prototype.removeItem,
+    clear: Storage.prototype.clear,
+  };
+
+  beforeEach(() => {
+    Storage.prototype.getItem = realStorage.get;
+    Storage.prototype.setItem = realStorage.set;
+    Storage.prototype.removeItem = realStorage.remove;
+    Storage.prototype.clear = realStorage.clear;
+    localStorage.clear();
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+
+  /** Fresh browser → first-run modal → import the gas fixture → unmount. */
+  const importGasFixture = async (variant: 'quiet' | 'classic') => {
+    const view = render(<Dashboard variant={variant} />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    // Genuinely empty storage still gets the first-run dialog (criterion 2).
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
+
+    const input = screen.getByLabelText('Upload Green Button XML') as HTMLInputElement;
+    await userEvent.upload(
+      input,
+      new File([USAGE_XML], 'enbridge-gas-synthetic.xml', { type: 'text/xml' }),
+    );
+
+    // The import landed: modal gone, ten summaries stored.
+    await waitFor(() => {
+      const raw = localStorage.getItem('usage_summaries');
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw as string)).toHaveLength(10);
+    });
+    expect(screen.queryByTestId('upload-modal')).toBeNull();
+    // The exact precondition QA accepted: bills in storage, NO electric points.
+    const energy = localStorage.getItem('energy_data_v2');
+    expect(energy).not.toBeNull();
+    expect(JSON.parse(energy as string).points).toHaveLength(0);
+
+    view.unmount();
+  };
+
+  /** Reload (a fresh mount over the same storage) and see what the user sees. */
+  const reloadAndExpectData = async (variant: 'quiet' | 'classic') => {
+    render(<Dashboard variant={variant} />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    // R1: the data IS in storage, so the first-run modal must NOT come back.
+    expect(screen.queryByTestId('upload-modal')).toBeNull();
+    // ...and the data itself is on screen: ten gas periods, feed-exact money.
+    await userEvent.click(screen.getByRole('tab', { name: 'Plans' }));
+    const cards = await screen.findAllByTestId('gas-period');
+    expect(cards).toHaveLength(10);
+    expect(within(cards[0]).getByTestId('gas-amount-due').textContent).toContain('$175.76');
+    expect(within(cards[9]).getByTestId('gas-amount-due').textContent).toContain('$72.47');
+  };
+
+  it('quiet: reload opens the dashboard, not the modal, with all ten gas periods', async () => {
+    await importGasFixture('quiet');
+    await reloadAndExpectData('quiet');
+  });
+
+  it('classic: reload opens the dashboard, not the modal, with all ten gas periods', async () => {
+    await importGasFixture('classic');
+    await reloadAndExpectData('classic');
+  });
+
+  it('quiet: reload on a #tab deep link behaves the same (hash or not)', async () => {
+    await importGasFixture('quiet');
+    window.history.replaceState(null, '', `${window.location.pathname}#tab=plans`);
+    await reloadAndExpectData('quiet');
+  });
+
+  it('classic: reload on a #tab deep link behaves the same (hash or not)', async () => {
+    await importGasFixture('classic');
+    window.history.replaceState(null, '', `${window.location.pathname}#tab=plans`);
+    await reloadAndExpectData('classic');
+  });
+
+  it('genuinely empty storage still opens the modal after the same reload (control)', async () => {
+    // No import at all: two mounts over storage that never held anything.
+    const view = render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
+    view.unmount();
+
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
   });
 });

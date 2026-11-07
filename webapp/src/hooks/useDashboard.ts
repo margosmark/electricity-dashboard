@@ -881,22 +881,35 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         else if (!dayRes.ok) reportStorage(dayRes);
 
         const stored = loadEnergyData();
+        // The bills live under their OWN key, and a gas extract commits ZERO
+        // electric DataPoints — its whole dataset is the billing summaries.
+        // "Is there anything to show?" therefore has to ask BOTH halves of
+        // storage, or every reload of a summary-only dashboard claims to be
+        // empty and blocks the screen with the first-run modal over data that
+        // is already stored (defect R1: gas import → reload → false-empty).
+        const bills = readStoredBillFeed().summaries;
         if (!stored.ok) {
           // Unreadable storage: say so, and open the upload prompt — the
           // dashboard must not claim to be empty when it cannot tell.
           reportStorage(stored);
           if (mounted) setShowUploadModal(true);
-        } else if (stored.value && stored.value.points.length > 0) {
+        } else if ((stored.value?.points.length ?? 0) > 0 || bills.length > 0) {
           if (mounted) {
-            loadedReadings = true;
-            const parsed = stored.value.points;
-            // Ref first: the Green Button sync runs later in THIS same init
-            // pass and must see what was just restored.
-            rawDataRef.current = parsed;
-            setRawData(parsed);
-            // A reload must keep saying "this is example data" if it is.
-            if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
-            applyInitialWindow(parsed, day, readStoredBillFeed().summaries);
+            const parsed = stored.value?.points ?? [];
+            // Summary-only storage restores the BILLS half only: there are no
+            // rows to ref, no window to anchor (a file with no periods never
+            // reaches applyInitialWindow), and no rates fetch — exactly the
+            // state a Cancel left the user in, minus the modal.
+            if (parsed.length > 0) {
+              loadedReadings = true;
+              // Ref first: the Green Button sync runs later in THIS same init
+              // pass and must see what was just restored.
+              rawDataRef.current = parsed;
+              setRawData(parsed);
+              // A reload must keep saying "this is example data" if it is.
+              if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
+              applyInitialWindow(parsed, day, bills);
+            }
           }
           // Migration warnings (quota / cleanup) still surface.
           reportStorage(stored);
