@@ -114,7 +114,7 @@ export type BudgetRefusal = RefusalCopy & {
  * assert on the numbers and the codes, never on the prose.
  */
 export class GreenButtonRefusal extends Error {
-  readonly code: 'budget' | 'bill-figure' | 'bill-measurement';
+  readonly code: 'budget' | 'bill-figure' | 'bill-scale' | 'bill-measurement';
   readonly dim: BudgetDim | null;
   readonly measured: number | null;
   readonly limit: number | null;
@@ -380,6 +380,68 @@ function billFigureRefusal(
 export function assertBillDollars(what: string, dollars: number): void {
   if (Number.isFinite(dollars) && Math.abs(dollars) <= MAX_BILL_DOLLARS) return;
   throw billFigureRefusal(what, dollars, MAX_BILL_DOLLARS);
+}
+
+/** Divergence still called agreement: the same power of ten computed twice. */
+const BILL_SCALE_TOLERANCE = 1e-9;
+
+/**
+ * The missing half of {@link assertBillDollars}: a figure scaled by the power
+ * of ten the file itself declares, not just a figure small enough to keep.
+ *
+ * `assertBillDollars` bounds MAGNITUDE, so it refuses the too-large lie
+ * (`1e308`) and cannot see the too-small one. Enbridge Gas sends every money
+ * line as milli-dollars (`measurement { powerOfTenMultiplier: -3, uom: 80 }`)
+ * and `billLastPeriod` as the very same figure the Amount Due line carries:
+ * rendering either at the ESPI hundred-thousandths default turns $175.76 into
+ * $1.76 — a finite, comfortable, bound-passing figure that no per-figure
+ * magnitude check can object to, because $1.76 is a figure a bill CAN hold.
+ * What makes it wrong is that the file contradicts it: `raw × 10^power` is
+ * the figure, so anything else was scaled by a different power of ten.
+ *
+ * `powerOfTenMultiplier === null` means the file declares no scale for this
+ * figure (Oakville's money lines carry no measurement; the ESPI Currency
+ * default of 10^-5 is assumed). There is then nothing to agree with — only
+ * the magnitude bound applies, and it has already been applied.
+ *
+ * The comparison is deliberately computed here from `raw` and `power` rather
+ * than handed in, so a renderer that starts dividing by a hard-coded constant
+ * again trips this at the first money line instead of shipping a bill that is
+ * quietly 100× small.
+ */
+export function assertDeclaredBillScale(
+  what: string,
+  raw: number,
+  powerOfTenMultiplier: number | null,
+  dollars: number,
+): void {
+  if (powerOfTenMultiplier === null) return;
+  const expected = raw / 10 ** -powerOfTenMultiplier;
+  const tolerance = Math.max(BILL_SCALE_TOLERANCE, Math.abs(expected) * BILL_SCALE_TOLERANCE);
+  if (Math.abs(dollars - expected) <= tolerance) return;
+  throw billScaleRefusal(what, dollars, expected, powerOfTenMultiplier);
+}
+
+/** A figure kept at the wrong power of ten: both numbers ride on the refusal. */
+function billScaleRefusal(
+  what: string,
+  value: number,
+  expected: number,
+  power: number,
+): GreenButtonRefusal {
+  return new GreenButtonRefusal({
+    code: 'bill-scale',
+    measured: value,
+    limit: expected,
+    ...billCopy(
+      t('parse.refuseBillScale', {
+        what,
+        value: String(value),
+        expected: String(expected),
+        power: String(power),
+      }),
+    ),
+  });
 }
 
 /** A dollars-per-unit price the bill may keep. */

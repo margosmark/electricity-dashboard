@@ -450,6 +450,15 @@ const APPARENT_POWER_UOM = new Set<number>([61 /* VA */]);
 const REACTIVE_POWER_UOM = new Set<number>([63 /* VAr */]);
 
 /**
+ * uom 80 — ESPI's "money". A bill line's `<measurement>` naming this unit is
+ * the file stating the power of ten it scales its OWN figures by (Enbridge Gas
+ * sends milli-dollars: `powerOfTenMultiplier -3`), which is why energy.ts
+ * derives a bill amount's scale from the line instead of assuming the
+ * schema's hundred-thousandths default.
+ */
+export const MONEY_UOM = 80;
+
+/**
  * Non-quantity units: they carry a measurement but never an amount of energy,
  * so a series declaring one is a summary/telemetry series, not usage.
  */
@@ -459,7 +468,7 @@ const NON_QUANTITY_UOM = new Set<number>([
   114, // code
   109, // status
   108, // timeStamp
-  80, // money
+  MONEY_UOM, // money
   111, // count
   76, // char
   77, // charPerSec

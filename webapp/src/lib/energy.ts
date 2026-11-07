@@ -10,10 +10,12 @@ import {
   MAX_DOCUMENT_DEPTH,
   assertBillDollars,
   assertBillMeasurement,
+  assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
   isClockOffset,
 } from './greenbutton/limits';
+import { MONEY_UOM } from './greenbutton/espiUnits';
 import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
@@ -1993,7 +1995,8 @@ export function calculateTrueBill(input: {
  * UsageSummary blocks, each a complete itemized bill (billingPeriod, money
  * scalars, and a costAdditionalDetailLastPeriod list of amount + note +
  * itemKind + optional measurement). Money is ESPI's "hundred-thousandths of
- * the currency" — see BILL_AMOUNT_SCALE — and the note is the only label we
+ * the currency" unless the file restates the scale on the line itself — see
+ * BILL_AMOUNT_SCALE and moneyPowerOf — and the note is the only label we
  * can trust (see BillLineItem.itemKind).
  *
  * Everything below is pure and client-side: it runs over the same XML string
@@ -2001,11 +2004,19 @@ export function calculateTrueBill(input: {
  * localStorage next to `energy_data`. No server round trip, ever.
  * ========================================================================== */
 
-/** ESPI money scale: bill amounts are hundred-thousandths of a currency unit
- *  (the schema documents billLastPeriod exactly that way). $1,365.03 arrives
- *  as 136503000. Verified against Mark's Oakville Hydro export: the three
- *  periods' "Total Electricity Charges" sum to $1,365.03, matching the bill
- *  line-for-line. */
+/** ESPI's DEFAULT money scale: bill amounts are hundred-thousandths of a
+ *  currency unit (the schema documents billLastPeriod exactly that way).
+ *  $1,365.03 arrives as 136503000. Verified against Mark's Oakville Hydro
+ *  export: the three periods' "Total Electricity Charges" sum to $1,365.03,
+ *  matching the bill line-for-line.
+ *
+ *  A default, not a fact about every file: a utility may restate the scale on
+ *  the line itself. Enbridge Gas stamps
+ *  `measurement { powerOfTenMultiplier: -3, uom: 80 (money) }` on every money
+ *  line — milli-dollars, so its $175.76 Amount Due arrives as 175760, and
+ *  dividing that by 100000 rendered every Enbridge bill 100× small. Every
+ *  figure here goes through `moneyPowerOf`, which reads the file's own
+ *  declaration and falls back to this only when it declares nothing. */
 export const BILL_AMOUNT_SCALE = 100000;
 
 export type BillMeasurement = {
@@ -2019,7 +2030,8 @@ export type BillMeasurement = {
 export type BillLineItem = {
   /** Verbatim `<note>`, never normalised: it is the only dependable label. */
   note: string;
-  /** Dollars (raw ÷ BILL_AMOUNT_SCALE); null when the element is absent. */
+  /** Dollars (raw ÷ the scale this line's own measurement declares, else
+   *  BILL_AMOUNT_SCALE); null when the element is absent. */
   amount: number | null;
   /** The raw integer exactly as the file sent it. */
   rawAmount: number | null;
@@ -2031,9 +2043,13 @@ export type BillLineItem = {
    *  TOU lines). So no code list is hard-coded here — grouping keys off
    *  `note`, and unknown codes still render as the number they are. */
   itemKind: number | null;
-  /** Dollars per unit when the utility sends one (same money scale). */
+  /** Dollars per unit when the utility sends one (the line's own money
+   *  scale, exactly like `amount`). */
   unitCost: number | null;
-  /** Present on the informational lines: meter reads, TOU usage, dates. */
+  /** Present on the informational lines: meter reads, TOU usage, dates.
+   *  A money line's `<measurement>` usually carries no `<value>` — the number
+   *  IS the `<amount>` — so `parseMeasurement` (value required) leaves it null
+   *  here; the scale it declares is still honoured, via `moneyPowerOf`. */
   measurement: BillMeasurement | null;
 };
 
@@ -2085,17 +2101,60 @@ function billNum(v: unknown): number | null {
 }
 
 /**
- * Raw ESPI money (hundred-thousandths) → dollars, bounded.
+ * The power of ten a raw `<measurement>` node declares for MONEY, or null
+ * when it declares none.
  *
- * `what` names the element for the refusal sentence: this is the bill half of
- * the same rule `series.ts` applies to one interval's kWh (see
- * greenbutton/limits.ts) — a finite figure that no bill can hold is refused
- * rather than scaled into every derived total.
+ * A measurement restates how the figure beside it is scaled only when it
+ * names money (uom 80) or names no unit at all. Any other unit (Wh, sec, a
+ * read code) is describing a DIFFERENT quantity the same line carries — the
+ * usage a charge priced, a due date, a meter read — and says nothing about
+ * the money, so the ESPI default stands. A node with no
+ * `<powerOfTenMultiplier>` declares no scale either: it has stated a unit and
+ * not a power of ten.
+ *
+ * The `<value>` is deliberately not required here. Enbridge Gas sends its
+ * money lines as `measurement { powerOfTenMultiplier -3, uom 80 }` with NO
+ * value — the number is the `<amount>` — so `parseMeasurement`, which needs a
+ * value to build a quantity, leaves those measurements null. Reading the raw
+ * node is what keeps the scale when the parsed measurement is gone: callers
+ * pass `line.measurement` exactly as it arrives in the XML, never a parsed
+ * BillMeasurement.
  */
-function billMoney(what: string, raw: number | null): number | null {
+function moneyPowerOf(measurement: unknown): number | null {
+  const node = asArray<Record<string, unknown>>(
+    (measurement as Record<string, unknown> | undefined) ?? {},
+  )[0];
+  if (!node) return null;
+  const power = billNum(node.powerOfTenMultiplier);
+  if (power === null) return null;
+  const uom = billNum(node.uom);
+  // A stated unit that is not money: the measurement is about something else.
+  if (uom !== null && uom !== 0 && uom !== MONEY_UOM) return null;
+  return power;
+}
+
+/** Raw money the file sent → dollars, at the scale it declared for it. */
+function scaleMoney(raw: number, power: number | null): number {
+  return power === null ? raw / BILL_AMOUNT_SCALE : raw / 10 ** -power;
+}
+
+/**
+ * Raw ESPI money → dollars, at the scale the file declared, bounded.
+ *
+ * `power` is the power of ten the file stated for this figure (its own
+ * measurement, or the block's lines' consensus for a block scalar); null is
+ * the ESPI Currency default, hundred-thousandths. `what` names the element
+ * for the refusal sentence: this is the bill half of the same rule
+ * `series.ts` applies to one interval's kWh (see greenbutton/limits.ts) — a
+ * finite figure that no bill can hold is refused rather than scaled into
+ * every derived total, and a figure the file itself contradicts (rendered at
+ * the wrong power of ten) is refused for agreeing with nothing in it.
+ */
+function billMoney(what: string, raw: number | null, power: number | null): number | null {
   if (raw === null) return null;
-  const dollars = raw / BILL_AMOUNT_SCALE;
+  const dollars = scaleMoney(raw, power);
   assertBillDollars(what, dollars);
+  assertDeclaredBillScale(what, raw, power, dollars);
   return dollars;
 }
 
@@ -2163,10 +2222,22 @@ function parseLineItem(raw: unknown): BillLineItem | null {
   const measurement = parseMeasurement(o.measurement, 'measurement');
   if (rawAmount === null && !note && measurement === null) return null;
   const rawUnitCost = billNum(o.unitCost);
-  const amount = rawAmount === null ? null : rawAmount / BILL_AMOUNT_SCALE;
-  if (amount !== null) assertBillDollars('amount', amount);
-  const unitCost = rawUnitCost === null ? null : rawUnitCost / BILL_AMOUNT_SCALE;
-  if (unitCost !== null) assertUnitPrice('unitCost', unitCost);
+  // The scale is the line's own, read from the raw node: the money lines
+  // that declare one (Enbridge) are exactly the ones whose measurement has
+  // no `<value>` for `parseMeasurement` to keep.
+  const power = moneyPowerOf(o.measurement);
+  let amount: number | null = null;
+  if (rawAmount !== null) {
+    amount = scaleMoney(rawAmount, power);
+    assertBillDollars('amount', amount);
+    assertDeclaredBillScale('amount', rawAmount, power, amount);
+  }
+  let unitCost: number | null = null;
+  if (rawUnitCost !== null) {
+    unitCost = scaleMoney(rawUnitCost, power);
+    assertUnitPrice('unitCost', unitCost);
+    assertDeclaredBillScale('unitCost', rawUnitCost, power, unitCost);
+  }
   return {
     note,
     rawAmount,
@@ -2175,6 +2246,40 @@ function parseLineItem(raw: unknown): BillLineItem | null {
     unitCost,
     measurement,
   };
+}
+
+/**
+ * The power of ten this bill's own scalars (`billLastPeriod`, …) are stated
+ * in, read off its line items.
+ *
+ * The block scalars carry no `<measurement>` of their own, and ESPI documents
+ * them as hundred-thousandths — which is only the default. A utility that
+ * stamps a scale on every money line is telling us what unit ITS money is
+ * written in, and the scalars are the very same figures: Enbridge sends
+ * `billLastPeriod` as the raw integer its Amount Due line carries, so at the
+ * ESPI default the two render as $1.76 and $175.76 — one bill, two powers of
+ * ten apart. The lines declare the scale, then: the power most of the block's
+ * PRICED money lines agree on, a rate line (`¢/m³`, 10^-4) being a minority
+ * vote among them (23 money lines to 3 in every Enbridge period). A block
+ * whose lines declare nothing keeps the ESPI default — Oakville's money lines
+ * carry no measurement, so its output does not move.
+ */
+function blockMoneyPower(lines: readonly Record<string, unknown>[]): number | null {
+  const declared: number[] = [];
+  for (const line of lines) {
+    if (billNum(line.amount) === null) continue;
+    const power = moneyPowerOf(line.measurement);
+    if (power !== null) declared.push(power);
+  }
+  if (declared.length === 0) return null;
+  const counts = new Map<number, number>();
+  for (const power of declared) counts.set(power, (counts.get(power) ?? 0) + 1);
+  // File order breaks an exact tie: only a strictly larger count replaces it.
+  let best = declared[0];
+  for (const power of declared) {
+    if ((counts.get(power) ?? 0) > (counts.get(best) ?? 0)) best = power;
+  }
+  return best;
 }
 
 /**
@@ -2190,11 +2295,13 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     const start = billNum(period?.start);
     const duration = billNum(period?.duration);
     if (start === null || duration === null || duration <= 0) continue;
-    const items = asArray<Record<string, unknown>>(
+    const rawLines = asArray<Record<string, unknown>>(
       node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
-    )
+    );
+    const items = rawLines
       .map(parseLineItem)
       .filter((i): i is BillLineItem => i !== null);
+    const moneyPower = blockMoneyPower(rawLines);
     const consumption = parseMeasurement(
       node.overallConsumptionLastPeriod,
       'overallConsumptionLastPeriod',
@@ -2206,13 +2313,16 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
       startDate: utcDayKey(start),
       endDate: utcDayKey(start + duration),
       days: Math.round((duration / 86400) * 10) / 10,
-      // the same hundred-thousandths scale as the line items, and bounded:
-      // a figure past MAX_BILL_DOLLARS refuses the file (limits.ts)
-      billLastPeriod: billMoney('billLastPeriod', billNum(node.billLastPeriod)),
-      billToDate: billMoney('billToDate', billNum(node.billToDate)),
+      // the block's own money scale (its lines' consensus, else ESPI's
+      // hundred-thousandths — see blockMoneyPower), and bounded: a figure
+      // past MAX_BILL_DOLLARS, or one the file's scale contradicts,
+      // refuses the file (limits.ts)
+      billLastPeriod: billMoney('billLastPeriod', billNum(node.billLastPeriod), moneyPower),
+      billToDate: billMoney('billToDate', billNum(node.billToDate), moneyPower),
       costAdditionalLastPeriod: billMoney(
         'costAdditionalLastPeriod',
         billNum(node.costAdditionalLastPeriod),
+        moneyPower,
       ),
       currency: billNum(node.currency),
       consumption,

@@ -34,6 +34,7 @@ import {
   MAX_UNIT_PRICE_DOLLARS,
   assertBillDollars,
   assertBillMeasurement,
+  assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
   budgetRefusal,
@@ -43,7 +44,7 @@ import {
   measureDocument,
   type DocumentStats,
 } from './limits';
-import { parseGreenButtonFeed, parseGreenButtonUsagePoints } from '@/lib/energy';
+import { BILL_AMOUNT_SCALE, parseGreenButtonFeed, parseGreenButtonUsagePoints } from '@/lib/energy';
 import { diagnoseGreenButtonDocument } from '@/lib/parseDiagnostic';
 
 function stats(o: Partial<DocumentStats>): DocumentStats {
@@ -311,4 +312,83 @@ describe('the numeric bounds — a figure no bill can hold is refused', () => {
     expect(refusal?.code).toBe('budget');
     expect(() => parseGreenButtonFeed('<feed/>')).not.toThrow();
   }, 60_000);
+});
+
+/* ==========================================================================
+ * The declared scale — the too-small half the magnitude bound cannot see
+ * ==========================================================================
+ *
+ * `assertBillDollars` bounds MAGNITUDE, so it refuses `1e308` and is blind to
+ * the opposite lie: Enbridge Gas sends $175.76 as the raw integer 175760
+ * with `measurement { powerOfTenMultiplier: -3 }`, and rendering it at the
+ * ESPI hundred-thousandths default yields $1.76 — finite, well under
+ * MAX_BILL_DOLLARS, and wrong by 100×. No absolute floor can catch that
+ * either: a $1.76 bill is a figure a bill CAN hold, and a floor high enough
+ * to fail it would refuse real credit bills, and a refusal is fatal to the
+ * whole import. Only the file can say which figure it meant.
+ *
+ * This bound is asserted at the function deliberately. It compares a rendered
+ * figure against the power of ten THE FILE DECLARED for that same figure, so
+ * while the renderer derives its scale from the file — which is what
+ * `billMoneyScale.test.ts` pins through the app's own entry point, with the
+ * absolute magnitudes data CAN contradict — no data can disagree with it;
+ * only a renderer that stops deriving can, and that is precisely the
+ * regression it exists to catch.
+ */
+
+describe('the scale the file declares — a figure contradicted by its own power of ten is refused', () => {
+  /** Enbridge's Amount Due: raw 175760, milli-dollars (power −3). */
+  const RAW = 175760;
+  const POWER = -3;
+  const DOLLARS = 175.76;
+
+  it('keeps the figure the file declares, to the last cent', () => {
+    expect(() => assertDeclaredBillScale('amount', RAW, POWER, DOLLARS)).not.toThrow();
+    expect(() => assertDeclaredBillScale('amount', 0, POWER, 0)).not.toThrow();
+    expect(() => assertDeclaredBillScale('amount', -50000, POWER, -50)).not.toThrow(); // a credit
+    // …and the same power computed twice lands on the same double, so the
+    // agreement is exact; only an honest epsilon keeps it that way if the
+    // arithmetic is ever rewritten.
+    expect(() => assertDeclaredBillScale('amount', RAW, POWER, RAW / 10 ** -POWER)).not.toThrow();
+  });
+
+  it('refuses the 100×-small figure the old hard-coded scale produced', () => {
+    const tooSmall = RAW / BILL_AMOUNT_SCALE; // what $175.76 became: 1.7576
+    expect(tooSmall).toBe(1.7576);
+    // `assertBillDollars` waves that through — it is a figure a bill can hold.
+    expect(() => assertBillDollars('amount', tooSmall)).not.toThrow();
+
+    try {
+      assertDeclaredBillScale('amount', RAW, POWER, tooSmall);
+      throw new Error('unreachable — a 100×-small bill was kept');
+    } catch (e) {
+      expect(isGreenButtonRefusal(e)).toBe(true);
+      if (!isGreenButtonRefusal(e)) throw e;
+      expect(e.code).toBe('bill-scale');
+      expect(e.measured).toBe(tooSmall); // what it was rendered as
+      expect(e.limit).toBe(DOLLARS); // …and what the file declares
+      expect(e.detail).toContain('1.7576');
+      expect(e.detail).toContain('175.76');
+      expect(e.detail).toContain('10^-3');
+      expect(e.detail).toMatch(/Nothing from this file was imported/);
+    }
+  });
+
+  it('refuses the too-large half at the declared scale as well', () => {
+    expect(() => assertDeclaredBillScale('amount', RAW, POWER, DOLLARS * 100)).toThrow(
+      /wrong power of ten/,
+    );
+    expect(() => assertDeclaredBillScale('amount', RAW, POWER, Number.NaN)).toThrow(
+      /Nothing from this file was imported/,
+    );
+  });
+
+  it('compares nothing when the file declares nothing — the magnitude bound still applies', () => {
+    // Oakville's money lines carry no measurement: the ESPI default is an
+    // assumption, not a declaration, so there is nothing to contradict.
+    expect(() =>
+      assertDeclaredBillScale('billLastPeriod', 284259, null, 284259 / BILL_AMOUNT_SCALE),
+    ).not.toThrow();
+    expect(() => assertDeclaredBillScale('billLastPeriod', 1e303, null, 1e303)).not.toThrow();
+  });
 });
