@@ -451,6 +451,14 @@ export type GreenButtonFeed = {
   /** The feed's own clock rules, when the file carries LocalTimeParameters. */
   localTime: LocalTimeParams | null;
   /**
+   * Customer/account labels when the document IS an account feed (Customer,
+   * CustomerAccount, CustomerAgreement, ServiceLocation, ServiceSupplier,
+   * Meter entries — the Enbridge `EGD_Gas_AccountDetails_…` shape), else null.
+   * Enrichment only: it never gates an import and never carries readings or
+   * bills of its own (t_fb80429a).
+   */
+  account: AccountDetails | null;
+  /**
    * Every refusal, dropped reading and unit assumption the ingestion made —
    * including the group-level notes that explain how a point's several series
    * were combined, and the notes that belong to no single group. Empty means
@@ -709,6 +717,33 @@ function duplicateResolutionNote(
 }
 
 /**
+ * fast-xml-parser's value coercion, pinned to this app's rules.
+ *
+ * With `parseTagValue` on (the parser's default) EVERY numeric-looking tag
+ * becomes a Number — which silently erases the leading zeros of an identifier:
+ * an account file's `<accountId>000000000000</accountId>` came out as `0`.
+ * Account numbers, agreement ids and meter serials are labels, not quantities,
+ * so this processor keeps the coercion the rest of the tree relies on (plain
+ * integers and decimals → number, `true`/`false` → boolean) while a leading-zero
+ * numeric string stays exactly the string the utility sent. Nothing else
+ * changes: every value that is not a leading-zero numeric is coerced exactly
+ * as fast-xml-parser's default would (t_fb80429a).
+ */
+function preserveIdentifiers(tagName: string, tagValue: unknown): unknown {
+  if (typeof tagValue !== 'string') return tagValue;
+  if (tagValue === 'true') return true;
+  if (tagValue === 'false') return false;
+  if (/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(tagValue) && !/^0\d/.test(tagValue)) {
+    // Finite only: fast-xml-parser's own pass leaves `360E2000` (a DST rule
+    // that LOOKS like scientific notation) as the string it is, because
+    // Number('360E2000') is Infinity — the guard keeps that behaviour.
+    const n = Number(tagValue);
+    return Number.isFinite(n) ? n : tagValue;
+  }
+  return tagValue;
+}
+
+/**
  * One pass over one document: readings, bills and the feed's own clock.
  *
  * Everything Wave L needs sits in the same XML the reading parser already
@@ -740,6 +775,10 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
+    // The app owns the value coercion (see preserveIdentifiers): the parser's
+    // default numeric pass would erase an account id's leading zeros.
+    parseTagValue: false,
+    tagValueProcessor: preserveIdentifiers,
     // Belt and braces behind the budget scan: the scan is a raw-text estimate,
     // this is the parser's own ceiling. It is stated here rather than left to
     // fast-xml-parser's default (100) so the app's bound is the app's, and the
@@ -881,11 +920,14 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     return a.id.localeCompare(b.id);
   });
 
+  const account = parseAccountDetails(parsed);
+
   return {
     groups: out,
     summaries: parseUsageSummaryNodes(parsed),
     localTime: parseLocalTimeNode(parsed),
-    notes: [...notes, ...groupNotes],
+    account,
+    notes: [...notes, ...groupNotes, ...(account ? [accountDetailsNote(account)] : [])],
   };
 }
 export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
@@ -2071,6 +2113,15 @@ export type UsageSummary = {
   currency: number | null;
   /** overallConsumptionLastPeriod, scaled by its own multiplier. */
   consumption: BillMeasurement | null;
+  /**
+   * currentBillingPeriodOverAllConsumption, scaled by its own multiplier —
+   * the volume THIS period's bill states for itself (Enbridge gas fills it
+   * with the adjusted m³: 429 for a period whose meter reads moved 427 and
+   * whose unadjusted usage is 426.569; Oakville's summary shape carries no
+   * such element, so null there). `consumption`'s overall figure is 0 in all
+   * ten Enbridge periods, so a gas period's volume must read THIS field.
+   */
+  volume: BillMeasurement | null;
   /** Every line item, verbatim and in file order. */
   items: BillLineItem[];
 };
@@ -2306,6 +2357,10 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
       node.overallConsumptionLastPeriod,
       'overallConsumptionLastPeriod',
     );
+    const volume = parseMeasurement(
+      node.currentBillingPeriodOverAllConsumption,
+      'currentBillingPeriodOverAllConsumption',
+    );
     out.push({
       source: name as UsageSummary['source'],
       start,
@@ -2326,10 +2381,220 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
       ),
       currency: billNum(node.currency),
       consumption,
+      volume,
       items,
     });
   }
   return out.sort((a, b) => a.start - b.start);
+}
+
+/* ==========================================================================
+ * Account details — the customer-file half of an ESPI extract
+ * ========================================================================== */
+
+/**
+ * The labels an AccountDetails / Customer feed carries — Enbridge's
+ * `EGD_Gas_AccountDetails_…xml` shape: Customer, CustomerAccount,
+ * CustomerAgreement, ServiceLocation, ServiceSupplier and Meter entries.
+ *
+ * ENRICHMENT, NEVER A REQUIREMENT (t_fb80429a): a file that carries only
+ * these entries imports nothing of its own — no readings, no bills — and must
+ * never block the EnergyUsage file that does. Every field is a label the
+ * dashboard may show beside the bills; a missing field is null, and a
+ * document with none of the six entry kinds parses to `null`, not to a
+ * refusal.
+ */
+export type AccountDetails = {
+  /** Customer.customerName. */
+  customerName: string | null;
+  /** Customer.kind — "Residential Customer" in the real file. */
+  customerKind: string | null;
+  /** CustomerAccount.accountId — the utility's account number. */
+  accountId: string | null;
+  /** CustomerAgreement.agreementId. */
+  agreementId: string | null;
+  /** ServiceSupplier.Organisation.organisationName — "Enbridge Gas Distribution". */
+  supplier: string | null;
+  /** Meter.serialNumber. */
+  meterSerial: string | null;
+  /** Meter.intervalLength, seconds (2592000 = 30 days in the real file). */
+  meterIntervalLength: number | null;
+  /** ServiceLocation.mainAddress, one line — street, town, province postal. */
+  serviceAddress: string | null;
+};
+
+const ACCOUNT_BLOCK_NAMES = new Set([
+  'Customer',
+  'CustomerAccount',
+  'CustomerAgreement',
+  'ServiceLocation',
+  'ServiceSupplier',
+  'Meter',
+]);
+
+/** First text under `key` — the account file writes scalars directly. */
+function accountText(node: Record<string, unknown>, key: string): string | null {
+  return billText(node[key]);
+}
+
+/**
+ * One address field that may be a scalar (the flat form some feeds use) or the
+ * ESPI nested block Enbridge emits (`streetDetail/addressGeneral`,
+ * `townDetail/name`). An object with none of the known keys yields null —
+ * never `[object Object]` in a line a human reads (t_fb80429a, real-file
+ * verification).
+ */
+function addressField(value: unknown, keys: readonly string[]): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') {
+    const rec = value as Record<string, unknown>;
+    for (const k of keys) {
+      const t = billText(rec[k]);
+      if (t) return t;
+    }
+    return null;
+  }
+  return billText(value);
+}
+
+/** One address block (`streetAddress` / `mainAddress`) rendered on one line. */
+function accountAddress(node: Record<string, unknown>, key: string): string | null {
+  const block = asArray<Record<string, unknown>>(
+    (node[key] as Record<string, unknown> | undefined) ?? {},
+  )[0];
+  if (!block) return null;
+  // Enbridge nests `stateOrProvince` INSIDE townDetail; a flat feed puts it
+  // beside townDetail — both spell the same one-line address.
+  const townBlock =
+    block.townDetail && typeof block.townDetail === 'object'
+      ? (block.townDetail as Record<string, unknown>)
+      : null;
+  const street = addressField(block.streetDetail, ['addressGeneral', 'streetName']);
+  const town = addressField(block.townDetail, ['name', 'townName']);
+  const province = townBlock
+    ? billText(townBlock.stateOrProvince)
+    : billText(block.stateOrProvince);
+  const postal = billText(block.postalCode);
+  const line = [street, town, [province, postal].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+  return line || null;
+}
+
+/** The `Organisation` wrapper Customer / ServiceSupplier hang their text off. */
+function organisationOf(node: Record<string, unknown>): Record<string, unknown> {
+  return asArray<Record<string, unknown>>(
+    (node.Organisation as Record<string, unknown> | undefined) ?? {},
+  )[0] ?? {};
+}
+
+/**
+ * The one sentence an account file's recognition raises (t_fb80429a).
+ *
+ * Raised whenever a feed carries account entries, so an enrichment upload is
+ * never silent: the notice row says which supplier, account and meter the
+ * file named — and that the file itself holds no readings or bills. Missing
+ * fields interpolate as an em dash rather than `null`, because a sentence is
+ * composed from these values in both languages.
+ */
+function accountDetailsNote(account: AccountDetails): SeriesNote {
+  const supplier = account.supplier ?? '—';
+  const accountId = account.accountId ?? '—';
+  const serial = account.meterSerial ?? '—';
+  return {
+    code: 'account-details',
+    params: { supplier, accountId, serial },
+    detail: `Account details recognized: ${supplier} · account ${accountId} · meter ${serial} — labels only; this file carries no readings or bills of its own.`,
+  };
+}
+
+/**
+ * Every account label a customer feed states, or null when it states none.
+ *
+ * Exact-name matches only (`collectBillNodes`): the EnergyUsage file's
+ * `MeterReading` entries are not `Meter` entries, so a usage document parses
+ * to null here and the two files stay distinguishable by what they carry.
+ * When both an address kinds appear the SERVICE one wins (where the meter
+ * is), which the real file's entry order arranges: Customer first,
+ * ServiceLocation later overwrites.
+ */
+export function parseAccountDetails(parsed: unknown): AccountDetails | null {
+  const found: AccountDetails = {
+    customerName: null,
+    customerKind: null,
+    accountId: null,
+    agreementId: null,
+    supplier: null,
+    meterSerial: null,
+    meterIntervalLength: null,
+    serviceAddress: null,
+  };
+  let seen = false;
+  for (const { name, node } of collectBillNodes(parsed, ACCOUNT_BLOCK_NAMES)) {
+    seen = true;
+    switch (name) {
+      case 'Customer': {
+        found.customerName = accountText(node, 'customerName') ?? found.customerName;
+        found.customerKind = accountText(node, 'kind') ?? found.customerKind;
+        if (found.serviceAddress === null) {
+          found.serviceAddress = accountAddress(organisationOf(node), 'streetAddress');
+        }
+        break;
+      }
+      case 'CustomerAccount':
+        found.accountId = accountText(node, 'accountId') ?? found.accountId;
+        break;
+      case 'CustomerAgreement':
+        found.agreementId = accountText(node, 'agreementId') ?? found.agreementId;
+        break;
+      case 'ServiceLocation':
+        found.serviceAddress = accountAddress(node, 'mainAddress') ?? found.serviceAddress;
+        break;
+      case 'ServiceSupplier':
+        found.supplier =
+          accountText(organisationOf(node), 'organisationName') ?? found.supplier;
+        break;
+      case 'Meter':
+        found.meterSerial = accountText(node, 'serialNumber') ?? found.meterSerial;
+        found.meterIntervalLength = billNum(node.intervalLength) ?? found.meterIntervalLength;
+        break;
+    }
+  }
+  return seen ? found : null;
+}
+
+/**
+ * The meter reads a bill states for itself: `Current Meter Read` −
+ * `Previous Meter Read`, in the unit those lines declare (Enbridge gas:
+ * 1175.0 − 748.0 = 427 m³), or null when the bill carries no pair of reads.
+ *
+ * The delta is rounded to whole milli-metres: both reads arrive as
+ * `value × 10^potm` floats, and 1175 − 748 must read 427, not 426.99999999999994.
+ * This is the figure the acceptance criteria compare against Usage
+ * * (unadjusted) within the 1.0057 atmospheric factor (t_fb80429a).
+ */
+export function meterReadVolume(
+  bill: UsageSummary,
+): { current: number; previous: number; delta: number } | null {
+  const current =
+    bill.items.find((i) => i.note === 'Current Meter Read')?.measurement?.scaled ?? null;
+  const previous =
+    bill.items.find((i) => i.note === 'Previous Meter Read')?.measurement?.scaled ?? null;
+  if (current === null || previous === null) return null;
+  const delta = Math.round((current - previous) * 1000) / 1000;
+  return { current, previous, delta };
+}
+
+/**
+ * The bill's own `Usage (unadjusted)` figure — the meter-read volume before
+ * the 1.0057 atmospheric factor (Enbridge gas: 426.569 m³, uom 167, whose
+ * ×1.0057 rounds to the 429 m³ `volume` this period bills), or null when the
+ * line is absent. Kept distinct from `meterReadVolume` (raw reads) and from
+ * `volume` (the adjusted figure): the three are different, all-legitimate
+ * numbers and must never be cross-substituted (t_fb80429a AC12/AC13).
+ */
+export function usageUnadjusted(bill: UsageSummary): number | null {
+  return bill.items.find((i) => i.note === 'Usage (unadjusted)')?.measurement?.scaled ?? null;
 }
 
 /**

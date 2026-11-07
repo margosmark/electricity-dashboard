@@ -99,7 +99,7 @@ function makeSummary(day: string, days: number, items: BillLineItem[]): UsageSum
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items,
   };
 }

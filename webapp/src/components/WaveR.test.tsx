@@ -663,7 +663,7 @@ describe('Wave R 4d — the card answers its own question', () => {
       billToDate: null,
       costAdditionalLastPeriod: null,
       currency: 124,
-      consumption: null,
+      consumption: null, volume: null,
       items: [
         { note: 'Off Peak-Summer', amount, rawAmount: null, itemKind: null, unitCost: null, measurement: null },
       ],

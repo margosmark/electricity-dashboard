@@ -451,7 +451,7 @@ function tieredSummary(startDate: string, days: number, items: BillLineItem[]): 
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items,
   };
 }

@@ -43,6 +43,8 @@ export type Translate = (key: string, params?: Record<string, string | number>) 
 export const NOTE_KEY: Partial<Record<SeriesNote['code'], string>> = {
   'unsupported-series': 'gbseries.note.unsupportedSeries',
   'converted-to-energy': 'gbseries.note.convertedToEnergy',
+  'volume-series': 'gbseries.note.volumeSeries',
+  'account-details': 'gbseries.note.accountDetails',
   'refused-readings': 'gbseries.note.refusedReadings',
   'assumed-direction': 'gbseries.note.assumedDirection',
   'unlinked-reading-type': 'gbseries.note.unlinkedReadingType',
