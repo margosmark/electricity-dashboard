@@ -20,6 +20,9 @@ import {
   MIN_WINDOW_COVERAGE,
   EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, chargesArePristine,
 } from "@/lib/energy";
+// Commodity 7: gas enrichment rides the summaries themselves (interval block
+// per period + supplier label) so backup/restore needs no second channel.
+import { enrichGasSummaries, isGasFeed } from "@/lib/gasBillUi";
 // The billing axis — the file's OWN periods as the view's timeline (this
 // wave's whole idea), with billing_day as the fallback when it has none.
 import { buildBillingAxis, dateWindowOf, periodAt, stepPeriod, type BillingAxis } from "@/lib/billingAxis";
@@ -623,6 +626,13 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         : { ok: false, code: "unparseable" };
     }
     const groups = feed.groups;
+    // Commodity 7 enrichment (the gas bill surfaces): which IntervalBlock
+    // belongs to which billing period — and whether a paired Account Details
+    // file stated the supplier — is decidable only with the whole feed in
+    // hand. Computed once, here, and stored ON the summaries so it survives
+    // the localStorage round trip with them (backup/restore then needs no
+    // second storage channel). Non-gas feeds pass through untouched.
+    const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
     if (incoming === 0) return { ok: false, code: "no_readings" };
 
@@ -630,7 +640,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // can still be cancelled) and then folded in — a sync never deletes a
     // bill the feed no longer repeats.
     billFeedsRef.current = [
-      { summaries: feed.summaries, localTime: feed.localTime, source: "your Green Button feed" },
+      { summaries, localTime: feed.localTime, source: "your Green Button feed" },
     ];
 
     if (groups.length > 1) {
@@ -638,7 +648,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         fileName: "Oakville Hydro (live sync)",
         groups,
         origin: "greenbutton",
-        summaries: feed.summaries,
+        summaries,
         // Held until the pick commits (see chooseUsagePoint).
         notes: feed.notes,
       });
@@ -659,7 +669,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
-    commitReadings(merged, "upload", feed.summaries, feed.notes);
+    commitReadings(merged, "upload", summaries, feed.notes);
     commitBillFeed("union");
     if (hadWindow) {
       setStartDate(keep.start);
@@ -1096,10 +1106,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           }
           const groups = feed.groups;
           const readings = countReadings(groups);
+          // Commodity 7 enrichment (gas bill surfaces) — same one-pass rule
+          // as ingestFeedXml: decide interval-block ownership and supplier
+          // labels with the whole file in hand, store them ON the summaries.
+          const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
           // Wave L: the bill half rides along with the readings and is held
           // until the user actually imports (see commitBillFeed).
           billFeedsRef.current.push({
-            summaries: feed.summaries,
+            summaries,
             localTime: feed.localTime,
             source: file.name,
           });
@@ -1114,7 +1128,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             notes: feed.notes,
             // The bills ride with the readings: the first-load window is
             // chosen in the same call that imports them.
-            summaries: feed.summaries,
+            summaries,
             ...(readings === 0 ? { issue: diagnoseGreenButtonDocument(text, 0) } : {}),
           });
         };
