@@ -26,6 +26,125 @@ const SAMPLE = path.resolve(__dirname, '../../public/samples/example-usage.xml')
 /** Repo-root evidence dir (Playwright runs with cwd = webapp/). */
 const EVIDENCE = path.resolve(__dirname, '../../../evidence');
 
+/* ------------------------------------------------------------------------ *
+ * The focus ring is a MEASURED contract, not one era's colour constants.
+ *
+ * Wave H pinned it as "3px white outline + 6px blue halo" in globals.css;
+ * the Quiet Meter redesign (#110) replaced that with a 2px `--focus-ring`
+ * outline at a 2px offset (the 2px `--page` ring inside it is the gap), and
+ * made the ink a per-theme token — the accent (#c7f000) is 1.22:1 on the
+ * light canvas, i.e. an invisible indicator, which is exactly what the
+ * redesign shipped and this file used to wave through on a stale geometry
+ * match (t_5f6b2315). So the gate below asserts what a focus indicator owes
+ * the user — DRAWN, and readable against the surface it lands on (WCAG
+ * 1.4.11's 3:1 non-text floor) — and lets the design keep its own tokens.
+ * ------------------------------------------------------------------------ */
+
+type RingReading = {
+  label: string;
+  tag: string;
+  focusVisible: boolean;
+  outlineWidth: number;
+  outlineStyle: string;
+  outlineColor: [number, number, number];
+  gapColor: [number, number, number] | null;
+  surface: [number, number, number];
+};
+
+/** WCAG relative luminance on already-normalised sRGB. */
+function luminance([r, g, b]: [number, number, number]): number {
+  const f = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * Read the settled ring on the focused element. Every colour goes through a
+ * 1x1 canvas first: Chrome serialises Tailwind v4 colours as lab()/oklch(),
+ * which a regex for rgb() silently fails to read (see theme-contrast.spec).
+ */
+async function readRing(page: Page): Promise<RingReading | null> {
+  return page.evaluate(() => {
+    const el = document.activeElement as HTMLElement | null;
+    if (!el) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d')!;
+    const norm = (css: string): [number, number, number] => {
+      ctx.fillStyle = '#000';
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = css;
+      ctx.fillRect(0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+    const s = getComputedStyle(el);
+    // The surface the ring is painted against: the first ancestor that
+    // actually paints a background (toolbar, card, slab, the page itself).
+    let surface = getComputedStyle(document.body).backgroundColor;
+    for (let n = el.parentElement; n; n = n.parentElement) {
+      const bg = getComputedStyle(n).backgroundColor;
+      if (bg && bg !== 'transparent' && !/^rgba\(\s*0,\s*0,\s*0,\s*0\s*\)$/.test(bg)) {
+        surface = bg;
+        break;
+      }
+    }
+    // Chrome prints the colour first: "rgb(246, 246, 243) 0px 0px 0px 2px".
+    const gap = s.boxShadow.match(/^(rgba?\([^)]*\)|#[0-9a-f]+)/i);
+    return {
+      label: el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 40),
+      tag: el.tagName,
+      focusVisible: el.matches(':focus-visible'),
+      outlineWidth: parseFloat(s.outlineWidth),
+      outlineStyle: s.outlineStyle,
+      outlineColor: norm(s.outlineColor),
+      gapColor: gap ? norm(gap[1]) : null,
+      surface: norm(surface),
+    };
+  });
+}
+
+/**
+ * The best contrast ANY layer of the ring achieves against the surface it
+ * lands on. Two layers, two jobs: the `--page` gap reads against a dark
+ * slab the outline cannot see, the outline reads against the page/card.
+ */
+function ringContrast(r: RingReading): number {
+  const layers: [number, number, number][] = [r.outlineColor];
+  if (r.gapColor) layers.push(r.gapColor);
+  return Math.max(...layers.map((c) => contrastRatio(c, r.surface)));
+}
+
+function describeRing(r: RingReading): string {
+  return `${r.tag} "${r.label}": outline ${r.outlineWidth}px ${r.outlineStyle} rgb(${r.outlineColor.join(', ')}) on rgb(${r.surface.join(', ')}) = ${ringContrast(r).toFixed(2)}:1`;
+}
+
+/**
+ * Tab through the page and measure the ring on every keyboard stop that
+ * matches :focus-visible — cards, chips, slabs and the page itself, so the
+ * budget is checked on the surfaces the app really paints.
+ */
+async function walkRings(page: Page, stops: number): Promise<RingReading[]> {
+  const readings: RingReading[] = [];
+  await page.keyboard.press('Tab');
+  for (let i = 0; i < stops; i++) {
+    // The controls carry `transition-colors` and outline-color is one of
+    // its properties, so the ring animates in: read it once it settles.
+    await page.waitForTimeout(250);
+    const r = await readRing(page);
+    if (r?.focusVisible) readings.push(r);
+    await page.keyboard.press('Tab');
+  }
+  return readings;
+}
+
 test.describe('full journey', () => {
   test('land → upload export → Shift Optimizer headline → totals → CSV download', async ({
     page,
@@ -40,8 +159,18 @@ test.describe('full journey', () => {
     await expect(page.getByText('Drop XML Here')).toBeVisible();
     // Wave H item 1: the way in for someone with no export at all.
     await expect(page.getByTestId('try-example-data')).toBeVisible();
-    // Wave H item 2: the plan is named before any data exists.
-    await expect(page.getByTestId('active-plan-chip')).toHaveAttribute('data-plan', /TOU|Tiered|ULO/);
+    // Wave H item 2: the plan is named before any data exists. The Quiet
+    // Meter redesign (#110) retired the header chip — `ActivePlanChip` is
+    // no longer rendered — for the toolbar's own switcher, which reads the
+    // same `useSelectedPlan` store the chip did: exactly one plan is pressed
+    // and its canonical id is on screen before a byte has been uploaded.
+    const switcher = page.getByTestId('plan-switcher');
+    await expect(switcher).toBeVisible();
+    const pressedPlan = switcher.locator('button[data-plan][aria-pressed="true"]');
+    await expect(pressedPlan, 'exactly one plan is the active one').toHaveCount(1);
+    await expect(pressedPlan).toHaveAttribute('data-plan', /TOU|Tiered|ULO/);
+    // The visible label IS the accessible name (no aria-label to hide it).
+    await expect(pressedPlan).toHaveText(/TOU|Tiered|ULO/);
 
     // --- 2. Upload: through the same input a real user file takes. --------
     // NOTE the drop zone is NOT the signal: it flips to "ANALYZING..." the
@@ -229,36 +358,25 @@ test.describe('keyboard, print and crash', () => {
       if (label === 'Upload XML') break;
       await page.keyboard.press('Tab');
     }
-    // The ring ANIMATES in (the app's buttons all carry `transition-all`),
-    // so read it once it has settled: 3px outline + a 6px blue halo.
+    // The ring ANIMATES in (the controls carry `transition-colors`, and
+    // outline-color is one of its properties), so read it once it has
+    // settled. What is pinned here is the CONTRACT, not one era's
+    // geometry: a DRAWN ring (solid outline, at least 2px) with the 2px
+    // `--page` gap inside it, whose colour actually reads on the surface
+    // it lands on. Both themes — and every surface, chips and slabs
+    // included — are walked in the test below.
     await expect
-      .poll(
-        async () =>
-          page.evaluate(() => {
-            const el = document.activeElement as HTMLElement | null;
-            if (!el) return '';
-            const s = getComputedStyle(el);
-            return `${s.outlineWidth} ${s.boxShadow}`;
-          }),
-        { timeout: 5_000 },
-      )
-      .toMatch(/3px .*0px 0px 0px 6px/);
-
-    const ring = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el) return null;
-      const s = getComputedStyle(el);
-      return {
-        label: el.getAttribute('aria-label'),
-        outlineWidth: s.outlineWidth,
-        outlineColor: s.outlineColor,
-        boxShadow: s.boxShadow,
-      };
-    });
-    expect(ring?.label).toBe('Upload XML');
-    expect(parseFloat(ring?.outlineWidth || '0')).toBeGreaterThan(0);
-    // Blue halo, which is what makes the ring read on white AND on black.
-    expect(ring?.boxShadow).toMatch(/rgb\(37,\s*99,\s*235\)/);
+      .poll(async () => (await readRing(page))?.label ?? '', { timeout: 5_000 })
+      .toBe('Upload XML');
+    await page.waitForTimeout(300);
+    const ring = await readRing(page);
+    expect(ring, 'the upload control must be focusable').not.toBeNull();
+    expect(ring!.label).toBe('Upload XML');
+    expect(ring!.focusVisible).toBe(true);
+    expect(ring!.outlineStyle, 'the ring must be DRAWN, not merely a focused element').toBe('solid');
+    expect(ring!.outlineWidth, 'a hairline outline is not an indicator').toBeGreaterThanOrEqual(2);
+    expect(ring!.gapColor, 'the 2px --page gap is part of the ring').not.toBeNull();
+    expect(ringContrast(ring!), `ring does not read on its surface — ${describeRing(ring!)}`).toBeGreaterThanOrEqual(3);
 
     // Enter opens the modal, Escape closes it again.
     await page.keyboard.press('Enter');
@@ -272,6 +390,37 @@ test.describe('keyboard, print and crash', () => {
     expect(await toggle.getAttribute('aria-expanded')).toBe('true');
     await escapeUntilHidden(page, page.getByTestId('backup-drawer'));
     expect(await toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('the focus ring reads on every surface it lands on, in both themes', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    // One ring rule paints the whole app, so ONE surface passing proves
+    // nothing: the design language is white chips, yellow chips AND black
+    // slabs, and #110's ring token (the accent, 1.22:1 on the light page)
+    // passed a colour-blind gate for exactly that reason. Walk the tab
+    // order and check the budget on every stop, in each theme.
+    for (const theme of ['light', 'dark'] as const) {
+      // localStorage needs an origin first: set the tag, then reload with it.
+      await page.goto('/');
+      await page.evaluate((t) => localStorage.setItem('theme', t), theme);
+      await page.reload();
+      await expect(page.getByText('Drop XML Here')).toBeVisible({ timeout: 60_000 });
+
+      const readings = await walkRings(page, 30);
+      // A walk that measured nothing must never read as green.
+      expect(readings.length, `${theme}: the walk measured no focusable ring`).toBeGreaterThanOrEqual(6);
+      for (const r of readings) {
+        expect(r.outlineStyle, `${theme}: ${r.label} has no drawn ring`).toBe('solid');
+        expect(r.outlineWidth, `${theme}: ${r.label}'s ring is a hairline`).toBeGreaterThanOrEqual(2);
+        expect(
+          ringContrast(r),
+          `${theme}: ${describeRing(r)} — no ring layer reads on the surface it lands on`,
+        ).toBeGreaterThanOrEqual(3);
+      }
+      // Evidence: what was actually measured, per stop, per theme.
+      console.log(`focus-ring walk — ${theme} (${readings.length} stops)\n  ${readings.map(describeRing).join('\n  ')}`);
+    }
   });
 
   test('print layout: nav and controls gone, document intact, fits Letter width', async ({
