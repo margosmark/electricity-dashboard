@@ -9,6 +9,7 @@ import { isOntarioHoliday } from './ontarioHolidays';
 import {
   MAX_DOCUMENT_DEPTH,
   assertBillDollars,
+  assertBillLinesPerPeriod,
   assertBillMeasurement,
   assertDeclaredBillScale,
   assertDocumentBudget,
@@ -765,11 +766,12 @@ function preserveIdentifiers(tagName: string, tagValue: unknown): unknown {
  */
 export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   // The document budget comes FIRST: an over-budget document (`>` 32 MiB, `>`
-  // 200 000 entries, `>` 500 000 readings, `>` 64 levels deep) is refused
-  // before the parser is handed the text, so no object tree — and no partial
-  // reading, bill or note — can exist for it. Nothing is written by a refusal:
-  // every caller catches it and shows a diagnostic (see greenbutton/limits.ts
-  // for the measurements behind each number).
+  // 200 000 entries, `>` 500 000 readings, `>` 1 200 bill blocks, `>` 8 000
+  // bill lines, `>` 64 levels deep) is refused before the parser is handed
+  // the text, so no object tree — and no partial reading, bill or note — can
+  // exist for it. Nothing is written by a refusal: every caller catches it
+  // and shows a diagnostic (see greenbutton/limits.ts for the measurements
+  // behind each number).
   assertDocumentBudget(xmlText);
 
   const parser = new XMLParser({
@@ -2349,6 +2351,14 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     const rawLines = asArray<Record<string, unknown>>(
       node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
     );
+    // The per-bill half of the document budget (limits.ts): the pre-parse
+    // scan counts these lines across the WHOLE document but cannot tell which
+    // period they belong to, so one bill holding the entire allowance is
+    // judged here — before a single line is parsed and before the card that
+    // renders all of them exists. Refused whole, never truncated: billTotals
+    // sums these lines, so a kept subset would be a bill whose rows disagree
+    // with its own totals.
+    assertBillLinesPerPeriod(rawLines.length);
     const items = rawLines
       .map(parseLineItem)
       .filter((i): i is BillLineItem => i !== null);

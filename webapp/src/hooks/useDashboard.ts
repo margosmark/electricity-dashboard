@@ -51,7 +51,7 @@ import {
   type StorageResult,
   loadEnergyData, saveEnergyData, clearEnergyData,
   loadBillingDay, saveBillingDay,
-  parseImport, resetStoredData, listOurStoredKeys,
+  parseImport, resetStoredData, listOurStoredKeys, writeStoredKey,
 } from "@/lib/storage";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
@@ -163,20 +163,40 @@ export const countUsableRows = (gs: UsagePointGroup[]): number =>
     0,
   );
 
-/** Persist; a storage failure must never break the UI. */
-export function writeStoredBillFeed(feed: BillFeed): void {
+/**
+ * Persist the bill half — and SAY when it does not land.
+ *
+ * Both writes go through storage.ts's `writeStoredKey`, so a quota failure
+ * comes back classified exactly like the readings write, and the caller
+ * raises it through `reportStorage` (the same notice row). The old version
+ * swallowed the failure in an empty catch: for a gas-only import that is the
+ * only persisted copy of the data at all — zero electric `DataPoint`s are
+ * committed for commodity 7 — so a silent quota failure looked like a
+ * successful import until the reload that found 0 periods.
+ *
+ * Returns the verdict instead of throwing: a storage failure must never break
+ * the UI (the in-memory value is still the truth on screen), it must only be
+ * visible.
+ */
+export function writeStoredBillFeed(feed: BillFeed): StorageResult<true> {
+  let summaries: string | null;
+  let clock: string | null;
   try {
-    if (feed.summaries.length > 0) {
-      localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(feed.summaries));
-    } else {
-      localStorage.removeItem(USAGE_SUMMARIES_KEY);
-    }
-    if (feed.localTime) {
-      localStorage.setItem(LOCAL_TIME_KEY, JSON.stringify(feed.localTime));
-    } else {
-      localStorage.removeItem(LOCAL_TIME_KEY);
-    }
-  } catch { /* quota exceeded / private mode: keep the in-memory value */ }
+    summaries = feed.summaries.length > 0 ? JSON.stringify(feed.summaries) : null;
+    clock = feed.localTime ? JSON.stringify(feed.localTime) : null;
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "corrupt",
+      detail: `Bill feed is not serializable: ${(err as Error)?.message ?? String(err)}`,
+    };
+  }
+  // Both writes are ATTEMPTED even if the first fails (a stale clock beside
+  // new bills is still better than neither), and the first failure wins —
+  // one notice, naming the key that failed.
+  const written = writeStoredKey(USAGE_SUMMARIES_KEY, summaries);
+  const timed = writeStoredKey(LOCAL_TIME_KEY, clock);
+  return written.ok ? timed : written;
 }
 
 /**
@@ -428,6 +448,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * actual-bill panel without re-parsing the export.
    */
   const [billFeed, setBillFeed] = useState<BillFeed>(() => readStoredBillFeed());
+  /**
+   * The same value, readable synchronously. `commitBillFeed` unions from the
+   * LAST commit, so two commits landing in one tick (a network pull and a
+   * staged service-worker feed, say) cannot both union against the render
+   * before the first one — which is what reading the `billFeed` closure would
+   * do now that the write happens outside the state updater.
+   */
+  const billFeedRef = useRef<BillFeed>(billFeed);
 
   /**
    * The timeline THIS FILE defines: its own `billingPeriod` entries (de-duped
@@ -475,18 +503,22 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const commitBillFeed = (mode: "replace" | "union") => {
     const incoming = billFeedsRef.current;
     billFeedsRef.current = [];
-    setBillFeed((prev) => {
-      const next =
-        mode === "replace"
-          ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
-          : // `incoming` holds one feed per FILE the user selected (one entry for a
-            // live sync) — not one per bill in the file — and the batch is cleared
-            // on commit. `unionBillFeeds`'s variadic tail is therefore file-count-sized.
-            // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
-            unionBillFeeds(prev, ...incoming);
-      writeStoredBillFeed(next);
-      return next;
-    });
+    const next =
+      mode === "replace"
+        ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
+        : // `incoming` holds one feed per FILE the user selected (one entry for a
+          // live sync) — not one per bill in the file — and the batch is cleared
+          // on commit. `unionBillFeeds`'s variadic tail is therefore file-count-sized.
+          // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
+          unionBillFeeds(billFeedRef.current, ...incoming);
+    // Written OUTSIDE the state updater (updaters must stay pure) and BEFORE
+    // the state lands, so a failed write raises the same notice row the
+    // readings write raises — never a silent one. Deliberately reports only:
+    // commitReadings may have just raised ITS OWN notice for the same commit,
+    // and clearing here would erase a quota failure the user must still see.
+    reportStorage(writeStoredBillFeed(next));
+    billFeedRef.current = next;
+    setBillFeed(next);
   };
 
   /* ---------------------------------------------------------------------
@@ -1339,6 +1371,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       localStorage.removeItem(USAGE_SUMMARIES_KEY);
       localStorage.removeItem(LOCAL_TIME_KEY);
     } catch { /* nothing to remove */ }
+    billFeedRef.current = EMPTY_BILL_FEED;
     setBillFeed(EMPTY_BILL_FEED);
     setRawData([]);
     setExampleData(false);
