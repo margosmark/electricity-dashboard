@@ -134,6 +134,30 @@ function safeGetItem(key: string): StorageResult<string | null> {
   }
 }
 
+/**
+ * Write (or, with `value: null`, remove) ONE key that storage.ts does not
+ * itself own, through the same error classification every write here uses.
+ *
+ * `usage_summaries` / `local_time_parameters` are declared in useDashboard
+ * because the parse that fills them lives there — but their write must not be
+ * a second, quieter contract. For a gas-only import those keys are the ONLY
+ * persisted copy of the data (no electric `DataPoint`s are committed), so a
+ * failure here has to come back as the same `StorageResult`, the same
+ * quota/corrupt reason and the same sentence the readings write reports,
+ * instead of vanishing into an empty catch.
+ */
+export function writeStoredKey(key: string, value: string | null): StorageResult<true> {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+    return ok(true);
+  } catch (err) {
+    const reason: StorageFailureReason = isQuotaError(err) ? 'quota' : 'corrupt';
+    const word = reason === 'quota' ? t('storage.reasonQuota') : t('storage.reasonWrite');
+    return fail<true>(reason, t('storage.writeFail', { reason: word, key, detail: describeError(err) }));
+  }
+}
+
 // --- Energy data -----------------------------------------------------------
 
 /**

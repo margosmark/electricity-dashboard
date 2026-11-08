@@ -44,6 +44,9 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'ev.signedNegative', // "−{amount}" — the minus glyph is the same in both
   'ev.categoriesAnd', // " + " — the joiner between period names is glyph-only
   'account.quietFormat', // "HH:MM-HH:MM" — a clock-format code, identical in fr
+  'gasBill.m3Unit', // "m³" — the cubic-metre glyph, identical in fr
+  'gasBill.rateUnit', // "¢/m³" — the unit glyph, identical in fr
+  'gasBill.supplier', // "Enbridge Gas Distribution" — the utility's own name
 ]);
 
 describe('i18n catalogs', () => {

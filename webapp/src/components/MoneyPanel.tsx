@@ -25,6 +25,7 @@ import BillAccrualCurve from '@/components/BillAccrualCurve';
 import { expectedBillDate } from '@/lib/billAccrual';
 import { TrueBillEstimate } from '@/components/TrueBillEstimate';
 import EvScenarioCard from '@/components/EvScenarioCard';
+import { isGasFeed } from '@/lib/gasBillUi';
 
 const MoneySection = dynamic(() => import('@/components/MoneySection'), {
   ssr: false,
@@ -114,10 +115,13 @@ export default function MoneyPanel({
         />
       </div>
 
-      {/* EV charging scenario — the household's own kWh, priced three ways. */}
-      <div data-testid="money-ev-slot">
-        <EvScenarioCard rows={allData} rates={rates} plan={plan} />
-      </div>
+      {/* EV charging scenario — the household's own kWh, priced three ways.
+          Never on a gas dataset (epic DoD 4: no kWh/plan surfaces on gas). */}
+      {!isGasFeed(summaries) && (
+        <div data-testid="money-ev-slot">
+          <EvScenarioCard rows={allData} rates={rates} plan={plan} />
+        </div>
+      )}
     </div>
   );
 }

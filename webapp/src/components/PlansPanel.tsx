@@ -30,6 +30,7 @@ import { PlanTimelineEditor } from '@/components/PlanTimelineEditor';
 import SwitchTrackRecord from '@/components/SwitchTrackRecord';
 import HindsightPanel from '@/components/HindsightPanel';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
+import { isGasFeed } from '@/lib/gasBillUi';
 import { fmtNumber, fmtPercent, useTranslation } from '@/i18n';
 
 export type PlansPanelProps = {
@@ -70,6 +71,22 @@ export default function PlansPanel({
   allData,
 }: PlansPanelProps) {
   const { t } = useTranslation();
+  // Commodity 7 has no plan to compare against — no ¢/kWh basis, no TOU
+  // windows, no hindsight repricing (epic DoD 4: no plan-comparison
+  // surfaces on gas data). The tab therefore shows ONLY the actual bill.
+  if (isGasFeed(summaries)) {
+    return (
+      <div
+        id="panel-plans"
+        role="tabpanel"
+        aria-labelledby="tab-plans"
+        className="order-2 space-y-6 md:space-y-10"
+        data-testid="tab-panel-plans"
+      >
+        <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />
+      </div>
+    );
+  }
   return (
     <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="order-2 space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}

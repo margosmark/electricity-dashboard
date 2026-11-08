@@ -9,11 +9,14 @@ import { isOntarioHoliday } from './ontarioHolidays';
 import {
   MAX_DOCUMENT_DEPTH,
   assertBillDollars,
+  assertBillLinesPerPeriod,
   assertBillMeasurement,
+  assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
   isClockOffset,
 } from './greenbutton/limits';
+import { MONEY_UOM } from './greenbutton/espiUnits';
 import { daysInMonth as utcDaysInMonth } from './dateSpan';
 import type { HourlyTemps } from './openMeteo';
 import { tempAtC } from './openMeteo';
@@ -449,6 +452,14 @@ export type GreenButtonFeed = {
   /** The feed's own clock rules, when the file carries LocalTimeParameters. */
   localTime: LocalTimeParams | null;
   /**
+   * Customer/account labels when the document IS an account feed (Customer,
+   * CustomerAccount, CustomerAgreement, ServiceLocation, ServiceSupplier,
+   * Meter entries — the Enbridge `EGD_Gas_AccountDetails_…` shape), else null.
+   * Enrichment only: it never gates an import and never carries readings or
+   * bills of its own (t_fb80429a).
+   */
+  account: AccountDetails | null;
+  /**
    * Every refusal, dropped reading and unit assumption the ingestion made —
    * including the group-level notes that explain how a point's several series
    * were combined, and the notes that belong to no single group. Empty means
@@ -707,6 +718,33 @@ function duplicateResolutionNote(
 }
 
 /**
+ * fast-xml-parser's value coercion, pinned to this app's rules.
+ *
+ * With `parseTagValue` on (the parser's default) EVERY numeric-looking tag
+ * becomes a Number — which silently erases the leading zeros of an identifier:
+ * an account file's `<accountId>000000000000</accountId>` came out as `0`.
+ * Account numbers, agreement ids and meter serials are labels, not quantities,
+ * so this processor keeps the coercion the rest of the tree relies on (plain
+ * integers and decimals → number, `true`/`false` → boolean) while a leading-zero
+ * numeric string stays exactly the string the utility sent. Nothing else
+ * changes: every value that is not a leading-zero numeric is coerced exactly
+ * as fast-xml-parser's default would (t_fb80429a).
+ */
+function preserveIdentifiers(tagName: string, tagValue: unknown): unknown {
+  if (typeof tagValue !== 'string') return tagValue;
+  if (tagValue === 'true') return true;
+  if (tagValue === 'false') return false;
+  if (/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(tagValue) && !/^0\d/.test(tagValue)) {
+    // Finite only: fast-xml-parser's own pass leaves `360E2000` (a DST rule
+    // that LOOKS like scientific notation) as the string it is, because
+    // Number('360E2000') is Infinity — the guard keeps that behaviour.
+    const n = Number(tagValue);
+    return Number.isFinite(n) ? n : tagValue;
+  }
+  return tagValue;
+}
+
+/**
  * One pass over one document: readings, bills and the feed's own clock.
  *
  * Everything Wave L needs sits in the same XML the reading parser already
@@ -728,16 +766,21 @@ function duplicateResolutionNote(
  */
 export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
   // The document budget comes FIRST: an over-budget document (`>` 32 MiB, `>`
-  // 200 000 entries, `>` 500 000 readings, `>` 64 levels deep) is refused
-  // before the parser is handed the text, so no object tree — and no partial
-  // reading, bill or note — can exist for it. Nothing is written by a refusal:
-  // every caller catches it and shows a diagnostic (see greenbutton/limits.ts
-  // for the measurements behind each number).
+  // 200 000 entries, `>` 500 000 readings, `>` 1 200 bill blocks, `>` 8 000
+  // bill lines, `>` 64 levels deep) is refused before the parser is handed
+  // the text, so no object tree — and no partial reading, bill or note — can
+  // exist for it. Nothing is written by a refusal: every caller catches it
+  // and shows a diagnostic (see greenbutton/limits.ts for the measurements
+  // behind each number).
   assertDocumentBudget(xmlText);
 
   const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
+    // The app owns the value coercion (see preserveIdentifiers): the parser's
+    // default numeric pass would erase an account id's leading zeros.
+    parseTagValue: false,
+    tagValueProcessor: preserveIdentifiers,
     // Belt and braces behind the budget scan: the scan is a raw-text estimate,
     // this is the parser's own ceiling. It is stated here rather than left to
     // fast-xml-parser's default (100) so the app's bound is the app's, and the
@@ -879,11 +922,14 @@ export function parseGreenButtonFeed(xmlText: string): GreenButtonFeed {
     return a.id.localeCompare(b.id);
   });
 
+  const account = parseAccountDetails(parsed);
+
   return {
     groups: out,
     summaries: parseUsageSummaryNodes(parsed),
     localTime: parseLocalTimeNode(parsed),
-    notes: [...notes, ...groupNotes],
+    account,
+    notes: [...notes, ...groupNotes, ...(account ? [accountDetailsNote(account)] : [])],
   };
 }
 export function parseGreenButtonUsagePoints(xmlText: string): UsagePointGroup[] {
@@ -1993,7 +2039,8 @@ export function calculateTrueBill(input: {
  * UsageSummary blocks, each a complete itemized bill (billingPeriod, money
  * scalars, and a costAdditionalDetailLastPeriod list of amount + note +
  * itemKind + optional measurement). Money is ESPI's "hundred-thousandths of
- * the currency" — see BILL_AMOUNT_SCALE — and the note is the only label we
+ * the currency" unless the file restates the scale on the line itself — see
+ * BILL_AMOUNT_SCALE and moneyPowerOf — and the note is the only label we
  * can trust (see BillLineItem.itemKind).
  *
  * Everything below is pure and client-side: it runs over the same XML string
@@ -2001,11 +2048,19 @@ export function calculateTrueBill(input: {
  * localStorage next to `energy_data`. No server round trip, ever.
  * ========================================================================== */
 
-/** ESPI money scale: bill amounts are hundred-thousandths of a currency unit
- *  (the schema documents billLastPeriod exactly that way). $1,365.03 arrives
- *  as 136503000. Verified against Mark's Oakville Hydro export: the three
- *  periods' "Total Electricity Charges" sum to $1,365.03, matching the bill
- *  line-for-line. */
+/** ESPI's DEFAULT money scale: bill amounts are hundred-thousandths of a
+ *  currency unit (the schema documents billLastPeriod exactly that way).
+ *  $1,365.03 arrives as 136503000. Verified against Mark's Oakville Hydro
+ *  export: the three periods' "Total Electricity Charges" sum to $1,365.03,
+ *  matching the bill line-for-line.
+ *
+ *  A default, not a fact about every file: a utility may restate the scale on
+ *  the line itself. Enbridge Gas stamps
+ *  `measurement { powerOfTenMultiplier: -3, uom: 80 (money) }` on every money
+ *  line — milli-dollars, so its $175.76 Amount Due arrives as 175760, and
+ *  dividing that by 100000 rendered every Enbridge bill 100× small. Every
+ *  figure here goes through `moneyPowerOf`, which reads the file's own
+ *  declaration and falls back to this only when it declares nothing. */
 export const BILL_AMOUNT_SCALE = 100000;
 
 export type BillMeasurement = {
@@ -2019,7 +2074,8 @@ export type BillMeasurement = {
 export type BillLineItem = {
   /** Verbatim `<note>`, never normalised: it is the only dependable label. */
   note: string;
-  /** Dollars (raw ÷ BILL_AMOUNT_SCALE); null when the element is absent. */
+  /** Dollars (raw ÷ the scale this line's own measurement declares, else
+   *  BILL_AMOUNT_SCALE); null when the element is absent. */
   amount: number | null;
   /** The raw integer exactly as the file sent it. */
   rawAmount: number | null;
@@ -2031,9 +2087,13 @@ export type BillLineItem = {
    *  TOU lines). So no code list is hard-coded here — grouping keys off
    *  `note`, and unknown codes still render as the number they are. */
   itemKind: number | null;
-  /** Dollars per unit when the utility sends one (same money scale). */
+  /** Dollars per unit when the utility sends one (the line's own money
+   *  scale, exactly like `amount`). */
   unitCost: number | null;
-  /** Present on the informational lines: meter reads, TOU usage, dates. */
+  /** Present on the informational lines: meter reads, TOU usage, dates.
+   *  A money line's `<measurement>` usually carries no `<value>` — the number
+   *  IS the `<amount>` — so `parseMeasurement` (value required) leaves it null
+   *  here; the scale it declares is still honoured, via `moneyPowerOf`. */
   measurement: BillMeasurement | null;
 };
 
@@ -2055,6 +2115,15 @@ export type UsageSummary = {
   currency: number | null;
   /** overallConsumptionLastPeriod, scaled by its own multiplier. */
   consumption: BillMeasurement | null;
+  /**
+   * currentBillingPeriodOverAllConsumption, scaled by its own multiplier —
+   * the volume THIS period's bill states for itself (Enbridge gas fills it
+   * with the adjusted m³: 429 for a period whose meter reads moved 427 and
+   * whose unadjusted usage is 426.569; Oakville's summary shape carries no
+   * such element, so null there). `consumption`'s overall figure is 0 in all
+   * ten Enbridge periods, so a gas period's volume must read THIS field.
+   */
+  volume: BillMeasurement | null;
   /** Every line item, verbatim and in file order. */
   items: BillLineItem[];
 };
@@ -2085,17 +2154,60 @@ function billNum(v: unknown): number | null {
 }
 
 /**
- * Raw ESPI money (hundred-thousandths) → dollars, bounded.
+ * The power of ten a raw `<measurement>` node declares for MONEY, or null
+ * when it declares none.
  *
- * `what` names the element for the refusal sentence: this is the bill half of
- * the same rule `series.ts` applies to one interval's kWh (see
- * greenbutton/limits.ts) — a finite figure that no bill can hold is refused
- * rather than scaled into every derived total.
+ * A measurement restates how the figure beside it is scaled only when it
+ * names money (uom 80) or names no unit at all. Any other unit (Wh, sec, a
+ * read code) is describing a DIFFERENT quantity the same line carries — the
+ * usage a charge priced, a due date, a meter read — and says nothing about
+ * the money, so the ESPI default stands. A node with no
+ * `<powerOfTenMultiplier>` declares no scale either: it has stated a unit and
+ * not a power of ten.
+ *
+ * The `<value>` is deliberately not required here. Enbridge Gas sends its
+ * money lines as `measurement { powerOfTenMultiplier -3, uom 80 }` with NO
+ * value — the number is the `<amount>` — so `parseMeasurement`, which needs a
+ * value to build a quantity, leaves those measurements null. Reading the raw
+ * node is what keeps the scale when the parsed measurement is gone: callers
+ * pass `line.measurement` exactly as it arrives in the XML, never a parsed
+ * BillMeasurement.
  */
-function billMoney(what: string, raw: number | null): number | null {
+function moneyPowerOf(measurement: unknown): number | null {
+  const node = asArray<Record<string, unknown>>(
+    (measurement as Record<string, unknown> | undefined) ?? {},
+  )[0];
+  if (!node) return null;
+  const power = billNum(node.powerOfTenMultiplier);
+  if (power === null) return null;
+  const uom = billNum(node.uom);
+  // A stated unit that is not money: the measurement is about something else.
+  if (uom !== null && uom !== 0 && uom !== MONEY_UOM) return null;
+  return power;
+}
+
+/** Raw money the file sent → dollars, at the scale it declared for it. */
+function scaleMoney(raw: number, power: number | null): number {
+  return power === null ? raw / BILL_AMOUNT_SCALE : raw / 10 ** -power;
+}
+
+/**
+ * Raw ESPI money → dollars, at the scale the file declared, bounded.
+ *
+ * `power` is the power of ten the file stated for this figure (its own
+ * measurement, or the block's lines' consensus for a block scalar); null is
+ * the ESPI Currency default, hundred-thousandths. `what` names the element
+ * for the refusal sentence: this is the bill half of the same rule
+ * `series.ts` applies to one interval's kWh (see greenbutton/limits.ts) — a
+ * finite figure that no bill can hold is refused rather than scaled into
+ * every derived total, and a figure the file itself contradicts (rendered at
+ * the wrong power of ten) is refused for agreeing with nothing in it.
+ */
+function billMoney(what: string, raw: number | null, power: number | null): number | null {
   if (raw === null) return null;
-  const dollars = raw / BILL_AMOUNT_SCALE;
+  const dollars = scaleMoney(raw, power);
   assertBillDollars(what, dollars);
+  assertDeclaredBillScale(what, raw, power, dollars);
   return dollars;
 }
 
@@ -2163,10 +2275,22 @@ function parseLineItem(raw: unknown): BillLineItem | null {
   const measurement = parseMeasurement(o.measurement, 'measurement');
   if (rawAmount === null && !note && measurement === null) return null;
   const rawUnitCost = billNum(o.unitCost);
-  const amount = rawAmount === null ? null : rawAmount / BILL_AMOUNT_SCALE;
-  if (amount !== null) assertBillDollars('amount', amount);
-  const unitCost = rawUnitCost === null ? null : rawUnitCost / BILL_AMOUNT_SCALE;
-  if (unitCost !== null) assertUnitPrice('unitCost', unitCost);
+  // The scale is the line's own, read from the raw node: the money lines
+  // that declare one (Enbridge) are exactly the ones whose measurement has
+  // no `<value>` for `parseMeasurement` to keep.
+  const power = moneyPowerOf(o.measurement);
+  let amount: number | null = null;
+  if (rawAmount !== null) {
+    amount = scaleMoney(rawAmount, power);
+    assertBillDollars('amount', amount);
+    assertDeclaredBillScale('amount', rawAmount, power, amount);
+  }
+  let unitCost: number | null = null;
+  if (rawUnitCost !== null) {
+    unitCost = scaleMoney(rawUnitCost, power);
+    assertUnitPrice('unitCost', unitCost);
+    assertDeclaredBillScale('unitCost', rawUnitCost, power, unitCost);
+  }
   return {
     note,
     rawAmount,
@@ -2175,6 +2299,40 @@ function parseLineItem(raw: unknown): BillLineItem | null {
     unitCost,
     measurement,
   };
+}
+
+/**
+ * The power of ten this bill's own scalars (`billLastPeriod`, …) are stated
+ * in, read off its line items.
+ *
+ * The block scalars carry no `<measurement>` of their own, and ESPI documents
+ * them as hundred-thousandths — which is only the default. A utility that
+ * stamps a scale on every money line is telling us what unit ITS money is
+ * written in, and the scalars are the very same figures: Enbridge sends
+ * `billLastPeriod` as the raw integer its Amount Due line carries, so at the
+ * ESPI default the two render as $1.76 and $175.76 — one bill, two powers of
+ * ten apart. The lines declare the scale, then: the power most of the block's
+ * PRICED money lines agree on, a rate line (`¢/m³`, 10^-4) being a minority
+ * vote among them (23 money lines to 3 in every Enbridge period). A block
+ * whose lines declare nothing keeps the ESPI default — Oakville's money lines
+ * carry no measurement, so its output does not move.
+ */
+function blockMoneyPower(lines: readonly Record<string, unknown>[]): number | null {
+  const declared: number[] = [];
+  for (const line of lines) {
+    if (billNum(line.amount) === null) continue;
+    const power = moneyPowerOf(line.measurement);
+    if (power !== null) declared.push(power);
+  }
+  if (declared.length === 0) return null;
+  const counts = new Map<number, number>();
+  for (const power of declared) counts.set(power, (counts.get(power) ?? 0) + 1);
+  // File order breaks an exact tie: only a strictly larger count replaces it.
+  let best = declared[0];
+  for (const power of declared) {
+    if ((counts.get(power) ?? 0) > (counts.get(best) ?? 0)) best = power;
+  }
+  return best;
 }
 
 /**
@@ -2190,14 +2348,28 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     const start = billNum(period?.start);
     const duration = billNum(period?.duration);
     if (start === null || duration === null || duration <= 0) continue;
-    const items = asArray<Record<string, unknown>>(
+    const rawLines = asArray<Record<string, unknown>>(
       node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
-    )
+    );
+    // The per-bill half of the document budget (limits.ts): the pre-parse
+    // scan counts these lines across the WHOLE document but cannot tell which
+    // period they belong to, so one bill holding the entire allowance is
+    // judged here — before a single line is parsed and before the card that
+    // renders all of them exists. Refused whole, never truncated: billTotals
+    // sums these lines, so a kept subset would be a bill whose rows disagree
+    // with its own totals.
+    assertBillLinesPerPeriod(rawLines.length);
+    const items = rawLines
       .map(parseLineItem)
       .filter((i): i is BillLineItem => i !== null);
+    const moneyPower = blockMoneyPower(rawLines);
     const consumption = parseMeasurement(
       node.overallConsumptionLastPeriod,
       'overallConsumptionLastPeriod',
+    );
+    const volume = parseMeasurement(
+      node.currentBillingPeriodOverAllConsumption,
+      'currentBillingPeriodOverAllConsumption',
     );
     out.push({
       source: name as UsageSummary['source'],
@@ -2206,20 +2378,249 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
       startDate: utcDayKey(start),
       endDate: utcDayKey(start + duration),
       days: Math.round((duration / 86400) * 10) / 10,
-      // the same hundred-thousandths scale as the line items, and bounded:
-      // a figure past MAX_BILL_DOLLARS refuses the file (limits.ts)
-      billLastPeriod: billMoney('billLastPeriod', billNum(node.billLastPeriod)),
-      billToDate: billMoney('billToDate', billNum(node.billToDate)),
+      // the block's own money scale (its lines' consensus, else ESPI's
+      // hundred-thousandths — see blockMoneyPower), and bounded: a figure
+      // past MAX_BILL_DOLLARS, or one the file's scale contradicts,
+      // refuses the file (limits.ts)
+      billLastPeriod: billMoney('billLastPeriod', billNum(node.billLastPeriod), moneyPower),
+      billToDate: billMoney('billToDate', billNum(node.billToDate), moneyPower),
       costAdditionalLastPeriod: billMoney(
         'costAdditionalLastPeriod',
         billNum(node.costAdditionalLastPeriod),
+        moneyPower,
       ),
       currency: billNum(node.currency),
       consumption,
+      volume,
       items,
     });
   }
   return out.sort((a, b) => a.start - b.start);
+}
+
+/* ==========================================================================
+ * Account details — the customer-file half of an ESPI extract
+ * ========================================================================== */
+
+/**
+ * The labels an AccountDetails / Customer feed carries — Enbridge's
+ * `EGD_Gas_AccountDetails_…xml` shape: Customer, CustomerAccount,
+ * CustomerAgreement, ServiceLocation, ServiceSupplier and Meter entries.
+ *
+ * ENRICHMENT, NEVER A REQUIREMENT (t_fb80429a): a file that carries only
+ * these entries imports nothing of its own — no readings, no bills — and must
+ * never block the EnergyUsage file that does. Every field is a label the
+ * dashboard may show beside the bills; a missing field is null, and a
+ * document with none of the six entry kinds parses to `null`, not to a
+ * refusal.
+ */
+export type AccountDetails = {
+  /** Customer.customerName. */
+  customerName: string | null;
+  /** Customer.kind — "Residential Customer" in the real file. */
+  customerKind: string | null;
+  /** CustomerAccount.accountId — the utility's account number. */
+  accountId: string | null;
+  /** CustomerAgreement.agreementId. */
+  agreementId: string | null;
+  /** ServiceSupplier.Organisation.organisationName — "Enbridge Gas Distribution". */
+  supplier: string | null;
+  /** Meter.serialNumber. */
+  meterSerial: string | null;
+  /** Meter.intervalLength, seconds (2592000 = 30 days in the real file). */
+  meterIntervalLength: number | null;
+  /** ServiceLocation.mainAddress, one line — street, town, province postal. */
+  serviceAddress: string | null;
+};
+
+const ACCOUNT_BLOCK_NAMES = new Set([
+  'Customer',
+  'CustomerAccount',
+  'CustomerAgreement',
+  'ServiceLocation',
+  'ServiceSupplier',
+  'Meter',
+]);
+
+/** First text under `key` — the account file writes scalars directly. */
+function accountText(node: Record<string, unknown>, key: string): string | null {
+  return billText(node[key]);
+}
+
+/**
+ * One address field that may be a scalar (the flat form some feeds use) or the
+ * ESPI nested block Enbridge emits (`streetDetail/addressGeneral`,
+ * `townDetail/name`). An object with none of the known keys yields null —
+ * never `[object Object]` in a line a human reads (t_fb80429a, real-file
+ * verification).
+ */
+function addressField(value: unknown, keys: readonly string[]): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') {
+    const rec = value as Record<string, unknown>;
+    for (const k of keys) {
+      const t = billText(rec[k]);
+      if (t) return t;
+    }
+    return null;
+  }
+  return billText(value);
+}
+
+/** One address block (`streetAddress` / `mainAddress`) rendered on one line. */
+function accountAddress(node: Record<string, unknown>, key: string): string | null {
+  const block = asArray<Record<string, unknown>>(
+    (node[key] as Record<string, unknown> | undefined) ?? {},
+  )[0];
+  if (!block) return null;
+  // Enbridge nests `stateOrProvince` INSIDE townDetail; a flat feed puts it
+  // beside townDetail — both spell the same one-line address.
+  const townBlock =
+    block.townDetail && typeof block.townDetail === 'object'
+      ? (block.townDetail as Record<string, unknown>)
+      : null;
+  const street = addressField(block.streetDetail, ['addressGeneral', 'streetName']);
+  const town = addressField(block.townDetail, ['name', 'townName']);
+  const province = townBlock
+    ? billText(townBlock.stateOrProvince)
+    : billText(block.stateOrProvince);
+  const postal = billText(block.postalCode);
+  const line = [street, town, [province, postal].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+  return line || null;
+}
+
+/** The `Organisation` wrapper Customer / ServiceSupplier hang their text off. */
+function organisationOf(node: Record<string, unknown>): Record<string, unknown> {
+  return asArray<Record<string, unknown>>(
+    (node.Organisation as Record<string, unknown> | undefined) ?? {},
+  )[0] ?? {};
+}
+
+/**
+ * The one sentence an account file's recognition raises (t_fb80429a).
+ *
+ * Raised whenever a feed carries account entries, so an enrichment upload is
+ * never silent: the notice row says which supplier, account and meter the
+ * file named — and that the file itself holds no readings or bills. Missing
+ * fields interpolate as an em dash rather than `null`, because a sentence is
+ * composed from these values in both languages.
+ */
+function accountDetailsNote(account: AccountDetails): SeriesNote {
+  const supplier = account.supplier ?? '—';
+  const accountId = account.accountId ?? '—';
+  const serial = account.meterSerial ?? '—';
+  return {
+    code: 'account-details',
+    params: { supplier, accountId, serial },
+    detail: `Account details recognized: ${supplier} · account ${accountId} · meter ${serial} — labels only; this file carries no readings or bills of its own.`,
+  };
+}
+
+/**
+ * Every account label a customer feed states, or null when it states none.
+ *
+ * Exact-name matches only (`collectBillNodes`): the EnergyUsage file's
+ * `MeterReading` entries are not `Meter` entries, so a usage document parses
+ * to null here and the two files stay distinguishable by what they carry.
+ * When both an address kinds appear the SERVICE one wins (where the meter
+ * is), which the real file's entry order arranges: Customer first,
+ * ServiceLocation later overwrites.
+ */
+export function parseAccountDetails(parsed: unknown): AccountDetails | null {
+  const found: AccountDetails = {
+    customerName: null,
+    customerKind: null,
+    accountId: null,
+    agreementId: null,
+    supplier: null,
+    meterSerial: null,
+    meterIntervalLength: null,
+    serviceAddress: null,
+  };
+  let seen = false;
+  for (const { name, node } of collectBillNodes(parsed, ACCOUNT_BLOCK_NAMES)) {
+    seen = true;
+    switch (name) {
+      case 'Customer': {
+        found.customerName = accountText(node, 'customerName') ?? found.customerName;
+        found.customerKind = accountText(node, 'kind') ?? found.customerKind;
+        if (found.serviceAddress === null) {
+          found.serviceAddress = accountAddress(organisationOf(node), 'streetAddress');
+        }
+        break;
+      }
+      case 'CustomerAccount':
+        found.accountId = accountText(node, 'accountId') ?? found.accountId;
+        break;
+      case 'CustomerAgreement':
+        found.agreementId = accountText(node, 'agreementId') ?? found.agreementId;
+        break;
+      case 'ServiceLocation':
+        found.serviceAddress = accountAddress(node, 'mainAddress') ?? found.serviceAddress;
+        break;
+      case 'ServiceSupplier':
+        found.supplier =
+          accountText(organisationOf(node), 'organisationName') ?? found.supplier;
+        break;
+      case 'Meter':
+        found.meterSerial = accountText(node, 'serialNumber') ?? found.meterSerial;
+        found.meterIntervalLength = billNum(node.intervalLength) ?? found.meterIntervalLength;
+        break;
+    }
+  }
+  return seen ? found : null;
+}
+
+/**
+ * The meter reads a bill states for itself: `Current Meter Read` −
+ * `Previous Meter Read`, in the unit those lines declare (Enbridge gas:
+ * 1175.0 − 748.0 = 427 m³), or null when the bill carries no pair of reads.
+ *
+ * The delta is rounded to whole milli-metres: both reads arrive as
+ * `value × 10^potm` floats, and 1175 − 748 must read 427, not 426.99999999999994.
+ * This is the figure the acceptance criteria compare against Usage
+ * * (unadjusted) within the 1.0057 atmospheric factor (t_fb80429a).
+ */
+export function meterReadVolume(
+  bill: UsageSummary,
+): { current: number; previous: number; delta: number } | null {
+  const current =
+    bill.items.find((i) => i.note === 'Current Meter Read')?.measurement?.scaled ?? null;
+  const previous =
+    bill.items.find((i) => i.note === 'Previous Meter Read')?.measurement?.scaled ?? null;
+  if (current === null || previous === null) return null;
+  const delta = Math.round((current - previous) * 1000) / 1000;
+  return { current, previous, delta };
+}
+
+/**
+ * The bill's own `Usage (unadjusted)` figure — the meter-read volume before
+ * the 1.0057 atmospheric factor (Enbridge gas: 426.569 m³, uom 167, whose
+ * ×1.0057 rounds to the 429 m³ `volume` this period bills), or null when the
+ * line is absent. Kept distinct from `meterReadVolume` (raw reads) and from
+ * `volume` (the adjusted figure): the three are different, all-legitimate
+ * numbers and must never be cross-substituted (t_fb80429a AC12/AC13).
+ */
+export function usageUnadjusted(bill: UsageSummary): number | null {
+  return bill.items.find((i) => i.note === 'Usage (unadjusted)')?.measurement?.scaled ?? null;
+}
+
+/**
+ * True when `seconds` could be a ZONE's offset, not merely a finite number
+ * inside `isClockOffset`'s ±86400 s magnitude bound.
+ *
+ * Enbridge sends `tzOffset: -18` where Oakville sends -18000: finite, in
+ * range, and read as seconds an 18-second "Ontario" clock whose wall clock
+ * for 2026-01-27T00:00Z is 2026-01-26T23:59:42 — every exact-UTC-midnight
+ * period stamp a day early. Every offset a zone has ever had is a multiple
+ * of 15 minutes, so a value that is not cannot be this dataset's clock. The
+ * block is dropped (the documented fallback: the device's own zone / UTC)
+ * rather than believed — the readings in the same file still import.
+ */
+function isZoneOffset(seconds: number): boolean {
+  return isClockOffset(seconds) && seconds % 900 === 0;
 }
 
 /**
@@ -2230,14 +2631,15 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
  * maths built on it produces instants no calendar can render. The clock is
  * optional metadata with a documented fallback (the device's own zone), so an
  * impossible one is DROPPED, not fatal: the readings in the same file still
- * import (see greenbutton/limits.ts#isClockOffset).
+ * import (see greenbutton/limits.ts#isClockOffset, and `isZoneOffset` above
+ * for the granularity a magnitude bound cannot catch).
  */
 export function parseLocalTimeNode(parsed: unknown): LocalTimeParams | null {
   for (const { node } of collectBillNodes(parsed, new Set(['LocalTimeParameters']))) {
     const tzOffset = billNum(node.tzOffset);
-    if (tzOffset === null || !isClockOffset(tzOffset)) continue;
+    if (tzOffset === null || !isZoneOffset(tzOffset)) continue;
     const dstOffset = billNum(node.dstOffset);
-    if (dstOffset !== null && !isClockOffset(dstOffset)) continue;
+    if (dstOffset !== null && !isZoneOffset(dstOffset)) continue;
     return {
       tzOffset,
       dstOffset,
@@ -2296,6 +2698,21 @@ export function decodeDstRule(rule: string | null | undefined): DstRule | null {
   };
   if (ruleOut.month < 1 || ruleOut.month > 12) return null;
   if (ruleOut.hour > 23) return null;
+  // The layout comment above documents bits 0-11 as seconds-in-hour 0-3599 —
+  // a bound the code never enforced, so `minute = floor(secondsInHour / 60)`
+  // could reach 68 and `dstTransitionAt` would build a wall time no clock has.
+  // And a transition is a wall-clock appointment: no timezone regime on Earth
+  // changes its clocks mid-minute, so a rule whose seconds-of-hour is not a
+  // whole minute is not a transition, it is a number that happens to decode.
+  //
+  // Both bounds are what drop Enbridge's two values (t_cab415ea): `69AD1E70`
+  // carries 3696 s → minute 61, `6AE6E370` carries 880 s → 14:14:40. They
+  // are not DstRuleType bitmaps at all — 1772953200 = 2026-03-08T07:00Z and
+  // 1794564976 = 2026-11-01T06:00Z, unix instants that happen to be the 2026
+  // US transitions — so nothing about them is a rule, and believing them
+  // built an inverted June-only DST window on an 18-second offset.
+  if (secondsInHour > 3599) return null;
+  if (secondsInHour % 60 !== 0) return null;
   return ruleOut;
 }
 
@@ -2383,6 +2800,13 @@ export function resolveZone(params: LocalTimeParams | null | undefined): Dataset
   if (!params) return null;
   const tzOffset = params.tzOffset;
   const dstOffset = params.dstOffset ?? 0;
+  // Defence for a clock that was persisted before this check existed
+  // (useDashboard keeps LocalTimeParameters in localStorage and shape-checks
+  // only): an offset that cannot be a zone is refused here too, so the
+  // fallback — the device's own zone / UTC — is what the caller gets instead
+  // of an 18-second "Ontario" clock that dates every midnight stamp a day
+  // early (Enbridge, hazard 2 of the gas epic).
+  if (!isZoneOffset(tzOffset) || !isZoneOffset(dstOffset)) return null;
   const startRule = decodeDstRule(params.dstStartRule);
   const endRule = decodeDstRule(params.dstEndRule);
   const cache = new Map<number, ZoneTransitions>();
@@ -2471,15 +2895,67 @@ const BILL_INFO_NOTE =
   /\busage\b|meter read|days in bill|loss factor|read date|due date|post date|balance forward|amount due/;
 
 /**
+ * A line that states a PRICE, not a charge: Enbridge's `Gas Supply Rate ¢/m3`
+ * carries amount 204037 with its own powerOfTenMultiplier -4 → 20.4037 CENTS
+ * per cubic metre, while the dollar lines beside it are × 10^-3. Fed to a
+ * dollar bucket it would be summed as $20.40 and lose the unit its own note
+ * declares. Any `¢/…` note is a unit price: display-only, never a bucket,
+ * never a total — its `Total Gas Supply Rate ¢/m3 (net)` wording would
+ * otherwise satisfy /^total\b/ and overwrite the stated bill total.
+ */
+const UNIT_PRICE_NOTE = /¢\s*\//;
+
+/**
+ * Enbridge's gas bill vocabulary, keyed off the note VERBATIM (lowercased).
+ * `itemKind` stays ignored — see BillLineItem.itemKind for why no published
+ * code list can be trusted. Matching is exact on purpose: these are the
+ * utility's own strings, and an unknown wording still falls through to the
+ * loose rules below and is listed in `other`, never guessed into a bucket we
+ * would then double-count (the existing contract — see classifyBillLine).
+ *
+ * `Gas Service Provider Supply Charge ($)` is `info`, not `commodity`: it
+ * restates `Gas Supply Charge` byte-for-byte in all ten periods (84.74 =
+ * 84.74 in P1), and the canonical identity counts supply ONCE —
+ * `Gas Supply Charge + Gas Delivery Variable Charge + Gas Cost Adjustment ($)
+ * + Customer charge + HST ($) = Total Gas Charges ($)` holds 10/10 to the
+ * cent, while adding the restatement too is the superseded 6-term form that
+ * double counts (246.63 against the stated 161.89 in P1) and must appear in
+ * no test and no UI (AC8, t_e2898d1b / comment 661). Display-only: it still
+ * renders in the bill's line list, it just never enters a sum.
+ */
+const GAS_LINE_CLASS: ReadonlyMap<string, BillLineClass> = new Map([
+  ['gas supply charge', 'commodity'],
+  ['gas service provider supply charge ($)', 'info'],
+  ['gas delivery variable charge', 'delivery'],
+  ['gas transportation charge ($)', 'delivery'],
+  ['transportation to enbridge (lvb)', 'delivery'],
+  ['customer charge', 'delivery'],
+  ['gas federal carbon charge', 'regulatory'],
+  ['gas cost adjustment ($)', 'regulatory'],
+  ['gas service provider admin fee ($)', 'regulatory'],
+  ['hst ($)', 'tax'],
+  ['total gas charges ($)', 'total'],
+  ['payments received ($)', 'credit'],
+]);
+
+/**
  * Group a line for display and reconciliation. The note is the utility's own
- * wording (Oakville: "Off Peak-Summer", "H.S.T. # 000000000", "Delivery"),
- * so matching stays loose on purpose: an unknown wording falls through to
- * `other` and is still listed verbatim, never silently folded into a total
- * we would then double-count.
+ * wording (Oakville: "Off Peak-Summer", "H.S.T. # 000000000", "Delivery";
+ * Enbridge: "Gas Delivery Variable Charge", "Customer charge"), so matching
+ * stays loose on purpose: an unknown wording falls through to `other` and is
+ * still listed verbatim, never silently folded into a total we would then
+ * double-count. The two Enbridge-specific passes (unit price, then the exact
+ * gas vocabulary above) run first because their notes collide with the loose
+ * rules: a rate line contains "supply", `Total Gas Supply Rate ¢/m3 (net)`
+ * starts with "total", and a negative `Gas Cost Adjustment ($)` looks like a
+ * credit but is a regulatory charge the feed itself counts in its total.
  */
 export function classifyBillLine(item: BillLineItem): BillLineClass {
-  const note = item.note.toLowerCase();
+  const note = item.note.trim().toLowerCase();
+  if (UNIT_PRICE_NOTE.test(note)) return 'info';
   if (BILL_INFO_NOTE.test(note)) return 'info';
+  const gas = GAS_LINE_CLASS.get(note);
+  if (gas !== undefined) return gas;
   if (/^total\b|total electricity/.test(note)) return 'total';
   if (/h\.?s\.?t\.?|g\.?s\.?t\.?|\btax\b/.test(note)) return 'tax';
   if (item.amount !== null && item.amount < 0) return 'credit';

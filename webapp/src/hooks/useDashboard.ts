@@ -20,6 +20,9 @@ import {
   MIN_WINDOW_COVERAGE,
   EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, chargesArePristine,
 } from "@/lib/energy";
+// Commodity 7: gas enrichment rides the summaries themselves (interval block
+// per period + supplier label) so backup/restore needs no second channel.
+import { enrichGasSummaries, isGasFeed } from "@/lib/gasBillUi";
 // The billing axis — the file's OWN periods as the view's timeline (this
 // wave's whole idea), with billing_day as the fallback when it has none.
 import { buildBillingAxis, dateWindowOf, periodAt, stepPeriod, type BillingAxis } from "@/lib/billingAxis";
@@ -48,7 +51,7 @@ import {
   type StorageResult,
   loadEnergyData, saveEnergyData, clearEnergyData,
   loadBillingDay, saveBillingDay,
-  parseImport, resetStoredData, listOurStoredKeys,
+  parseImport, resetStoredData, listOurStoredKeys, writeStoredKey,
 } from "@/lib/storage";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
@@ -119,9 +122,16 @@ export function readStoredBillFeed(): BillFeed {
     const summaries = raw ? (JSON.parse(raw) as UsageSummary[]) : [];
     const localTime = clock ? (JSON.parse(clock) as LocalTimeParams) : null;
     if (!Array.isArray(summaries)) return EMPTY_BILL_FEED;
-    const clean = summaries.filter(
-      (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
-    );
+    // `volume` was added to UsageSummary by the Enbridge wave: anything
+    // stored earlier has NO key for it, and the type says `volume: BillMeasurement
+    // | null`. Default it on read so a missing key reads as null, never
+    // undefined — `undefined !== null` is the trap that crashed isGasSummary
+    // on every pre-wave dashboard (ERR-4887C2).
+    const clean = summaries
+      .filter(
+        (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
+      )
+      .map((s) => ({ ...s, volume: s.volume ?? null }));
     const okClock =
       localTime && typeof localTime.tzOffset === "number" ? localTime : null;
     if (clean.length === 0 && !okClock) return EMPTY_BILL_FEED;
@@ -131,20 +141,62 @@ export function readStoredBillFeed(): BillFeed {
   }
 }
 
-/** Persist; a storage failure must never break the UI. */
-export function writeStoredBillFeed(feed: BillFeed): void {
+/**
+ * Rows a document actually gave us, for the import gate.
+ *
+ * An Enbridge gas extract carries no electric `DataPoint`s at all — its data
+ * lives in commodity-7 `volume` series (the five IntervalBlocks) and in the
+ * billing summaries — so gating on `g.readings` alone rejects every gas file
+ * with "produced no readable rows" even though the parse succeeded. Electric
+ * feeds are unaffected: their series are not `volume`, so this counts exactly
+ * what `g.readings` counts for them.
+ */
+export const countUsableRows = (gs: UsagePointGroup[]): number =>
+  gs.reduce(
+    (n, g) =>
+      n +
+      g.readings.length +
+      (g.series ?? []).reduce(
+        (m, s) => m + (s.status === "volume" ? s.readings.length : 0),
+        0,
+      ),
+    0,
+  );
+
+/**
+ * Persist the bill half — and SAY when it does not land.
+ *
+ * Both writes go through storage.ts's `writeStoredKey`, so a quota failure
+ * comes back classified exactly like the readings write, and the caller
+ * raises it through `reportStorage` (the same notice row). The old version
+ * swallowed the failure in an empty catch: for a gas-only import that is the
+ * only persisted copy of the data at all — zero electric `DataPoint`s are
+ * committed for commodity 7 — so a silent quota failure looked like a
+ * successful import until the reload that found 0 periods.
+ *
+ * Returns the verdict instead of throwing: a storage failure must never break
+ * the UI (the in-memory value is still the truth on screen), it must only be
+ * visible.
+ */
+export function writeStoredBillFeed(feed: BillFeed): StorageResult<true> {
+  let summaries: string | null;
+  let clock: string | null;
   try {
-    if (feed.summaries.length > 0) {
-      localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(feed.summaries));
-    } else {
-      localStorage.removeItem(USAGE_SUMMARIES_KEY);
-    }
-    if (feed.localTime) {
-      localStorage.setItem(LOCAL_TIME_KEY, JSON.stringify(feed.localTime));
-    } else {
-      localStorage.removeItem(LOCAL_TIME_KEY);
-    }
-  } catch { /* quota exceeded / private mode: keep the in-memory value */ }
+    summaries = feed.summaries.length > 0 ? JSON.stringify(feed.summaries) : null;
+    clock = feed.localTime ? JSON.stringify(feed.localTime) : null;
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "corrupt",
+      detail: `Bill feed is not serializable: ${(err as Error)?.message ?? String(err)}`,
+    };
+  }
+  // Both writes are ATTEMPTED even if the first fails (a stale clock beside
+  // new bills is still better than neither), and the first failure wins —
+  // one notice, naming the key that failed.
+  const written = writeStoredKey(USAGE_SUMMARIES_KEY, summaries);
+  const timed = writeStoredKey(LOCAL_TIME_KEY, clock);
+  return written.ok ? timed : written;
 }
 
 /**
@@ -396,6 +448,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * actual-bill panel without re-parsing the export.
    */
   const [billFeed, setBillFeed] = useState<BillFeed>(() => readStoredBillFeed());
+  /**
+   * The same value, readable synchronously. `commitBillFeed` unions from the
+   * LAST commit, so two commits landing in one tick (a network pull and a
+   * staged service-worker feed, say) cannot both union against the render
+   * before the first one — which is what reading the `billFeed` closure would
+   * do now that the write happens outside the state updater.
+   */
+  const billFeedRef = useRef<BillFeed>(billFeed);
 
   /**
    * The timeline THIS FILE defines: its own `billingPeriod` entries (de-duped
@@ -443,18 +503,22 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   const commitBillFeed = (mode: "replace" | "union") => {
     const incoming = billFeedsRef.current;
     billFeedsRef.current = [];
-    setBillFeed((prev) => {
-      const next =
-        mode === "replace"
-          ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
-          : // `incoming` holds one feed per FILE the user selected (one entry for a
-            // live sync) — not one per bill in the file — and the batch is cleared
-            // on commit. `unionBillFeeds`'s variadic tail is therefore file-count-sized.
-            // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
-            unionBillFeeds(prev, ...incoming);
-      writeStoredBillFeed(next);
-      return next;
-    });
+    const next =
+      mode === "replace"
+        ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
+        : // `incoming` holds one feed per FILE the user selected (one entry for a
+          // live sync) — not one per bill in the file — and the batch is cleared
+          // on commit. `unionBillFeeds`'s variadic tail is therefore file-count-sized.
+          // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
+          unionBillFeeds(billFeedRef.current, ...incoming);
+    // Written OUTSIDE the state updater (updaters must stay pure) and BEFORE
+    // the state lands, so a failed write raises the same notice row the
+    // readings write raises — never a silent one. Deliberately reports only:
+    // commitReadings may have just raised ITS OWN notice for the same commit,
+    // and clearing here would erase a quota failure the user must still see.
+    reportStorage(writeStoredBillFeed(next));
+    billFeedRef.current = next;
+    setBillFeed(next);
   };
 
   /* ---------------------------------------------------------------------
@@ -623,14 +687,21 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         : { ok: false, code: "unparseable" };
     }
     const groups = feed.groups;
+    // Commodity 7 enrichment (the gas bill surfaces): which IntervalBlock
+    // belongs to which billing period — and whether a paired Account Details
+    // file stated the supplier — is decidable only with the whole feed in
+    // hand. Computed once, here, and stored ON the summaries so it survives
+    // the localStorage round trip with them (backup/restore then needs no
+    // second storage channel). Non-gas feeds pass through untouched.
+    const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
-    if (incoming === 0) return { ok: false, code: "no_readings" };
+    if (countUsableRows(groups) === 0) return { ok: false, code: "no_readings" };
 
     // Held until the rows below are actually committed (a multi-meter pick
     // can still be cancelled) and then folded in — a sync never deletes a
     // bill the feed no longer repeats.
     billFeedsRef.current = [
-      { summaries: feed.summaries, localTime: feed.localTime, source: "your Green Button feed" },
+      { summaries, localTime: feed.localTime, source: "your Green Button feed" },
     ];
 
     if (groups.length > 1) {
@@ -638,7 +709,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         fileName: "Oakville Hydro (live sync)",
         groups,
         origin: "greenbutton",
-        summaries: feed.summaries,
+        summaries,
         // Held until the pick commits (see chooseUsagePoint).
         notes: feed.notes,
       });
@@ -659,7 +730,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
-    commitReadings(merged, "upload", feed.summaries, feed.notes);
+    commitReadings(merged, "upload", summaries, feed.notes);
     commitBillFeed("union");
     if (hadWindow) {
       setStartDate(keep.start);
@@ -849,22 +920,35 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         else if (!dayRes.ok) reportStorage(dayRes);
 
         const stored = loadEnergyData();
+        // The bills live under their OWN key, and a gas extract commits ZERO
+        // electric DataPoints — its whole dataset is the billing summaries.
+        // "Is there anything to show?" therefore has to ask BOTH halves of
+        // storage, or every reload of a summary-only dashboard claims to be
+        // empty and blocks the screen with the first-run modal over data that
+        // is already stored (defect R1: gas import → reload → false-empty).
+        const bills = readStoredBillFeed().summaries;
         if (!stored.ok) {
           // Unreadable storage: say so, and open the upload prompt — the
           // dashboard must not claim to be empty when it cannot tell.
           reportStorage(stored);
           if (mounted) setShowUploadModal(true);
-        } else if (stored.value && stored.value.points.length > 0) {
+        } else if ((stored.value?.points.length ?? 0) > 0 || bills.length > 0) {
           if (mounted) {
-            loadedReadings = true;
-            const parsed = stored.value.points;
-            // Ref first: the Green Button sync runs later in THIS same init
-            // pass and must see what was just restored.
-            rawDataRef.current = parsed;
-            setRawData(parsed);
-            // A reload must keep saying "this is example data" if it is.
-            if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
-            applyInitialWindow(parsed, day, readStoredBillFeed().summaries);
+            const parsed = stored.value?.points ?? [];
+            // Summary-only storage restores the BILLS half only: there are no
+            // rows to ref, no window to anchor (a file with no periods never
+            // reaches applyInitialWindow), and no rates fetch — exactly the
+            // state a Cancel left the user in, minus the modal.
+            if (parsed.length > 0) {
+              loadedReadings = true;
+              // Ref first: the Green Button sync runs later in THIS same init
+              // pass and must see what was just restored.
+              rawDataRef.current = parsed;
+              setRawData(parsed);
+              // A reload must keep saying "this is example data" if it is.
+              if (localStorage.getItem(EXAMPLE_DATA_KEY) === "1") setExampleData(true);
+              applyInitialWindow(parsed, day, bills);
+            }
           }
           // Migration warnings (quota / cleanup) still surface.
           reportStorage(stored);
@@ -1048,9 +1132,6 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const files = Array.from(fileList);
     setParsing(true);
 
-    const countReadings = (gs: UsagePointGroup[]) =>
-      gs.reduce((n, g) => n + g.readings.length, 0);
-
     const parseOne = (file: File): Promise<MergeFileChoice> =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1095,11 +1176,16 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             return;
           }
           const groups = feed.groups;
-          const readings = countReadings(groups);
+          // The gate counts gas volume rows too — see countUsableRows.
+          const readings = countUsableRows(groups);
+          // Commodity 7 enrichment (gas bill surfaces) — same one-pass rule
+          // as ingestFeedXml: decide interval-block ownership and supplier
+          // labels with the whole file in hand, store them ON the summaries.
+          const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
           // Wave L: the bill half rides along with the readings and is held
           // until the user actually imports (see commitBillFeed).
           billFeedsRef.current.push({
-            summaries: feed.summaries,
+            summaries,
             localTime: feed.localTime,
             source: file.name,
           });
@@ -1114,7 +1200,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             notes: feed.notes,
             // The bills ride with the readings: the first-load window is
             // chosen in the same call that imports them.
-            summaries: feed.summaries,
+            summaries,
             ...(readings === 0 ? { issue: diagnoseGreenButtonDocument(text, 0) } : {}),
           });
         };
@@ -1124,7 +1210,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     setParseIssue(null);
     Promise.all(files.map(parseOne))
       .then((results) => {
-        const total = results.reduce((n, r) => n + countReadings(r.groups), 0);
+        const total = results.reduce((n, r) => n + countUsableRows(r.groups), 0);
         if (total === 0) {
           // Nothing readable: keep the modal open and say exactly why, and
           // drop the bills parsed out of the same unreadable batch.
@@ -1285,6 +1371,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       localStorage.removeItem(USAGE_SUMMARIES_KEY);
       localStorage.removeItem(LOCAL_TIME_KEY);
     } catch { /* nothing to remove */ }
+    billFeedRef.current = EMPTY_BILL_FEED;
     setBillFeed(EMPTY_BILL_FEED);
     setRawData([]);
     setExampleData(false);

@@ -55,6 +55,8 @@ export type UsagePanelProps = ChartViewProps & {
   processedData: ProcessedPoint[];
   /** The dashboard's one Open-Meteo fetch (Wave T). */
   temps: HourlyTempsState;
+  /** Commodity 7: the whole panel is hourly/electric — render the skip card. */
+  gas?: boolean;
 };
 
 /**
@@ -76,6 +78,7 @@ export default function UsagePanel({
   heatmapData,
   processedData,
   temps,
+  gas = false,
   ...chart
 }: UsagePanelProps) {
   const bandReport = useMemo(
@@ -86,6 +89,32 @@ export default function UsagePanel({
   // language switch (fmtDate reads the module locale for month names).
   const { t, locale } = useTranslation();
   const spanLabel = useMemo(() => windowLabel(chart.filteredData, locale), [chart.filteredData, locale]);
+  // Commodity 7 (UX spec t_860756c3 principle 4): every view here is an
+  // hourly/electricity view — heatmap, TOU cost, temperature bins, kWh
+  // year-over-year. Gas never enters them; the panel says so explicitly.
+  if (gas) {
+    return (
+      <div
+        id="panel-usage"
+        role="tabpanel"
+        aria-labelledby="tab-usage"
+        className="space-y-6 md:space-y-10"
+        data-testid="tab-panel-usage"
+      >
+        <section
+          data-testid="gas-analytics-skip"
+          className="bg-card border border-edge rounded-xl md:rounded-2xl p-4 md:p-6 max-w-3xl"
+        >
+          <h2 className="text-[10px] md:text-xs tracking-[0.2em] text-ink-4 font-semibold uppercase">
+            {t('gasBill.analyticsTitle')}
+          </h2>
+          <p className="mt-3 text-[10px] md:text-xs text-ink-3 normal-case font-medium leading-relaxed">
+            {t('gasBill.analyticsBody', { plans: t('tab.plans'), money: t('tab.money') })}
+          </p>
+        </section>
+      </div>
+    );
+  }
   return (
     <div id="panel-usage" role="tabpanel" aria-labelledby="tab-usage" className="space-y-6 md:space-y-10" data-testid="tab-panel-usage">
       {/* Are the rates this chart prices with still the current ones? */}

@@ -35,6 +35,9 @@ import type { StalenessResult } from '@/hooks/useRateStaleness';
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
   comparison: PlanCosts | null;
+  /** Commodity 7 dataset: no plan widget may stand over a gas bill
+   *  (epic DoD 4 — no plan-comparison surfaces on gas data). */
+  gas?: boolean;
   userPlan: PlanId;
   /** Day span the comparison covers. */
   days: number;
@@ -69,6 +72,7 @@ export type OverviewPanelProps = {
 
 export default function OverviewPanel({
   comparison,
+  gas = false,
   userPlan,
   days,
   totals,
@@ -202,6 +206,8 @@ export default function OverviewPanel({
       <RateByMonth rows={usage.processedData} plan={userPlan} />
 
       <section className="grid md:grid-cols-2 gap-4" aria-label={t('overview.planAndAttention')} data-testid="overview-plan-attention">
+        {/* Commodity 7: the plan widget never stands over a gas bill. */}
+        {!gas && (
         <div className="quiet-plan-summary p-4 md:p-5" data-testid="overview-plan-summary">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-base font-semibold">{t('overview.yourPlan')}</h2>
@@ -223,6 +229,7 @@ export default function OverviewPanel({
             <button type="button" onClick={onOpenPlans} className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.comparePlans')}</button>
           </div>
         </div>
+        )}
 
         <div className="quiet-attention p-4 md:p-5" data-testid="overview-attention">
           <div className="flex items-center justify-between gap-3 mb-3">

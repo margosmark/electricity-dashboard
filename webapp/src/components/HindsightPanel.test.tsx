@@ -88,7 +88,7 @@ function touSummary(day: string, days: number, commodity: number, season = 'Wint
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items: [
       line(`Off Peak-${season}`, off),
       line(`On Peak-${season}`, on),

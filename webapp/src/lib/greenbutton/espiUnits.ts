@@ -435,6 +435,8 @@ export type QuantityKind =
   | 'apparent-power'
   /** VAr — reactive power. */
   | 'reactive-power'
+  /** m3, m3compensated: a VOLUME (natural gas, water …) — a quantity, never energy. */
+  | 'volume'
   /** sec, code, money, count, status … a value that is simply not an amount of energy. */
   | 'non-quantity'
   /** A defined unit this app has no conversion for (btu, therm, ft3, litre …). */
@@ -450,6 +452,25 @@ const APPARENT_POWER_UOM = new Set<number>([61 /* VA */]);
 const REACTIVE_POWER_UOM = new Set<number>([63 /* VAr */]);
 
 /**
+ * Volume units: `42` (m3) and `167` (m3compensated — m³ corrected to a
+ * reference temperature and pressure, which Enbridge bills its gas in).
+ *
+ * A series declaring one carries a VOLUME, not energy: it scales by its own
+ * `powerOfTenMultiplier` into cubic metres and is never priced, never summed
+ * into kWh and never written to the readings stream (t_fb80429a).
+ */
+const VOLUME_UOM = new Set<number>([42 /* m3 */, 167 /* m3compensated */]);
+
+/**
+ * uom 80 — ESPI's "money". A bill line's `<measurement>` naming this unit is
+ * the file stating the power of ten it scales its OWN figures by (Enbridge Gas
+ * sends milli-dollars: `powerOfTenMultiplier -3`), which is why energy.ts
+ * derives a bill amount's scale from the line instead of assuming the
+ * schema's hundred-thousandths default.
+ */
+export const MONEY_UOM = 80;
+
+/**
  * Non-quantity units: they carry a measurement but never an amount of energy,
  * so a series declaring one is a summary/telemetry series, not usage.
  */
@@ -459,7 +480,7 @@ const NON_QUANTITY_UOM = new Set<number>([
   114, // code
   109, // status
   108, // timeStamp
-  80, // money
+  MONEY_UOM, // money
   111, // count
   76, // char
   77, // charPerSec
@@ -475,6 +496,7 @@ export function quantityKindOf(uom: number | null | undefined): QuantityKind {
   if (ACTIVE_POWER_UOM.has(code)) return 'active-power';
   if (APPARENT_POWER_UOM.has(code)) return 'apparent-power';
   if (REACTIVE_POWER_UOM.has(code)) return 'reactive-power';
+  if (VOLUME_UOM.has(code)) return 'volume';
   if (NON_QUANTITY_UOM.has(code)) return 'non-quantity';
   // A defined unit this app does not convert (or a value the schema does not
   // define). The two cases are distinguished for the diagnostic text only.
@@ -532,6 +554,25 @@ export function multiplierFactor(multiplier: number | null | undefined): number 
   if (!Number.isFinite(multiplier)) return null;
   const factor = 10 ** Math.trunc(multiplier);
   return Number.isFinite(factor) && factor > 0 ? factor : null;
+}
+
+/**
+ * A volume reading scaled into cubic metres: `raw × 10^powerOfTenMultiplier`.
+ *
+ * The counterpart of `energyKwhFromRaw` for series whose quantity is a volume
+ * (uom 42 / 167): Enbridge publishes gas at `powerOfTenMultiplier -3`, so a
+ * monthly block of `427000` is 427 m³. `null` when the value or the declared
+ * multiplier is not usable — the caller counts it as a dropped reading rather
+ * than letting `NaN` into a chart. A multiplier the feed never stated is
+ * 10^0 = 1, the same "not stated means no scaling" rule `multiplierFactor`
+ * applies everywhere else.
+ */
+export function volumeM3FromRaw(raw: number, powerOfTenMultiplier: number | null | undefined): number | null {
+  if (!Number.isFinite(raw)) return null;
+  const factor = multiplierFactor(powerOfTenMultiplier);
+  if (factor === null) return null;
+  const m3 = raw * factor;
+  return Number.isFinite(m3) ? m3 : null;
 }
 
 export function multiplierName(multiplier: number | null | undefined): string {
