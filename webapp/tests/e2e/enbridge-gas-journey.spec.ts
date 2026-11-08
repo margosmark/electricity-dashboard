@@ -209,11 +209,13 @@ test.describe('Enbridge gas import journey', () => {
     await expect(periods(page)).toHaveCount(10);
 
     await page.reload();
-    // The upload prompt re-opens on a fresh boot — dismiss it; the profile
-    // underneath is what this test is about.
-    await expect(page.getByText('Drop XML Here')).toBeVisible({ timeout: 30_000 });
-    await page.keyboard.press('Escape');
+    // R1 (4c6eec3): restored summary-only storage (usage_summaries=10,
+    // points=0) is DATA, not an empty profile — the first-run upload modal
+    // must NOT re-open over it. The empty-storage half of that contract is
+    // asserted in landAndImport above (modal visible on a genuinely fresh
+    // profile) and in Dashboard.test.tsx's summary-only reload suite.
     await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await openTab(page, 'tab-plans');
     await expect(periods(page)).toHaveCount(10, { timeout: 30_000 });
@@ -228,6 +230,10 @@ test.describe('Enbridge gas import journey', () => {
       JSON.parse(localStorage.getItem('usage_summaries') || '[]'),
     );
     expect(stored).toHaveLength(10);
+    // Still no modal after the full post-reload walk — guards against a
+    // late-appearing dialog over restored data (a modal that opened mid-test
+    // would already have blocked the tab clicks above).
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
   test('honesty at the DOM level: no kWh unit on a gas surface, absence labelled not zero', async ({
