@@ -63,9 +63,18 @@ const GAS_NOTE_MARKERS: readonly RegExp[] = [
  *  declares in all ten Enbridge periods. No electricity feed stamps it. */
 const CUBIC_METRES_UOM = 42;
 
-/** True when this billing period is a natural-gas bill. */
+/**
+ * True when this billing period is a natural-gas bill.
+ *
+ * The `volume` guard is `!= null`, not `!== null`: summaries stored before
+ * the Enbridge wave (and both e2e seeds) carry NO `volume` key at all, so
+ * `summary.volume` is `undefined`, `undefined !== null` is `true`, and
+ * `undefined.uom` threw inside `summaries.some(isGasSummary)` — the
+ * AppErrorBoundary crash (ERR-4887C2) that took the whole dashboard down on
+ * any pre-wave localStorage. Absent and null both mean "states no volume".
+ */
 export function isGasSummary(summary: UsageSummary): boolean {
-  if (summary.volume !== null && summary.volume.uom === CUBIC_METRES_UOM) return true;
+  if (summary.volume != null && summary.volume.uom === CUBIC_METRES_UOM) return true;
   return summary.items.some((item) => GAS_NOTE_MARKERS.some((re) => re.test(item.note)));
 }
 

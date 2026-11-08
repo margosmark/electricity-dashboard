@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { parseGreenButtonFeed, type BillLineItem } from './energy';
+import { parseGreenButtonFeed, type BillLineItem, type UsageSummary } from './energy';
 import {
   enrichGasSummaries,
   gasCharges,
@@ -230,5 +230,65 @@ describe('recognition does not misfire on electricity', () => {
     expect(out.every((s) => (s as { _gasInterval?: unknown })._gasInterval === undefined)).toBe(
       true,
     );
+  });
+});
+
+/* ==========================================================================
+ * Legacy stored summaries — the shape localStorage held BEFORE the gas wave
+ * ========================================================================== */
+
+/**
+ * `volume` was added to UsageSummary by the Enbridge wave. Every summary
+ * stored earlier — and both e2e seeds (`tests/e2e/mark-seed.ts`,
+ * `tests/e2e/plan-switch-fixture.ts`) — has NO `volume` key at all:
+ * `summary.volume` is `undefined`, `undefined !== null` is `true`, and
+ * `undefined.uom` threw inside `summaries.some(isGasSummary)` →
+ * AppErrorBoundary crash ERR-4887C2 on every pre-wave dashboard.
+ *
+ * The parser always writes `volume`, so every fixture-derived summary in
+ * this file has it; these tests construct the stored-legacy shape by hand
+ * (delete the key) and pin the recognition path against it.
+ */
+const stripVolume = (s: UsageSummary): UsageSummary => {
+  const legacy: Record<string, unknown> = { ...s };
+  delete legacy.volume;
+  return legacy as unknown as UsageSummary; // the lie storage tells the type
+};
+
+describe('legacy stored summaries — no `volume` key (ERR-4887C2)', () => {
+  const oakville = parseGreenButtonFeed(
+    readFileSync(join(__dirname, '../../tests/fixtures/usage-summary-synthetic.xml'), 'utf8'),
+  );
+  const legacyElectric = oakville.summaries.map(stripVolume);
+  const legacyGas = summaries.map(stripVolume);
+
+  it('really is the key-less shape (or these tests prove nothing)', () => {
+    expect(oakville.summaries.length).toBeGreaterThan(0);
+    expect(summaries.length).toBeGreaterThan(0);
+    expect('volume' in legacyElectric[0]).toBe(false);
+    expect('volume' in legacyGas[0]).toBe(false);
+    expect('volume' in summaries[0]).toBe(true); // the parser's own shape
+  });
+
+  it('a stored electric summary with no `volume` key is not gas and never throws', () => {
+    expect(() => legacyElectric.forEach(isGasSummary)).not.toThrow();
+    expect(legacyElectric.every((s) => !isGasSummary(s))).toBe(true);
+    expect(isGasFeed(legacyElectric)).toBe(false);
+  });
+
+  it('the gas note markers still recognise a stored summary that lacks `volume`', () => {
+    expect(legacyGas.every(isGasSummary)).toBe(true);
+    expect(isGasFeed(legacyGas)).toBe(true);
+  });
+
+  it('a stored feed straddling the wave survives `Array.some` both ways round', () => {
+    // The exact crash site: .some() over summaries where the first element
+    // has no `volume` key (electric, pre-wave) and the rest are gas.
+    expect(isGasFeed([legacyElectric[0], ...legacyGas])).toBe(true);
+    expect(isGasFeed([...legacyGas, legacyElectric[0]])).toBe(true);
+  });
+
+  it('an absent volume reports null, never 0 — absence is a state', () => {
+    expect(gasVolume(legacyGas[0]).billed).toBeNull();
   });
 });
