@@ -9,11 +9,14 @@
  * This page parses the payload with the app's own Green Button parser (the
  * exact code path the upload modal uses, so a file that loads here loads
  * there), then writes the readings through the same storage contract the
- * dashboard reads (versioned `energy_data_v2`, legacy key migrated). The one thing
- * it adds is a promise the upload flow makes implicitly and this one states
- * out loud: **existing readings are never overwritten without a merge
- * review.** With an empty profile it imports straight away, because there is
- * nothing to lose.
+ * dashboard reads (versioned `energy_data_v2`, legacy key migrated) and the
+ * bill half through the modal's own keys (`usage_summaries` /
+ * `local_time_parameters`) — a feed is both halves, and writing only the
+ * readings is how an Enbridge export used to import with no gas anywhere
+ * (t_05195060). The one thing this page adds is a promise the upload flow
+ * makes implicitly and this one states out loud: **existing readings are
+ * never overwritten without a merge review.** With an empty profile it
+ * imports straight away, because there is nothing to lose.
  *
  * Sources accepted: a dropped/picked XML file, a pasted XML document, pasted
  * base64 (`dmd_export_b64.py --b64`), and `?d=<base64>` for small payloads.
@@ -28,19 +31,31 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FileDown, GitMerge, Replace, X } from 'lucide-react';
 import {
-  parseGreenButtonUsagePoints,
+  parseGreenButtonFeed,
   type DataPoint,
   type UsagePointGroup,
 } from '@/lib/energy';
 import { diagnoseGreenButtonDocument, type ParseDiagnostic } from '@/lib/parseDiagnostic';
 import UsagePointPicker from '@/components/UsagePointPicker';
-import { EXAMPLE_DATA_KEY } from '@/hooks/useDashboard';
+// Commodity 7: a gas extract's bill half is decided with the WHOLE feed in
+// hand (which IntervalBlock belongs to which period), exactly as the upload
+// modal does it — see gasBillUi.
+import { enrichGasSummaries, isGasFeed } from '@/lib/gasBillUi';
+import {
+  countUsableRows,
+  EMPTY_BILL_FEED,
+  EXAMPLE_DATA_KEY,
+  readStoredBillFeed,
+  writeStoredBillFeed,
+  type BillFeed,
+} from '@/hooks/useDashboard';
 import {
   decodeImportPayload,
   mergeForWrite,
   planImport,
   type ImportPlan,
 } from '@/lib/importPlan';
+import { planBillFeed, type BillFeedMode } from './billFeedPlan';
 import { isGreenButtonRefusal } from '@/lib/greenbutton/limits';
 // The readings live under the versioned key; storage.ts owns the read, the
 // legacy-key migration and the write (the dashboard reads exactly this).
@@ -80,18 +95,53 @@ function ImportFlow() {
   const fileRef = useRef<HTMLInputElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
   const autoApplied = useRef(false);
+  /**
+   * The BILL half of the file being imported, held until the user actually
+   * commits it — a picker or a review screen that is cancelled must not have
+   * already written bills (the rule useDashboard's `billFeedsRef` follows for
+   * the same reason).
+   *
+   * `usable` is the whole document's row count, which is what the "no
+   * readings" gate has to ask: a gas extract carries ZERO electric
+   * `DataPoint`s — its rows live in commodity-7 volume series (see
+   * `countUsableRows`), so gating on `readings` alone rejected every Enbridge
+   * export with "produced no readable rows".
+   */
+  const pendingRef = useRef<{ feed: BillFeed; usable: number } | null>(null);
 
   /**
    * The write. Same storage keys the upload modal's `commitReadings` touches
    * (`energy_data` plus the example-data flag), then a client navigation to
    * `/` so every hook that seeds itself from storage on boot re-reads the new
    * rows — the identical finalization path a manual upload ends on.
+   *
+   * A feed is TWO halves: the readings above, and the UsageSummary bills +
+   * clock rules under `usage_summaries` / `local_time_parameters`. Writing
+   * only the first is how an Enbridge export used to import "successfully"
+   * with no gas anywhere (`isGasFeed` false ⇒ every gas surface off), so the
+   * bill half commits in the same click, with the merge/replace verdict the
+   * review screen just got (planBillFeed).
    */
   const commit = useCallback(
-    (rows: DataPoint[]) => {
+    (rows: DataPoint[], mode: BillFeedMode) => {
+      // Snapshot before any write: what the bill merge unions against is the
+      // feed this browser held when the import was confirmed.
+      const existingBills = readStoredBillFeed();
       const saved = saveEnergyData(rows, { source: 'import-page' });
       if (!saved.ok) {
         window.alert(t('backup.errRefused', { detail: saved.detail }));
+        return;
+      }
+      const written = writeStoredBillFeed(
+        planBillFeed(mode, existingBills, pendingRef.current?.feed ?? EMPTY_BILL_FEED),
+      );
+      // A failed bill write is reported, never absorbed: for a gas file those
+      // keys are the ONLY persisted copy of the dataset (zero electric rows),
+      // and a silent quota failure would look exactly like a finished import
+      // until the reload that found no periods. The page stays here —
+      // navigating away would report a half-import as done.
+      if (!written.ok) {
+        window.alert(t('import.billsRefused', { detail: written.detail }));
         return;
       }
       try {
@@ -107,7 +157,10 @@ function ImportFlow() {
 
   /** Everything a confirmed write needs is computed here; nothing writes. */
   const reviewOrImport = useCallback((incoming: DataPoint[]) => {
-    if (incoming.length === 0) {
+    const pending = pendingRef.current;
+    // The gate asks the WHOLE document (electric rows + gas volume rows),
+    // because a gas extract parses to rows that are not `readings`.
+    if (!pending || pending.usable === 0) {
       setIssue({
         ok: false,
         headline: t('upload.noReadingsHeadline'),
@@ -118,7 +171,10 @@ function ImportFlow() {
     }
     const existing = loadStored();
     if (existing.length === 0) {
-      commit(incoming);
+      // Nothing to lose → straight through. MERGE, never replace: with no
+      // review screen the user has not chosen to drop anything, so a file
+      // that carries no bills must not take the ones already stored (AC3).
+      commit(incoming, 'merge');
       return;
     }
     setPlan({ plan: planImport(existing, incoming), incoming, existing });
@@ -126,14 +182,22 @@ function ImportFlow() {
   }, [commit, t]);
 
   const ingestText = useCallback(
-    (text: string) => {
+    (text: string, name?: string) => {
       setIssue(null);
       setError(null);
       setParsing(true);
+      pendingRef.current = null;
       try {
-        const parsed = parseGreenButtonUsagePoints(text);
-        const total = parsed.reduce((n, g) => n + g.readings.length, 0);
-        if (total === 0) {
+        // One pass, everything the bytes carry — the exact call the upload
+        // modal makes, so a file that loads here loads there: readings for
+        // the picker, bills + clock for the commit.
+        const feed = parseGreenButtonFeed(text);
+        const parsed = feed.groups;
+        // The gate counts gas volume rows too — see countUsableRows. Gating
+        // on `g.readings` alone rejected every Enbridge extract, whose rows
+        // are commodity-7 volume series, with "produced no readable rows".
+        const usable = countUsableRows(parsed);
+        if (usable === 0) {
           const diag = diagnoseGreenButtonDocument(text, 0);
           setIssue(
             diag.ok
@@ -147,6 +211,20 @@ function ImportFlow() {
           );
           return;
         }
+        // The bill half rides along with the rows until the user commits —
+        // a cancelled picker or review writes nothing (same rule as the
+        // modal's billFeedsRef). Enrichment needs the WHOLE feed: which
+        // IntervalBlock belongs to which billing period is only decidable
+        // with every block in hand, and the labels ride the summaries into
+        // localStorage with them.
+        pendingRef.current = {
+          usable,
+          feed: {
+            summaries: isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries,
+            localTime: feed.localTime,
+            source: name ?? null,
+          },
+        };
         if (parsed.length > 1) {
           // Several meters in one file: never silently pick or blend them.
           setGroups(parsed);
@@ -210,7 +288,7 @@ function ImportFlow() {
       setFileName(file.name);
       setParsing(true);
       try {
-        ingestText(await file.text());
+        ingestText(await file.text(), file.name);
       } catch {
         setError(t('upload.couldNotRead', { name: file.name }));
         setParsing(false);
@@ -226,6 +304,9 @@ function ImportFlow() {
     setIssue(null);
     setError(null);
     setFileName(null);
+    // Nothing was written, so nothing of that file may still be waiting to
+    // be: a later commit must not fold in bills the user walked away from.
+    pendingRef.current = null;
   };
 
   const body = (() => {
@@ -283,7 +364,7 @@ function ImportFlow() {
               type="button"
               data-testid="import-merge"
               className={BTN + ' bg-emerald-400 text-accent-ink'}
-              onClick={() => commit(mergeForWrite(existing, incoming))}
+              onClick={() => commit(mergeForWrite(existing, incoming), 'merge')}
             >
               <GitMerge size={14} strokeWidth={4} /> {t('import.mergeBtn')} ({p.mergeRows} {t('import.rows', { count: p.mergeRows })})
             </button>
@@ -291,7 +372,7 @@ function ImportFlow() {
               type="button"
               data-testid="import-replace"
               className={BTN + ' bg-yellow-400 text-accent-ink'}
-              onClick={() => commit(incoming)}
+              onClick={() => commit(incoming, 'replace')}
             >
               <Replace size={14} strokeWidth={4} /> {t('import.replaceBtn')} ({p.replaceRows} {t('import.rows', { count: p.replaceRows })})
             </button>

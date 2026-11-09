@@ -699,6 +699,7 @@
   "hourCost.tooltipHour": "{hour} hour",
   "hourCost.windowAverage": "Window average",
   "import.alreadyHave": "Already have a dashboard?",
+  "import.billsRefused": "This browser refused to save the bills from that file ({detail}). The readings were saved — import the file again to add them.",
   "import.chooseFile": "Choose a file",
   "import.clientOnlyLead": "Client-only: the file is parsed here, in your browser, and stored in this browser. Nothing is uploaded. Paste the base64 from",
   "import.identical": "This export matches what is already stored — merging will change nothing.",
