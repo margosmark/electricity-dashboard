@@ -171,14 +171,19 @@ for (const vp of VIEWPORTS) {
       // --- D2: the blue sliver must keep its 5px of air. ---------------
       const d2 = await measureD2(page);
       expect(d2, 'a selected tab with a neighbour to its right').not.toBeNull();
-      // The blue hard shadow is a deliberate language element (toolbar
-      // buttons use shadow-hard-blue-4) — spacing, not colour, is the fix.
-      expect(d2!.shadow).toContain('37, 99, 235');
+      // Restated at integration (t_183afcde) for the quiet-shell redesign:
+      // the selected pill carries NO hard blue shadow any more — TabNav's own
+      // contract comment records "measured: boxShadow 'none'", and the marker
+      // is the pill's accent underline painted INSIDE its own box. Measured on
+      // this tree at 390×844 (probe): shadow none, offset 0, pillGap 4
+      // (tablist gap-1 below md). The invariants D2 always guarded still hold:
+      // no focus-ring sliver, real air between pills, ≥4px of clear air.
+      expect(d2!.shadow, 'quiet shell: no hard shadow on the active pill').toBe('none');
       expect(d2!.focusVisible, 'the sliver was never the focus ring').toBe(false);
-      expect(d2!.offset, '3px hard offset').toBe(3);
-      expect(d2!.pillGap, 'gap-2 = 8px between pills').toBeGreaterThanOrEqual(8);
-      // Shadow ends 3px into that gap → ≥5px of clear air (spec: ≥4px).
-      expect(d2!.shadowClearance).toBeGreaterThanOrEqual(4);
+      expect(d2!.offset, 'no shadow offset to bleed into the gap').toBe(0);
+      expect(d2!.pillGap, 'tablist gap-1 below md = 4px between pills').toBeGreaterThanOrEqual(4);
+      // No shadow → the whole gap is clear air (spec: ≥4px).
+      expect(d2!.shadowClearance, 'clear air between marker and neighbour').toBeGreaterThanOrEqual(4);
 
       // --- D3: legible type, no collisions, labels inside their bands. --
       const d3 = await measureD3(page);

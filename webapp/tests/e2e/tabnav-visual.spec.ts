@@ -70,6 +70,13 @@ for (const width of WIDTHS) {
 
         test(`active, keyboard focus and sticky states`, async ({ page }) => {
           test.setTimeout(180_000);
+          // Freeze the clock to the baselines' capture day (05c5021,
+          // 2026-10-25 02:19 EDT). Since #113 moved the date range into this
+          // nav, the strip screenshot carries the rolling date-window inputs —
+          // without a frozen clock every baseline ages out the day after it
+          // is committed (the header's "dates cannot make an unrelated visual
+          // diff" promise only holds here).
+          await page.clock.setFixedTime(new Date('2026-10-25T06:19:41Z'));
           await selectLocale(page, locale);
           await selectTheme(page, theme);
           await page.route('https://archive-api.open-meteo.com/**', (route) => route.abort());
