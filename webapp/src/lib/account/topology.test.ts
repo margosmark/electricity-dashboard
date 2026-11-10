@@ -215,3 +215,45 @@ describe("edge — the OAuth referer hop (fix 7ee0375)", () => {
     expect(block).toContain('add_header Referrer-Policy "no-referrer"');
   });
 });
+
+describe("edge — early-phase logging (F3)", () => {
+  /**
+   * nginx answers 414 (URI too long) / 400 / 505 while it is still READING
+   * the request line — before any location is selected — so such a request
+   * is logged with the SERVER's (inherited: the image's http-level `main`)
+   * defaults, never the matched location's. Until F3 was fixed, an oversized
+   * `GET /import?d=<9k>` was therefore written in `main` format — full
+   * `$request`, query string included, i.e. the base64 meter payload — into
+   * the rotated docker log, right next to normal requests that `gb_noquery`
+   * had redacted. These pins put the redacting defaults INSIDE `server {}`,
+   * ahead of the first location: drop either line and this fails.
+   */
+  const serverHead = stripComments(edge.slice(edge.indexOf("server {"), edge.search(/^\s+location /m)));
+
+  it("declares the redacting access_log at server level — early-phase requests inherit it", () => {
+    expect(serverHead).toContain("access_log /var/log/nginx/access.log gb_noquery;");
+    // The gap was specifically the query-bearing stock format, so the server
+    // default must not reintroduce `$request` (or the stock alias) by hand.
+    expect(serverHead).not.toContain("$request");
+    expect(serverHead).not.toContain("combined");
+  });
+
+  it("declares an error_log threshold at server level — error lines quote $request verbatim", () => {
+    // `client sent invalid request line: "GET /import?d=…"` and
+    // `… request: "GET /import?d=… HTTP/1.1"` are both written through the
+    // same request-scoped log, so early-phase/error narration needs the same
+    // server-level default the access log got.
+    expect(serverHead).toContain("error_log /var/log/nginx/error.log crit;");
+  });
+
+  it("leaves every location's own format in place — the default fills the gap, not the override", () => {
+    // Regression guard for acceptance "notify/account log formats unchanged":
+    // gb_notify still redacts the path token, acct_safe still drops IP+query,
+    // and the normal traffic locations still name gb_noquery explicitly.
+    expect(locationBlock("/")).toContain("access_log /var/log/nginx/access.log gb_noquery;");
+    expect(locationBlock("/greenbutton")).toContain("access_log /var/log/nginx/access.log gb_noquery;");
+    expect(locationBlock("^~ /greenbutton/notify/")).toContain("access_log /var/log/nginx/access.log gb_notify;");
+    expect(locationBlock("/account")).toContain("access_log /var/log/nginx/access.log gb_noquery;");
+    expect(locationBlock("/account/internal")).toContain("access_log /var/log/nginx/access.log acct_safe;");
+  });
+});

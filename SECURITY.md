@@ -158,6 +158,29 @@ as HTML.
   would otherwise write the credential straight back out. *(tested —
   `e2e-greenbutton-topology.sh`: canary query strings, the referer hop, and
   the notify token are each asserted absent from the router log.)*
+- **Early-phase logging (F3, fixed 2026-11-10)**: a location's `access_log`
+  only applies AFTER nginx has chosen a location — but nginx answers 414 (URI
+  too long) / 400 / 505 while it is still reading the request line, so those
+  requests fell back to the image's stock `main` format and logged the FULL
+  `$request`: an oversized `import?d=<9k>` wrote the base64 meter payload
+  (truncated to the 8k header buffer) into the rotated docker log while every
+  normal request beside it was redacted. The `server` block now declares both
+  defaults itself — `access_log … gb_noquery` and `error_log … crit` — so
+  early-phase and otherwise-unmatched requests inherit redacted logging while
+  every per-location override still wins for normal traffic. (`$uri` is `-`
+  on an early-phase line: nginx never finished parsing it, which is exactly
+  why the path is absent — the point is that the query cannot be there
+  either.) The `crit` threshold is deliberate and cost-bearing: err-level
+  upstream diagnostics (`connect() failed`, `could not be resolved`) are no
+  longer narrated for `location /` and `/greenbutton`, because each of those
+  lines quotes the query string too; the status still reaches the access log.
+  *(tested — `topology.test.ts` pins both server-level directives AND every
+  location override; `e2e-greenbutton-topology.sh` sends a canary `?d=`
+  long enough to trigger 414 and asserts the canary reaches no edge log while
+  the 414 line itself is recorded; A/B on nginx:1.29-alpine: 0 query-bearing
+  log lines with the fix vs 4 without. Since the tripped-limit log line is
+  now silenced, that gate observes `limit_req` through the response instead —
+  a 503 with NO `x-gb-process` header is a router-owned rejection.)*
 - **Transport**: TLS via Let's Encrypt at the edge proxy (measured: TLS1.3
   preferred, TLS1.2 ECDHE-GCM only, TLS1.0/1.1 rejected, weak suites
   refused). The edge also 302s http→https — but a redirect is a request,

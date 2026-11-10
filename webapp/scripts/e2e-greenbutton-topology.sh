@@ -487,6 +487,33 @@ case "$ROUTER_LOG2" in
 esac
 
 echo
+echo "== early-phase 414 never logs the query (F3) =="
+# nginx answers 414 while it is still READING the request line — before any
+# location is selected — so the matched location's `access_log` cannot cover
+# it; only the SERVER-level `gb_noquery` default can (F3: an oversized
+# `?d=` link used to be written in the image's stock format, query string
+# included, i.e. the base64 meter payload, into the rotated docker log).
+# The canary sits at the HEAD of a query longer than the 8k header buffer,
+# so the truncated request line that lands in the log would carry it. Both
+# halves are asserted — the 414 line must BE present (otherwise "no canary"
+# would pass vacuously by never logging anything), and the canary must not.
+F3_TAG="f3-$(date +%s)-$$"
+F3_QUERY="${F3_TAG}$(head -c 8900 /dev/zero | tr '\0' 'A')"
+F3_CODE="$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$BASE/import?d=$F3_QUERY" || echo 000)"
+check "oversized ?d= request answered 414 at the edge ($F3_CODE)" \
+  "$([ "$F3_CODE" = 414 ] && echo 0 || echo 1)"
+sleep 1
+F3_LOG="$(docker logs gb-topo-router 2>&1)"
+case "$F3_LOG" in
+  *'" 414'*) check "the 414 itself IS logged (so the canary check below means something)" 0 ;;
+  *)         check "the 414 itself IS logged (so the canary check below means something)" 1 ;;
+esac
+case "$F3_LOG" in
+  *"$F3_TAG"*) check "early-phase 414 never reaches any edge log (F3)" 1 ;;
+  *)           check "early-phase 414 never reaches any edge log (F3)" 0 ;;
+esac
+
+echo
 echo "== baseline security headers, CSP and rate limit, through the real router =="
 HDRS="$(curl -sSI "$BASE/" | tr -d '\r')"
 for h in strict-transport-security x-content-type-options referrer-policy x-frame-options; do
@@ -530,19 +557,33 @@ check "GET / carries Cross-Origin-Opener-Policy" $?
 # high enough that one connect flow (~19 requests) never trips it, so honest
 # traffic is never the thing being refused. 15 against the strict zone must
 # reach the ceiling AT THE ROUTER rather than the shim.
-for i in $(seq 1 15); do
-  curl -s -m 5 -o /dev/null "$BASE/greenbutton/start" || true
-done
-sleep 1
-case "$(docker logs gb-topo-router 2>&1)" in
-  *"limiting requests"*) check "rate limit engages on /greenbutton/start" 0 ;;
-  *)                     check "rate limit engages on /greenbutton/start" 1 ;;
-esac
-# And the soft zone must NOT have fired — if it did, this gate (which makes
+#
+# Since F3 the router's error_log threshold is `crit` at SERVER level —
+# nginx's own line for a tripped limit quotes `$request` with the query
+# string, the exact thing this file exists to keep out of the log — so the
+# limit can no longer be observed as a log line. Observe it as the RESPONSE
+# instead: a router-owned rejection never reached an upstream and therefore
+# carries no `x-gb-process` identity header, while every upstream answer
+# sets one (the same discriminator section 0 uses for the 403 deny).
+router_rejects() { # router_rejects <url> <samples> → count of 503s with NO x-gb-process
+  local n=0 i hdr code proc
+  for i in $(seq 1 "$2"); do
+    hdr="$(curl -s -m 5 -D - -o /dev/null "$1" | tr -d '\r' || true)"
+    code="$(printf '%s\n' "$hdr" | awk 'NR==1 {print $2}')"
+    proc="$(printf '%s\n' "$hdr" | awk 'tolower($1) == "x-gb-process:" {print $2}')"
+    if [ "$code" = 503 ] && [ -z "$proc" ]; then n=$((n + 1)); fi
+  done
+  echo "$n"
+}
+START_REJECTS="$(router_rejects "$BASE/greenbutton/start" 15)"
+check "rate limit engages AT THE ROUTER on /greenbutton/start ($START_REJECTS of 15 rejected with no upstream identity)" \
+  "$([ "$START_REJECTS" -gt 0 ] && echo 0 || echo 1)"
+# …and the soft zone must NOT have fired — if it did, this gate (which makes
 # ~19 legitimate requests above) would itself be the thing being throttled.
-case "$(docker logs gb-topo-router 2>&1)" in
-  *'by zone "gb_soft"'*) check "gb_soft never fires on legitimate traffic" 1 ;;
-  *)                     check "gb_soft never fires on legitimate traffic" 0 ;;
-esac
+# Same response-side signal: an honest /greenbutton/status is served by the
+# shim in every state of this run, and must never arrive router-rejected.
+SOFT_REJECTS="$(router_rejects "$BASE/greenbutton/status" 15)"
+check "gb_soft never rejects legitimate /greenbutton traffic ($SOFT_REJECTS of 15)" \
+  "$([ "$SOFT_REJECTS" -eq 0 ] && echo 0 || echo 1)"
 
 exit "$FAIL"
