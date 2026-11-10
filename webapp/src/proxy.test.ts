@@ -13,6 +13,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import proxy, { config } from "@/proxy";
 import { resetConfigCache } from "@/lib/greenbutton/config";
+import { ACCOUNT_VERIFY_CSP } from "@/lib/account/verifyCsp";
 
 afterEach(() => {
   delete process.env.GB_TOKEN_FILE;
@@ -146,6 +147,44 @@ describe("x-gb-process proxy", () => {
     expect(csp("http://localhost:3000/oeb-rates-page?probe=1")).toBe("sandbox; default-src 'none'");
   });
 
+  it("answers the two account verify routes with THEIR belt — t_30b7e0d7", () => {
+    // Both handlers assert ACCOUNT_VERIFY_CSP on their HTML, but measured
+    // (curl vs a production `next start` build, 2026-11-09, F2 re-gate
+    // t_3838351d) the proxy's `Content-Security-Policy` wins the name — so
+    // before the ROUTE_CSP entries the browser received the app-wide policy
+    // for these paths and both belts were dead on the wire. This layer is the
+    // one that reaches the browser; the handlers import the same constant as
+    // their belt for the day the matcher stops covering the path.
+    const csp = (url: string) => proxy(new NextRequest(url)).headers.get("Content-Security-Policy");
+
+    for (const path of ["/account/verify", "/account/recover/verify"]) {
+      const onPath = csp(`http://localhost:3000${path}`);
+      expect(onPath, path).toBe(ACCOUNT_VERIFY_CSP);
+      // Genuinely the strict belt, not the app-wide policy in disguise:
+      // `default-src 'self'` and the sandbox must both be absent.
+      expect(onPath, path).not.toContain("default-src 'self'");
+      expect(onPath, path).not.toContain("sandbox");
+      // A query string is not a different path — pathname strips it.
+      expect(csp(`http://localhost:3000${path}?probe=1`), path).toBe(ACCOUNT_VERIFY_CSP);
+    }
+
+    // The map is keyed by EXACT path: neighbouring account routes and
+    // near-miss spellings keep the app-wide policy (they serve the app's own
+    // JSON/pages, not the verify form document), and neither belt leaks the
+    // other way.
+    for (const url of [
+      "http://localhost:3000/",
+      "http://localhost:3000/account/recover",
+      "http://localhost:3000/account/session",
+      "http://localhost:3000/account/verify-clone",
+      "http://localhost:3000/account/recover/verify/extra",
+    ]) {
+      const c = csp(url);
+      expect(c, url).toContain("default-src 'self'");
+      expect(c, url).not.toBe(ACCOUNT_VERIFY_CSP);
+    }
+  });
+
   it("ships the cheap companion headers", () => {
     const res = proxy();
     expect(res.headers.get("Permissions-Policy")).toContain("camera=()");
@@ -166,6 +205,10 @@ describe("x-gb-process proxy", () => {
     // covering it, that branch never runs and only the route's own header
     // stands between OEB's inline scripts and this origin.
     expect(re.test("/oeb-rates-page")).toBe(true);
+    // Same for the two account verify routes — their belt lives in ROUTE_CSP
+    // in `proxy()` (t_30b7e0d7).
+    expect(re.test("/account/verify")).toBe(true);
+    expect(re.test("/account/recover/verify")).toBe(true);
     expect(re.test("/_next/static/chunks/x.js")).toBe(false);
     expect(re.test("/_next/static/media/font.woff2")).toBe(false);
     expect(re.test("/sw.js")).toBe(false);

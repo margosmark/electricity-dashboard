@@ -16,6 +16,7 @@ import {
 } from "@/lib/account/db";
 import { accountError, accountJson, applySessionCookie, getDb, isConfig, readJsonSmall, readTextCapped, rejectCrossOrigin, requireEnabled } from "@/lib/account/http";
 import { hashPassword, hashToken, hashRecoveryCode, newRecoveryCode, newSessionToken, validatePassword, verifyPassword } from "@/lib/account/auth";
+import { ACCOUNT_VERIFY_CSP } from "@/lib/account/verifyCsp";
 
 export async function GET(_request: Request): Promise<Response> {
   void _request;
@@ -29,7 +30,7 @@ export async function GET(_request: Request): Promise<Response> {
   const html = `<!doctype html><meta charset="utf-8"><title>Verify account</title><h1>Verify your account</h1><form method="post" action="/account/verify"><input type="hidden" name="token" id="token"><label>New password <input type="password" name="password" minlength="8" required></label><button type="submit">Create account</button></form><noscript>JavaScript is required to continue.</noscript><script>const token=document.getElementById("token");const match=/^#token=([A-Za-z0-9_-]{40,64})$/.exec(location.hash);if(token&&match){token.value=match[1];history.replaceState(null,"",location.pathname);}</script>`;
   return new Response(html, {
     status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'; script-src 'unsafe-inline'; form-action 'self'" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff", "content-security-policy": ACCOUNT_VERIFY_CSP },
   });
 }
 

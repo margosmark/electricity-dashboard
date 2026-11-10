@@ -26,6 +26,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getProcessIdentity } from "@/lib/greenbutton/config";
 import { OEB_RATES_PROXY_PATH, OEB_ROUTE_CSP } from "@/lib/oebRouteCsp";
+import { ACCOUNT_RECOVER_VERIFY_PATH, ACCOUNT_VERIFY_CSP, ACCOUNT_VERIFY_PATH } from "@/lib/account/verifyCsp";
 
 /**
  * Content-Security-Policy.
@@ -34,8 +35,9 @@ import { OEB_RATES_PROXY_PATH, OEB_ROUTE_CSP } from "@/lib/oebRouteCsp";
  * readings (`energy_data_v2` in localStorage), so a response that executes
  * code this origin did not ship is a data-exfil surface. The policy below
  * is set on every response this proxy matches — and it is NOT one policy
- * for every path: the OEB proxy path is answered with a different, stricter
- * one (see the branch in `proxy()` and src/lib/oebRouteCsp.ts).
+ * for every path: the per-path map in `proxy()` answers a few exact paths
+ * with their own stricter policy instead (OEB — src/lib/oebRouteCsp.ts; the
+ * two account verify routes — src/lib/account/verifyCsp.ts).
  *
  * WHAT THIS POLICY ACTUALLY BUYS — stated plainly, because it is weaker than
  * the textbook version and pretending otherwise would be worse than having none.
@@ -74,7 +76,7 @@ import { OEB_RATES_PROXY_PATH, OEB_ROUTE_CSP } from "@/lib/oebRouteCsp";
  * No part of the policy above contained THAT — a source-level scan of our
  * own tree says nothing about markup a third party serves.
  *
- * The fix is a second, per-path policy in `proxy()`: that one response is
+ * The fix is a per-path policy in `proxy()`'s map: that one response is
  * answered with `OEB_ROUTE_CSP` (`sandbox; default-src 'none'`) INSTEAD of
  * this one, so the document runs sandboxed as a unique origin with scripts
  * disabled. The route handler asserts the same constant on its own response
@@ -193,24 +195,45 @@ function isInventoriedHttpsOrigin(request?: NextRequest): boolean {
   return INVENTORIED_HTTPS_ORIGINS.has(host.split(":")[0].trim().toLowerCase());
 }
 
+/**
+ * The exact paths whose response policy is NOT the app-wide one above.
+ *
+ * Keyed by exact pathname — no prefixes — so a near-miss path
+ * (`/account/verify-clone`) or a 404 can never inherit a policy meant for a
+ * document it does not serve. Each value is the same constant its own route
+ * handler asserts (one source, both layers): whichever layer wins the
+ * `Content-Security-Policy` name, the wire carries this value.
+ */
+const ROUTE_CSP: Readonly<Record<string, string>> = {
+  [OEB_RATES_PROXY_PATH]: OEB_ROUTE_CSP,
+  [ACCOUNT_VERIFY_PATH]: ACCOUNT_VERIFY_CSP,
+  [ACCOUNT_RECOVER_VERIFY_PATH]: ACCOUNT_VERIFY_CSP,
+};
+
 export default function proxy(request?: NextRequest): NextResponse {
-  // TWO policies, chosen by path. `/oeb-rates-page` answers third-party HTML
-  // as a navigable document, so it gets the sandbox policy instead of the
-  // app-wide one — `script-src 'unsafe-inline'` would hand oeb.ca's inline
-  // scripts (AddToAny, GTM loader, $buoop, Drupal JSON) a same-origin run at
-  // this origin's localStorage (F2, t_0d85b1f8; browser-proven before the
-  // fix). Every other path keeps the policy above.
+  // Per-path policies, by exact pathname. `/oeb-rates-page` answers
+  // third-party HTML as a navigable document, so it gets the sandbox policy
+  // instead of the app-wide one — `script-src 'unsafe-inline'` would hand
+  // oeb.ca's inline scripts (AddToAny, GTM loader, $buoop, Drupal JSON) a
+  // same-origin run at this origin's localStorage (F2, t_0d85b1f8;
+  // browser-proven before the fix). The two account verify routes serve their
+  // own form-plus-one-inline-script markup and assert their own stricter belt
+  // (src/lib/account/verifyCsp.ts) — which was dead on the wire until this map
+  // carried it, because the app-wide value below used to win for every path
+  // (measured mechanism: t_3838351d re-gate; fixed: t_30b7e0d7). Every other
+  // path keeps the policy above.
   //
-  // WHY THE BRANCH IS HERE and not only on the route's own Response: measured
+  // WHY THE BRANCH IS HERE and not only on the routes' own Response: measured
   // 2026-11-09 with curl against a production `next start` build — Next
   // applies these proxy headers AFTER the handler's, so a
   // `content-security-policy` set by the route never reaches the browser
   // (only that one name collided; the same response's `cache-control:
-  // no-store` came through intact). The route asserts the identical constant
-  // as its belt for the case where this matcher stops covering the path.
+  // no-store` came through intact). The routes assert the identical constant
+  // as their belt for the case where this matcher stops covering the path.
+  const pathname = request?.nextUrl?.pathname;
   const csp =
-    request?.nextUrl?.pathname === OEB_RATES_PROXY_PATH
-      ? OEB_ROUTE_CSP
+    pathname !== undefined && pathname in ROUTE_CSP
+      ? ROUTE_CSP[pathname]
       : buildCsp(isInventoriedHttpsOrigin(request));
   const response = NextResponse.next();
   response.headers.set("Content-Security-Policy", csp);
