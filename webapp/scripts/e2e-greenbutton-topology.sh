@@ -402,8 +402,18 @@ curl -sS --max-time 5 -o /dev/null \
   "$BASE/account/$LOG_TAG?probe=$QUERY_CANARY" || true
 sleep 1
 ACCOUNT_LOG="$(docker logs gb-topo-router 2>&1)"
+# Anchor on the REDACTED LINE the access log actually writes, not on a request
+# line: `location /account` logs `gb_noquery` (`$remote_addr [$time_local]
+# "$uri" $status` — `$uri` only, NO method), so a `GET /account/…` pattern can
+# never come from the access log and only ever matched an error-level
+# `request: "…"` line, which this config (error_log crit on /account) does not
+# emit — i.e. it could not fail, only pass vacuously. The quoted path is the
+# same anchor the F3 and notify sections use: it proves the request landed in
+# the log AND that only the path did. The three checks below are the secrecy
+# half — they must go red if a query string, IP or cookie canary appears
+# ANYWHERE in the log.
 case "$ACCOUNT_LOG" in
-  *"GET /account/$LOG_TAG"*) check "unique account canary request itself is present in router log" 0 ;;
+  *"/account/$LOG_TAG"*) check "unique account canary request itself is present in router log" 0 ;;
   *) check "unique account canary request itself is present in router log" 1 ;;
 esac
 for CANARY in "$QUERY_CANARY" "$IP_CANARY" "$COOKIE_CANARY"; do

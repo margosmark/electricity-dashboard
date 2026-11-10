@@ -135,7 +135,8 @@ forged_token() { printf '%s%s' "$(date +%s%N)" "$$" | sha256sum | cut -c1-48; }
 # ---------------------------------------------------------------------------
 MATRIX_PATHS="/account/login /account/notify /account/recover /account/register
               /account/session /account/sync /account/push/preferences
-              /account/push/subscribe /account/logout"
+              /account/push/subscribe /account/logout
+              /account/verify /account/smtp-events /account/recover/verify"
 
 # The paths this script probes and the route files on disk must be the SAME
 # set. A new `/account/*` route that nobody adds here would otherwise ship
@@ -165,11 +166,26 @@ surface_guard() {
 # `HEAD` is answered by the route's `GET`; every verb a route does not export is
 # the shared `wrongMethod` stub (405, naming the method). Session-gated routes
 # answer 401 in this signed-out sweep.
+#
+# The MAILBOX family (9f08acc — register, recover, verify, recover/verify,
+# smtp-events) is gated by ACCT_EMAIL_VERIFICATION_ENABLED, and every
+# environment this HTTP gate runs in boots it OFF (docker-compose.yml, the
+# topology compose and CI's ON container all default it to `false`, and the
+# section below asserts that state before it probes anything). The flag is a
+# hard gate: each handler returns 404 before it reads the request, and the
+# `wrongEmailMethod` stubs return 404 as well — so EVERY verb on those five
+# paths is 404 here, not the 405 an enabled flag would name. The verified flow
+# itself (202 verification_pending, 400 invalid_verification, honest 405
+# wrong-method) is asserted in-process by route-matrix.test.ts against a
+# fixture server with the flag ON and SMTP configured; this gate's job over
+# HTTP is the state that ships.
 # ---------------------------------------------------------------------------
 matrix_expect() { # matrix_expect <path> <method>
   local path="$1" method="$2" verbs eff
   case "$path" in
-    /account/register|/account/login|/account/logout|/account/notify|/account/recover) verbs="POST" ;;
+    /account/register|/account/recover|/account/verify|/account/recover/verify|/account/smtp-events)
+      echo 404; return ;;
+    /account/login|/account/logout|/account/notify) verbs="POST" ;;
     /account/session) verbs="GET" ;;
     /account/sync|/account/push/preferences) verbs="GET PUT" ;;
     /account/push/subscribe) verbs="POST DELETE" ;;
@@ -182,7 +198,7 @@ matrix_expect() { # matrix_expect <path> <method>
     *) echo 405; return ;;
   esac
   case "$path $eff" in
-    "/account/register POST"|"/account/login POST"|"/account/recover POST") echo 400 ;;
+    "/account/login POST") echo 400 ;;
     "/account/logout POST") echo 200 ;;
     "/account/session GET") echo 200 ;;
     "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT"|\
@@ -257,18 +273,36 @@ fi
 if [ "$MODE" = "--expect-registration-closed" ]; then
   echo "account gate (feature enabled, registration closed): ${BASE}"
   code=$(req - GET /account/session)
-  check "GET /account/session → 200 from enabled account process" $([ "$code" = "200" ] && echo 0 || echo 1)
-  check "session reports enabled and signed out" \
+  # The observed values are interpolated into the labels: this single request
+  # feeds three cells, and a static label (the old wording) turned one
+  # transient non-200 into three unexplained reds — with no status, header or
+  # body to tell 429 from 502 from an off process.
+  ACCT_PROC="$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}')"
+  ACCT_EDGE="$(grep -i '^x-edge-location:' "$HDR" | tr -d '\r' | awk '{print $2}')"
+  check "GET /account/session → $code (want 200) from enabled account process" $([ "$code" = "200" ] && echo 0 || echo 1)
+  check "session reports enabled and signed out (enabled=$(jget '.enabled'), authed=$(jget '.authed'))" \
     $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
-  check "account identity headers agree" \
-    $([ "$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] \
-      && [ "$(grep -i '^x-edge-location:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
+  check "account identity headers agree (x-gb-process=$ACCT_PROC, x-edge-location=$ACCT_EDGE)" \
+    $([ "$ACCT_PROC" = "account" ] && [ "$ACCT_EDGE" = "account" ] && echo 0 || echo 1)
+
+  # The state every cell in this section assumes, asserted FIRST so a server
+  # booted with ACCT_EMAIL_VERIFICATION_ENABLED=true fails ONE named cell here
+  # instead of twenty puzzling ones below. The shipping default — and every
+  # environment this HTTP gate runs in (docker-compose.yml, the topology
+  # compose, CI's ON container) — has the mailbox-verification flag OFF, and
+  # 9f08acc made that flag a hard gate: the mailbox routes answer 404 before
+  # they read a thing. The verified flow itself (202 verification_pending,
+  # 400 invalid_verification, honest 405 wrong-method) lives in
+  # src/lib/account/route-matrix.test.ts, which boots the flag ON with SMTP.
+  code=$(req - GET /account/verify)
+  check "GET /account/verify → 404 (mailbox-verification flag OFF — the state this section asserts)" \
+    $([ "$code" = "404" ] && echo 0 || echo 1)
 
   attacker='attacker-owned-password'
   code=$(req - POST /account/register "{\"email\":\"known@example.com\",\"password\":\"$attacker\"}")
   known_body=$(cat "$BODY")
-  check "registration returns generic 202 verification_pending" \
-    $([ "$code" = "202" ] && [ "$(jget '.status')" = "verification_pending" ] && echo 0 || echo 1)
+  check "registration closed outright → 404 (flag OFF never falls back to unverified signup)" \
+    $([ "$code" = "404" ] && echo 0 || echo 1)
   check "registration creates no session cookie" \
     $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
   check "response never echoes password or claims email was sent" \
@@ -276,7 +310,7 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
 
   code=$(req - POST /account/register '{"email":"unknown@example.com"}')
   check "unknown address gets identical status and body (no enumeration)" \
-    $([ "$code" = "202" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
+    $([ "$code" = "404" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
   check "unknown address also creates no session cookie" \
     $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
 
