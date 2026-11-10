@@ -135,21 +135,79 @@ async function measureD3(page: Page) {
   });
 }
 
-/** D4 — at max scroll the last card must clear the OS gesture bar. */
+/**
+ * D4 — the projection card reads WHOLE above the gesture bar, and the FOOT
+ * of the page keeps clearing it, whatever the page now ends with.
+ *
+ * Until #110 this was one measurement doing both jobs: the banner was
+ * OverviewPanel's LAST card, so scrolling to the bottom of the document
+ * landed on it. The Quiet Meter redesign reordered the panel to
+ *
+ *   header → key figures → **bill focus (the banner)** → rate by month →
+ *   plan & attention → totals → efficiency → embedded usage panel
+ *
+ * so at max scroll the card sits at document y 843..1185 of a 6330px page
+ * at 390×844 — 4.6k px of overview below it, identical at t0 and +600ms,
+ * so not a layout transient. `fullyVisible at max scroll` was therefore
+ * re-measuring the pre-redesign PAGE ORDER, not a defect: this spec file is
+ * byte-identical across `79b7d00^..79b7d00` (the redesign touches no
+ * test), which is exactly what a stale gate looks like.
+ *
+ * Both concerns the old gate carried are still measured, each where it
+ * now lives:
+ *
+ *   A. the card's FOOT is aligned to the gesture line (innerH − 33px) and
+ *      the card must still be whole THERE — `top ≥ 0` means it fits whole
+ *      in the region above the bar (height ≤ innerH − 33), and
+ *      `clearance ≥ 33` says the alignment really happened;
+ *   B. at max scroll the bottom-most painted element on the page keeps
+ *      ≥ 33px of air above the viewport bottom. The mechanism is the
+ *      body's 40px padding floor (asserted below), so this holds whichever
+ *      element ends up last — the card being third now does not weaken it.
+ */
 async function measureD4(page: Page) {
   return page.evaluate(() => {
-    window.scrollTo(0, document.documentElement.scrollHeight);
+    const GESTURE = 33; // OS bar 108 image px ÷ DPR 3.0 = 36 CSS px; spec bar ≥33
     const card = document.querySelector('[data-testid="bill-projection"]');
     if (!card) return null;
+    const innerH = window.innerHeight;
+    const bodyPadBottom = getComputedStyle(document.body).paddingBottom;
+
+    // A — put the card's foot on the gesture line. Scroll offsets are
+    // floored by the engine, so ceil the target: land ON or just above the
+    // line instead of 0.4px under it.
+    const r0 = card.getBoundingClientRect();
+    window.scrollTo(0, Math.max(0, Math.ceil(window.scrollY + r0.bottom - (innerH - GESTURE))));
     const r = card.getBoundingClientRect();
-    return {
-      state: card.getAttribute('data-state'),
+    const cardIn = {
+      top: r.top,
       bottom: r.bottom,
-      viewport: window.innerHeight,
-      clearance: window.innerHeight - r.bottom,
-      fullyVisible: r.bottom <= window.innerHeight && r.top >= 0,
-      bodyPadBottom: getComputedStyle(document.body).paddingBottom,
-      maxScroll: Math.round(document.documentElement.scrollHeight - window.innerHeight),
+      height: r.height,
+      clearance: innerH - r.bottom,
+      fullyVisible: r.bottom <= innerH && r.top >= 0,
+      state: card.getAttribute('data-state'),
+    };
+
+    // B — the page's foot, read at a real max scroll.
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    let footBottom: number | null = null;
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+      // `fixed` overlays (modals, sheets) are not page content; a hidden
+      // box paints nothing to be covered by the bar.
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
+      const b = el.getBoundingClientRect();
+      if (b.width <= 0 || b.height <= 0) continue;
+      if (footBottom === null || b.bottom > footBottom) footBottom = b.bottom;
+    }
+
+    return {
+      ...cardIn,
+      bodyPadBottom,
+      // -1 when the page painted nothing at all: the gate must fail loudly
+      // rather than pass vacuously.
+      footClearance: footBottom === null ? -1 : innerH - footBottom,
+      maxScroll: Math.round(document.documentElement.scrollHeight - innerH),
       scrollY: Math.round(window.scrollY),
     };
   });
@@ -204,12 +262,24 @@ for (const vp of VIEWPORTS) {
       expect(d3!.bands.length).toBeGreaterThanOrEqual(3);
       expect(d3!.labelledBands).toBeGreaterThan(0);
 
-      // --- D4: the last card clears the gesture bar at max scroll. ------
+      // --- D4: the card reads whole above the gesture bar, and the page's
+      //     foot keeps clearing it. --------------------------------------
       const d4 = await measureD4(page);
       expect(d4, 'the projection banner renders').not.toBeNull();
       expect(d4!.state, 'fixture must open the projection gate').toBe('ready');
       expect(d4!.bodyPadBottom, 'body floor = max(2.5rem, env())').toBe('40px');
-      expect(d4!.fullyVisible, 'the card is whole at max scroll').toBe(true);
+      // A. The card's foot sits ON the gesture line and it must still be
+      //    WHOLE there. #110 made the banner the overview's third block
+      //    (doc y 843..1185 of a 6330px page at 390×844), so this — not
+      //    "at max scroll" — is where its wholeness is testable: `top`
+      //    goes negative the day the card outgrows innerH − 33.
+      expect(d4!.fullyVisible, 'the card is whole with its foot on the gesture line').toBe(true);
+      expect(d4!.top, "the card's head stays on screen").toBeGreaterThanOrEqual(0);
+      // B. At a real max scroll the page's FOOT — the bottom-most painted
+      //    element, whichever one that is — keeps its air. The card no
+      //    longer ends the page, so the gate follows the page's end rather
+      //    than the element that used to be there.
+      expect(d4!.footClearance, 'the page foot vs the OS gesture bar').toBeGreaterThanOrEqual(33);
       // The OS bar is 108 image px ÷ DPR 3.0 = 36 CSS px on Mark's device;
       // the spec's acceptance bar is ≥33px of clearance.
       expect(d4!.clearance, 'projection card bottom vs viewport bottom').toBeGreaterThanOrEqual(33);
