@@ -78,13 +78,40 @@ jobs:
       # a second profile → GET sync → stale-rev 409 → logout invalidation.
       - name: Account gate (feature OFF — the public app is unchanged)
         run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3100 --expect-disabled
-      - name: Boot the same image as the account server
-        # /data exists in production only because compose bind-mounts it onto
-        # the account-server; the bare CI container has no such directory and
-        # `nextjs` (uid 1001) cannot mkdir under /, so SQLite fails every
-        # write and the ON gate dies 13/32. The tmpfs is this runner's
-        # equivalent of that bind mount: same path, real file, writable.
-        run: docker run -d --rm -p 3101:3000 --name energy-account-smoke --tmpfs /data:rw,mode=1777 -e ACCT_ENABLED=true -e ACCT_DB_PATH=/data/accounts.db energy-smoke
+      - name: Boot the account-server behind the edge (the ON gate needs both)
+        # Measured on hermescomputer 2026-11-09 against the image of this
+        # tree: the bare `docker run` was red for TWO independent reasons.
+        #  1. BOOT — since 28af5e4 the instrumentation hook runs
+        #     assertAccountDataDir, so ACCT_DATA_DIR_HOST/ACCT_REPO_HOST_DIR
+        #     must be absolute with the data dir OUTSIDE the checkout, and the
+        #     mounted /data must be uid 1001 (the container user) and mode
+        #     0700-or-stricter — the old `mode=1777` tmpfs fails that check
+        #     outright, and without the env pair every request 500s before the
+        #     readiness loop exhausts its 30s. This container has no host
+        #     checkout to name, so the pair names the container's own paths
+        #     (/data sits outside /app); every filesystem check the loader
+        #     makes runs against the mounted /data, which the uid/gid/mode
+        #     tmpfs below satisfies. ACCT_DATA_DIR mirrors the compose file.
+        #  2. X-Edge-Location — that header is set ONLY by the edge
+        #     (ops/edge/default.conf.template). The gate's identity cell pairs
+        #     it with x-gb-process, so a bare container can never pass, and
+        #     the script paces its matrix for nginx's 60r/m account limiter on
+        #     purpose: it was written to run behind the edge, exactly as the
+        #     topology gate does. So this leg boots the same edge template in
+        #     front; the app container from the OFF leg stays up and answers
+        #     "/" through it (readiness probe + default location), as in
+        #     production. /greenbutton locations are never requested here, so
+        #     the unreferenced shim upstream is never resolved.
+        run: |
+          docker network create energy-smoke-net
+          docker network connect --alias energy-dashboard energy-smoke-net energy-smoke
+          docker run -d --rm --network energy-smoke-net --network-alias account-server --name energy-account-smoke \
+            --tmpfs /data:rw,noexec,nosuid,nodev,size=65536k,uid=1001,gid=1001,mode=0700 \
+            -e ACCT_ENABLED=true -e ACCT_DATA_DIR=/data -e ACCT_DATA_DIR_HOST=/data \
+            -e ACCT_REPO_HOST_DIR=/app -e ACCT_DB_PATH=/data/accounts.db \
+            energy-smoke
+          docker build -t energy-edge ../ops/edge
+          docker run -d --rm --network energy-smoke-net -p 3101:80 -e XFP=http --name energy-edge energy-edge
       - name: Account gate (feature ON — register → sync → second device → logout)
         run: bash tests/e2e/account_smoke.sh http://127.0.0.1:3101
       - name: Playwright smoke (upload flow, Shift Optimizer, PWA offline)
@@ -119,9 +146,12 @@ jobs:
         run: |
           docker logs energy-smoke || true
           docker logs energy-account-smoke || true
+          docker logs energy-edge || true
       - name: Teardown
         if: always()
-        run: docker rm -f energy-smoke energy-account-smoke || true
+        run: |
+          docker rm -f energy-smoke energy-account-smoke energy-edge || true
+          docker network rm energy-smoke-net || true
 
   python:
     name: Python (Parser Tests)
