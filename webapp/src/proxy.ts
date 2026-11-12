@@ -25,24 +25,22 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getProcessIdentity } from "@/lib/greenbutton/config";
+import { OEB_RATES_PROXY_PATH, OEB_ROUTE_CSP } from "@/lib/oebRouteCsp";
 
 /**
  * Content-Security-Policy.
  *
- * WHY IT IS HERE NOW: this page is the sole custodian of the user's meter
- * readings (`energy_data_v2` in localStorage), and it renders THIRD-PARTY HTML
- * ON ITS OWN ORIGIN — the `/oeb-rates-page` route handler
- * (src/app/oeb-rates-page/route.ts, formerly a next.config rewrite) serves
- * `www.oeb.ca`'s HTML at this origin. Anything that can inject markup or
- * script into that OEB page would otherwise execute same-origin, with
- * direct read access to the readings. `X-Frame-Options` does nothing for
- * this: it is not clickjacking, it is same-origin execution. CSP is the
- * control that contains it.
+ * WHY IT IS HERE: this page is the sole custodian of the user's meter
+ * readings (`energy_data_v2` in localStorage), so a response that executes
+ * code this origin did not ship is a data-exfil surface. The policy below
+ * is set on every response this proxy matches — and it is NOT one policy
+ * for every path: the OEB proxy path is answered with a different, stricter
+ * one (see the branch in `proxy()` and src/lib/oebRouteCsp.ts).
  *
  * WHAT THIS POLICY ACTUALLY BUYS — stated plainly, because it is weaker than
  * the textbook version and pretending otherwise would be worse than having none.
  *
- * It DOES stop, and this is the part that matters for the OEB proxy above:
+ * It DOES stop, for this app's own pages:
  *   - `<script src="https://…">` from anywhere but this origin (the measured
  *     case: Chromium reports the directive and never receives a response),
  *   - `<object>` / `<embed>` / `<base href>` hijacks (`object-src`,
@@ -63,6 +61,26 @@ import { getProcessIdentity } from "@/lib/greenbutton/config";
  * every file and fails on any of them — including ones mentioned in
  * comments), and feed-derived strings render only through React text nodes.
  * The policy and that test are one guard each for one half of the same threat.
+ *
+ * THE SURFACE WHERE THAT COVER ENDS — `/oeb-rates-page` (F2, security
+ * assessment t_0d85b1f8, 2026-11-09): that route serves www.oeb.ca's HTML as
+ * a NAVIGABLE DOCUMENT on this origin, so the third party's own inline
+ * `<script>` blocks (AddToAny, the GTM loader, `$buoop`, Drupal JSON) reach
+ * the browser under `'unsafe-inline'` and RUN here. Browser-proven before
+ * the fix: after navigating to the route, `window.a2a_config` /
+ * `window.dataLayer` / `window.$buoop` were all objects, with this origin's
+ * `localStorage` readable from them; only cross-origin script LOADING was
+ * already blocked (GTM's injected googletagmanager.com script never ran).
+ * No part of the policy above contained THAT — a source-level scan of our
+ * own tree says nothing about markup a third party serves.
+ *
+ * The fix is a second, per-path policy in `proxy()`: that one response is
+ * answered with `OEB_ROUTE_CSP` (`sandbox; default-src 'none'`) INSTEAD of
+ * this one, so the document runs sandboxed as a unique origin with scripts
+ * disabled. The route handler asserts the same constant on its own response
+ * as well — measured, the proxy's header wins the name (Next applies proxy
+ * headers after handler headers), so both layers carry one value and either
+ * alone is sufficient. See src/lib/oebRouteCsp.ts for the measurement.
  *
  * `style-src 'unsafe-inline'` is required by Tailwind v4 and by Recharts'
  * runtime styles; it is not a script surface.
@@ -96,10 +114,6 @@ import { getProcessIdentity } from "@/lib/greenbutton/config";
  * The one third-party origin the browser talks to is Open-Meteo (date ranges
  * only — see lib/openMeteo.ts). Everything else, including the custodian's ESPI
  * feed, is same-origin via /greenbutton/usage.
- *
- * The OEB route handler inherits this policy (headers apply on `/:path*`),
- * which is the point: third-party HTML served here is then held to `default-
- * src 'self'` and cannot load script, frames or connections from our origin.
  */
 function buildCsp(upgradeInsecureRequests: boolean): string {
   return [
@@ -180,7 +194,24 @@ function isInventoriedHttpsOrigin(request?: NextRequest): boolean {
 }
 
 export default function proxy(request?: NextRequest): NextResponse {
-  const csp = buildCsp(isInventoriedHttpsOrigin(request));
+  // TWO policies, chosen by path. `/oeb-rates-page` answers third-party HTML
+  // as a navigable document, so it gets the sandbox policy instead of the
+  // app-wide one — `script-src 'unsafe-inline'` would hand oeb.ca's inline
+  // scripts (AddToAny, GTM loader, $buoop, Drupal JSON) a same-origin run at
+  // this origin's localStorage (F2, t_0d85b1f8; browser-proven before the
+  // fix). Every other path keeps the policy above.
+  //
+  // WHY THE BRANCH IS HERE and not only on the route's own Response: measured
+  // 2026-11-09 with curl against a production `next start` build — Next
+  // applies these proxy headers AFTER the handler's, so a
+  // `content-security-policy` set by the route never reaches the browser
+  // (only that one name collided; the same response's `cache-control:
+  // no-store` came through intact). The route asserts the identical constant
+  // as its belt for the case where this matcher stops covering the path.
+  const csp =
+    request?.nextUrl?.pathname === OEB_RATES_PROXY_PATH
+      ? OEB_ROUTE_CSP
+      : buildCsp(isInventoriedHttpsOrigin(request));
   const response = NextResponse.next();
   response.headers.set("Content-Security-Policy", csp);
   // Cheap companions that need no nonce work at all.

@@ -26,8 +26,12 @@ import {
 export const OEB_RATES_URL =
   'https://www.oeb.ca/consumer-information-and-protection/electricity-rates';
 
-/** Same-origin route handler that proxies the OEB page (CORS-free transport). */
-export const OEB_RATES_PROXY_PATH = '/oeb-rates-page';
+/**
+ * Same-origin route handler that proxies the OEB page (CORS-free transport).
+ * The value lives in ./oebRouteCsp — src/proxy.ts needs it too (it sets that
+ * route's hardening CSP), and one source cannot drift from the other.
+ */
+export { OEB_RATES_PROXY_PATH } from './oebRouteCsp';
 
 const MONTH_TO_NUM: Record<string, string> = {
   january: '01', february: '02', march: '03', april: '04',

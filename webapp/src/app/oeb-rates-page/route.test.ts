@@ -9,13 +9,19 @@
  * first-read proxy buffer could not hold them, so every request died as a
  * 502 at the edge. These tests pin the property that fixes it for good:
  * the handler ECHOES NO UPSTREAM HEADER except content-type, no matter how
- * large or numerous OEB's headers become.
+ * large or numerous OEB's headers become — plus the ONE header this origin
+ * asserts itself on this route (the F2 hardening CSP, OEB_ROUTE_CSP), which
+ * must be exactly ours and never upstream's.
  */
 
 // @vitest-environment node
 import { describe, it, expect, afterEach, vi, MockInstance } from 'vitest';
 
 import { GET, CACHED_MAX_AGE_MS, __resetUpstreamCacheForTests } from './route';
+// The hardening policy itself lives in the module src/proxy.ts shares — the
+// route and the proxy both assert this one constant (see oebRouteCsp.ts for
+// which of the two actually reaches the browser, measured).
+import { OEB_ROUTE_CSP } from '@/lib/oebRouteCsp';
 // PM fold (t_9991d1f2): the unavailable page's copy and /api/rates must name
 // the SAME last-verified date — imported from the one constant both read.
 import { GET as ratesGET, RATES_LAST_CHECKED } from '@/app/api/rates/route';
@@ -91,19 +97,24 @@ describe('/oeb-rates-page transport (route handler)', () => {
     await expect(res.text()).resolves.toBe('<table>FOO</table>');
   });
 
-  it('echoes no upstream header except content-type — regardless of size', async () => {
+  it('echoes no upstream header — and the CSP it answers with is OURS, not oeb.ca’s', async () => {
     mockUpstream(streamedResponse('<table>FOO</table>', FAT_UPSTREAM_HEADERS));
     const res = await GET(probeRequest());
     // Headers allows duplicates — walk every pair via forEach.
     const echoed: string[] = [];
     res.headers.forEach((_value, key) => echoed.push(key.toLowerCase()));
 
-    expect(echoed.length).toBeLessThanOrEqual(2);
-    expect(echoed, `offending headers echoed: ${JSON.stringify(echoed)}`).toEqual(
-      ['cache-control', 'content-type'],
+    // Exactly three: the two this route always asserted, plus the F2
+    // hardening CSP it now asserts for itself. Sorted, because Headers
+    // iterates in insertion order and the SET is the contract.
+    expect([...echoed].sort(), `offending headers echoed: ${JSON.stringify(echoed)}`).toEqual(
+      ['cache-control', 'content-security-policy', 'content-type'],
     );
+    // The upstream CSP (a 3.7 KB Drupal policy, in FAT_UPSTREAM_HEADERS)
+    // must never be the one that reaches the browser: the value has to be
+    // byte-identical to this route's own.
+    expect(res.headers.get('content-security-policy')).toBe(OEB_ROUTE_CSP);
     // The two headers that broke the edge are pinned by name:
-    expect(res.headers.has('content-security-policy')).toBe(false);
     expect(res.headers.has('x-content-security-policy')).toBe(false);
     // An upstream Set-Cookie never survives the swap; the only cache
     // assertion this route makes is its own no-store.
@@ -221,8 +232,9 @@ describe('/oeb-rates-page upstream DNS failure', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('x-oeb-rates-source')).toBe('cached');
     expect(res.headers.get('x-oeb-rates-fetched-at')).toBe('2026-10-24T12:00:00.000Z');
-    // Upstream headers still never leak, degraded or not.
-    expect(res.headers.has('content-security-policy')).toBe(false);
+    // Upstream headers still never leak, degraded or not — and the saved
+    // copy carries the same hardening CSP as the live path.
+    expect(res.headers.get('content-security-policy')).toBe(OEB_ROUTE_CSP);
     expect(res.headers.get('cache-control')).toBe('no-store');
 
     const body = await res.text();
@@ -262,5 +274,75 @@ describe('/oeb-rates-page upstream DNS failure', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('x-oeb-rates-source')).toBe('unavailable');
     await expect(res.text()).resolves.not.toContain('Service unavailable');
+  });
+});
+
+/**
+ * F2 (security assessment t_0d85b1f8): this route answers text/html on OUR
+ * origin, so the bytes are a navigable document — OEB's 4 inline <script>
+ * blocks executed same-origin under the app-wide CSP before this fix
+ * (`window.a2a_config`/`dataLayer`/`$buoop` were objects after navigation,
+ * with this origin's localStorage readable). The control is a response
+ * header this route asserts itself, and it has to be on EVERY shape the
+ * route can answer, because any of them is a document a browser can be
+ * pointed at: live upstream, non-2xx passthrough, the in-process saved
+ * copy, and the honest empty state.
+ */
+describe('/oeb-rates-page hardening CSP (F2)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    __resetUpstreamCacheForTests();
+  });
+
+  function mockUpstream(response: Response): void {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(response);
+  }
+
+  function dnsFailure(): void {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('fetch failed'));
+  }
+
+  async function shapes(): Promise<Array<[string, Response]>> {
+    const out: Array<[string, Response]> = [];
+
+    mockUpstream(streamedResponse('<table>OK</table>', FAT_UPSTREAM_HEADERS));
+    out.push(['live200', await GET(probeRequest())]);
+
+    mockUpstream(streamedResponse('nope', {}, 503));
+    out.push(['non-2xx passthrough', await GET(probeRequest())]);
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-24T12:00:00.000Z'));
+    mockUpstream(streamedResponse('<table>OK</table>', FAT_UPSTREAM_HEADERS));
+    await GET(probeRequest());
+    dnsFailure();
+    vi.setSystemTime(new Date('2026-10-24T12:05:00.000Z'));
+    out.push(['saved copy', await GET(probeRequest())]);
+
+    vi.useRealTimers();
+    __resetUpstreamCacheForTests();
+    dnsFailure();
+    out.push(['unavailable', await GET(probeRequest())]);
+
+    return out;
+  }
+
+  it('carries the sandbox policy on every status it can answer', async () => {
+    for (const [label, res] of await shapes()) {
+      // Byte-equal to this route's own constant — which is also the proof
+      // that the 3.7 KB Drupal policy upstream sent did not ride along.
+      expect(res.headers.get('content-security-policy'), label).toBe(OEB_ROUTE_CSP);
+    }
+  });
+
+  it('names sandbox + default-src none — the two properties the fix rests on', () => {
+    // Parsed rather than string-matched so a reformat of the constant cannot
+    // silently drop a directive the browser depends on.
+    const directives = OEB_ROUTE_CSP.split(';').map((d) => d.trim());
+    expect(directives).toContain('sandbox');
+    // `sandbox` with no allow-* token: unique origin, no scripts, no forms.
+    expect(OEB_ROUTE_CSP).not.toMatch(/allow-/);
+    expect(directives).toContain("default-src 'none'");
   });
 });
