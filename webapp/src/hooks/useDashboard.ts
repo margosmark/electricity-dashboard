@@ -1301,12 +1301,41 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         // empty and blocks the screen with the first-run modal over data that
         // is already stored (defect R1: gas import → reload → false-empty).
         const bills = readStoredBillFeed().summaries;
+        // The GAS half lives under its own keys (t_8a9038d6): a gas-only
+        // browser has ZERO electric points and ZERO electric periods, so
+        // asking only the electric halves would reopen the first-run modal
+        // over stored data — defect R1 in the new key space. Unreadable gas
+        // storage is treated exactly like unreadable electric storage: say
+        // so, and prompt, rather than claim empty when we cannot tell.
+        const gasStored = loadGasData();
+        const gasPoints = gasStored.ok && gasStored.value ? gasStored.value.points.length : 0;
+        const gasBills = readStoredGasBillFeed().summaries;
+        if (!gasStored.ok) reportStorage(gasStored);
         if (!stored.ok) {
           // Unreadable storage: say so, and open the upload prompt — the
           // dashboard must not claim to be empty when it cannot tell.
           reportStorage(stored);
           if (mounted) setShowUploadModal(true);
-        } else if ((stored.value?.points.length ?? 0) > 0 || bills.length > 0) {
+        } else if (!gasStored.ok) {
+          if (mounted) setShowUploadModal(true);
+        } else if (
+          (stored.value?.points.length ?? 0) > 0 ||
+          bills.length > 0 ||
+          gasPoints > 0 ||
+          gasBills.length > 0
+        ) {
+          // No electric data but a gas dataset in storage ⇒ the section this
+          // browser actually has data for is Gas: open on it instead of an
+          // empty Electricity section (the stored selection, if any, wins
+          // only when it still has data to show).
+          if (
+            (stored.value?.points.length ?? 0) === 0 &&
+            bills.length === 0 &&
+            (gasPoints > 0 || gasBills.length > 0) &&
+            commodityRef.current === 'electricity'
+          ) {
+            setCommodity('gas');
+          }
           if (mounted) {
             const parsed = stored.value?.points ?? [];
             // Summary-only storage restores the BILLS half only: there are no

@@ -47,6 +47,7 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'gasBill.m3Unit', // "m³" — the cubic-metre glyph, identical in fr
   'gasBill.rateUnit', // "¢/m³" — the unit glyph, identical in fr
   'gasBill.supplier', // "Enbridge Gas Distribution" — the utility's own name
+  'gbseries.notice.repeatCount', // "×{count}" — the × glyph is the same in fr
 ]);
 
 describe('i18n catalogs', () => {

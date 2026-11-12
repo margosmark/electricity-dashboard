@@ -323,7 +323,18 @@
     "gb.dismiss": "dismiss",
     "gb.readingsStayLocal": "· readings stay in this browser only.",
     "gb.disconnect": "Disconnect",
-    "gb.authoriseBlurb": "Authorise once and the dashboard refreshes itself — no more re-downloading the export. You sign in on Oakville Hydro’s own page; we never see that password, and the readings are parsed here, in your browser."
+    "gb.authoriseBlurb": "Authorise once and the dashboard refreshes itself — no more re-downloading the export. You sign in on Oakville Hydro’s own page; we never see that password, and the readings are parsed here, in your browser.",
+    "commodity.groupLabel": "Energy commodity",
+    "commodity.electricity": "Electricity",
+    "commodity.gas": "Gas",
+    "commodity.gasEmptyTitle": "No gas data in this browser yet",
+    "commodity.gasEmptyBody": "Upload a natural gas export (XML) to see its billing periods and volumes here. Your electricity data stays untouched.",
+    "commodity.gasEmptyAction": "Upload gas data",
+    "commodity.gasAnalyticsTitle": "Gas interval charts are not available yet",
+    "commodity.gasAnalyticsBody": "Your gas readings are stored in this browser ({count} intervals) and shown as billing periods with volumes. Electricity analytics live in the Electricity tab.",
+    "commodity.gasBillsOnly": "This file carried billing periods but no interval readings for gas — only the figures the bill itself states are shown.",
+    "commodity.gasOverviewNote": "Figures on this tab are natural gas exactly as the bill states them (m³ and amounts). Electricity analytics are in the Electricity tab.",
+    "commodity.switchLabel": "Choose which energy commodity to view"
   },
   "fr": {
     "app.title": "Ontario Energy Optimizer",
@@ -649,6 +660,17 @@
     "gb.dismiss": "masquer",
     "gb.readingsStayLocal": "· les relevés restent uniquement dans ce navigateur.",
     "gb.disconnect": "Déconnecter",
-    "gb.authoriseBlurb": "Autorisez une seule fois et le tableau de bord s’actualise de lui-même — plus besoin de retélécharger l’export. Vous vous connectez sur la page même d’Oakville Hydro ; nous ne voyons jamais ce mot de passe et les relevés sont analysés ici, dans votre navigateur."
+    "gb.authoriseBlurb": "Autorisez une seule fois et le tableau de bord s’actualise de lui-même — plus besoin de retélécharger l’export. Vous vous connectez sur la page même d’Oakville Hydro ; nous ne voyons jamais ce mot de passe et les relevés sont analysés ici, dans votre navigateur.",
+    "commodity.groupLabel": "Type d'énergie",
+    "commodity.electricity": "Électricité",
+    "commodity.gas": "Gaz",
+    "commodity.gasEmptyTitle": "Aucune donnée de gaz dans ce navigateur pour l'instant",
+    "commodity.gasEmptyBody": "Importez un export de gaz naturel (XML) pour voir ses périodes de facturation et ses volumes ici. Vos données d'électricité restent intactes.",
+    "commodity.gasEmptyAction": "Importer des données de gaz",
+    "commodity.gasAnalyticsTitle": "Les graphiques d'intervalle de gaz ne sont pas encore disponibles",
+    "commodity.gasAnalyticsBody": "Vos relevés de gaz sont conservés dans ce navigateur ({count} intervalles) et affichés sous forme de périodes de facturation avec volumes. Les analyses d'électricité se trouvent dans l'onglet Électricité.",
+    "commodity.gasBillsOnly": "Ce fichier contenait des périodes de facturation mais aucun relevé d'intervalle pour le gaz — seules les valeurs que la facture indique sont affichées.",
+    "commodity.gasOverviewNote": "Les valeurs de cet onglet sont du gaz naturel tel que la facture l'indique (m³ et montants). Les analyses d'électricité se trouvent dans l'onglet Électricité.",
+    "commodity.switchLabel": "Choisir le type d'énergie à afficher"
   }
 }

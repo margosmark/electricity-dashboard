@@ -25,7 +25,6 @@ import {
   getFilteredForZoom,
   resolveZone,
 } from '@/lib/energy';
-import { isGasFeed } from '@/lib/gasBillUi';
 import { buildEfficiency } from '@/lib/statistics';
 import {
   useEnergyData, useActiveRateSet, useZoomNavigation, type ViewScope,
@@ -50,6 +49,9 @@ import ThemeToggle from '@/components/classic/ThemeToggle';
 import { useThemeBootstrap } from '@/lib/theme';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/classic/TabNav';
+import CommodityTabs from '@/components/CommodityTabs';
+import { GasOverviewPanel, GasAnalyticsNote, GasEmptyState } from '@/components/GasSection';
+import { ActualBillPanel } from '@/components/classic/ActualBillPanel';
 import BestChoiceChip from '@/components/classic/BestChoiceChip';
 import OverviewPanel from '@/components/classic/OverviewPanel';
 import UsagePanel from '@/components/classic/UsagePanel';
@@ -116,11 +118,19 @@ export default function Dashboard() {
     gbRefreshTick, backgroundSync,
     // Wave L: UsageSummary bills + the feed's own clock rules
     billFeed,
+    // Commodity isolation (t_8a9038d6)
+    gasData, gasBillFeed, commodity, setCommodity,
     // The billing axis: the file's own periods as the view's timeline.
     axis,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
+
+  /* Commodity isolation (t_8a9038d6): the section on screen decides which
+     feed the panels read — electric figures never render under Gas. */
+  const gasSelected = commodity === 'gas';
+  const activeFeed = gasSelected ? gasBillFeed : billFeed;
+  const gasEmpty = gasData.length === 0 && gasBillFeed.summaries.length === 0;
 
   // Wave U — the shell's locale subscription. `t` is the memo key for every
   // text-producing computation below.
@@ -666,6 +676,8 @@ export default function Dashboard() {
           floor button) absorb the slack instead of white space doing it. */}
       <div className="no-print relative z-[200] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-hard-8 border-4 border-edge flex flex-col gap-4 md:gap-6 text-ink">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
+           {/* Explicit Electricity / Gas sections (t_8a9038d6) — view choice only. */}
+           <CommodityTabs value={commodity} onChange={setCommodity} />
            <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="min-h-11 min-w-11 p-3 md:p-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
            <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-red-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
            <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-info border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
@@ -720,7 +732,7 @@ export default function Dashboard() {
              <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-ink font-black" />
           </div>
           {/* Commodity 7: nothing on a gas feed prices a plan (DoD 4). */}
-          {!isGasFeed(billFeed.summaries) && (
+          {!gasSelected && (
           <div data-testid="plan-switcher" className="bg-hover p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
                   accessible name. A label like "Select Time-of-Use plan" hides
@@ -784,7 +796,18 @@ export default function Dashboard() {
 
       {/* The four sections. Only the active one renders — a hidden tab's
           charts are not drawn, measured or announced to a screen reader. */}
-      {tab === 'overview' && (
+      {tab === 'overview' && gasSelected && (
+        gasEmpty ? (
+          <GasEmptyState onImport={() => { setParseIssue(null); setShowUploadModal(true); }} />
+        ) : (
+          <GasOverviewPanel
+            intervalCount={gasData.length}
+            billPanel={<ActualBillPanel summaries={activeFeed.summaries} allData={[]} plan={userPlan} />}
+          />
+        )
+      )}
+
+      {tab === 'overview' && !gasSelected && (
         <OverviewPanel
           comparison={comparison}
           userPlan={userPlan}
@@ -813,7 +836,15 @@ export default function Dashboard() {
         />
       )}
 
-      {tab === 'usage' && (
+      {tab === 'usage' && gasSelected && !gasEmpty && (
+        <GasAnalyticsNote intervalCount={gasData.length} />
+      )}
+
+      {tab === 'usage' && gasSelected && gasEmpty && (
+        <GasEmptyState onImport={() => { setParseIssue(null); setShowUploadModal(true); }} />
+      )}
+
+      {tab === 'usage' && !gasSelected && (
         <UsagePanel
           staleness={staleness}
           anomalies={anomalies}
@@ -831,7 +862,7 @@ export default function Dashboard() {
           userPlan={userPlan}
           startDate={startDate}
           filteredData={filteredData}
-          gas={isGasFeed(billFeed.summaries)}
+          gas={gasSelected}
         />
       )}
 
@@ -847,14 +878,14 @@ export default function Dashboard() {
           wfh={wfh}
           shiftAnalysis={shiftAnalysis}
           verification={verification}
-          summaries={billFeed.summaries}
+          summaries={activeFeed.summaries}
           allData={processedData}
         />
       )}
 
       {tab === 'money' && (
         <MoneyPanel
-          summaries={billFeed.summaries}
+          summaries={activeFeed.summaries}
           allData={processedData}
           filteredData={filteredData}
           plan={userPlan}
