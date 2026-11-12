@@ -24,8 +24,12 @@ import type { ChangeEvent } from 'react';
 import {
   useEnergyData,
   writeStoredBillFeed,
+  readStoredBillFeed,
+  readStoredGasBillFeed,
   USAGE_SUMMARIES_KEY,
   LOCAL_TIME_KEY,
+  GAS_USAGE_SUMMARIES_KEY,
+  GAS_LOCAL_TIME_KEY,
 } from './useDashboard';
 import { parseGreenButtonFeed } from '@/lib/energy';
 
@@ -33,7 +37,13 @@ const GAS_XML = readFileSync(
   join(__dirname, '../../tests/fixtures/enbridge-gas-synthetic.xml'),
   'utf8',
 );
+const ELEC_XML = readFileSync(
+  join(__dirname, '../../tests/fixtures/green-button-alliance-sample.xml'),
+  'utf8',
+);
 const FEED = parseGreenButtonFeed(GAS_XML);
+/** The electric half's writer works on electricity — see the split below. */
+const ELEC_FEED = parseGreenButtonFeed(ELEC_XML);
 /** The synthetic feed declares no clock (the Enbridge clock block is dropped
  *  by the feed-quirks fix), so the clock write is exercised with one. */
 const CLOCK = { tzOffset: -18000, dstOffset: 3600, dstStartRule: null, dstEndRule: null };
@@ -58,14 +68,34 @@ afterEach(() => {
 describe('writeStoredBillFeed — the verdict the caller renders', () => {
   it('writes both keys and reports a clean result when storage cooperates', () => {
     const result = writeStoredBillFeed({
+      summaries: ELEC_FEED.summaries,
+      localTime: CLOCK,
+      source: 'test',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(JSON.parse(localStorage.getItem(USAGE_SUMMARIES_KEY)!)).toHaveLength(
+      ELEC_FEED.summaries.length,
+    );
+    expect(localStorage.getItem(LOCAL_TIME_KEY)).not.toBeNull();
+  });
+
+  it('routes a GAS feed handed to the electric writer into the gas keys', () => {
+    // Legacy callers (a pre-split read, the /import page) may still hand gas
+    // periods to this function. They must be parked on the gas side — never
+    // written to `usage_summaries`, never dropped.
+    const result = writeStoredBillFeed({
       summaries: FEED.summaries,
       localTime: CLOCK,
       source: 'test',
     });
 
     expect(result.ok).toBe(true);
-    expect(JSON.parse(localStorage.getItem(USAGE_SUMMARIES_KEY)!)).toHaveLength(10);
-    expect(localStorage.getItem(LOCAL_TIME_KEY)).not.toBeNull();
+    expect(localStorage.getItem(USAGE_SUMMARIES_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)!)).toHaveLength(10);
+    expect(localStorage.getItem(GAS_LOCAL_TIME_KEY)).not.toBeNull();
+    expect(readStoredBillFeed().summaries).toHaveLength(0);
+    expect(readStoredGasBillFeed().summaries).toHaveLength(10);
   });
 
   it('returns a QUOTA failure naming the key, instead of swallowing it', () => {
@@ -75,8 +105,8 @@ describe('writeStoredBillFeed — the verdict the caller renders', () => {
     });
 
     const result = writeStoredBillFeed({
-      summaries: FEED.summaries,
-      localTime: FEED.localTime,
+      summaries: ELEC_FEED.summaries,
+      localTime: ELEC_FEED.localTime,
       source: 'test',
     });
 
@@ -100,14 +130,16 @@ describe('writeStoredBillFeed — the verdict the caller renders', () => {
 
 describe('a gas import whose bill write fails is VISIBLE, not silent', () => {
   it('raises the storage notice row (same copy as the readings quota notice)', async () => {
-    // Only the bill key fails — the readings write below must succeed, so the
-    // notice that appears can only have come from the bill half.
+    // Only the gas bill key fails — the readings write below must succeed, so
+    // the notice that appears can only have come from the bill half. A gas
+    // upload never writes `usage_summaries` any more (that is the split), so
+    // the key under test is the gas one.
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
       this: Storage,
       key: string,
       value: string,
     ) {
-      if (key === USAGE_SUMMARIES_KEY) throw quotaError();
+      if (key === GAS_USAGE_SUMMARIES_KEY) throw quotaError();
       return originalSetItem.call(this, key, value);
     });
 
@@ -125,13 +157,14 @@ describe('a gas import whose bill write fails is VISIBLE, not silent', () => {
     });
     const notice = result.current.storageNotice!;
     expect(notice.kind).toBe('quota');
-    expect(notice.detail).toContain(USAGE_SUMMARIES_KEY);
+    expect(notice.detail).toContain(GAS_USAGE_SUMMARIES_KEY);
     expect(notice.detail).toMatch(/quota/i);
 
     // The in-memory bills still exist (a full disk must not throw the upload
     // away) — they are just honestly labelled as NOT persisted.
-    expect(result.current.billFeed.summaries).toHaveLength(10);
-    expect(localStorage.getItem(USAGE_SUMMARIES_KEY)).toBeNull();
+    expect(result.current.gasBillFeed.summaries).toHaveLength(10);
+    expect(result.current.billFeed.summaries).toHaveLength(0);
+    expect(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)).toBeNull();
   }, 30_000);
 
   it('CONTROL: the same upload persists the bills when storage works', async () => {
@@ -144,12 +177,16 @@ describe('a gas import whose bill write fails is VISIBLE, not silent', () => {
       } as unknown as ChangeEvent<HTMLInputElement>);
     });
 
-    await waitFor(() => expect(result.current.billFeed.summaries).toHaveLength(10), {
+    await waitFor(() => expect(result.current.gasBillFeed.summaries).toHaveLength(10), {
       timeout: 15_000,
     });
     await waitFor(() => expect(result.current.storageNotice).toBeNull(), {
       timeout: 15_000,
     });
-    expect(JSON.parse(localStorage.getItem(USAGE_SUMMARIES_KEY)!)).toHaveLength(10);
+    // Gas bills live under the gas key; the electric key is not addressed by
+    // a gas upload at all.
+    expect(JSON.parse(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)!)).toHaveLength(10);
+    expect(localStorage.getItem(USAGE_SUMMARIES_KEY)).toBeNull();
+    expect(result.current.billFeed.summaries).toHaveLength(0);
   }, 30_000);
 });

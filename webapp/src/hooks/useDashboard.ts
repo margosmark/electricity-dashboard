@@ -50,9 +50,19 @@ import {
 import {
   type StorageResult,
   loadEnergyData, saveEnergyData, clearEnergyData,
+  loadGasData, saveGasData,
+  type GasPoint,
   loadBillingDay, saveBillingDay,
   parseImport, resetStoredData, listOurStoredKeys, writeStoredKey,
 } from "@/lib/storage";
+// Commodity isolation (t_8a9038d6): one parsed feed → two disjoint buckets.
+// The split lives in lib/commodity.ts so /import and this hook cannot
+// disagree about what a gas document is.
+import {
+  type Commodity, type FeedSplit,
+  commodityPresence, extractGasPoints, primaryCommodity, sortGasPoints,
+  splitFeed, splitSummaries, unionGasPoints,
+} from "@/lib/commodity";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
 import { PLAN_TIMELINE_KEY } from "@/lib/planTimeline";
@@ -103,6 +113,51 @@ export { EXAMPLE_DATA_KEY };
 export const USAGE_SUMMARIES_KEY = "usage_summaries";
 export const LOCAL_TIME_KEY = "local_time_parameters";
 
+/**
+ * The gas half of the bill feed (t_8a9038d6).
+ *
+ * Before this split a single `usage_summaries` array held both commodities,
+ * and `commitBillFeed("replace")` rewrote it wholesale — so uploading gas
+ * replaced every electricity bill and vice versa. The two keys are written
+ * by their own commit path and are never addressed by the other's.
+ */
+export const GAS_USAGE_SUMMARIES_KEY = "gas_usage_summaries";
+export const GAS_LOCAL_TIME_KEY = "gas_local_time_parameters";
+
+/**
+ * Which commodity section the dashboard is showing (t_8a9038d6).
+ *
+ * Selection is per-browser and survives a reload, because the two datasets
+ * both live in this browser: coming back to an electric chart after a gas
+ * upload would hide the file the user just imported. It is a VIEW choice
+ * only — it never decides what a parsed document writes to.
+ */
+export const COMMODITY_STORAGE_KEY = "oeo_commodity";
+
+export type CommoditySelection = {
+  /** The stored (or default) commodity for a fresh mount. */
+  read: () => Commodity;
+  /** Persist a selection; storage being unavailable must not break the toggle. */
+  write: (next: Commodity) => void;
+};
+
+export const commoditySelection: CommoditySelection = {
+  read: () => {
+    try {
+      return localStorage.getItem(COMMODITY_STORAGE_KEY) === "gas" ? "gas" : "electricity";
+    } catch {
+      return "electricity";
+    }
+  },
+  write: (next) => {
+    try {
+      localStorage.setItem(COMMODITY_STORAGE_KEY, next);
+    } catch {
+      /* quota/blocked storage: the in-memory selection still holds */
+    }
+  },
+};
+
 export type BillFeed = {
   /** Every billing period the parse found, oldest first. */
   summaries: UsageSummary[];
@@ -114,14 +169,21 @@ export type BillFeed = {
 
 export const EMPTY_BILL_FEED: BillFeed = { summaries: [], localTime: null, source: null };
 
-/** Whitelisted read: whatever is unreadable or of the wrong shape is dropped. */
-export function readStoredBillFeed(): BillFeed {
+/**
+ * Read ONE summary/clock key pair, dropping whatever is unreadable or of the
+ * wrong shape. Shared by both commodities so a malformed gas key cannot be
+ * tolerated where a malformed electric one is not (and vice versa).
+ */
+function readStoredRows(
+  summaryKey: string,
+  clockKey: string,
+): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
   try {
-    const raw = localStorage.getItem(USAGE_SUMMARIES_KEY);
-    const clock = localStorage.getItem(LOCAL_TIME_KEY);
+    const raw = localStorage.getItem(summaryKey);
+    const clock = localStorage.getItem(clockKey);
     const summaries = raw ? (JSON.parse(raw) as UsageSummary[]) : [];
     const localTime = clock ? (JSON.parse(clock) as LocalTimeParams) : null;
-    if (!Array.isArray(summaries)) return EMPTY_BILL_FEED;
+    if (!Array.isArray(summaries)) return { summaries: [], localTime: null };
     // `volume` was added to UsageSummary by the Enbridge wave: anything
     // stored earlier has NO key for it, and the type says `volume: BillMeasurement
     // | null`. Default it on read so a missing key reads as null, never
@@ -132,13 +194,51 @@ export function readStoredBillFeed(): BillFeed {
         (s) => s && typeof s.start === "number" && typeof s.duration === "number" && Array.isArray(s.items),
       )
       .map((s) => ({ ...s, volume: s.volume ?? null }));
-    const okClock =
-      localTime && typeof localTime.tzOffset === "number" ? localTime : null;
-    if (clean.length === 0 && !okClock) return EMPTY_BILL_FEED;
-    return { summaries: clean, localTime: okClock, source: null };
+    const okClock = localTime && typeof localTime.tzOffset === "number" ? localTime : null;
+    return { summaries: clean, localTime: okClock };
   } catch {
-    return EMPTY_BILL_FEED;
+    return { summaries: [], localTime: null };
   }
+}
+
+/**
+ * Whitelisted read of the ELECTRICITY bill feed.
+ *
+ * A key written before the commodity split can still hold gas periods — the
+ * split is a write-side migration (ensureBillPartition), so this partitions
+ * ON READ and never depends on the migration having run. Gas periods are
+ * handed to `readStoredGasBillFeed`, not dropped.
+ */
+export function readStoredBillFeed(): BillFeed {
+  const rows = readStoredRows(USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY);
+  const { electric } = splitSummaries(rows.summaries);
+  if (electric.length === 0 && !rows.localTime) return EMPTY_BILL_FEED;
+  return { summaries: electric, localTime: rows.localTime, source: null };
+}
+
+/**
+ * Whitelisted read of the NATURAL GAS bill feed.
+ *
+ * Sums the migrated key with whatever gas periods are still sitting in the
+ * legacy key (a browser that has not written since the split), keyed by
+ * `start` so a period present in both counts once. The migrated copy wins a
+ * conflict: it is the one the gas write path maintains.
+ *
+ * The clock falls back to the electric key read-only. Duplicating it would
+ * be safe, but deleting or rewriting the electric copy from a gas read is
+ * not this function's business.
+ */
+export function readStoredGasBillFeed(): BillFeed {
+  const migrated = readStoredRows(GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY);
+  const legacy = readStoredRows(USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY);
+  const { gas } = splitSummaries(legacy.summaries);
+  const byStart = new Map<number, UsageSummary>();
+  for (const s of gas) byStart.set(s.start, s);
+  for (const s of migrated.summaries) byStart.set(s.start, s);
+  const summaries = [...byStart.values()].sort((a, b) => a.start - b.start);
+  const localTime = migrated.localTime ?? legacy.localTime;
+  if (summaries.length === 0 && !localTime) return EMPTY_BILL_FEED;
+  return { summaries, localTime, source: null };
 }
 
 /**
@@ -164,25 +264,102 @@ export const countUsableRows = (gs: UsagePointGroup[]): number =>
   );
 
 /**
- * Persist the bill half — and SAY when it does not land.
+ * Move every gas period out of the legacy `usage_summaries` array and into
+ * the gas key — the non-destructive half of the commodity split.
  *
- * Both writes go through storage.ts's `writeStoredKey`, so a quota failure
+ * Order is the whole safety property:
+ *   1. the gas copy is written FIRST (unioned with anything already there,
+ *      so re-running never duplicates a period and never loses one);
+ *   2. only after that write succeeds is the legacy array rewritten without
+ *      the gas rows.
+ * If step 1 fails (quota) nothing is touched and the caller gets the
+ * failure: the browser still holds every period exactly where it found it.
+ * If step 2 fails, the gas copy already exists, so the leftover rows in the
+ * electric key are a harmless duplicate that `readStoredBillFeed`'s
+ * on-read partition keeps on the correct side anyway.
+ *
+ * Idempotent: after the first successful run `gas.length === 0` and this is
+ * a read-only no-op.
+ */
+export function ensureBillPartition(): StorageResult<true> {
+  const legacy = readStoredRows(USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY);
+  const { gas } = splitSummaries(legacy.summaries);
+  if (gas.length === 0) return { ok: true, value: true, warnings: [] };
+
+  const parked = mergeGasBillRows(gas, legacy.localTime);
+  if (!parked.ok) return parked;
+
+  const { electric } = splitSummaries(legacy.summaries);
+  const stripped = writeStoredKey(
+    USAGE_SUMMARIES_KEY,
+    electric.length > 0 ? JSON.stringify(electric) : null,
+  );
+  return stripped.ok ? { ok: true, value: true, warnings: [] } : stripped;
+}
+
+/**
+ * Union `extra` into the gas bill key. Rows already migrated win a conflict
+ * on the same `start` — the migrated copy is the one this build maintains,
+ * so a re-run of the partition can only ever add periods it does not have.
+ *
+ * The clock is copied across only when the gas key has none: a stale clock
+ * beside the right periods beats a missing one, and the electric key's copy
+ * is never removed from here.
+ */
+function mergeGasBillRows(extra: readonly UsageSummary[], clock: LocalTimeParams | null): StorageResult<true> {
+  const existing = readStoredRows(GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY);
+  const byStart = new Map<number, UsageSummary>();
+  for (const s of existing.summaries) byStart.set(s.start, s);
+  for (const s of extra) if (!byStart.has(s.start)) byStart.set(s.start, s);
+  const merged = [...byStart.values()].sort((a, b) => a.start - b.start);
+
+  let payload: string | null;
+  try {
+    payload = merged.length > 0 ? JSON.stringify(merged) : null;
+  } catch (err) {
+    return { ok: false, reason: "corrupt", detail: `Gas bill feed is not serializable: ${(err as Error)?.message ?? String(err)}` };
+  }
+  const written = writeStoredKey(GAS_USAGE_SUMMARIES_KEY, payload);
+  if (!written.ok) return written;
+  const nextClock = existing.localTime ?? clock;
+  return writeStoredKey(GAS_LOCAL_TIME_KEY, nextClock ? JSON.stringify(nextClock) : null);
+}
+
+/**
+ * Persist the ELECTRICITY bill half — and SAY when it does not land.
+ *
+ * Two writes go through storage.ts's `writeStoredKey`, so a quota failure
  * comes back classified exactly like the readings write, and the caller
  * raises it through `reportStorage` (the same notice row). The old version
- * swallowed the failure in an empty catch: for a gas-only import that is the
- * only persisted copy of the data at all — zero electric `DataPoint`s are
- * committed for commodity 7 — so a silent quota failure looked like a
- * successful import until the reload that found 0 periods.
+ * swallowed the failure in an empty catch, which looked like a successful
+ * import until the reload that found 0 periods.
+ *
+ * The commodity split runs first (see ensureBillPartition) and the incoming
+ * feed is partitioned too, so a gas period can never be written to the
+ * electric key — and a failure in the split aborts this write rather than
+ * proceeding on a half-migrated store.
  *
  * Returns the verdict instead of throwing: a storage failure must never break
  * the UI (the in-memory value is still the truth on screen), it must only be
  * visible.
  */
 export function writeStoredBillFeed(feed: BillFeed): StorageResult<true> {
+  const split = splitSummaries(feed.summaries);
+
+  const migrated = ensureBillPartition();
+  if (!migrated.ok) return migrated;
+  // A caller that handed us a gas period (an unpartitioned legacy read, say)
+  // parks it in the gas key instead of dropping it — then the electric write
+  // below only ever sees electricity.
+  if (split.gas.length > 0) {
+    const parked = mergeGasBillRows(split.gas, feed.localTime);
+    if (!parked.ok) return parked;
+  }
+
   let summaries: string | null;
   let clock: string | null;
   try {
-    summaries = feed.summaries.length > 0 ? JSON.stringify(feed.summaries) : null;
+    summaries = split.electric.length > 0 ? JSON.stringify(split.electric) : null;
     clock = feed.localTime ? JSON.stringify(feed.localTime) : null;
   } catch (err) {
     return {
@@ -196,6 +373,51 @@ export function writeStoredBillFeed(feed: BillFeed): StorageResult<true> {
   // one notice, naming the key that failed.
   const written = writeStoredKey(USAGE_SUMMARIES_KEY, summaries);
   const timed = writeStoredKey(LOCAL_TIME_KEY, clock);
+  return written.ok ? timed : written;
+}
+
+/**
+ * Persist the NATURAL GAS bill half under the gas keys.
+ *
+ * Mirrors `writeStoredBillFeed` exactly — same error classification, same
+ * "attempt both, first failure wins" rule — but addresses only
+ * `gas_usage_summaries` / `gas_local_time_parameters`, so a gas commit can
+ * neither read nor rewrite the electricity feed.
+ *
+ * `mode` follows the readings: an upload replaces (the file the user just
+ * chose is what they asked to see), a live sync unions (one more source of
+ * truth must not delete bills the feed no longer repeats).
+ */
+export function writeStoredGasBillFeed(feed: BillFeed, mode: "replace" | "union"): StorageResult<true> {
+  const migrated = ensureBillPartition();
+  if (!migrated.ok) return migrated;
+
+  const split = splitSummaries(feed.summaries);
+  // `union` folds the incoming periods into what is stored; `replace` is the
+  // file alone. Both are normalised through the same de-dupe/sort so a period
+  // two files describe differently counts once.
+  const target: BillFeed =
+    mode === "replace"
+      ? unionBillFeeds(EMPTY_BILL_FEED, { ...feed, summaries: split.gas })
+      : unionBillFeeds(
+          { ...readStoredGasBillFeed(), source: feed.source },
+          { ...feed, summaries: split.gas },
+        );
+
+  let payload: string | null;
+  let clock: string | null;
+  try {
+    payload = target.summaries.length > 0 ? JSON.stringify(target.summaries) : null;
+    clock = target.localTime ? JSON.stringify(target.localTime) : null;
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "corrupt",
+      detail: `Gas bill feed is not serializable: ${(err as Error)?.message ?? String(err)}`,
+    };
+  }
+  const written = writeStoredKey(GAS_USAGE_SUMMARIES_KEY, payload);
+  const timed = writeStoredKey(GAS_LOCAL_TIME_KEY, clock);
   return written.ok ? timed : written;
 }
 
@@ -457,6 +679,62 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   const billFeedRef = useRef<BillFeed>(billFeed);
 
+  /* ---------------------------------------------------------------------
+   * The NATURAL GAS half (t_8a9038d6) — deliberately a parallel copy of the
+   * four pieces above rather than a `commodity` field on them. Sharing state
+   * between the two commodities is exactly the coupling that let one upload
+   * overwrite the other's data; keeping two feeds means the only code that
+   * can touch gas storage is the gas commit, and vice versa.
+   * --------------------------------------------------------------------- */
+
+  /** Gas billing periods, seeded from storage so a reload keeps the gas panel. */
+  const [gasBillFeed, setGasBillFeed] = useState<BillFeed>(() => readStoredGasBillFeed());
+  /** Synchronous mirror of `gasBillFeed` — same reason as `billFeedRef`. */
+  const gasBillFeedRef = useRef<BillFeed>(gasBillFeed);
+  /** Gas intervals the file(s) waiting to import carry (mirror of rawData). */
+  const [gasData, setGasData] = useState<GasPoint[]>(() => {
+    const stored = loadGasData();
+    return stored.ok && stored.value ? stored.value.points : [];
+  });
+  const gasDataRef = useRef<GasPoint[]>(gasData);
+  /** Bills parsed out of the files waiting on a picker/merge screen. */
+  const gasBillFeedsRef = useRef<BillFeed[]>([]);
+  /** Gas intervals parsed out of the same waiting files. */
+  const gasPointsRef = useRef<GasPoint[]>([]);
+
+  /**
+   * Which commodity section is on screen. A VIEW choice only: it never
+   * routes a write (see commoditySelection), it only decides which dataset
+   * the panels read and which section an import opens on.
+   */
+  const [commodity, setCommodityState] = useState<Commodity>(() => commoditySelection.read());
+  const commodityRef = useRef<Commodity>(commodity);
+  const setCommodity = useCallback((next: Commodity) => {
+    commodityRef.current = next;
+    setCommodityState(next);
+    commoditySelection.write(next);
+  }, []);
+
+  /**
+   * Run the commodity split once on boot (t_8a9038d6).
+   *
+   * Reads already partition on see (readStoredBillFeed / readStoredGasBillFeed),
+   * so this is not needed for correctness of what is DISPLAYED — it exists so
+   * the browser's stored bytes become truthful without waiting for the next
+   * upload to write something. The write-side order inside
+   * `ensureBillPartition` is what makes it non-destructive, and it is
+   * idempotent, so a double mount in dev costs one extra read.
+   *
+   * A failure is raised through the same notice row every other storage
+   * failure uses: a quota error here means the split did not happen, and
+   * hiding that would leave two accounts of the same periods alive at once.
+   */
+  useEffect(() => {
+    const res = ensureBillPartition();
+    if (!res.ok || res.warnings.length > 0) reportStorage(res);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only; reportStorage is stable enough for a one-shot
+  }, []);
+
   /**
    * The timeline THIS FILE defines: its own `billingPeriod` entries (de-duped
    * when several exports describe the same bill), the holes between them, and
@@ -519,6 +797,74 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     reportStorage(writeStoredBillFeed(next));
     billFeedRef.current = next;
     setBillFeed(next);
+  };
+
+  /**
+   * The gas twin of `commitBillFeed`. Same rules, different keys: it reads
+   * and writes only `gas_usage_summaries` / `gas_local_time_parameters`, so
+   * folding gas bills in can never rewrite the electricity feed.
+   */
+  const commitGasBillFeed = (mode: "replace" | "union") => {
+    const incoming = gasBillFeedsRef.current;
+    gasBillFeedsRef.current = [];
+    const next =
+      mode === "replace"
+        ? incoming.reduce((acc, f) => unionBillFeeds(EMPTY_BILL_FEED, f), EMPTY_BILL_FEED)
+        : // eslint-disable-next-line no-restricted-syntax -- one feed per selected file, cleared on commit
+          unionBillFeeds(gasBillFeedRef.current, ...incoming);
+    reportStorage(writeStoredGasBillFeed(next, mode));
+    gasBillFeedRef.current = next;
+    setGasBillFeed(next);
+  };
+
+  /**
+   * Import gas intervals: persist to the gas key, open the gas section.
+   *
+   * Deliberately NOT routed through `commitReadings`: that function writes
+   * `energy_data_v2` and re-anchors the ELECTRICITY window, and a gas
+   * document reaching it is precisely the defect this card exists to close
+   * (an Enbridge upload committed `[]` and wiped the electric dataset).
+   *
+   * `mode` mirrors the readings semantics — an upload replaces the gas
+   * bucket, a live sync unions into it — and only ever within the bucket:
+   * `energy_data_v2` is not addressed here at all.
+   */
+  const commitGasReadings = (
+    points: GasPoint[],
+    mode: "replace" | "union" = "replace",
+    bills?: UsageSummary[],
+    notes?: SeriesNote[],
+  ) => {
+    const sorted = sortGasPoints(points);
+    const next = mode === "replace" ? sorted : unionGasPoints(gasDataRef.current, sorted);
+    gasDataRef.current = next;
+    setGasData(next);
+
+    const saved = saveGasData(next, { source: "upload" });
+    if (saved.ok && saved.warnings.length === 0) setStorageNotice(null);
+    else reportStorage(saved);
+
+    // The section this import actually filled is chosen by the CALLER, not
+    // here: a background live sync must not yank the view to gas the way an
+    // upload opens the section it just filled (see handleFileUpload).
+    setParseIssue(null);
+    publishRefusalNotes(notes);
+    setShowUploadModal(false);
+    // Consumed: the pending batch is committed, so the next upload starts
+    // from its own files instead of folding these intervals in again.
+    gasPointsRef.current = [];
+    // Gas has no billing-day-anchored window to re-cut (the gas panel shows
+    // the whole stored span), so only an electric commit re-anchors.
+    if (bills && bills.length > 0 && gasBillFeedsRef.current.length === 0) {
+      gasBillFeedsRef.current = [{ summaries: bills, localTime: null, source: null }];
+    }
+  };
+
+  /** Drop every pending (not yet committed) bill/reading from BOTH commodities. */
+  const clearPendingFeeds = () => {
+    billFeedsRef.current = [];
+    gasBillFeedsRef.current = [];
+    gasPointsRef.current = [];
   };
 
   /* ---------------------------------------------------------------------
@@ -697,12 +1043,38 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const incoming = groups.reduce((n, g) => n + g.readings.length, 0);
     if (countUsableRows(groups) === 0) return { ok: false, code: "no_readings" };
 
-    // Held until the rows below are actually committed (a multi-meter pick
-    // can still be cancelled) and then folded in — a sync never deletes a
-    // bill the feed no longer repeats.
-    billFeedsRef.current = [
-      { summaries, localTime: feed.localTime, source: "your Green Button feed" },
-    ];
+    // Commodity split (t_8a9038d6). A document whose rows are all volume
+    // must never reach the electric merge below: `mergeForWrite` on an empty
+    // electric list leaves the readings alone but the bill union would still
+    // park gas periods in `usage_summaries`.
+    const gasPoints = extractGasPoints(groups);
+    const split = splitSummaries(summaries);
+    const holdPendingFeeds = () => {
+      if (incoming > 0) {
+        billFeedsRef.current = [
+          { summaries: split.electric, localTime: feed.localTime, source: "your Green Button feed" },
+        ];
+      }
+      if (gasPoints.length > 0) {
+        gasBillFeedsRef.current = [
+          { summaries: split.gas, localTime: feed.localTime, source: "your Green Button feed" },
+        ];
+        gasPointsRef.current = gasPoints;
+      }
+    };
+    holdPendingFeeds();
+    const commitGasHalf = (mode: "replace" | "union") => {
+      if (gasPointsRef.current.length === 0 && gasBillFeedsRef.current.length === 0) return;
+      if (gasPointsRef.current.length > 0) commitGasReadings(gasPointsRef.current, mode, undefined, feed.notes);
+      commitGasBillFeed(mode);
+    };
+
+    if (incoming === 0 && gasPoints.length > 0) {
+      // Gas-only on the live-sync path: union into the gas bucket, say what
+      // was found, and stop — there is no electric row here to merge.
+      commitGasHalf("union");
+      return { ok: true, incoming: gasPoints.length, added: gasPoints.length };
+    }
 
     if (groups.length > 1) {
       setPendingUpload({
@@ -724,14 +1096,16 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // identical, and unioning the same bill twice is a no-op anyway.
     if (plan.identical) {
       commitBillFeed("union");
+      commitGasHalf("union");
       return { ok: true, incoming, added: 0, unchanged: true };
     }
 
     const merged = mergeForWrite(base, groups[0].readings);
     const keep = windowRef.current;
     const hadWindow = keep.start !== "" && keep.end !== "";
-    commitReadings(merged, "upload", summaries, feed.notes);
+    commitReadings(merged, "upload", split.electric, feed.notes);
     commitBillFeed("union");
+    commitGasHalf("union");
     if (hadWindow) {
       setStartDate(keep.start);
       setEndDate(keep.end);
@@ -1182,13 +1556,30 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           // as ingestFeedXml: decide interval-block ownership and supplier
           // labels with the whole file in hand, store them ON the summaries.
           const summaries = isGasFeed(feed.summaries) ? enrichGasSummaries(feed) : feed.summaries;
-          // Wave L: the bill half rides along with the readings and is held
-          // until the user actually imports (see commitBillFeed).
-          billFeedsRef.current.push({
-            summaries,
-            localTime: feed.localTime,
-            source: file.name,
-          });
+          // Commodity split (t_8a9038d6): the bill half rides along with the
+          // readings and is held until the user actually imports — but each
+          // half goes to ITS commodity's pending list. A file that carries no
+          // electric rows contributes NOTHING to `billFeedsRef`, which is what
+          // stops a gas upload from handing the electricity commit an empty
+          // (or worse, a gas) feed to replace with.
+          const split = splitSummaries(summaries);
+          const electricRows = groups.reduce((n, g) => n + g.readings.length, 0);
+          const gasPoints = extractGasPoints(groups);
+          if (electricRows > 0) {
+            billFeedsRef.current.push({
+              summaries: split.electric,
+              localTime: feed.localTime,
+              source: file.name,
+            });
+          }
+          if (gasPoints.length > 0) {
+            gasBillFeedsRef.current.push({
+              summaries: split.gas,
+              localTime: feed.localTime,
+              source: file.name,
+            });
+            gasPointsRef.current.push(...gasPoints);
+          }
           // A single-meter file is pre-picked; a multi-meter one stays null
           // until the review screen asks.
           resolve({
@@ -1208,13 +1599,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       });
 
     setParseIssue(null);
+    clearPendingFeeds();
     Promise.all(files.map(parseOne))
       .then((results) => {
         const total = results.reduce((n, r) => n + countUsableRows(r.groups), 0);
         if (total === 0) {
           // Nothing readable: keep the modal open and say exactly why, and
           // drop the bills parsed out of the same unreadable batch.
-          billFeedsRef.current = [];
+          clearPendingFeeds();
           setParseIssue(
             results.map((r) => r.issue).find(Boolean) ?? {
               ok: false,
@@ -1240,18 +1632,53 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             setShowUploadModal(false);
             return;
           }
-          commitReadings(only.groups[0].readings, "upload", only.summaries, only.notes);
-          // An upload REPLACES: this file is what the user asked to see, so
-          // an unrelated upload also replaces the panel (to nothing, if it
-          // carried no bills) instead of leaving a stranger's bill on screen.
-          commitBillFeed("replace");
+          // ONE document, possibly TWO commodities. Each half is committed
+          // only when the document actually carries rows for it — an empty
+          // commit is a wipe, and wiping the other commodity's bucket with an
+          // upload that never contained it is the defect this card closes.
+          const split = splitFeed({ groups: only.groups, summaries: only.summaries ?? [] });
+          if (split.gas.length > 0) {
+            commitGasReadings(split.gas, 'replace', split.gasSummaries, only.notes);
+            commitGasBillFeed('replace');
+          }
+          if (split.electric.length > 0) {
+            // An upload REPLACES: this file is what the user asked to see, so
+            // an unrelated upload also replaces the panel (to nothing, if it
+            // carried no bills) instead of leaving a stranger's bill on screen.
+            commitReadings(split.electric, 'upload', split.electricSummaries, only.notes);
+            commitBillFeed('replace');
+          }
+          // Open the section the file actually filled — and say which one it
+          // was, rather than leaving the user on the other dataset wondering
+          // whether the upload worked.
+          const primary = primaryCommodity(split);
+          if (primary) setCommodity(primary);
+          clearPendingFeeds();
+          return;
+        }
+        const hasElectricRows = results.some((r) => r.groups.some((g) => g.readings.length > 0));
+        if (!hasElectricRows) {
+          // Every file in the batch is gas: there is no electric range for
+          // the merge review to show, so an empty review screen would be a
+          // dead end. Commit the gas bucket directly — the user still
+          // confirmed the upload, and nothing about the electric dataset is
+          // addressed here.
+          commitGasReadings(
+            gasPointsRef.current,
+            'replace',
+            undefined,
+            results.flatMap((r) => r.notes ?? []),
+          );
+          commitGasBillFeed('replace');
+          setCommodity('gas');
+          clearPendingFeeds();
           return;
         }
         setPendingMerge(results);
         setShowUploadModal(false);
       })
       .catch((e) => {
-        billFeedsRef.current = [];
+        clearPendingFeeds();
         setParseIssue(
           isParseDiagnostic(e)
             ? e
@@ -1266,10 +1693,17 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       .finally(() => setParsing(false));
   };
 
-  /** Import the rows the merge review screen computed. */
+  /**
+   * Import the rows the merge review screen computed.
+   *
+   * The review screens ELECTRICITY (its merged range is an electric range),
+   * so the gas intervals the same batch parsed ride along and commit with
+   * it: one confirmation, both commodities, neither silently dropped.
+   */
   const chooseMerge = (readings: DataPoint[]) => {
     const files = pendingMerge ?? [];
     setPendingMerge(null);
+    const gasPoints = gasPointsRef.current;
     if (readings.length > 0) {
       // Every file in the merge review, bills included: the axis de-dupes
       // periods that two exports describe differently. The refusals from the
@@ -1277,20 +1711,28 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       commitReadings(
         readings,
         "upload",
-        files.flatMap((f) => f.summaries ?? []),
+        files.flatMap((f) => splitSummaries(f.summaries ?? []).electric),
         files.flatMap((f) => f.notes ?? []),
       );
       // The merged dataset IS those files, bills included (replace).
       commitBillFeed("replace");
-    } else {
-      billFeedsRef.current = [];
     }
+    if (gasPoints.length > 0) {
+      commitGasReadings(
+        gasPoints,
+        "replace",
+        undefined,
+        files.flatMap((f) => f.notes ?? []),
+      );
+      commitGasBillFeed("replace");
+    }
+    if (readings.length === 0 && gasPoints.length === 0) clearPendingFeeds();
   };
 
   /** Back out of the merge review without importing anything. */
   const cancelMerge = () => {
     setPendingMerge(null);
-    billFeedsRef.current = [];
+    clearPendingFeeds();
     setShowUploadModal(true);
   };
 
@@ -1305,12 +1747,29 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const pick = pendingUpload;
     const origin = pick?.origin;
     setPendingUpload(null);
-    if (readings.length === 0) return;
+    if (readings.length === 0) {
+      // A multi-UsagePoint GAS file: no electric row to pick, but the volume
+      // intervals are real data the user just chose to import. Commit them to
+      // the gas bucket — never to `energy_data_v2`, which is what an empty
+      // electric pick used to leave behind.
+      if (gasPointsRef.current.length > 0) {
+        commitGasReadings(gasPointsRef.current, "replace", undefined, pick?.notes);
+        commitGasBillFeed("replace");
+        setCommodity("gas");
+      }
+      return;
+    }
     // The refusals the file carried are raised by the commit below: choosing a
     // point is what makes the import real, so a cancelled pick never shows it.
     if (origin === "greenbutton") {
       commitReadings(mergeForWrite(rawDataRef.current, readings), "upload", pick?.summaries, pick?.notes);
       commitBillFeed("union");
+      // A live-sync pick can also carry volume (a multi-commodity feed):
+      // union it into the gas bucket with the same commit.
+      if (gasPointsRef.current.length > 0) {
+        commitGasReadings(gasPointsRef.current, "union", undefined, pick?.notes);
+        commitGasBillFeed("union");
+      }
       return;
     }
     commitReadings(readings, "upload", pick?.summaries, pick?.notes);
@@ -1320,7 +1779,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   /** Back out of the picker without importing anything. */
   const cancelUsagePoint = () => {
     setPendingUpload(null);
-    billFeedsRef.current = [];
+    clearPendingFeeds();
     setShowUploadModal(true);
   };
 
@@ -1349,6 +1808,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       commitReadings(loaded.readings, "example");
       // The bundled export carries no bills: an example dataset must not
       // keep showing a real customer's actual bill next to fake readings.
+      // ELECTRICITY ONLY — the example set is synthetic kWh, so it has no
+      // business clearing a gas bill feed it never contained.
+      clearPendingFeeds();
       billFeedsRef.current = [EMPTY_BILL_FEED];
       commitBillFeed("replace");
       return { ok: true };
@@ -1614,6 +2076,9 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     rawData, rateHistory, loading, parsing,
     // Wave L: the bill half of the feed (UsageSummary periods + its clock)
     billFeed,
+    // Commodity isolation (t_8a9038d6): the gas datasets + which section is
+    // showing. `setCommodity` is a VIEW switch only — it never routes a write.
+    gasData, gasBillFeed, commodity, setCommodity,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     viewScope, setViewScope,
@@ -1777,6 +2242,9 @@ export const APP_OWNED_STORAGE_KEYS: readonly string[] = [
   EXAMPLE_DATA_KEY,
   USAGE_SUMMARIES_KEY,
   LOCAL_TIME_KEY,
+  GAS_USAGE_SUMMARIES_KEY,
+  GAS_LOCAL_TIME_KEY,
+  COMMODITY_STORAGE_KEY,
   EXTRA_CHARGES_KEY,
   PLAN_TIMELINE_KEY,
   PLAN_STORAGE_KEY,

@@ -6,7 +6,9 @@
  *    modes (`quota`, `corrupt`) surface to the caller instead of being
  *    swallowed by a bare try/catch.
  *  - Data lives under the versioned key `energy_data_v2` with an explicit
- *    payload `{ version, uploadedAt, source, points }`.
+ *    payload `{ version, uploadedAt, source, points }` — ELECTRICITY ONLY.
+ *    Gas volume lives under `energy_gas_v2` (see ENERGY_GAS_KEY) and is
+ *    never written to, read as, or merged into the electric key.
  *  - The legacy v1 key `energy_data` (bare array of points) is migrated
  *    on read: parsed, re-written under the v2 key, then removed. Live users
  *    already have `energy_data` populated, so it is never dropped before a
@@ -27,9 +29,24 @@ export const ENERGY_KEY_V2 = 'energy_data_v2';
 export const LEGACY_ENERGY_KEY = 'energy_data';
 export const BILLING_DAY_KEY = 'billing_day';
 
+/**
+ * Natural gas lives under its OWN key (t_8a9038d6).
+ *
+ * `energy_data_v2` holds `DataPoint`s — `{timestamp, usage_kwh}` — and every
+ * consumer prices those as electricity. A gas extract carries cubic metres,
+ * so writing it there either wipes the electric dataset (a gas file's
+ * `g.readings` is empty) or lands m³ where kWh is assumed. The two keys are
+ * therefore disjoint by TYPE: a `GasPoint` has no `usage_kwh`, so it cannot
+ * pass `isDataPoint`, and an electric `DataPoint` cannot pass `isGasPoint`.
+ * Neither write path can address the other's key.
+ */
+export const ENERGY_GAS_KEY = 'energy_gas_v2';
+export const GAS_SCHEMA_VERSION = 1;
+
 /** Every localStorage key this app owns. Reset touches these and nothing else. */
 export const OUR_STORAGE_KEYS: readonly string[] = [
   ENERGY_KEY_V2,
+  ENERGY_GAS_KEY,
   LEGACY_ENERGY_KEY,
   BILLING_DAY_KEY,
 ];
@@ -39,6 +56,27 @@ export type StoredPayload = {
   uploadedAt: string;
   source: string;
   points: DataPoint[];
+};
+
+/**
+ * One gas interval. `volume_m3` is `raw × 10^powerOfTenMultiplier` computed
+ * by the parser against the ReadingType's own scale — never re-derived here,
+ * and never convertible to kWh by anything downstream.
+ */
+export type GasPoint = {
+  /** UTC epoch seconds of the interval start. */
+  timestamp: number;
+  /** Interval length in seconds when the feed states one. */
+  duration_s: number | null;
+  /** Cubic metres for that interval. */
+  volume_m3: number;
+};
+
+export type GasStoredPayload = {
+  version: number;
+  uploadedAt: string;
+  source: string;
+  points: GasPoint[];
 };
 
 export type StorageFailureReason = 'quota' | 'corrupt';
@@ -110,6 +148,40 @@ export function buildPayload(
   uploadedAt: string = new Date().toISOString(),
 ): StoredPayload {
   return { version: SCHEMA_VERSION, uploadedAt, source, points };
+}
+
+/**
+ * A gas interval — the MIRROR of `isDataPoint`, and deliberately
+ * mutually exclusive with it: `volume_m3` carries no `usage_kwh`, so a gas
+ * point can never be persisted (or later read back) as electricity.
+ */
+export function isGasPoint(value: unknown): value is GasPoint {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const point = value as Record<string, unknown>;
+  if (typeof point.timestamp !== 'number' || !Number.isFinite(point.timestamp)) return false;
+  if (typeof point.volume_m3 !== 'number' || !Number.isFinite(point.volume_m3)) return false;
+  if (point.volume_m3 < 0) return false;
+  return point.duration_s === null || (typeof point.duration_s === 'number' && Number.isFinite(point.duration_s));
+}
+
+export function isGasStoredPayload(value: unknown): value is GasStoredPayload {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.version === 'number' &&
+    typeof payload.uploadedAt === 'string' &&
+    typeof payload.source === 'string' &&
+    Array.isArray(payload.points) &&
+    payload.points.every(isGasPoint)
+  );
+}
+
+export function buildGasPayload(
+  points: GasPoint[],
+  source: string,
+  uploadedAt: string = new Date().toISOString(),
+): GasStoredPayload {
+  return { version: GAS_SCHEMA_VERSION, uploadedAt, source, points };
 }
 
 // --- Low level IO ----------------------------------------------------------
@@ -278,7 +350,61 @@ export function saveEnergyData(points: DataPoint[], options: SaveOptions = {}): 
   return ok(payload, warnings);
 }
 
-// --- Billing day -----------------------------------------------------------
+// --- Gas volume data -------------------------------------------------------
+
+/**
+ * Read the gas payload. Returns `value: null` when no gas file has ever been
+ * stored — the honest "no gas data yet" state, never a zeroed dataset that
+ * looks like an import that produced nothing.
+ *
+ * A corrupt gas key fails on its own terms and never degrades into "no
+ * data": reporting 0 points for a key that actually holds unreadable bytes
+ * would be a lie the user cannot act on.
+ */
+export function loadGasData(): StorageResult<GasStoredPayload | null> {
+  const current = safeGetItem(ENERGY_GAS_KEY);
+  if (!current.ok) return current;
+  const raw = current.value;
+  if (raw === null) return ok<GasStoredPayload | null>(null);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return fail<GasStoredPayload | null>('corrupt', `${ENERGY_GAS_KEY} is not valid JSON: ${describeError(err)}`);
+  }
+  if (!isGasStoredPayload(parsed)) {
+    return fail<GasStoredPayload | null>('corrupt', `${ENERGY_GAS_KEY} does not match the v${GAS_SCHEMA_VERSION} gas payload schema`);
+  }
+  return ok<GasStoredPayload | null>(parsed);
+}
+
+/**
+ * Persist gas intervals under the gas key.
+ *
+ * Never touches `energy_data_v2` or `energy_data`: a gas import rewrites the
+ * gas bucket only, which is what makes the two upload orders safe in both
+ * directions. Quota failures come back as `{ok:false, reason:'quota'}` so the
+ * caller raises the same notice row the electric write does.
+ */
+export function saveGasData(points: GasPoint[], options: SaveOptions = {}): StorageResult<GasStoredPayload> {
+  if (!Array.isArray(points) || !points.every(isGasPoint)) {
+    return fail<GasStoredPayload>('corrupt', t('storage.errSaveShape'));
+  }
+
+  const payload = buildGasPayload(points, options.source ?? 'upload', options.uploadedAt);
+
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(payload);
+  } catch (err) {
+    return fail<GasStoredPayload>('corrupt', `Payload is not serializable: ${describeError(err)}`);
+  }
+
+  const written = safeSetItem(ENERGY_GAS_KEY, serialized);
+  if (!written.ok) return fail<GasStoredPayload>('quota', written.detail);
+  return ok(payload, []);
+}
 
 export function loadBillingDay(): StorageResult<number | null> {
   const stored = safeGetItem(BILLING_DAY_KEY);
@@ -405,4 +531,13 @@ export function resetStoredData(extraKeys: readonly string[] = []): StorageResul
  */
 export function clearEnergyData(): StorageResult<string[]> {
   return removeKeys([ENERGY_KEY_V2, LEGACY_ENERGY_KEY]);
+}
+
+/**
+ * Drop ONLY the gas readings. Never called by an electric flow: clearing the
+ * electric example set (or a reset of one commodity) must leave the other
+ * commodity's dataset in place.
+ */
+export function clearGasData(): StorageResult<string[]> {
+  return removeKeys([ENERGY_GAS_KEY]);
 }
