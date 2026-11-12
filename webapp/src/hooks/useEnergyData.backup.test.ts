@@ -142,3 +142,169 @@ describe('useEnergyData — import', () => {
     expect(onBackupApplied).not.toHaveBeenCalled();
   });
 });
+
+/* ==========================================================================
+ * v3 — the gas dataset rides the backup too (t_578268b7):
+ * gas-only export, dual-commodity export, and an old (gas-less) backup
+ * restoring without touching what the gas keys hold.
+ * ========================================================================== */
+
+const GAS_STRING = JSON.stringify({
+  version: 1,
+  uploadedAt: '2026-11-01T00:00:00.000Z',
+  source: 'gas-upload',
+  points: [
+    { timestamp: 1704067200, duration_s: 3600, volume_m3: 1.5 },
+    { timestamp: 1704070800, duration_s: 3600, volume_m3: 0.75 },
+  ],
+});
+const GAS_SUMMARIES_STRING = JSON.stringify([
+  { source: 'UsageSummary', start: 1704067200, duration: 2592000, items: [], volume: null },
+]);
+const GAS_CLOCK_STRING = JSON.stringify({
+  tzOffset: -18000,
+  dstOffset: 3600,
+  dstStartRule: null,
+  dstEndRule: null,
+});
+
+function seedGas() {
+  localStorage.setItem('energy_gas_v2', GAS_STRING);
+  localStorage.setItem('gas_usage_summaries', GAS_SUMMARIES_STRING);
+  localStorage.setItem('gas_local_time_parameters', GAS_CLOCK_STRING);
+}
+
+async function renderEmpty(onBackupApplied = vi.fn()) {
+  const hook = renderHook(() => useEnergyData({ onBackupApplied }));
+  await waitFor(() => expect(hook.result.current.loading).toBe(false));
+  return { ...hook, onBackupApplied };
+}
+
+describe('useEnergyData — gas backup (t_578268b7)', () => {
+  it('exports a gas-only browser instead of reporting nothing to back up', async () => {
+    seedGas();
+    const { result } = await renderEmpty();
+    expect(result.current.rawData).toHaveLength(0);
+
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+    expect(out!).not.toBeNull();
+
+    const parsed = parseBackup(out!.text);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.payload.energy_data).toEqual([]);
+    expect(parsed.value.payload.gas_data).toEqual(JSON.parse(GAS_STRING));
+    expect(parsed.value.payload.gas_usage_summaries).toHaveLength(1);
+    expect(parsed.value.payload.gas_local_time_parameters).toEqual(JSON.parse(GAS_CLOCK_STRING));
+    expect(out!.filename).toMatch(/^energy-backup_\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('a gas-only export → restore on a fresh browser reproduces all three gas keys byte for byte', async () => {
+    seedGas();
+    const { result, onBackupApplied } = await renderEmpty();
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+
+    // The cleared profile a fresh browser starts from.
+    localStorage.clear();
+
+    const file = new File([out!.text], out!.filename, { type: 'application/json' });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+
+    expect(res!).toEqual({ ok: true, filename: out!.filename });
+    expect(localStorage.getItem('energy_gas_v2')).toBe(GAS_STRING);
+    expect(localStorage.getItem('gas_usage_summaries')).toBe(GAS_SUMMARIES_STRING);
+    expect(localStorage.getItem('gas_local_time_parameters')).toBe(GAS_CLOCK_STRING);
+    // No empty electric dataset is invented for a gas-only profile.
+    expect(localStorage.getItem('energy_data_v2')).toBeNull();
+    expect(localStorage.getItem('energy_data')).toBeNull();
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('a dual-commodity export → restore puts both halves back (gas byte for byte)', async () => {
+    seedStorage();
+    seedGas();
+    const { result, onBackupApplied } = await renderLoaded();
+
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+    expect(out!).not.toBeNull();
+
+    localStorage.clear();
+    const file = new File([out!.text], out!.filename, { type: 'application/json' });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+    expect(res!.ok).toBe(true);
+
+    // Gas: byte-identical to what the exporting browser stored.
+    expect(localStorage.getItem('energy_gas_v2')).toBe(GAS_STRING);
+    expect(localStorage.getItem('gas_usage_summaries')).toBe(GAS_SUMMARIES_STRING);
+    expect(localStorage.getItem('gas_local_time_parameters')).toBe(GAS_CLOCK_STRING);
+    // Electric: restored exactly as it was before this feature existed.
+    const restored = loadEnergyData();
+    expect(restored.ok && restored.value?.points).toEqual(rows);
+    expect(localStorage.getItem('billing_day')).toBe('5');
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('restoring an OLD (v2, gas-less) backup leaves existing gas data alone', async () => {
+    seedStorage();
+    seedGas();
+    const { result, onBackupApplied } = await renderLoaded();
+    const gasBefore = [
+      localStorage.getItem('energy_gas_v2'),
+      localStorage.getItem('gas_usage_summaries'),
+      localStorage.getItem('gas_local_time_parameters'),
+    ];
+
+    // What a pre-v3 build exported: stamped version 2, no gas section in it.
+    const oldDoc = {
+      ...buildBackupDocument({
+        energyData: [{ timestamp: 1, usage_kwh: 9.9 }],
+        billingDay: 12,
+        exportedAt: new Date('2026-10-02T12:00:00.000Z'),
+      }),
+      version: 2,
+    };
+    const file = new File([serializeBackup(oldDoc)], 'energy-backup_old.json', {
+      type: 'application/json',
+    });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+    expect(res!.ok).toBe(true);
+
+    // The gas dataset is not deleted, not rewritten, not touched.
+    expect([
+      localStorage.getItem('energy_gas_v2'),
+      localStorage.getItem('gas_usage_summaries'),
+      localStorage.getItem('gas_local_time_parameters'),
+    ]).toEqual(gasBefore);
+    // …and the old file's own electric half still restores.
+    const oldEnergy = loadEnergyData();
+    expect(oldEnergy.ok && oldEnergy.value?.points).toEqual([{ timestamp: 1, usage_kwh: 9.9 }]);
+    expect(localStorage.getItem('billing_day')).toBe('12');
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('a lone gas clock is not a dataset — export still reports nothing to back up', async () => {
+    localStorage.setItem('gas_local_time_parameters', GAS_CLOCK_STRING);
+    const { result } = await renderEmpty();
+    act(() => {
+      expect(result.current.exportBackup()).toBeNull();
+    });
+  });
+});

@@ -22,7 +22,7 @@
 
 /* Wave U — storage failures are surfaced in the UI, so they translate. */
 import { t } from '@/i18n';
-import type { DataPoint } from './energy';
+import type { DataPoint, LocalTimeParams, UsageSummary } from './energy';
 
 export const SCHEMA_VERSION = 2;
 export const ENERGY_KEY_V2 = 'energy_data_v2';
@@ -42,6 +42,23 @@ export const BILLING_DAY_KEY = 'billing_day';
  */
 export const ENERGY_GAS_KEY = 'energy_gas_v2';
 export const GAS_SCHEMA_VERSION = 1;
+
+/**
+ * The gas half of the bill feed (t_8a9038d6) — declared HERE, beside the gas
+ * readings key, because `lib/backup.ts` must name them too (a restore writes
+ * them) and importing this hook from there — or from sync.ts — would be a
+ * cycle. `hooks/useDashboard.ts` re-exports them so every existing
+ * `import { GAS_USAGE_SUMMARIES_KEY } from "@/hooks/useDashboard"` keeps
+ * working.
+ *
+ * Before the commodity split a single `usage_summaries` array held both
+ * commodities, and `commitBillFeed("replace")` rewrote it wholesale — so
+ * uploading gas replaced every electricity bill and vice versa. The two
+ * keys are written by their own commit path and are never addressed by the
+ * other's.
+ */
+export const GAS_USAGE_SUMMARIES_KEY = 'gas_usage_summaries';
+export const GAS_LOCAL_TIME_KEY = 'gas_local_time_parameters';
 
 /** Every localStorage key this app owns. Reset touches these and nothing else. */
 export const OUR_STORAGE_KEYS: readonly string[] = [
@@ -404,6 +421,71 @@ export function saveGasData(points: GasPoint[], options: SaveOptions = {}): Stor
   const written = safeSetItem(ENERGY_GAS_KEY, serialized);
   if (!written.ok) return fail<GasStoredPayload>('quota', written.detail);
   return ok(payload, []);
+}
+
+/**
+ * A gas billing period a backup will carry (t_578268b7): what this build's
+ * own reader (`readStoredRows`) accepts — numeric start/duration and an
+ * items array — plus the one rule the reader is looser about: every item
+ * must be an OBJECT. Real feeds only ever produce object line items, so
+ * refusing primitives here costs real data nothing and stops a hostile
+ * backup file parking them in localStorage through a restore.
+ *
+ * ONE predicate, shared by the exporter below and `lib/backup.ts`'s
+ * importer: whatever a build of ours writes is exactly what the reader
+ * accepts, so export → import can never drift apart.
+ */
+export function isReadableGasSummary(value: unknown): value is UsageSummary {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const s = value as Record<string, unknown>;
+  if (typeof s.start !== 'number' || typeof s.duration !== 'number') return false;
+  return Array.isArray(s.items) && s.items.every((i) => !!i && typeof i === 'object' && !Array.isArray(i));
+}
+
+/** The gas clock rules this build reads: an object carrying a numeric tzOffset. */
+export function isReadableLocalTime(value: unknown): value is LocalTimeParams {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof (value as LocalTimeParams).tzOffset === 'number'
+  );
+}
+
+/**
+ * The gas bill half EXACTLY as stored — the byte-faithful read a backup
+ * export needs (t_578268b7).
+ *
+ * `readStoredGasBillFeed` in `hooks/useDashboard.ts` is the NORMALIZED read
+ * view for rendering: it unions rows still parked in the legacy electric
+ * key, sorts by `start` and defaults a missing `volume`. Every one of those
+ * steps can rewrite bytes, so a document built from it could not promise
+ * that a restore reproduces the stored dataset byte-for-byte.
+ *
+ * This is deliberately the other contract: the original row objects, in
+ * stored order, with only the readability filter `readStoredRows` applies —
+ * a row this build's own reader would drop is dropped here too, so whatever
+ * a backup carries is something the app can read back. Rows still parked in
+ * the pre-split legacy `usage_summaries` key are NOT unioned here: the boot
+ * migration (`ensureBillPartition`) moves them before an export can run,
+ * and this module must not import the hook to reach them.
+ *
+ * Absent or corrupt keys read as empty — the honest "no gas bills yet",
+ * never a throw: a backup of the readable half beats no backup at all.
+ */
+export function loadGasBillSections(): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
+  const readJson = (key: string): unknown => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null ? null : JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+  const rows = readJson(GAS_USAGE_SUMMARIES_KEY);
+  const summaries = Array.isArray(rows) ? rows.filter(isReadableGasSummary) : [];
+  const clock = readJson(GAS_LOCAL_TIME_KEY);
+  return { summaries, localTime: isReadableLocalTime(clock) ? clock : null };
 }
 
 export function loadBillingDay(): StorageResult<number | null> {

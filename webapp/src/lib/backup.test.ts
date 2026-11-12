@@ -20,7 +20,7 @@ import {
   storageValuesFromBackup,
   type BackupDocument,
 } from './backup';
-import { EMPTY_EXTRA_CHARGES, type DataPoint } from './energy';
+import { EMPTY_EXTRA_CHARGES, type DataPoint, type LocalTimeParams, type UsageSummary } from './energy';
 import { type PlanTimelineEntry } from './planTimeline';
 
 const rows: DataPoint[] = [
@@ -386,15 +386,15 @@ describe('plan_timeline in the backup', () => {
  * ========================================================================== */
 
 describe('backup schema v2 (Wave N multi-device sync)', () => {
-  it('stamps v2 and carries the selected plan + example flag', () => {
+  it('stamps the current version and carries the selected plan + example flag', () => {
     const doc = buildBackupDocument({
       energyData: rows,
       billingDay: 7,
       selectedPlan: 'Tiered',
       isExample: true,
-      exportedAt: new Date('2026-10-07T12:00:00.000Z'),
+      exportedAt: new Date('2026-10-07T12:00:00Z'),
     });
-    expect(doc.version).toBe(2);
+    expect(doc.version).toBe(BACKUP_VERSION);
     expect(doc.payload.selected_plan).toBe('Tiered');
     expect(doc.payload.energy_data_is_example).toBe(true);
     const round = parseBackup(serializeBackup(doc));
@@ -438,7 +438,7 @@ describe('backup schema v2 (Wave N multi-device sync)', () => {
     // The guard that matters: bumping BACKUP_VERSION without adding the
     // version we just stopped writing would silently reject our own files,
     // so the reader's promise and the writer's stamp are asserted together.
-    expect([...SUPPORTED_BACKUP_VERSIONS].sort()).toEqual([1, 2]);
+    expect([...SUPPORTED_BACKUP_VERSIONS].sort()).toEqual([1, 2, 3]);
     expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION)).toBe(true);
     expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION + 1)).toBe(false);
   });
@@ -472,5 +472,196 @@ describe('backup schema v2 (Wave N multi-device sync)', () => {
     );
     expect(res.ok).toBe(true);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});
+
+/* ==========================================================================
+ * v3 — the gas dataset rides the backup too (t_578268b7)
+ * ========================================================================== */
+
+const GAS_POINTS = [
+  { timestamp: 1704067200, duration_s: 3600, volume_m3: 1.5 },
+  { timestamp: 1704070800, duration_s: 3600, volume_m3: 0.75 },
+];
+
+const GAS_PAYLOAD = {
+  version: 1,
+  uploadedAt: '2026-11-01T00:00:00.000Z',
+  source: 'gas-upload',
+  points: GAS_POINTS,
+};
+
+const gasSummary = (start: number): UsageSummary => ({
+  source: 'UsageSummary',
+  start,
+  duration: 2592000,
+  startDate: '2026-01-01',
+  endDate: '2026-01-31',
+  days: 31,
+  billLastPeriod: null,
+  billToDate: null,
+  costAdditionalLastPeriod: null,
+  currency: 124,
+  consumption: null,
+  volume: null,
+  items: [],
+});
+
+const GAS_CLOCK: LocalTimeParams = {
+  tzOffset: -18000,
+  dstOffset: 3600,
+  dstStartRule: '360E2000',
+  dstEndRule: '360E2000',
+};
+
+describe('v3 gas section — build → parse → localStorage writes (t_578268b7)', () => {
+  it('carries gas readings, bills and clock, byte for byte', () => {
+    const doc = buildBackupDocument({
+      energyData: [],
+      billingDay: 7,
+      gasData: GAS_PAYLOAD,
+      gasSummaries: [gasSummary(1704067200), gasSummary(1704326400)],
+      gasLocalTime: GAS_CLOCK,
+      exportedAt: new Date('2026-11-12T00:00:00Z'),
+    });
+    // A gas-only document is legal — energy_data empty, but for a reason the
+    // reader can verify rather than a trap it must guess at.
+    expect(doc.payload.energy_data).toEqual([]);
+
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    expect(round.value.payload.gas_data).toEqual(GAS_PAYLOAD);
+    expect(round.value.payload.gas_usage_summaries).toHaveLength(2);
+    expect(round.value.payload.gas_local_time_parameters).toEqual(GAS_CLOCK);
+
+    const values = storageValuesFromBackup(round.value);
+    // The three gas keys, byte-identical to what the export read.
+    expect(values.energy_gas_v2).toBe(JSON.stringify(GAS_PAYLOAD));
+    expect(values.gas_usage_summaries).toBe(
+      JSON.stringify([gasSummary(1704067200), gasSummary(1704326400)]),
+    );
+    expect(values.gas_local_time_parameters).toBe(JSON.stringify(GAS_CLOCK));
+    // The electric writes are exactly the ones they always were.
+    expect(Object.keys(values).sort()).toEqual([
+      'billing_day',
+      'energy_data',
+      'energy_data_is_example',
+      'energy_gas_v2',
+      'extra_charges',
+      'gas_local_time_parameters',
+      'gas_usage_summaries',
+      'plan_timeline',
+    ]);
+  });
+
+  it('accepts empty energy_data ONLY because a gas section proves the document holds data', () => {
+    const withGas = parseBackup(
+      valid({ payload: { energy_data: [], billing_day: 7, gas_data: GAS_PAYLOAD } }),
+    );
+    expect(withGas.ok).toBe(true);
+    if (withGas.ok) expect(withGas.value.payload.energy_data).toEqual([]);
+
+    const without = parseBackup(valid({ payload: { energy_data: [], billing_day: 1 } }));
+    expect(without.ok).toBe(false);
+    if (!without.ok) expect(without.error).toMatch(/no readings/i);
+  });
+
+  it('refuses a gas_data section that is not a valid payload, or one with no points', () => {
+    const notPayload = parseBackup(
+      valid({ payload: { energy_data: rows, billing_day: 1, gas_data: { points: 'nope' } } }),
+    );
+    expect(notPayload.ok).toBe(false);
+    if (!notPayload.ok) expect(notPayload.error).toMatch(/gas_data/);
+
+    const noPoints = parseBackup(
+      valid({
+        payload: {
+          energy_data: rows,
+          billing_day: 1,
+          gas_data: { version: 1, uploadedAt: 'x', source: 'y', points: [] },
+        },
+      }),
+    );
+    expect(noPoints.ok).toBe(false);
+    if (!noPoints.ok) expect(noPoints.error).toMatch(/gas section contains no readings/i);
+  });
+
+  it('refuses a gas bill row or clock it cannot read, naming it', () => {
+    const badRow = parseBackup(
+      valid({
+        payload: {
+          energy_data: [],
+          billing_day: 1,
+          gas_data: GAS_PAYLOAD,
+          gas_usage_summaries: [gasSummary(1), 'not-a-period'],
+        },
+      }),
+    );
+    expect(badRow.ok).toBe(false);
+    if (!badRow.ok) expect(badRow.error).toMatch(/entry 2/);
+
+    const notArray = parseBackup(
+      valid({
+        payload: {
+          energy_data: [],
+          billing_day: 1,
+          gas_data: GAS_PAYLOAD,
+          gas_usage_summaries: { a: 1 },
+        },
+      }),
+    );
+    expect(notArray.ok).toBe(false);
+    if (!notArray.ok) expect(notArray.error).toMatch(/not an array/i);
+
+    const badClock = parseBackup(
+      valid({
+        payload: {
+          energy_data: [],
+          billing_day: 1,
+          gas_data: GAS_PAYLOAD,
+          gas_local_time_parameters: { tzOffset: 'EST' },
+        },
+      }),
+    );
+    expect(badClock.ok).toBe(false);
+    if (!badClock.ok) expect(badClock.error).toMatch(/gas_local_time_parameters/);
+  });
+
+  it('reads an explicit empty gas_usage_summaries as ABSENCE, never as "clear the bills"', () => {
+    const res = parseBackup(
+      valid({ payload: { energy_data: rows, billing_day: 1, gas_usage_summaries: [] } }),
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.payload.gas_usage_summaries).toBeUndefined();
+    expect(storageValuesFromBackup(res.value).gas_usage_summaries).toBeUndefined();
+  });
+
+  it('writes no gas keys for an old (v2) document — restoring one leaves gas alone', () => {
+    const res = parseBackup(valid({ version: 2, payload: { energy_data: rows, billing_day: 7 } }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.version).toBe(2);
+    const values = storageValuesFromBackup(res.value);
+    expect(Object.keys(values)).not.toContain('energy_gas_v2');
+    expect(Object.keys(values)).not.toContain('gas_usage_summaries');
+    expect(Object.keys(values)).not.toContain('gas_local_time_parameters');
+  });
+
+  it('drops unknown fields inside gas_data — the whitelist rule reaches the gas section', () => {
+    const hostile = valid({
+      payload: { energy_data: rows, billing_day: 1, gas_data: { ...GAS_PAYLOAD, smuggled: 'x' } },
+    });
+    const res = parseBackup(hostile);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.payload.gas_data).toBeDefined();
+    expect(Object.keys(res.value.payload.gas_data!).sort()).toEqual([
+      'points',
+      'source',
+      'uploadedAt',
+      'version',
+    ]);
   });
 });

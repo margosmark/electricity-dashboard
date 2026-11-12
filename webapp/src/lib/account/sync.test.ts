@@ -25,7 +25,7 @@ import {
 } from "./sync";
 import { buildBackupDocument, parseBackup, serializeBackup, BACKUP_SCHEMA, BACKUP_VERSION, EXAMPLE_DATA_KEY } from "@/lib/backup";
 import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
-import { BILLING_DAY_KEY, ENERGY_KEY_V2, LEGACY_ENERGY_KEY } from "@/lib/storage";
+import { BILLING_DAY_KEY, ENERGY_GAS_KEY, ENERGY_KEY_V2, GAS_LOCAL_TIME_KEY, GAS_USAGE_SUMMARIES_KEY, LEGACY_ENERGY_KEY } from "@/lib/storage";
 
 const ROWS = [
   { timestamp: 1704067200, usage_kwh: 1.5 },
@@ -186,6 +186,16 @@ describe("revision bookkeeping + wipe", () => {
   it("removes the dataset, the revision AND the derived key on logout", () => {
     seedLocal();
     localStorage.setItem(LEGACY_ENERGY_KEY, JSON.stringify(ROWS));
+    // The gas dataset rides in SYNC_DATASET_KEYS too (t_578268b7): a logout
+    // must take BOTH commodities, so seed one to prove the wipe reaches it.
+    localStorage.setItem(ENERGY_GAS_KEY, JSON.stringify({
+      version: 1,
+      uploadedAt: "2026-01-01T00:00:00.000Z",
+      source: "gas-fixture",
+      points: [{ timestamp: 1704067200, duration_s: 3600, volume_m3: 2.5 }],
+    }));
+    localStorage.setItem(GAS_USAGE_SUMMARIES_KEY, JSON.stringify([{ start: 1704067200, duration: 2592000, items: [] }]));
+    localStorage.setItem(GAS_LOCAL_TIME_KEY, JSON.stringify({ tzOffset: -18000, dstOffset: 3600, dstStartRule: null, dstEndRule: null }));
     setLocalRev(3);
     localStorage.setItem(ACCOUNT_KEY_ITEM, "Zm9vYmFy");
 
@@ -214,5 +224,128 @@ describe("session key storage", () => {
     expect(loadSessionKey()).toBe("abc123");
     clearSessionKey();
     expect(loadSessionKey()).toBeNull();
+  });
+});
+
+/* ==========================================================================
+ * v3 — the gas dataset syncs too (t_578268b7)
+ * ========================================================================== */
+
+const GAS_PAYLOAD = {
+  version: 1,
+  uploadedAt: "2026-11-01T00:00:00.000Z",
+  source: "gas-fixture",
+  points: [{ timestamp: 1704067200, duration_s: 3600, volume_m3: 2.5 }],
+};
+const GAS_STRING = JSON.stringify(GAS_PAYLOAD);
+const GAS_SUMMARIES_STRING = JSON.stringify([{ start: 1704067200, duration: 2592000, items: [] }]);
+const GAS_CLOCK_STRING = JSON.stringify({ tzOffset: -18000, dstOffset: 3600, dstStartRule: null, dstEndRule: null });
+
+function seedGas() {
+  localStorage.setItem(ENERGY_GAS_KEY, GAS_STRING);
+  localStorage.setItem(GAS_USAGE_SUMMARIES_KEY, GAS_SUMMARIES_STRING);
+  localStorage.setItem(GAS_LOCAL_TIME_KEY, GAS_CLOCK_STRING);
+}
+
+describe("gas dataset sync (t_578268b7)", () => {
+  it("treats a gas-only browser as holding data worth syncing", () => {
+    seedGas();
+    expect(hasLocalData()).toBe(true);
+    const doc = readLocalDocument();
+    expect(doc).not.toBeNull();
+    expect(doc!.payload.energy_data).toEqual([]);
+    expect(doc!.payload.gas_data).toEqual(GAS_PAYLOAD);
+    expect(doc!.payload.gas_usage_summaries).toHaveLength(1);
+    expect(doc!.payload.gas_local_time_parameters).toEqual(JSON.parse(GAS_CLOCK_STRING));
+  });
+
+  it("round-trips the gas dataset byte for byte: read → serialize → apply → read", () => {
+    seedLocal();
+    seedGas();
+    const before = readLocalDocument()!;
+    const reparsed = parseBackup(serializeBackup(before));
+    expect(reparsed.ok).toBe(true);
+    applyDocument(reparsed.ok ? reparsed.value : before);
+    // The three stored gas keys come back byte-identical…
+    expect(localStorage.getItem(ENERGY_GAS_KEY)).toBe(GAS_STRING);
+    expect(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)).toBe(GAS_SUMMARIES_STRING);
+    expect(localStorage.getItem(GAS_LOCAL_TIME_KEY)).toBe(GAS_CLOCK_STRING);
+    // …and the document after a pull equals the document before the push.
+    const after = readLocalDocument()!;
+    expect(after.payload).toEqual(before.payload);
+    expect(after.payload.energy_data).toEqual(ROWS);
+  });
+
+  it("pulling an electricity-only document leaves this device's gas alone", () => {
+    seedLocal();
+    seedGas();
+    const gasBefore = [
+      localStorage.getItem(ENERGY_GAS_KEY),
+      localStorage.getItem(GAS_USAGE_SUMMARIES_KEY),
+      localStorage.getItem(GAS_LOCAL_TIME_KEY),
+    ];
+    applyDocument(buildBackupDocument({ energyData: ROWS, billingDay: 9 }));
+    expect([
+      localStorage.getItem(ENERGY_GAS_KEY),
+      localStorage.getItem(GAS_USAGE_SUMMARIES_KEY),
+      localStorage.getItem(GAS_LOCAL_TIME_KEY),
+    ]).toEqual(gasBefore);
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2)!)).toMatchObject({ points: ROWS });
+  });
+
+  it("applying a gas-only document never touches the electric readings", () => {
+    seedLocal();
+    seedGas();
+    const electricBefore = localStorage.getItem(ENERGY_KEY_V2)!;
+    const { written } = applyDocument(
+      buildBackupDocument({
+        energyData: [],
+        billingDay: 7,
+        gasData: GAS_PAYLOAD,
+        gasSummaries: [
+          {
+            source: "UsageSummary",
+            start: 1704067200,
+            duration: 2592000,
+            startDate: "2026-01-01",
+            endDate: "2026-01-31",
+            days: 31,
+            billLastPeriod: null,
+            billToDate: null,
+            costAdditionalLastPeriod: null,
+            currency: 124,
+            consumption: null,
+            volume: null,
+            items: [],
+          },
+        ],
+      }),
+    );
+    expect(written).not.toContain(ENERGY_KEY_V2);
+    expect(localStorage.getItem(ENERGY_KEY_V2)).toBe(electricBefore);
+    expect(localStorage.getItem(ENERGY_GAS_KEY)).toBe(GAS_STRING);
+    expect(written).toContain(GAS_USAGE_SUMMARIES_KEY);
+  });
+
+  it("changes the fingerprint when ONLY gas changes", () => {
+    seedLocal();
+    const base = documentFingerprint(readLocalDocument()!);
+    seedGas();
+    expect(documentFingerprint(readLocalDocument()!)).not.toBe(base);
+  });
+
+  it("keeps a corrupt electric half from blocking a valid gas sync — with energy_data: []", () => {
+    seedGas();
+    localStorage.setItem(ENERGY_KEY_V2, "{not json");
+    const doc = readLocalDocument();
+    expect(doc).not.toBeNull();
+    expect(doc!.payload.energy_data).toEqual([]);
+    expect(doc!.payload.gas_data).toEqual(GAS_PAYLOAD);
+  });
+
+  it("still returns null when the browser holds no rows at all (clock or nothing)", () => {
+    localStorage.setItem(GAS_LOCAL_TIME_KEY, GAS_CLOCK_STRING);
+    expect(readLocalDocument()).toBeNull();
+    expect(hasLocalData()).toBe(false);
   });
 });
