@@ -22,7 +22,7 @@ import {
 } from "@/lib/energy";
 // Commodity 7: gas enrichment rides the summaries themselves (interval block
 // per period + supplier label) so backup/restore needs no second channel.
-import { enrichGasSummaries, isGasFeed } from "@/lib/gasBillUi";
+import { enrichGasSummaries, isGasFeed, isGasSummary } from "@/lib/gasBillUi";
 // The billing axis — the file's OWN periods as the view's timeline (this
 // wave's whole idea), with billing_day as the fallback when it has none.
 import { buildBillingAxis, dateWindowOf, periodAt, stepPeriod, type BillingAxis } from "@/lib/billingAxis";
@@ -60,7 +60,7 @@ import {
 // disagree about what a gas document is.
 import {
   type Commodity,
-  extractGasPoints, primaryCommodity, sortGasPoints,
+  commodityPresence, extractGasPoints, primaryCommodity, sortGasPoints,
   splitFeed, splitSummaries, unionGasPoints,
 } from "@/lib/commodity";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
@@ -708,6 +708,21 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * the panels read and which section an import opens on.
    */
   const [commodity, setCommodityState] = useState<Commodity>(() => commoditySelection.read());
+
+  /**
+   * What the last import was DETECTED as (t_8a9038d6) — the truthful answer
+   * to "did my file import, and as what?". The section switch already opens
+   * on the commodity that got data; this says it out loud, including the
+   * ambiguous case: a document carrying BOTH halves reports both instead of
+   * pretending it was one commodity. Cleared by the next upload.
+   */
+  const [commodityNotice, setCommodityNotice] = useState<Commodity | 'both' | null>(null);
+  const reportDetection = (electricity: boolean, gas: boolean) => {
+    setCommodityNotice(
+      electricity && gas ? 'both' : gas ? 'gas' : electricity ? 'electricity' : null,
+    );
+  };
+  const dismissCommodityNotice = useCallback(() => setCommodityNotice(null), []);
   const commodityRef = useRef<Commodity>(commodity);
   const setCommodity = useCallback((next: Commodity) => {
     commodityRef.current = next;
@@ -1642,6 +1657,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           // Nothing readable: keep the modal open and say exactly why, and
           // drop the bills parsed out of the same unreadable batch.
           clearPendingFeeds();
+          reportDetection(false, false);
           setParseIssue(
             results.map((r) => r.issue).find(Boolean) ?? {
               ok: false,
@@ -1686,6 +1702,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           // Open the section the file actually filled — and say which one it
           // was, rather than leaving the user on the other dataset wondering
           // whether the upload worked.
+          const presence = commodityPresence(split);
+          reportDetection(presence.electricity, presence.gas);
           const primary = primaryCommodity(split);
           if (primary) setCommodity(primary);
           clearPendingFeeds();
@@ -1705,6 +1723,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             results.flatMap((r) => r.notes ?? []),
           );
           commitGasBillFeed('replace');
+          reportDetection(false, true);
           setCommodity('gas');
           clearPendingFeeds();
           return;
@@ -1761,6 +1780,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       );
       commitGasBillFeed("replace");
     }
+    reportDetection(
+      readings.length > 0 || files.some((f) => (f.summaries ?? []).some((s) => !isGasSummary(s))),
+      gasPoints.length > 0 || files.some((f) => (f.summaries ?? []).some((s) => isGasSummary(s))),
+    );
     if (readings.length === 0 && gasPoints.length === 0) clearPendingFeeds();
   };
 
@@ -2114,6 +2137,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     // Commodity isolation (t_8a9038d6): the gas datasets + which section is
     // showing. `setCommodity` is a VIEW switch only — it never routes a write.
     gasData, gasBillFeed, commodity, setCommodity,
+    // What the last import was detected as (reported, never guessed)
+    commodityNotice, dismissCommodityNotice,
     showUploadModal, setShowUploadModal,
     billingDay, startDate, endDate, setStartDate, setEndDate,
     viewScope, setViewScope,

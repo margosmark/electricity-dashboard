@@ -337,7 +337,11 @@
     "commodity.switchLabel": "Choose which energy commodity to view",
     "import.gasReviewBody": "This browser already holds {existing} gas intervals and the file carries {incoming}. Nothing is written until you choose.",
     "import.gasIntervals": "{count} gas intervals",
-    "import.detectedGas": "This file is natural gas data (m³) — it goes to the Gas section, never to your electricity readings."
+    "import.detectedGas": "This file is natural gas data (m³) — it goes to the Gas section, never to your electricity readings.",
+    "commodity.detectedGas": "Detected: natural gas (m³) — imported into the Gas section.",
+    "commodity.detectedElectricity": "Detected: electricity (kWh) — imported into the Electricity section.",
+    "commodity.detectedBoth": "Detected: this file contains BOTH electricity and gas — each half was imported into its own section.",
+    "commodity.dismiss": "Dismiss"
   },
   "fr": {
     "app.title": "Ontario Energy Optimizer",
@@ -677,6 +681,10 @@
     "commodity.switchLabel": "Choisir le type d'énergie à afficher",
     "import.gasReviewBody": "Ce navigateur contient déjà {existing} intervalles de gaz et le fichier en contient {incoming}. Rien n'est écrit avant votre choix.",
     "import.gasIntervals": "{count} intervalles de gaz",
-    "import.detectedGas": "Ce fichier contient des données de gaz naturel (m³) — il va vers la section Gaz, jamais vers vos relevés d'électricité."
+    "import.detectedGas": "Ce fichier contient des données de gaz naturel (m³) — il va vers la section Gaz, jamais vers vos relevés d'électricité.",
+    "commodity.detectedGas": "Détecté : gaz naturel (m³) — importé dans la section Gaz.",
+    "commodity.detectedElectricity": "Détecté : électricité (kWh) — importé dans la section Électricité.",
+    "commodity.detectedBoth": "Détecté : ce fichier contient ET de l'électricité ET du gaz — chaque moitié a été importée dans sa propre section.",
+    "commodity.dismiss": "Fermer"
   }
 }

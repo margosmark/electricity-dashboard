@@ -112,6 +112,8 @@ describe('commodity probe — synthetic fixtures only', () => {
     await upload(result, ELEC_XML, 'electric.xml');
     expect(result.current.rawData).toHaveLength(216);
     expect(result.current.commodity).toBe('electricity');
+    // The upload SAYS what it was detected as (truthful reporting).
+    expect(result.current.commodityNotice).toBe('electricity');
 
     await upload(result, GAS_XML, 'gas.xml');
     await waitFor(() => expect(result.current.gasData.length).toBeGreaterThan(0));
@@ -124,8 +126,9 @@ describe('commodity probe — synthetic fixtures only', () => {
     expect(after.electricIsGasFeed).toBe(false); // no gas period on the electric side
     expect(after.gasBills).toBe(10);
     expect(after.gasIsGasFeed).toBe(true);
-    // The gas upload opened the section it filled.
+    // The gas upload opened the section it filled and said so.
     expect(result.current.commodity).toBe('gas');
+    expect(result.current.commodityNotice).toBe('gas');
     // Keys are disjoint and both present.
     expect(localStorage.getItem(ENERGY_KEY_V2)).not.toBeNull();
     expect(localStorage.getItem(ENERGY_GAS_KEY)).not.toBeNull();
@@ -140,6 +143,7 @@ describe('commodity probe — synthetic fixtures only', () => {
     await upload(result, GAS_XML, 'gas.xml');
     await waitFor(() => expect(result.current.gasData.length).toBeGreaterThan(0));
     expect(result.current.commodity).toBe('gas');
+    expect(result.current.commodityNotice).toBe('gas');
 
     await upload(result, ELEC_XML, 'electric.xml');
     await waitFor(() => expect(result.current.rawData.length).toBeGreaterThan(0));
@@ -153,6 +157,7 @@ describe('commodity probe — synthetic fixtures only', () => {
     expect(after.gasBills).toBe(10);
     expect(after.gasIsGasFeed).toBe(true);
     expect(result.current.commodity).toBe('electricity'); // opened what it filled
+    expect(result.current.commodityNotice).toBe('electricity');
   }, 30_000);
 
   it('a reload (fresh hook) reads BOTH datasets back', async () => {

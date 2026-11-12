@@ -120,6 +120,7 @@ export default function Dashboard() {
     billFeed,
     // Commodity isolation (t_8a9038d6)
     gasData, gasBillFeed, commodity, setCommodity,
+    commodityNotice, dismissCommodityNotice,
     // The billing axis: the file's own periods as the view's timeline.
     axis,
     // A restored backup must reach every hook that seeds itself from
@@ -787,6 +788,39 @@ export default function Dashboard() {
           so this is the only place its refusals can be said out loud. */}
       {refusalNotes.length > 0 && !showUploadModal && (
         <SeriesNotesNotice notes={refusalNotes} onDismiss={dismissRefusalNotes} />
+      )}
+
+      {/* What the last import was DETECTED as (t_8a9038d6): the truthful
+          answer to "did my file import, and as what?" — including the
+          ambiguous file that carried both commodities. */}
+      {commodityNotice && !showUploadModal && (
+        <div
+          role="status"
+          data-testid="commodity-import-notice"
+          className="bg-info-soft border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-start gap-3 md:gap-4 text-ink"
+        >
+          <p
+            data-testid="commodity-import-notice-text"
+            className="flex-1 min-w-[16rem] text-[10px] md:text-xs font-bold normal-case"
+          >
+            {t(
+              commodityNotice === 'both'
+                ? 'commodity.detectedBoth'
+                : commodityNotice === 'gas'
+                  ? 'commodity.detectedGas'
+                  : 'commodity.detectedElectricity',
+            )}
+          </p>
+          <button
+            type="button"
+            data-testid="commodity-import-notice-dismiss"
+            onClick={dismissCommodityNotice}
+            aria-label={t('commodity.dismiss')}
+            className="ml-auto min-h-11 inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-card text-ink border-4 border-edge rounded-lg md:rounded-xl font-black uppercase text-[10px] md:text-xs hover:bg-hover transition-colors"
+          >
+            {t('commodity.dismiss')}
+          </button>
+        </div>
       )}
 
       {/* Storage failure row (visible whenever a read/write did not land) */}
