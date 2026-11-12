@@ -103,6 +103,32 @@ server {
   # pages. One line, no downside.
   server_tokens off;
 
+  # EARLY-PHASE REQUESTS (F3). nginx answers 414 (URI too long) / 400 while it
+  # is still READING the request line and headers — before any location is
+  # chosen — so such a request is logged with whatever THIS server declares
+  # (inheriting the image's http-level `main` format when it declares nothing),
+  # and `main` records `$request` with the query string included. An oversized
+  # `GET /import?d=<9k>` therefore wrote the base64 meter payload — truncated
+  # to the 8k header buffer — straight into the rotated docker json log, while
+  # every location-matched request next to it was redacted. Declare the
+  # redacting defaults HERE so early-phase and otherwise-unmatched requests
+  # inherit them; each location below keeps its own `access_log`
+  # (gb_noquery / gb_notify / acct_safe) and still overrides for normal traffic.
+  access_log /var/log/nginx/access.log gb_noquery;
+
+  # The matching error-log default: nginx's error lines quote `$request`
+  # verbatim — `client sent invalid request line: "GET /import?d=…"`, a tripped
+  # limit, an upstream failure — query string included, at any level at or
+  # above the configured threshold. `crit` = never narrate a URI; the status
+  # still reaches the access log above (the 502 or 429 is the signal), the
+  # upstream logs its own failure from its own side, and the locations that
+  # already declare `crit` (callback, notify, account, account/internal) keep
+  # exactly the behaviour they have today. The accepted cost is that err-level
+  # diagnostics (e.g. "connect() failed") are no longer written for
+  # `location /` and `/greenbutton` — those messages would carry the full
+  # query, which is the thing this file exists to keep out of the log.
+  error_log /var/log/nginx/error.log crit;
+
   # Docker's embedded DNS, re-read every 10s.
   #
   # nginx resolves a literal `server <name>` inside an `upstream` block ONCE,
