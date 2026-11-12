@@ -334,7 +334,10 @@
     "commodity.gasAnalyticsBody": "Your gas readings are stored in this browser ({count} intervals) and shown as billing periods with volumes. Electricity analytics live in the Electricity tab.",
     "commodity.gasBillsOnly": "This file carried billing periods but no interval readings for gas — only the figures the bill itself states are shown.",
     "commodity.gasOverviewNote": "Figures on this tab are natural gas exactly as the bill states them (m³ and amounts). Electricity analytics are in the Electricity tab.",
-    "commodity.switchLabel": "Choose which energy commodity to view"
+    "commodity.switchLabel": "Choose which energy commodity to view",
+    "import.gasReviewBody": "This browser already holds {existing} gas intervals and the file carries {incoming}. Nothing is written until you choose.",
+    "import.gasIntervals": "{count} gas intervals",
+    "import.detectedGas": "This file is natural gas data (m³) — it goes to the Gas section, never to your electricity readings."
   },
   "fr": {
     "app.title": "Ontario Energy Optimizer",
@@ -671,6 +674,9 @@
     "commodity.gasAnalyticsBody": "Vos relevés de gaz sont conservés dans ce navigateur ({count} intervalles) et affichés sous forme de périodes de facturation avec volumes. Les analyses d'électricité se trouvent dans l'onglet Électricité.",
     "commodity.gasBillsOnly": "Ce fichier contenait des périodes de facturation mais aucun relevé d'intervalle pour le gaz — seules les valeurs que la facture indique sont affichées.",
     "commodity.gasOverviewNote": "Les valeurs de cet onglet sont du gaz naturel tel que la facture l'indique (m³ et montants). Les analyses d'électricité se trouvent dans l'onglet Électricité.",
-    "commodity.switchLabel": "Choisir le type d'énergie à afficher"
+    "commodity.switchLabel": "Choisir le type d'énergie à afficher",
+    "import.gasReviewBody": "Ce navigateur contient déjà {existing} intervalles de gaz et le fichier en contient {incoming}. Rien n'est écrit avant votre choix.",
+    "import.gasIntervals": "{count} intervalles de gaz",
+    "import.detectedGas": "Ce fichier contient des données de gaz naturel (m³) — il va vers la section Gaz, jamais vers vos relevés d'électricité."
   }
 }
