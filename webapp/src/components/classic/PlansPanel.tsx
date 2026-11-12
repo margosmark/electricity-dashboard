@@ -54,6 +54,11 @@ export type PlansPanelProps = {
   summaries: UsageSummary[];
   /** Every priced reading — a billing period is wider than the window. */
   allData: ProcessedPoint[];
+  /**
+   * The GAS section is on screen (t_a775c2a3 — AC2) — the actual bill is the
+   * only surface, even when the gas section holds no stored bill yet.
+   */
+  gasView?: boolean;
 };
 
 export default function PlansPanel({
@@ -69,11 +74,12 @@ export default function PlansPanel({
   verification,
   summaries,
   allData,
+  gasView = false,
 }: PlansPanelProps) {
   const { t } = useTranslation();
   // Commodity 7: no plan to compare against (epic DoD 4) — the tab shows
   // ONLY the actual bill, same as the modern skin.
-  if (isGasFeed(summaries)) {
+  if (gasView || isGasFeed(summaries)) {
     return (
       <div
         id="panel-plans"

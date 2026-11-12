@@ -10,7 +10,7 @@
 
 /* Wave U — upload/connect copy translates; hooks read the module locale. */
 import { t, useTranslation } from "@/i18n";
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, ChangeEvent } from "react";
 import { format, addMonths, subMonths, addDays, startOfMonth, lastDayOfMonth } from "date-fns";
 import {
   type DataPoint, type RateSet, type UsagePointGroup,
@@ -134,6 +134,18 @@ export const GAS_LOCAL_TIME_KEY = "gas_local_time_parameters";
  */
 export const COMMODITY_STORAGE_KEY = "oeo_commodity";
 
+/**
+ * Broadcast for chrome OUTSIDE <Dashboard> (t_a775c2a3 — AC2).
+ *
+ * The classic header's active-plan chip sits ABOVE the dashboard, so the
+ * dashboard's own `commodity` state cannot reach it: a section switch must be
+ * a signal every subscriber can read, not a fact only the component that
+ * wrote it knows. One dispatch point — `commoditySelection.write` — covers
+ * the switcher and /import's own writes; same-tab, so the browser's
+ * cross-document `storage` event is no use here.
+ */
+export const COMMODITY_CHANGE_EVENT = "oeo-commodity-change";
+
 export type CommoditySelection = {
   /** The stored (or default) commodity for a fresh mount. */
   read: () => Commodity;
@@ -155,8 +167,34 @@ export const commoditySelection: CommoditySelection = {
     } catch {
       /* quota/blocked storage: the in-memory selection still holds */
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(COMMODITY_CHANGE_EVENT));
+    }
   },
 };
+
+/**
+ * The section on screen, reactive for any component (header chrome above the
+ * dashboard included): `commoditySelection.read` re-run whenever a write
+ * broadcasts `COMMODITY_CHANGE_EVENT`. Same value the dashboard's
+ * `commodity` state holds — an electric-plan label must follow the section
+ * it describes (AC2: no electric chrome on a gas surface).
+ */
+export function useSectionCommodity(): Commodity {
+  return useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener(COMMODITY_CHANGE_EVENT, onChange);
+      return () => window.removeEventListener(COMMODITY_CHANGE_EVENT, onChange);
+    },
+    commoditySelection.read,
+    // Hydration must replay EXACTLY what the server painted: localStorage
+    // does not exist up there, so a prerender always renders the default
+    // section. Serving a live read here instead is what turned a
+    // gas-stored browser into hydration error #418 on /classic (the static
+    // HTML carries the chip, the first client pass then dropped it).
+    () => "electricity" as Commodity,
+  );
+}
 
 export type BillFeed = {
   /** Every billing period the parse found, oldest first. */

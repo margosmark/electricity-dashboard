@@ -514,8 +514,12 @@ export default function Dashboard() {
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
-          browser that has not authorised live sync. */}
-      <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+          browser that has not authorised live sync — and both notices are
+          ELECTRIC facts, so on the Gas section the banner does not exist
+          (t_a775c2a3 — AC2). */}
+      {!gasSelected && (
+        <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+      )}
 
       {/* Wave H item 1 — while the loaded readings are the synthetic set, the
           page says so on every view, and offers the way out. */}
@@ -689,14 +693,17 @@ export default function Dashboard() {
           {/* Wave N — the account control sits with the other global chrome:
               sign-in state is as global as the notification toggle. */}
           <AccountControls onDataApplied={() => window.location.reload()} />
-          {/* Wave R — the answer, on every tab. Click jumps to the banner. */}
-          <BestChoiceChip
-            comparison={comparison}
-            userPlan={userPlan}
-            days={windowDays}
-            active={tab === 'overview'}
-            onJump={() => setActiveTab('overview')}
-          />
+          {/* Wave R — the answer, on every tab. Click jumps to the banner.
+              ELECTRIC verdict only — never on the Gas section (t_a775c2a3). */}
+          {!gasSelected && (
+            <BestChoiceChip
+              comparison={comparison}
+              userPlan={userPlan}
+              days={windowDays}
+              active={tab === 'overview'}
+              onJump={() => setActiveTab('overview')}
+            />
+          )}
 
           <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
             <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-base md:text-sm text-ink bg-card" />
@@ -772,7 +779,9 @@ export default function Dashboard() {
               budget: it added 32px to that max-content and was what pushed
               1280 (the very next breakpoint) back into a wrap, opening a
               45,936px² dead band 936px² over the gate. */}
-          {floor && (
+          {/* t_a775c2a3 — AC2: the always-on floor is an ELECTRIC figure
+              (idle watts -> kWh/day -> $/yr), never under the Gas section. */}
+          {!gasSelected && floor && (
           <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
             <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
@@ -913,15 +922,19 @@ export default function Dashboard() {
           shiftAnalysis={shiftAnalysis}
           verification={verification}
           summaries={activeFeed.summaries}
-          allData={processedData}
+          /* Commodity-scoped rows (t_a775c2a3): the gas branch of this panel
+             runs with no electric rows, exactly like gas Overview's bill. */
+          allData={gasSelected ? [] : processedData}
+          gasView={gasSelected}
         />
       )}
 
       {tab === 'money' && (
         <MoneyPanel
           summaries={activeFeed.summaries}
-          allData={processedData}
-          filteredData={filteredData}
+          /* Commodity-scoped inputs (t_a775c2a3 — AC2). */
+          allData={gasSelected ? [] : processedData}
+          filteredData={gasSelected ? [] : filteredData}
           plan={userPlan}
           rates={activeRateSet}
           startDate={startDate}
@@ -929,6 +942,7 @@ export default function Dashboard() {
           projection={projection}
           openPeriod={openPeriod}
           billingDay={billingDay}
+          gasView={gasSelected}
         />
       )}
 
