@@ -59,8 +59,8 @@ import {
 // The split lives in lib/commodity.ts so /import and this hook cannot
 // disagree about what a gas document is.
 import {
-  type Commodity, type FeedSplit,
-  commodityPresence, extractGasPoints, primaryCommodity, sortGasPoints,
+  type Commodity,
+  extractGasPoints, primaryCommodity, sortGasPoints,
   splitFeed, splitSummaries, unionGasPoints,
 } from "@/lib/commodity";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
@@ -731,8 +731,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    */
   useEffect(() => {
     const res = ensureBillPartition();
-    if (!res.ok || res.warnings.length > 0) reportStorage(res);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only; reportStorage is stable enough for a one-shot
+    if (res.ok && res.warnings.length === 0) return;
+    // Deferred a tick: the rule (and React) forbid a synchronous setState in
+    // an effect body — the notice must still surface, just not as a cascading
+    // render of this very mount.
+    const id = window.setTimeout(() => reportStorage(res), 0);
+    return () => window.clearTimeout(id);
+    // Mount only: `ensureBillPartition` is module-scope and `reportStorage`
+    // is this hook's own stable setter, so there is nothing to re-subscribe.
   }, []);
 
   /**
@@ -1607,7 +1613,7 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
               localTime: feed.localTime,
               source: file.name,
             });
-            gasPointsRef.current.push(...gasPoints);
+            for (const gp of gasPoints) gasPointsRef.current.push(gp);
           }
           // A single-meter file is pre-picked; a multi-meter one stays null
           // until the review screen asks.

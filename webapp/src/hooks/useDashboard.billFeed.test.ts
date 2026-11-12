@@ -23,6 +23,7 @@ import type { ChangeEvent } from 'react';
 
 import {
   useEnergyData,
+  ensureBillPartition,
   writeStoredBillFeed,
   readStoredBillFeed,
   readStoredGasBillFeed,
@@ -32,6 +33,7 @@ import {
   GAS_LOCAL_TIME_KEY,
 } from './useDashboard';
 import { parseGreenButtonFeed } from '@/lib/energy';
+import { isGasSummary } from '@/lib/gasBillUi';
 
 const GAS_XML = readFileSync(
   join(__dirname, '../../tests/fixtures/enbridge-gas-synthetic.xml'),
@@ -189,4 +191,71 @@ describe('a gas import whose bill write fails is VISIBLE, not silent', () => {
     expect(localStorage.getItem(USAGE_SUMMARIES_KEY)).toBeNull();
     expect(result.current.billFeed.summaries).toHaveLength(0);
   }, 30_000);
+});
+
+/* ==========================================================================
+ * The migration itself (t_8a9038d6): a pre-split browser holds BOTH
+ * commodities in ONE array. The split must move gas across without losing a
+ * single period, and a FAILED gas write must leave the original bytes alone.
+ * ========================================================================== */
+
+describe('ensureBillPartition — non-destructive split of a legacy mixed array', () => {
+  it('parks every gas period in the gas key and keeps every electric period', () => {
+    const electric = ELEC_FEED.summaries;
+    const gas = FEED.summaries;
+    expect(electric.length).toBeGreaterThan(0);
+    expect(gas).toHaveLength(10);
+    // The pre-split shape: both commodities, one array.
+    localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify([...electric, ...gas]));
+
+    const res = ensureBillPartition();
+    expect(res.ok).toBe(true);
+
+    // Nothing dropped: 10 gas periods moved, electric periods stayed.
+    expect(JSON.parse(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)!)).toHaveLength(10);
+    expect(JSON.parse(localStorage.getItem(USAGE_SUMMARIES_KEY)!)).toHaveLength(
+      electric.length,
+    );
+    // And both READS see their own side — on-read partition included.
+    expect(readStoredGasBillFeed().summaries).toHaveLength(10);
+    expect(readStoredBillFeed().summaries).toHaveLength(electric.length);
+    expect(readStoredBillFeed().summaries.every((s) => !isGasSummary(s))).toBe(true);
+  });
+
+  it('idempotent: a second run changes nothing', () => {
+    localStorage.setItem(
+      USAGE_SUMMARIES_KEY,
+      JSON.stringify([...ELEC_FEED.summaries, ...FEED.summaries]),
+    );
+    expect(ensureBillPartition().ok).toBe(true);
+    const afterFirst = [
+      localStorage.getItem(USAGE_SUMMARIES_KEY),
+      localStorage.getItem(GAS_USAGE_SUMMARIES_KEY),
+    ];
+    expect(ensureBillPartition().ok).toBe(true);
+    expect([
+      localStorage.getItem(USAGE_SUMMARIES_KEY),
+      localStorage.getItem(GAS_USAGE_SUMMARIES_KEY),
+    ]).toEqual(afterFirst);
+  });
+
+  it('a FAILED gas write leaves the legacy array byte-for-byte untouched', () => {
+    const mixed = JSON.stringify([...ELEC_FEED.summaries, ...FEED.summaries]);
+    localStorage.setItem(USAGE_SUMMARIES_KEY, mixed);
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string) => {
+      if (key === GAS_USAGE_SUMMARIES_KEY) throw quotaError();
+      return undefined;
+    });
+
+    const res = ensureBillPartition();
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.reason).toBe('quota');
+
+    // The safety property: the gas copy is written FIRST, so a failure means
+    // the original is still exactly where it was — no half-migrated store.
+    expect(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)).toBeNull();
+    expect(localStorage.getItem(USAGE_SUMMARIES_KEY)).toBe(mixed);
+  });
 });

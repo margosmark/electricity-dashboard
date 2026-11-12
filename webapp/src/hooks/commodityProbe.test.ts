@@ -19,7 +19,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ChangeEvent } from 'react';
 
 import { parseGreenButtonFeed } from '@/lib/energy';
-import { enrichGasSummaries, isGasFeed } from '@/lib/gasBillUi';
+import { isGasFeed } from '@/lib/gasBillUi';
 import {
   ENERGY_GAS_KEY,
   ENERGY_KEY_V2,
