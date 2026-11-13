@@ -51,6 +51,10 @@ import {
   type StorageResult,
   loadEnergyData, saveEnergyData, clearEnergyData,
   loadGasData, saveGasData,
+  GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY,
+  GAS_SCHEMA_VERSION,
+  ENERGY_GAS_KEY,
+  loadGasBillSections,
   type GasPoint,
   loadBillingDay, saveBillingDay,
   parseImport, resetStoredData, listOurStoredKeys, writeStoredKey,
@@ -119,13 +123,19 @@ export const LOCAL_TIME_KEY = "local_time_parameters";
 /**
  * The gas half of the bill feed (t_8a9038d6).
  *
- * Before this split a single `usage_summaries` array held both commodities,
+ * Before the split a single `usage_summaries` array held both commodities,
  * and `commitBillFeed("replace")` rewrote it wholesale — so uploading gas
  * replaced every electricity bill and vice versa. The two keys are written
  * by their own commit path and are never addressed by the other's.
+ *
+ * The CONSTANTS now live in `lib/storage.ts` (t_578268b7): a backup restore
+ * has to write them, `lib/backup.ts` has to name them, and importing this
+ * hook from there would be a cycle — same reasoning as `EXAMPLE_DATA_KEY`
+ * above. Re-exported here so every existing
+ * `import { GAS_USAGE_SUMMARIES_KEY } from "@/hooks/useDashboard"` keeps
+ * working.
  */
-export const GAS_USAGE_SUMMARIES_KEY = "gas_usage_summaries";
-export const GAS_LOCAL_TIME_KEY = "gas_local_time_parameters";
+export { GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY };
 
 /**
  * Which commodity section the dashboard is showing (t_8a9038d6).
@@ -2142,14 +2152,39 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
   };
 
   /**
-   * Serialize everything this browser holds (readings, billing day, bill
-   * add-ons, plan timeline) into a versioned JSON document. Returns null when
-   * there is nothing to back up — the drawer reports that instead of writing
-   * an empty file that would wipe data if restored.
+   * Serialize everything this browser holds — readings, billing day, bill
+   * add-ons, plan timeline, AND the gas dataset (t_578268b7) — into a
+   * versioned JSON document. Returns null when there is nothing to back up:
+   * the drawer reports that instead of writing an empty file that would wipe
+   * data if restored. "Nothing" means no rows in EITHER commodity — a
+   * gas-only browser has plenty to export.
+   *
+   * Gas sections are snapshotted from DISK (with the live points overlaid on
+   * the stored envelope), not from the normalized read view: the stored bytes
+   * are what a restore must reproduce byte-for-byte. The one overlay — rows
+   * and points the last commit failed to persist (quota) — exists because
+   * the whole point of an export is to rescue data that did NOT land.
    */
   const exportBackup = (): BackupExport | null => {
-    if (rawData.length === 0) return null;
     const now = new Date();
+    const storedGas = loadGasData();
+    const gasDataPayload =
+      gasData.length > 0
+        ? {
+            ...(storedGas.ok && storedGas.value
+              ? storedGas.value
+              : { version: GAS_SCHEMA_VERSION, uploadedAt: now.toISOString(), source: "backup-export" }),
+            points: gasData,
+          }
+        : undefined;
+    const storedGasBill = loadGasBillSections();
+    const diskStarts = new Set(storedGasBill.summaries.map((s) => s.start));
+    const gasSummaries = [
+      ...storedGasBill.summaries,
+      // In-memory rows with no stored twin: a commit whose write failed. They
+      // ride behind the stored bytes so a normal export stays byte-identical.
+      ...gasBillFeed.summaries.filter((s) => !diskStarts.has(s.start)),
+    ];
     const doc = buildBackupDocument({
       energyData: rawData,
       billingDay,
@@ -2160,8 +2195,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // what the user was looking at when they exported.
       selectedPlan: readStoredPlan(),
       isExample: exampleData,
+      gasData: gasDataPayload,
+      gasSummaries,
+      gasLocalTime: storedGasBill.localTime ?? gasBillFeed.localTime,
       exportedAt: now,
     });
+    // Gate on the DOCUMENT, not on `rawData`: the gas section can be the only
+    // dataset present, and a document with no rows at all in either commodity
+    // is still the empty file that must never be written.
+    const p = doc.payload;
+    if (p.energy_data.length === 0 && p.gas_data === undefined && p.gas_usage_summaries === undefined) {
+      return null;
+    }
     return { filename: backupFilename(now), text: serializeBackup(doc) };
   };
 
@@ -2190,19 +2235,45 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       try {
         const values = storageValuesFromBackup(profile.value);
         // Readings first: if this fails nothing else is written, which keeps
-        // the all-or-nothing promise above.
-        const saved = saveEnergyData(profile.value.payload.energy_data, {
-          source: "backup-import",
-          uploadedAt: profile.value.exportedAt,
-        });
-        if (!saved.ok) {
-          reportStorage(saved);
-          return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
+        // the all-or-nothing promise above. A gas-only document carries NO
+        // electric rows — `saveEnergyData([])` would replace this browser's
+        // electricity dataset with an empty one, exactly the clobber a
+        // document without a section promises not to do — so that write is
+        // skipped, and the gas payload takes the same first-failure-wins
+        // slot (written verbatim, envelope included, so the stored key comes
+        // back byte-for-byte instead of as a fresh "backup-import" upload).
+        const hasElectric = profile.value.payload.energy_data.length > 0;
+        if (hasElectric) {
+          const saved = saveEnergyData(profile.value.payload.energy_data, {
+            source: "backup-import",
+            uploadedAt: profile.value.exportedAt,
+          });
+          if (!saved.ok) {
+            reportStorage(saved);
+            return { ok: false, error: t('backup.errRefused', { detail: saved.detail }) };
+          }
         }
-        const day = saveBillingDay(profile.value.payload.billing_day);
-        if (!day.ok) {
-          reportStorage(day);
-          return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
+        const gasPayload = profile.value.payload.gas_data;
+        if (gasPayload !== undefined) {
+          const gasSaved = writeStoredKey(ENERGY_GAS_KEY, JSON.stringify(gasPayload));
+          if (!gasSaved.ok) {
+            reportStorage(gasSaved);
+            return { ok: false, error: t('backup.errRefused', { detail: gasSaved.detail }) };
+          }
+        }
+        // Billing day is ELECTRIC profile, so it rides the same gate as the
+        // readings: a gas-only document only carries parseBackup's default
+        // (billing_day is mandatory in every payload), and stamping that over
+        // a configured browser's anchor day would be the same clobber one
+        // key further. `values` (storageValuesFromBackup) is gated to match,
+        // so the loop below writes no electric key for a gas-only document
+        // either — fresh browser, no electric keys at all.
+        if (hasElectric) {
+          const day = saveBillingDay(profile.value.payload.billing_day);
+          if (!day.ok) {
+            reportStorage(day);
+            return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
+          }
         }
         // Everything else in the document is owned by the hook that reads it
         // (charges, timeline, plan, example flag). Same contract the account

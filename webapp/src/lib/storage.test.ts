@@ -12,6 +12,9 @@ import {
   resetStoredData,
   listOurStoredKeys,
   clearEnergyData,
+  loadGasBillSections,
+  isReadableGasSummary,
+  isReadableLocalTime,
   type StoredPayload,
 } from './storage';
 import type { DataPoint } from './energy';
@@ -303,5 +306,62 @@ describe('clearEnergyData', () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value).toEqual([LEGACY_ENERGY_KEY]);
     expect(localStorage.length).toBe(0);
+  });
+});
+
+/* --- the byte-faithful gas bill read (t_578268b7) ------------------------ */
+
+describe('loadGasBillSections', () => {
+  it('returns the stored rows and clock exactly as written', () => {
+    const rows = [
+      { source: 'UsageSummary', start: 1704067200, duration: 2592000, items: [], volume: null },
+      { start: 1704326400, duration: 2592000, items: [{ amount: 42 }] },
+    ];
+    const clock = { tzOffset: -18000, dstOffset: 3600, dstStartRule: null, dstEndRule: null };
+    localStorage.setItem('gas_usage_summaries', JSON.stringify(rows));
+    localStorage.setItem('gas_local_time_parameters', JSON.stringify(clock));
+
+    const sections = loadGasBillSections();
+    // The whole point of this reader: stringify it back and the bytes match.
+    expect(JSON.stringify(sections.summaries)).toBe(JSON.stringify(rows));
+    expect(JSON.stringify(sections.localTime)).toBe(JSON.stringify(clock));
+  });
+
+  it('drops rows it cannot read and treats a corrupt clock as absent', () => {
+    localStorage.setItem(
+      'gas_usage_summaries',
+      JSON.stringify([
+        { start: 1, duration: 2, items: [] },
+        'not-a-period',
+        { start: 'x', duration: 2, items: [] },
+        { start: 3, duration: 4, items: [1] }, // primitive line items never come from a feed
+      ]),
+    );
+    localStorage.setItem('gas_local_time_parameters', '{not json');
+    const sections = loadGasBillSections();
+    expect(sections.summaries).toHaveLength(1);
+    expect(sections.localTime).toBeNull();
+  });
+
+  it('reads absent or corrupt keys as an honest empty state', () => {
+    expect(loadGasBillSections()).toEqual({ summaries: [], localTime: null });
+    localStorage.setItem('gas_usage_summaries', 'not json');
+    localStorage.setItem('gas_local_time_parameters', '[]');
+    expect(loadGasBillSections()).toEqual({ summaries: [], localTime: null });
+  });
+});
+
+describe('isReadableGasSummary / isReadableLocalTime', () => {
+  it('accepts what the app reads and refuses what it cannot', () => {
+    expect(isReadableGasSummary({ start: 1, duration: 2, items: [] })).toBe(true);
+    expect(isReadableGasSummary({ start: 1, duration: 2, items: [{ amount: 1 }] })).toBe(true);
+    expect(isReadableGasSummary({ start: '1', duration: 2, items: [] })).toBe(false);
+    expect(isReadableGasSummary({ start: 1, duration: 2 })).toBe(false);
+    expect(isReadableGasSummary({ start: 1, duration: 2, items: [1] })).toBe(false);
+    expect(isReadableGasSummary(null)).toBe(false);
+
+    expect(isReadableLocalTime({ tzOffset: -18000 })).toBe(true);
+    expect(isReadableLocalTime({ tzOffset: 'EST' })).toBe(false);
+    expect(isReadableLocalTime(null)).toBe(false);
   });
 });
