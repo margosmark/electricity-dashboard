@@ -1070,10 +1070,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const saved = saveEnergyData(data, { source });
     if (saved.ok && saved.warnings.length === 0) setStorageNotice(null);
     else reportStorage(saved);
-    try {
-      if (source === "example") localStorage.setItem(EXAMPLE_DATA_KEY, "1");
-      else localStorage.removeItem(EXAMPLE_DATA_KEY);
-    } catch { /* storage blocked: the in-memory flag below still holds */ }
+    // The flag describes the rows ON DISK, so it may only move when those rows
+    // did. A refused write (a full disk) leaves the previous rows in place:
+    // clearing the flag there would relabel the example set as real usage, and
+    // setting it after a failed example load would relabel the user's own data
+    // as synthetic. `/import` already refuses the write before touching this
+    // key; this is the same rule on the modal's path.
+    if (saved.ok) {
+      try {
+        if (source === "example") localStorage.setItem(EXAMPLE_DATA_KEY, "1");
+        else localStorage.removeItem(EXAMPLE_DATA_KEY);
+      } catch { /* storage blocked: the in-memory flag below still holds */ }
+    }
     setExampleData(source === "example");
     if (source === "example" && data.length > 0) {
       let first = data[0];
