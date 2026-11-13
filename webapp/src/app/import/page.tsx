@@ -35,7 +35,7 @@ import {
   type DataPoint,
   type UsagePointGroup,
 } from '@/lib/energy';
-import { diagnoseGreenButtonDocument, type ParseDiagnostic } from '@/lib/parseDiagnostic';
+import { type ParseDiagnostic } from '@/lib/parseDiagnostic';
 import UsagePointPicker from '@/components/UsagePointPicker';
 // Commodity 7: a gas extract's bill half is decided with the WHOLE feed in
 // hand (which IntervalBlock belongs to which period), exactly as the upload
@@ -65,7 +65,11 @@ import {
   type ImportPlan,
 } from '@/lib/importPlan';
 import { planBillFeed, type BillFeedMode } from './billFeedPlan';
-import { isGreenButtonRefusal } from '@/lib/greenbutton/limits';
+// One implementation of "what the app says when a document will not import"
+// — shared with the upload modal and the sync toolbar (greenbutton/recovery.ts).
+// It owns BOTH conversions this page used to make inline: the gate's
+// zero-usable-rows sentence and the catch's failure sentence.
+import { recoveryMessage } from '@/lib/greenbutton/recovery';
 // The readings live under the versioned key; storage.ts owns the read, the
 // legacy-key migration and the write (the dashboard reads exactly this).
 import {
@@ -383,17 +387,13 @@ function ImportFlow() {
         // are commodity-7 volume series, with "produced no readable rows".
         const usable = countUsableRows(parsed);
         if (usable === 0) {
-          const diag = diagnoseGreenButtonDocument(text, 0);
-          setIssue(
-            diag.ok
-              ? {
-                  ok: false,
-                  headline: t('upload.noReadingsHeadline'),
-                  detail: t('upload.noReadingsDetail'),
-                  hints: [t('upload.noReadingsHint')],
-                }
-              : diag,
-          );
+          // Nothing to import — and the message says WHY (no entries, no
+          // timestamps, not Green Button data at all), not just "no readings".
+          // recoveryMessage owns this sentence too: with no `error` it is the
+          // GATE branch, and it keeps this page's own `upload.noReadings*`
+          // copy when the diagnosis has nothing sharper to say (a file that
+          // parsed and simply carried no usable rows was not a failed parse).
+          setIssue(recoveryMessage({ text, readings: 0 }));
           return;
         }
         // The bill half rides along with the rows until the user commits —
@@ -430,31 +430,19 @@ function ImportFlow() {
         }
         reviewOrImport(parsed[0].readings);
       } catch (e) {
-        // A refusal is not a mystery: it names the number it judged (see
-        // greenbutton/limits.ts), so it is shown as itself. The raw-text
-        // diagnostic below stays the fallback for everything else — a
-        // refusal over a poisoned bill figure would otherwise be reported as
-        // "produced no readable rows", which names the wrong problem.
-        if (isGreenButtonRefusal(e)) {
-          setIssue({ ok: false, headline: e.headline, detail: e.detail, hints: e.hints });
-          return;
-        }
-        const diag = diagnoseGreenButtonDocument(text, 0);
-        setIssue(
-          diag.ok
-            ? {
-                ok: false,
-                headline: t('upload.couldNotReadPlain'),
-                detail: String((e as Error)?.message ?? e),
-                hints: [t('upload.redownloadHint')],
-              }
-            : diag,
-        );
+        // ONE conversion for every failure, shared with the upload modal and
+        // the sync toolbar (greenbutton/recovery.ts): a refusal shows its own
+        // copy (it names the number it judged), everything else is explained
+        // from the raw text, and the exception's own message is never shown —
+        // it is parser prose written for a developer, in English, in both
+        // locales. The old fallback here quoted `e.message` at the reader —
+        // in French included.
+        setIssue(recoveryMessage({ text, error: e }));
       } finally {
         setParsing(false);
       }
     },
-    [reviewOrImport, t],
+    [reviewOrImport],
   );
 
   /** Raw XML or base64 in; the parser takes it from there. */

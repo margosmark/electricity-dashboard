@@ -34,6 +34,22 @@ function countNumericStarts(text: string): number {
 }
 
 /**
+ * The validator's error CODE → the sentence this app shows for it.
+ *
+ * fast-xml-parser hands back four stable codes (`InvalidXml`, `InvalidTag`,
+ * `InvalidAttr`, `InvalidChar`) with an English `msg` beside each. The codes
+ * are language-neutral identifiers, so they can carry translated copy; the
+ * messages cannot, which is why they are not passed to `t()` at all (see the
+ * call site). An unknown code — a library upgrade adding one — falls back to
+ * `diag.malformedDetail`, never to the library's own prose.
+ */
+const MALFORMED_DETAIL_BY_CODE: Record<string, string> = {
+  InvalidTag: 'diag.malformedDetailTag',
+  InvalidAttr: 'diag.malformedDetailAttr',
+  InvalidChar: 'diag.malformedDetailChar',
+};
+
+/**
  * Explain why `xmlText` did not become a usable dataset — or, when the
  * document is structurally sound, report what it contained.
  *
@@ -108,20 +124,21 @@ export function diagnoseGreenButtonDocument(xmlText: string, parsedReadings?: nu
   const validity = XMLValidator.validate(text);
   if (validity !== true) {
     const err = (validity as { err: { code?: string; msg?: string; line?: number } }).err;
-    // BOTH sentences take the line, and the detail template needs it too:
-    // `malformedDetailMsg` reads "{msg} at line {line}.", so a call that passed
-    // only `msg` printed the placeholder at the user literally — "… found. at
-    // line {line}." (t_1fca89fa). A validator error with no line at all keeps
-    // its own message instead of claiming a line it does not have.
+    // The headline takes the line; it is a NUMBER, so it translates with the
+    // sentence around it. The DETAIL does not take the validator's `msg`: that
+    // prose is English parser text and, for a truncated document, the
+    // library's own stack dump — `Invalid '[    "feed",    "entry"]' found.`
+    // reached the fr page inside a French sentence (t_9dfd150b, found by the
+    // hostile-XML corpus). The error CODE is stable and language-neutral, so
+    // it selects this app's sentence instead, and the `{line}` placeholder
+    // bug class from t_1fca89fa cannot recur here because no template carries
+    // a `{msg}` anymore.
     const line = typeof err.line === 'number' ? err.line : null;
     return {
       ok: false,
       headline:
         line !== null ? t('diag.malformedHeadlineLine', { line }) : t('diag.malformedHeadline'),
-      detail:
-        err.msg && line !== null
-          ? t('diag.malformedDetailMsg', { msg: err.msg, line })
-          : err.msg || t('diag.malformedDetail'),
+      detail: t(MALFORMED_DETAIL_BY_CODE[err.code ?? ''] ?? 'diag.malformedDetail'),
       hints: [t('diag.malformedHint1'), t('diag.malformedHint2')],
     };
   }
