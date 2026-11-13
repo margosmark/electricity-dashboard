@@ -20,6 +20,8 @@ import { join } from 'node:path';
 import ImportPage from './page';
 import { ENERGY_KEY_V2, ENERGY_GAS_KEY, LEGACY_ENERGY_KEY, saveEnergyData, saveGasData } from '@/lib/storage';
 import { EXAMPLE_DATA_KEY, USAGE_SUMMARIES_KEY, GAS_USAGE_SUMMARIES_KEY } from '@/hooks/useDashboard';
+// t_cb0cf70f — Defect B: the staged handoff these tests assert on.
+import { clearCommodityNotice, readCommodityNotice } from '@/lib/importNotice';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 
@@ -276,5 +278,117 @@ describe('/import routes gas documents to the gas keys', () => {
     }[];
     expect(points).toHaveLength(5);
     expect(points.some((g) => g.volume_m3 === 9)).toBe(false);
+  }, 60_000);
+});
+
+/* ==========================================================================
+ * t_cb0cf70f — Defect B: detection disclosure for ELECTRIC + MIXED documents
+ *
+ * The gas review disclosed its commodity (`gas-detected`) since t_8a9038d6,
+ * but an electric or mixed document imported via /import surfaced NO
+ * detection disclosure anywhere: the review screens said nothing, and the
+ * dashboard's notice is hook state that does not exist across router.push.
+ * These tests pin both halves of the fix — the review line, and the staged
+ * handoff the dashboard consumes on mount.
+ * ========================================================================== */
+
+const MIXED_XML = readFileSync(
+  join(__dirname, '../../../tests/fixtures/mixed-commodity-synthetic.xml'),
+  'utf8',
+);
+const ELEC_XML = readFileSync(
+  join(__dirname, '../../../tests/fixtures/synthetic.xml'),
+  'utf8',
+);
+
+describe('/import discloses what an electric or mixed document is', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    push.mockClear();
+    // The staged handoff is module state that outlives one test — drop it
+    // so a later `toBeNull()` cannot pass/fail on an earlier test's staging.
+    clearCommodityNotice();
+  });
+
+  it('a MIXED document persists BOTH halves and stages a truthful notice', async () => {
+    render(<ImportPage />);
+    await importPayload(MIXED_XML);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/'), { timeout: 30_000 });
+
+    // The mixed doc: electric intervals + gas periods, no gas intervals.
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) as string).points).toHaveLength(68);
+    expect(JSON.parse(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY) as string)).toHaveLength(10);
+    // No gas intervals in the document → no empty gas bucket.
+    expect(localStorage.getItem(ENERGY_GAS_KEY)).toBeNull();
+
+    // Defect B: the verdict THIS page committed is staged for the dashboard
+    // to disclose after the navigation — 'both', because both halves wrote.
+    expect(readCommodityNotice()).toBe('both');
+  }, 60_000);
+
+  it('an ELECTRIC document stages electricity, not silence', async () => {
+    render(<ImportPage />);
+    await importPayload(ELEC_XML);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/'), { timeout: 30_000 });
+    expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2) as string).points).toHaveLength(68);
+    expect(readCommodityNotice()).toBe('electricity');
+  }, 60_000);
+
+  it('a GAS document stages gas (the handoff is uniform across commits)', async () => {
+    render(<ImportPage />);
+    await importPayload(GAS_XML);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/'), { timeout: 30_000 });
+    expect(readCommodityNotice()).toBe('gas');
+  }, 60_000);
+
+  it('the electric REVIEW screen discloses detection before anything is written', async () => {
+    // Existing electric data → the review screen appears instead of a
+    // straight-through commit; it must say what the file is, gas-free.
+    expect(
+      saveEnergyData([{ timestamp: 1_704_067_200, usage_kwh: 1.5 }], { source: 'seed' }).ok,
+    ).toBe(true);
+    const before = snapshot();
+
+    render(<ImportPage />);
+    await importPayload(ELEC_XML);
+
+    await waitFor(() => expect(screen.getByTestId('import-review')).toBeInTheDocument(), {
+      timeout: 30_000,
+    });
+    // The disclosure: present/future tense (nothing written yet).
+    expect(screen.getByTestId('electric-detected')).toHaveTextContent(/electricity/i);
+    expect(screen.getByTestId('electric-detected')).toHaveTextContent(/never to your gas data/i);
+    // NOTHING was written while the review is on screen.
+    expect(snapshot()).toBe(before);
+    expect(readCommodityNotice()).toBeNull();
+  }, 60_000);
+
+  it('the review discloses BOTH for a mixed document', async () => {
+    expect(
+      saveEnergyData([{ timestamp: 1_704_067_200, usage_kwh: 1.5 }], { source: 'seed' }).ok,
+    ).toBe(true);
+
+    render(<ImportPage />);
+    await importPayload(MIXED_XML);
+
+    await waitFor(() => expect(screen.getByTestId('import-review')).toBeInTheDocument(), {
+      timeout: 30_000,
+    });
+    expect(screen.getByTestId('electric-detected')).toHaveTextContent(/BOTH electricity and gas/i);
+    // Still nothing written — the disclosure is a review, not a commit.
+    expect(localStorage.getItem(GAS_USAGE_SUMMARIES_KEY)).toBeNull();
+    expect(readCommodityNotice()).toBeNull();
+  }, 60_000);
+
+  it('a refused document stages NOTHING (no notice for an import that did not happen)', async () => {
+    render(<ImportPage />);
+    await pasteAndImport(FEED('<entry><content><x>not xml at all</x></content></entry>'));
+
+    await waitFor(() => expect(screen.queryByTestId('import-error')).toBeInTheDocument());
+    expect(push).not.toHaveBeenCalled();
+    expect(readCommodityNotice()).toBeNull();
   }, 60_000);
 });

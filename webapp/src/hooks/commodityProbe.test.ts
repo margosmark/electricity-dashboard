@@ -19,7 +19,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ChangeEvent } from 'react';
 
 import { parseGreenButtonFeed } from '@/lib/energy';
-import { isGasFeed } from '@/lib/gasBillUi';
+import { isGasFeed, isGasSummary } from '@/lib/gasBillUi';
 import {
   ENERGY_GAS_KEY,
   ENERGY_KEY_V2,
@@ -33,6 +33,8 @@ import {
   USAGE_SUMMARIES_KEY,
   GAS_USAGE_SUMMARIES_KEY,
 } from '@/hooks/useDashboard';
+// t_cb0cf70f — Defect B: /import stages its verdict; the hook consumes it.
+import { clearCommodityNotice, stageCommodityNotice } from '@/lib/importNotice';
 
 const read = (name: string): string =>
   readFileSync(join(__dirname, '../../tests/fixtures', name), 'utf8');
@@ -83,7 +85,10 @@ function storedState(): StoredState {
   };
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  clearCommodityNotice();
+});
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -206,5 +211,135 @@ describe('commodity probe — synthetic fixtures only', () => {
     if (!elecAgain.ok || !gasAgain.ok || !elecAgain.value || !gasAgain.value) return;
     expect(elecAgain.value.points.some((p) => p.timestamp === clashTs)).toBe(true);
     expect(gasAgain.value.points.some((p) => p.timestamp === clashTs)).toBe(true);
+  }, 30_000);
+});
+
+/* ==========================================================================
+ * t_cb0cf70f — Defect A: the bills-only half of a MIXED document
+ *
+ * The security gate's F2 probe uploaded ONE document carrying electric
+ * intervals + gas billing periods and NO gas interval rows: the commit
+ * gated on interval rows dropped every gas period, storage kept no
+ * `gas_usage_summaries` at all — yet the notice claimed both halves were
+ * imported. These assertions pin the fixed contract through the same
+ * `handleFileUpload` path the probe drove.
+ * ========================================================================== */
+
+describe('mixed document — electric intervals + gas periods, no gas intervals', () => {
+  const MIXED_XML = read('mixed-commodity-synthetic.xml');
+
+  it('reports the fixture shape the F2 probe used', () => {
+    const feed = parseGreenButtonFeed(MIXED_XML);
+    expect(feed.groups).toHaveLength(1);
+    expect(countRows(feed.groups)).toBe(68); // electric intervals
+    expect(isGasFeed(feed.summaries)).toBe(true);
+    // No volume series anywhere → zero gas INTERVAL rows: the half a
+    // `points > 0` commit gate drops.
+    const volumeRows = feed.groups.reduce(
+      (n, g) => n + (g.series ?? []).filter((s) => s.status === 'volume')
+        .reduce((m, s) => m + s.readings.length, 0),
+      0,
+    );
+    expect(volumeRows).toBe(0);
+    expect(feed.summaries.filter((s) => isGasSummary(s))).toHaveLength(10);
+  });
+
+  it('commits BOTH halves: electric intervals + the gas periods', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    const { result } = renderHook(() => useEnergyData());
+
+    await upload(result, MIXED_XML, 'mixed.xml');
+    await waitFor(() => expect(result.current.rawData).toHaveLength(68));
+
+    const after = storedState();
+    // The electric half landed whole…
+    expect(after.electricPoints).toBe(68);
+    // …AND the gas periods landed even though the file has NO gas intervals
+    // (this line failed before t_cb0cf70f: gasBills stayed 0).
+    expect(after.gasBills).toBe(10);
+    expect(after.gasIsGasFeed).toBe(true);
+    // No gas intervals exist in the document → no empty gas bucket written.
+    expect(localStorage.getItem(ENERGY_GAS_KEY)).toBeNull();
+    // The electric half of THIS fixture carries no periods (synthetic.xml
+    // has none) — an upload replaces the panel, here to nothing.
+    expect(after.electricBills).toBe(0);
+    // The notice is true now BECAUSE both halves committed: derived from
+    // what ran, not from the document merely containing a half.
+    expect(result.current.commodityNotice).toBe('both');
+    // The bill keys stayed disjoint: no gas period on the electric side.
+    expect(after.electricIsGasFeed).toBe(false);
+    // Only commodity keys + the view key were written (gate AC1).
+    const keys = Object.keys(localStorage).sort();
+    expect(keys).toEqual(
+      expect.arrayContaining(['energy_data_v2', 'gas_usage_summaries', 'oeo_commodity']),
+    );
+    expect(keys).not.toContain('energy_gas_v2');
+  }, 30_000);
+
+  it('a reload reads BOTH halves back from storage', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    const first = renderHook(() => useEnergyData());
+    await upload(first.result, MIXED_XML, 'mixed.xml');
+    await waitFor(() => expect(first.result.current.rawData).toHaveLength(68));
+
+    // Simulated reload: a brand-new hook seeded from storage only.
+    const second = renderHook(() => useEnergyData());
+    await waitFor(() => expect(second.result.current.rawData).toHaveLength(68));
+    expect(second.result.current.gasBillFeed.summaries).toHaveLength(10);
+    expect(second.result.current.gasData).toHaveLength(0); // no intervals in the doc
+  }, 30_000);
+
+  it('a later GAS upload still survives beside the mixed import (replace semantics hold)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    const { result } = renderHook(() => useEnergyData());
+    await upload(result, MIXED_XML, 'mixed.xml');
+    await waitFor(() => expect(result.current.rawData).toHaveLength(68));
+
+    await upload(result, GAS_XML, 'gas.xml');
+    await waitFor(() => expect(result.current.gasData.length).toBeGreaterThan(0));
+
+    const after = storedState();
+    expect(after.electricPoints).toBe(68); // untouched by the gas upload
+    expect(after.gasPoints).toBe(5);
+    expect(after.gasBills).toBe(10);
+    expect(after.electricBills).toBe(0);
+    expect(result.current.commodityNotice).toBe('gas');
+  }, 30_000);
+});
+
+/* ==========================================================================
+ * t_cb0cf70f — Defect B, hook side: /import's staged verdict is consumed
+ * by the dashboard on mount, exactly once.
+ * ========================================================================== */
+
+describe('/import staged detection handoff', () => {
+  it('a staged verdict surfaces as the notice on the next hook mount', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    stageCommodityNotice('both');
+
+    const { result } = renderHook(() => useEnergyData());
+    await waitFor(() => expect(result.current.commodityNotice).toBe('both'));
+
+    // Consumed: a later mount must not resurrect it (the effect cleared it).
+    const second = renderHook(() => useEnergyData());
+    expect(second.result.current.commodityNotice).toBeNull();
+  }, 30_000);
+
+  it('staging nothing leaves the notice untouched (a refusal stages nothing)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    const { result } = renderHook(() => useEnergyData());
+    expect(result.current.commodityNotice).toBeNull();
+  }, 30_000);
+
+  it('an upload AFTER a staged verdict replaces it with its own truth', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: () => Promise.resolve({ historicalRates: [] }) }));
+    stageCommodityNotice('gas'); // stale staging from a prior navigation
+
+    const { result } = renderHook(() => useEnergyData());
+    await waitFor(() => expect(result.current.commodityNotice).toBe('gas'));
+
+    await upload(result, ELEC_XML, 'electric.xml');
+    // The upload's own detection wins — staged state cannot outlive its use.
+    await waitFor(() => expect(result.current.commodityNotice).toBe('electricity'));
   }, 30_000);
 });

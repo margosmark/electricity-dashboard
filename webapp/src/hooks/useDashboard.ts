@@ -22,7 +22,7 @@ import {
 } from "@/lib/energy";
 // Commodity 7: gas enrichment rides the summaries themselves (interval block
 // per period + supplier label) so backup/restore needs no second channel.
-import { enrichGasSummaries, isGasFeed, isGasSummary } from "@/lib/gasBillUi";
+import { enrichGasSummaries, isGasFeed } from "@/lib/gasBillUi";
 // The billing axis — the file's OWN periods as the view's timeline (this
 // wave's whole idea), with billing_day as the fallback when it has none.
 import { buildBillingAxis, dateWindowOf, periodAt, stepPeriod, type BillingAxis } from "@/lib/billingAxis";
@@ -60,9 +60,12 @@ import {
 // disagree about what a gas document is.
 import {
   type Commodity,
-  commodityPresence, extractGasPoints, primaryCommodity, sortGasPoints,
+  extractGasPoints, primaryCommodity, sortGasPoints,
   splitFeed, splitSummaries, unionGasPoints,
 } from "@/lib/commodity";
+// t_cb0cf70f — Defect B: /import stages its detection verdict here before
+// navigating, this hook consumes it on mount (see commodityNotice below).
+import { clearCommodityNotice, readCommodityNotice } from "@/lib/importNotice";
 // Wave P — the plan timeline travels with the backup, next to billing_day.
 import { readStoredTimeline } from "@/hooks/usePlanTimeline";
 import { PLAN_TIMELINE_KEY } from "@/lib/planTimeline";
@@ -715,8 +718,22 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
    * on the commodity that got data; this says it out loud, including the
    * ambiguous case: a document carrying BOTH halves reports both instead of
    * pretending it was one commodity. Cleared by the next upload.
+   *
+   * Seeded from the module-scope handoff `/import` stages before its
+   * `router.push('/')` (t_cb0cf70f — Defect B): this hook's state did not
+   * exist while the import page was committing, so without the handoff an
+   * electric or mixed document imported via `/import` surfaced NO detection
+   * disclosure anywhere. Read is non-destructive (React may re-run a
+   * `useState` initializer); the staged value is dropped in the mount
+   * effect below so a later remount cannot resurrect a stale notice.
    */
-  const [commodityNotice, setCommodityNotice] = useState<Commodity | 'both' | null>(null);
+  const [commodityNotice, setCommodityNotice] = useState<Commodity | 'both' | null>(() =>
+    readCommodityNotice(),
+  );
+  useEffect(() => {
+    clearCommodityNotice();
+    // Mount only: a one-shot handoff, consumed exactly once per staging.
+  }, []);
   const reportDetection = (electricity: boolean, gas: boolean) => {
     setCommodityNotice(
       electricity && gas ? 'both' : gas ? 'gas' : electricity ? 'electricity' : null,
@@ -1071,12 +1088,16 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const gasPoints = extractGasPoints(groups);
     const split = splitSummaries(summaries);
     const holdPendingFeeds = () => {
-      if (incoming > 0) {
+      // HOLD GATE = points OR periods (t_cb0cf70f), matching parseOne: a
+      // half with billing periods but no interval rows is still held, so
+      // `commitGasHalf` / the bill union below can land it. Points-only
+      // gates dropped a bills-only half before any commit saw it.
+      if (incoming > 0 || split.electric.length > 0) {
         billFeedsRef.current = [
           { summaries: split.electric, localTime: feed.localTime, source: "your Green Button feed" },
         ];
       }
-      if (gasPoints.length > 0) {
+      if (gasPoints.length > 0 || split.gas.length > 0) {
         gasBillFeedsRef.current = [
           { summaries: split.gas, localTime: feed.localTime, source: "your Green Button feed" },
         ];
@@ -1091,8 +1112,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     };
 
     if (incoming === 0 && gasPoints.length > 0) {
-      // Gas-only on the live-sync path: union into the gas bucket, say what
-      // was found, and stop — there is no electric row here to merge.
+      // Gas-only rows on the live-sync path: union into the gas bucket, say
+      // what was found, and stop — there is no electric row here to merge.
+      // Electric BILLING PERIODS with no electric rows still land first
+      // (t_cb0cf70f): a held feed left uncommitted would leak into the NEXT
+      // commit instead of this one. Union, never replace — live sync.
+      if (billFeedsRef.current.length > 0) commitBillFeed("union");
       commitGasHalf("union");
       return { ok: true, incoming: gasPoints.length, added: gasPoints.length };
     }
@@ -1612,17 +1637,24 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           // electric rows contributes NOTHING to `billFeedsRef`, which is what
           // stops a gas upload from handing the electricity commit an empty
           // (or worse, a gas) feed to replace with.
+          //
+          // HOLD GATE = points OR periods (t_cb0cf70f): a half is carried
+          // when it has interval rows OR when it has billing periods. The old
+          // points-only gate dropped a bills-only half (an electric upload
+          // whose gas side was Enbridge UsageSummary periods with no interval
+          // rows) before the commit ever saw it. Same condition as
+          // `import/page.tsx`'s gas check (`points > 0 || summaries > 0`).
           const split = splitSummaries(summaries);
           const electricRows = groups.reduce((n, g) => n + g.readings.length, 0);
           const gasPoints = extractGasPoints(groups);
-          if (electricRows > 0) {
+          if (electricRows > 0 || split.electric.length > 0) {
             billFeedsRef.current.push({
               summaries: split.electric,
               localTime: feed.localTime,
               source: file.name,
             });
           }
-          if (gasPoints.length > 0) {
+          if (gasPoints.length > 0 || split.gas.length > 0) {
             gasBillFeedsRef.current.push({
               summaries: split.gas,
               localTime: feed.localTime,
@@ -1684,26 +1716,52 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             return;
           }
           // ONE document, possibly TWO commodities. Each half is committed
-          // only when the document actually carries rows for it — an empty
-          // commit is a wipe, and wiping the other commodity's bucket with an
-          // upload that never contained it is the defect this card closes.
+          // only when the document actually carries rows OR periods for it —
+          // an empty commit is a wipe, and wiping the other commodity's
+          // bucket with an upload that never contained it is the defect this
+          // card closes.
+          //
+          // COMMIT GATE = points OR periods (t_cb0cf70f): the old
+          // `points > 0` gate silently dropped a bills-only half — an
+          // electric upload carrying Enbridge UsageSummary periods with no
+          // gas interval rows committed nothing gas, while the notice below
+          // still claimed both were imported. Same condition as
+          // `import/page.tsx` (`points > 0 || summaries > 0`). A half with
+          // periods but no intervals writes ONLY its bills: committing
+          // intervals with an empty list would replace stored intervals
+          // with nothing.
           const split = splitFeed({ groups: only.groups, summaries: only.summaries ?? [] });
-          if (split.gas.length > 0) {
-            commitGasReadings(split.gas, 'replace', split.gasSummaries, only.notes);
+          // The notice is derived from what this commit actually ran, not
+          // from the document merely containing a half — a claim gated on
+          // document presence is exactly how "both imported" lied.
+          let committedElectricity = false;
+          let committedGas = false;
+          if (split.gas.length > 0 || split.gasSummaries.length > 0) {
+            if (split.gas.length > 0) {
+              commitGasReadings(split.gas, 'replace', split.gasSummaries, only.notes);
+            }
+            // Bills-only half: the held feed (the parse-time gate pushed it
+            // on periods alone) lands here; no interval commit runs, so
+            // stored gas intervals stay untouched.
             commitGasBillFeed('replace');
+            committedGas = true;
           }
-          if (split.electric.length > 0) {
-            // An upload REPLACES: this file is what the user asked to see, so
-            // an unrelated upload also replaces the panel (to nothing, if it
-            // carried no bills) instead of leaving a stranger's bill on screen.
-            commitReadings(split.electric, 'upload', split.electricSummaries, only.notes);
+          if (split.electric.length > 0 || split.electricSummaries.length > 0) {
+            if (split.electric.length > 0) {
+              // An upload REPLACES: this file is what the user asked to see, so
+              // an unrelated upload also replaces the panel (to nothing, if it
+              // carried no bills) instead of leaving a stranger's bill on screen.
+              commitReadings(split.electric, 'upload', split.electricSummaries, only.notes);
+            }
+            // Bills-only electric half (gas intervals + electric periods):
+            // the held feed lands without touching `energy_data_v2`.
             commitBillFeed('replace');
+            committedElectricity = true;
           }
           // Open the section the file actually filled — and say which one it
           // was, rather than leaving the user on the other dataset wondering
           // whether the upload worked.
-          const presence = commodityPresence(split);
-          reportDetection(presence.electricity, presence.gas);
+          reportDetection(committedElectricity, committedGas);
           const primary = primaryCommodity(split);
           if (primary) setCommodity(primary);
           clearPendingFeeds();
@@ -1716,15 +1774,28 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
           // dead end. Commit the gas bucket directly — the user still
           // confirmed the upload, and nothing about the electric dataset is
           // addressed here.
-          commitGasReadings(
-            gasPointsRef.current,
-            'replace',
-            undefined,
-            results.flatMap((r) => r.notes ?? []),
-          );
-          commitGasBillFeed('replace');
-          reportDetection(false, true);
-          setCommodity('gas');
+          //
+          // "No electric ROWS" is not "no electric half" (t_cb0cf70f): a
+          // batch can carry electric BILLING PERIODS with no intervals.
+          // Those are held feeds now, so they commit here too — and the
+          // notice is derived from what ran, never hardcoded.
+          const batchNotes = results.flatMap((r) => r.notes ?? []);
+          let committedElectricity = false;
+          let committedGas = false;
+          if (gasPointsRef.current.length > 0) {
+            commitGasReadings(gasPointsRef.current, 'replace', undefined, batchNotes);
+            committedGas = true;
+          }
+          if (gasBillFeedsRef.current.length > 0) {
+            commitGasBillFeed('replace');
+            committedGas = true;
+          }
+          if (billFeedsRef.current.length > 0) {
+            commitBillFeed('replace');
+            committedElectricity = true;
+          }
+          reportDetection(committedElectricity, committedGas);
+          if (committedGas) setCommodity('gas');
           clearPendingFeeds();
           return;
         }
@@ -1758,6 +1829,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const files = pendingMerge ?? [];
     setPendingMerge(null);
     const gasPoints = gasPointsRef.current;
+    // What THIS import actually commits — the notice is derived from these,
+    // never from the documents merely carrying a half (t_cb0cf70f).
+    let committedElectricity = false;
+    let committedGas = false;
     if (readings.length > 0) {
       // Every file in the merge review, bills included: the axis de-dupes
       // periods that two exports describe differently. The refusals from the
@@ -1770,6 +1845,13 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       );
       // The merged dataset IS those files, bills included (replace).
       commitBillFeed("replace");
+      committedElectricity = true;
+    } else if (billFeedsRef.current.length > 0) {
+      // Electric BILLING PERIODS with no intervals in the merged range
+      // (t_cb0cf70f): the periods are real data — they land without an
+      // interval commit that would replace `energy_data_v2` with nothing.
+      commitBillFeed("replace");
+      committedElectricity = true;
     }
     if (gasPoints.length > 0) {
       commitGasReadings(
@@ -1779,12 +1861,15 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         files.flatMap((f) => f.notes ?? []),
       );
       commitGasBillFeed("replace");
+      committedGas = true;
+    } else if (gasBillFeedsRef.current.length > 0) {
+      // Gas periods without gas intervals — the bills-only half (the shape
+      // the F2 probe uploaded): commit the bills, touch no intervals.
+      commitGasBillFeed("replace");
+      committedGas = true;
     }
-    reportDetection(
-      readings.length > 0 || files.some((f) => (f.summaries ?? []).some((s) => !isGasSummary(s))),
-      gasPoints.length > 0 || files.some((f) => (f.summaries ?? []).some((s) => isGasSummary(s))),
-    );
-    if (readings.length === 0 && gasPoints.length === 0) clearPendingFeeds();
+    reportDetection(committedElectricity, committedGas);
+    clearPendingFeeds();
   };
 
   /** Back out of the merge review without importing anything. */
@@ -1805,6 +1890,10 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     const pick = pendingUpload;
     const origin = pick?.origin;
     setPendingUpload(null);
+    // What THIS pick commits (t_cb0cf70f): the notice — and every held half
+    // — follows what actually landed, not what the document carried.
+    let committedElectricity = false;
+    let committedGas = false;
     if (readings.length === 0) {
       // A multi-UsagePoint GAS file: no electric row to pick, but the volume
       // intervals are real data the user just chose to import. Commit them to
@@ -1812,9 +1901,21 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // electric pick used to leave behind.
       if (gasPointsRef.current.length > 0) {
         commitGasReadings(gasPointsRef.current, "replace", undefined, pick?.notes);
-        commitGasBillFeed("replace");
-        setCommodity("gas");
+        committedGas = true;
       }
+      // A bills-only half holds no intervals but its periods are still real
+      // data (t_cb0cf70f): the feed lands, no interval write runs.
+      if (gasBillFeedsRef.current.length > 0) {
+        commitGasBillFeed("replace");
+        committedGas = true;
+      }
+      if (billFeedsRef.current.length > 0) {
+        commitBillFeed("replace");
+        committedElectricity = true;
+      }
+      reportDetection(committedElectricity, committedGas);
+      if (committedGas) setCommodity("gas");
+      clearPendingFeeds();
       return;
     }
     // The refusals the file carried are raised by the commit below: choosing a
@@ -1822,16 +1923,38 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
     if (origin === "greenbutton") {
       commitReadings(mergeForWrite(rawDataRef.current, readings), "upload", pick?.summaries, pick?.notes);
       commitBillFeed("union");
+      committedElectricity = true;
       // A live-sync pick can also carry volume (a multi-commodity feed):
-      // union it into the gas bucket with the same commit.
+      // union it into the gas bucket with the same commit. Periods without
+      // intervals union in too — a bills-only half is still a half.
       if (gasPointsRef.current.length > 0) {
         commitGasReadings(gasPointsRef.current, "union", undefined, pick?.notes);
-        commitGasBillFeed("union");
+        committedGas = true;
       }
+      if (gasBillFeedsRef.current.length > 0) {
+        commitGasBillFeed("union");
+        committedGas = true;
+      }
+      reportDetection(committedElectricity, committedGas);
+      clearPendingFeeds();
       return;
     }
     commitReadings(readings, "upload", pick?.summaries, pick?.notes);
     commitBillFeed("replace");
+    committedElectricity = true;
+    // The picked meter's rows are what the user chose, but the file's gas
+    // half rides the same way its bills do (whole-file, like `pick.summaries`
+    // above): a mixed multi-meter upload must not drop it (t_cb0cf70f).
+    if (gasPointsRef.current.length > 0) {
+      commitGasReadings(gasPointsRef.current, "replace", undefined, pick?.notes);
+      committedGas = true;
+    }
+    if (gasBillFeedsRef.current.length > 0) {
+      commitGasBillFeed("replace");
+      committedGas = true;
+    }
+    reportDetection(committedElectricity, committedGas);
+    clearPendingFeeds();
   };
 
   /** Back out of the picker without importing anything. */
