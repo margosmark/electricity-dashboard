@@ -204,12 +204,24 @@ export function applyDocument(doc: BackupDocument): { written: string[] } {
   // the live storage service instead, so a remote apply cannot leave a stale
   // v2 payload beside a newly-written legacy payload.
   //
-  // The electric readings write stays first and all-or-nothing, and it is
+  // The electric reads write stays first and all-or-nothing, and it is
   // SKIPPED when the document carries none (a gas-only document has no
   // opinion about this device's electricity — writing `[]` here would be the
   // very clobber a section-less document promises not to do).
+  //
+  // EVERY other electric-side write rides the same gate (t_578268b7 review):
+  // billing_day, extra_charges, plan_timeline, selected_plan and the example
+  // flag are all ELECTRIC profile. A gas-only payload carries only
+  // parseBackup's defaults for them (billing_day and extra_charges are
+  // mandatory in every payload), so applying them unconditionally would
+  // reconfigure this device's billing anchor, add-ons, plan and banner while
+  // deliberately keeping its readings — and clearing `energy_data_is_example`
+  // over surviving demo rows is exactly the lie the flag rule exists to
+  // prevent. Absent electric section ⇒ no electric opinion, symmetric with
+  // the gas-key rule below: no write, no clear, no deletion.
+  const hasElectric = doc.payload.energy_data.length > 0;
   let written: string[] = [];
-  if (doc.payload.energy_data.length > 0) {
+  if (hasElectric) {
     const savedEnergy = saveEnergyData(doc.payload.energy_data, {
       source: "account-sync",
       uploadedAt: doc.exportedAt || new Date().toISOString(),
@@ -219,11 +231,15 @@ export function applyDocument(doc: BackupDocument): { written: string[] } {
   }
 
   const values: Record<string, string> = {
-    billing_day: String(doc.payload.billing_day),
-    extra_charges: JSON.stringify(doc.payload.extra_charges),
-    plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
-    ...(doc.payload.selected_plan !== undefined ? { [PLAN_STORAGE_KEY]: doc.payload.selected_plan } : {}),
-    [EXAMPLE_DATA_KEY]: doc.payload.energy_data_is_example === true ? "1" : "",
+    ...(hasElectric
+      ? {
+          billing_day: String(doc.payload.billing_day),
+          extra_charges: JSON.stringify(doc.payload.extra_charges),
+          plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
+          ...(doc.payload.selected_plan !== undefined ? { [PLAN_STORAGE_KEY]: doc.payload.selected_plan } : {}),
+          [EXAMPLE_DATA_KEY]: doc.payload.energy_data_is_example === true ? "1" : "",
+        }
+      : {}),
     // v3 gas keys — written ONLY when the document carries the section. A v1/v2
     // or electricity-only document has no gas opinion, so pulling it must
     // leave this device's gas dataset exactly as it is; a document that DOES

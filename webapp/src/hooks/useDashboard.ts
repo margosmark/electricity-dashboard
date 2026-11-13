@@ -2081,7 +2081,8 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
         // skipped, and the gas payload takes the same first-failure-wins
         // slot (written verbatim, envelope included, so the stored key comes
         // back byte-for-byte instead of as a fresh "backup-import" upload).
-        if (profile.value.payload.energy_data.length > 0) {
+        const hasElectric = profile.value.payload.energy_data.length > 0;
+        if (hasElectric) {
           const saved = saveEnergyData(profile.value.payload.energy_data, {
             source: "backup-import",
             uploadedAt: profile.value.exportedAt,
@@ -2099,10 +2100,19 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             return { ok: false, error: t('backup.errRefused', { detail: gasSaved.detail }) };
           }
         }
-        const day = saveBillingDay(profile.value.payload.billing_day);
-        if (!day.ok) {
-          reportStorage(day);
-          return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
+        // Billing day is ELECTRIC profile, so it rides the same gate as the
+        // readings: a gas-only document only carries parseBackup's default
+        // (billing_day is mandatory in every payload), and stamping that over
+        // a configured browser's anchor day would be the same clobber one
+        // key further. `values` (storageValuesFromBackup) is gated to match,
+        // so the loop below writes no electric key for a gas-only document
+        // either — fresh browser, no electric keys at all.
+        if (hasElectric) {
+          const day = saveBillingDay(profile.value.payload.billing_day);
+          if (!day.ok) {
+            reportStorage(day);
+            return { ok: false, error: t('backup.errRefusedBillingDay', { detail: day.detail }) };
+          }
         }
         // Everything else in the document is owned by the hook that reads it
         // (charges, timeline, plan, example flag). Same contract the account

@@ -223,9 +223,67 @@ describe('useEnergyData — gas backup (t_578268b7)', () => {
     expect(localStorage.getItem('energy_gas_v2')).toBe(GAS_STRING);
     expect(localStorage.getItem('gas_usage_summaries')).toBe(GAS_SUMMARIES_STRING);
     expect(localStorage.getItem('gas_local_time_parameters')).toBe(GAS_CLOCK_STRING);
-    // No empty electric dataset is invented for a gas-only profile.
+    // No empty electric dataset is invented for a gas-only profile — and no
+    // electric PROFILE key either: a fresh browser that restores a gas-only
+    // document holds gas and nothing else (review round 1: billing anchor,
+    // add-ons, timeline, plan and example flag must not appear either).
     expect(localStorage.getItem('energy_data_v2')).toBeNull();
     expect(localStorage.getItem('energy_data')).toBeNull();
+    expect(localStorage.getItem('billing_day')).toBeNull();
+    expect(localStorage.getItem('extra_charges')).toBeNull();
+    expect(localStorage.getItem('plan_timeline')).toBeNull();
+    expect(localStorage.getItem('selected_plan')).toBeNull();
+    expect(localStorage.getItem('energy_data_is_example')).toBeNull();
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('a gas-only restore onto an ELECTRIC-configured browser changes no electric key (byte for byte)', async () => {
+    // The gas-only document under test.
+    seedGas();
+    const { result: exporter, unmount } = await renderEmpty();
+    let out: ReturnType<NonNullable<typeof exporter.current.exportBackup>>;
+    act(() => {
+      out = exporter.current.exportBackup()!;
+    });
+    unmount();
+
+    // The receiving browser: fully configured ELECTRIC profile, deliberately
+    // different from anything in the gas-only document (which carries only
+    // parseBackup defaults), plus its own demo flag.
+    localStorage.clear();
+    seedStorage({ billingDay: '15', extraCharges: JSON.stringify({ hstPct: '13', deliveryFlat: '25' }) });
+    localStorage.setItem(
+      'plan_timeline',
+      JSON.stringify([{ id: 'seed', plan: 'Tiered', from: '2024-11-25', to: '2025-03-24' }]),
+    );
+    localStorage.setItem('selected_plan', 'ULO');
+    localStorage.setItem('energy_data_is_example', '1');
+    const electricKeys = [
+      'energy_data_v2',
+      'billing_day',
+      'extra_charges',
+      'plan_timeline',
+      'selected_plan',
+      'energy_data_is_example',
+    ];
+    const before = electricKeys.map((k) => localStorage.getItem(k));
+
+    const { result: importer, onBackupApplied } = await renderLoaded();
+    const file = new File([out!.text], out!.filename, { type: 'application/json' });
+    let res: Awaited<ReturnType<NonNullable<typeof importer.current.importBackupFile>>>;
+    await act(async () => {
+      res = await importer.current.importBackupFile(file);
+    });
+    expect(res!.ok).toBe(true);
+
+    // Every electric key byte-identical — readings, billing anchor, add-ons,
+    // timeline, plan AND the example flag (the "banner cleared over demo
+    // readings" lie is exactly this write).
+    expect(electricKeys.map((k) => localStorage.getItem(k))).toEqual(before);
+    // The gas half landed.
+    expect(localStorage.getItem('energy_gas_v2')).toBe(GAS_STRING);
+    expect(localStorage.getItem('gas_usage_summaries')).toBe(GAS_SUMMARIES_STRING);
+    expect(localStorage.getItem('gas_local_time_parameters')).toBe(GAS_CLOCK_STRING);
     expect(onBackupApplied).toHaveBeenCalledTimes(1);
   });
 

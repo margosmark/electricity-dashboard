@@ -542,17 +542,21 @@ describe('v3 gas section — build → parse → localStorage writes (t_578268b7
       JSON.stringify([gasSummary(1704067200), gasSummary(1704326400)]),
     );
     expect(values.gas_local_time_parameters).toBe(JSON.stringify(GAS_CLOCK));
-    // The electric writes are exactly the ones they always were.
+    // A gas-only document has NO electric opinion: the electric writes are
+    // absent entirely (not written-then-skipped — absent), so a restore
+    // cannot reconfigure billing anchor, add-ons, plan, timeline or the
+    // example flag on a browser whose readings it deliberately keeps.
     expect(Object.keys(values).sort()).toEqual([
-      'billing_day',
-      'energy_data',
-      'energy_data_is_example',
       'energy_gas_v2',
-      'extra_charges',
       'gas_local_time_parameters',
       'gas_usage_summaries',
-      'plan_timeline',
     ]);
+    expect(values.billing_day).toBeUndefined();
+    expect(values.extra_charges).toBeUndefined();
+    expect(values.plan_timeline).toBeUndefined();
+    expect(values.energy_data_is_example).toBeUndefined();
+    expect(values.selected_plan).toBeUndefined();
+    expect(values.energy_data).toBeUndefined();
   });
 
   it('accepts empty energy_data ONLY because a gas section proves the document holds data', () => {

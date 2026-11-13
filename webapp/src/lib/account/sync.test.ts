@@ -293,14 +293,40 @@ describe("gas dataset sync (t_578268b7)", () => {
     expect(JSON.parse(localStorage.getItem(ENERGY_KEY_V2)!)).toMatchObject({ points: ROWS });
   });
 
-  it("applying a gas-only document never touches the electric readings", () => {
+  it("applying a gas-only document never touches the electric profile — readings, billing, add-ons, plan, timeline, flag", () => {
     seedLocal();
     seedGas();
-    const electricBefore = localStorage.getItem(ENERGY_KEY_V2)!;
+    // Deliberately DIFFERENT from every electric value the document carries
+    // (the old version seeded billing_day '7' against a doc billingDay of 7,
+    // which masked the write): if any electric key is written or cleared,
+    // the byte comparison below fails.
+    localStorage.setItem("billing_day", "15");
+    localStorage.setItem(
+      "extra_charges",
+      JSON.stringify({ hstPct: "13", deliveryFlat: "25" }),
+    );
+    localStorage.setItem(
+      "plan_timeline",
+      JSON.stringify([{ id: "seed", plan: "Tiered", from: "2024-11-25", to: "2025-03-24" }]),
+    );
+    localStorage.setItem(PLAN_STORAGE_KEY, "ULO");
+    localStorage.setItem(EXAMPLE_DATA_KEY, "1");
+    const electricBefore = {
+      readings: localStorage.getItem(ENERGY_KEY_V2)!,
+      billing: localStorage.getItem(BILLING_DAY_KEY)!,
+      charges: localStorage.getItem("extra_charges")!,
+      timeline: localStorage.getItem("plan_timeline")!,
+      plan: localStorage.getItem(PLAN_STORAGE_KEY)!,
+      flag: localStorage.getItem(EXAMPLE_DATA_KEY)!,
+    };
+
     const { written } = applyDocument(
       buildBackupDocument({
         energyData: [],
-        billingDay: 7,
+        billingDay: 1,
+        extraCharges: { deliveryPerKwh: "", deliveryFlat: "", regulatoryPerKwh: "", hstPct: "" },
+        isExample: false,
+        selectedPlan: "Tiered",
         gasData: GAS_PAYLOAD,
         gasSummaries: [
           {
@@ -321,10 +347,53 @@ describe("gas dataset sync (t_578268b7)", () => {
         ],
       }),
     );
-    expect(written).not.toContain(ENERGY_KEY_V2);
-    expect(localStorage.getItem(ENERGY_KEY_V2)).toBe(electricBefore);
+    expect({
+      readings: localStorage.getItem(ENERGY_KEY_V2)!,
+      billing: localStorage.getItem(BILLING_DAY_KEY)!,
+      charges: localStorage.getItem("extra_charges")!,
+      timeline: localStorage.getItem("plan_timeline")!,
+      plan: localStorage.getItem(PLAN_STORAGE_KEY)!,
+      flag: localStorage.getItem(EXAMPLE_DATA_KEY)!,
+    }).toEqual(electricBefore);
+    // No electric key was even written, let alone changed.
+    for (const key of [
+      ENERGY_KEY_V2,
+      BILLING_DAY_KEY,
+      "extra_charges",
+      "plan_timeline",
+      PLAN_STORAGE_KEY,
+      EXAMPLE_DATA_KEY,
+    ]) {
+      expect(written, `${key} must not be written by a gas-only document`).not.toContain(key);
+    }
     expect(localStorage.getItem(ENERGY_GAS_KEY)).toBe(GAS_STRING);
     expect(written).toContain(GAS_USAGE_SUMMARIES_KEY);
+  });
+
+  it("applying a gas-only document to a FRESH browser creates no electric keys at all", () => {
+    localStorage.clear();
+    const { written } = applyDocument(
+      buildBackupDocument({
+        energyData: [],
+        billingDay: 7,
+        extraCharges: { deliveryPerKwh: "0.05", deliveryFlat: "25", regulatoryPerKwh: "0.0015", hstPct: "13" },
+        isExample: true,
+        selectedPlan: "ULO",
+        gasData: GAS_PAYLOAD,
+      }),
+    );
+    // Not one electric key exists — no readings, no billing anchor, no
+    // add-ons, no timeline, no plan, no example flag.
+    expect(localStorage.getItem(ENERGY_KEY_V2)).toBeNull();
+    expect(localStorage.getItem(LEGACY_ENERGY_KEY)).toBeNull();
+    expect(localStorage.getItem(BILLING_DAY_KEY)).toBeNull();
+    expect(localStorage.getItem("extra_charges")).toBeNull();
+    expect(localStorage.getItem("plan_timeline")).toBeNull();
+    expect(localStorage.getItem(PLAN_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(EXAMPLE_DATA_KEY)).toBeNull();
+    // The gas half landed.
+    expect(localStorage.getItem(ENERGY_GAS_KEY)).toBe(GAS_STRING);
+    expect(written).toEqual([ENERGY_GAS_KEY]);
   });
 
   it("changes the fingerprint when ONLY gas changes", () => {

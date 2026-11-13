@@ -516,26 +516,36 @@ function describe(v: unknown): string {
 
 /**
  * The exact localStorage writes an import performs — the same keys the app
- * already reads on boot (readings, billing day, bill add-ons, the Wave P
- * plan timeline, and — v3 — the gas dataset), so a restore is
- * indistinguishable from a re-upload.
+ * already reads on boot, so a restore is indistinguishable from a re-upload.
+ *
+ * Both halves follow one rule: ABSENT SECTION ⇒ NO OPINION (t_578268b7).
+ * The electric profile is written only when the document carries electric
+ * rows; the gas dataset only when it carries gas. A gas-only document holds
+ * nothing but parseBackup's defaults for the electric fields (billing_day
+ * and extra_charges are ALWAYS present in a parsed payload), so writing them
+ * would reconfigure a configured browser's electric profile while the
+ * readings — deliberately untouched — stayed put.
  */
 export function storageValuesFromBackup(doc: BackupDocument): Record<string, string> {
-  const values: Record<string, string> = {
-    energy_data: JSON.stringify(doc.payload.energy_data),
-    billing_day: String(doc.payload.billing_day),
-    extra_charges: JSON.stringify(doc.payload.extra_charges),
-    plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
-  };
-  // The two v2 keys are written ONLY when the document carries them: a v1
-  // backup has no opinion, so restoring one must not silently re-plan the
-  // user's dashboard or clear the example-data banner.
-  if (doc.payload.selected_plan !== undefined) values[PLAN_STORAGE_KEY] = doc.payload.selected_plan;
-  // The example flag is ALWAYS written, even for a v1 document that never
-  // recorded one: a restore replaces the whole profile, and leaving a stale
-  // "these are demo numbers" banner over the user's real restored readings
-  // would be a lie the app has no way to detect afterwards.
-  values[EXAMPLE_DATA_KEY] = doc.payload.energy_data_is_example === true ? '1' : '';
+  const values: Record<string, string> = {};
+  if (doc.payload.energy_data.length > 0) {
+    values.energy_data = JSON.stringify(doc.payload.energy_data);
+    values.billing_day = String(doc.payload.billing_day);
+    values.extra_charges = JSON.stringify(doc.payload.extra_charges);
+    values.plan_timeline = JSON.stringify(doc.payload.plan_timeline ?? []);
+    // The v2 key keeps its own rule INSIDE the gate: the plan is written only
+    // when the document recorded one — a v1 backup has no opinion, so
+    // restoring one must not silently re-plan the user's dashboard.
+    if (doc.payload.selected_plan !== undefined) values[PLAN_STORAGE_KEY] = doc.payload.selected_plan;
+    // The example flag is ALWAYS written for a document that carries rows,
+    // even a v1 one that never recorded it: that restore replaces the
+    // readings, and leaving a stale "these are demo numbers" banner over the
+    // user's real restored readings would be a lie the app cannot detect
+    // afterwards. The gate is what keeps a GAS-only restore from touching it
+    // — that restore replaces nothing, so clearing the banner over surviving
+    // demo rows would be the same lie in reverse.
+    values[EXAMPLE_DATA_KEY] = doc.payload.energy_data_is_example === true ? '1' : '';
+  }
   // v3 gas keys — the OPPOSITE rule from the flag above, and deliberately so:
   // written only when the document carries the section, never as a clear.
   // A v1/v2 backup (or an electricity-only export) has no gas opinion, so a
