@@ -1,0 +1,106 @@
+{
+  "audited_code_commit": "988ea57a7cc283f7edac7da350fc3931635662c1",
+  "schemas": 7,
+  "global_rows": 171,
+  "complex_type_rows": 216,
+  "field_rows": 1055,
+  "function_blocks": 62,
+  "java_active": 46,
+  "java_deprecated": 14,
+  "supported_features": 12,
+  "mapped_test_titles": 22,
+  "fixture_references": 14,
+  "proposed_acceptance_tests": 13,
+  "result": "PASS: inventory reconciliation; NOT standards certification",
+  "checked": "2026-10-12",
+  "existing_vitest": {
+    "command": "npm run test -- src/lib/utilitySamples.test.ts src/lib/usageSummary.test.ts src/lib/localTimeParameters.test.ts src/lib/parseDiagnostic.test.ts src/lib/greenbutton/shim.test.ts src/lib/greenbutton/oauthFlow.test.ts",
+    "files_passed": 6,
+    "tests_passed": 141,
+    "log": "existing-tests.log"
+  },
+  "reconciliation_self_tests_passed": 14,
+  "internal_links_checked": 174,
+  "review_revision": {
+    "checked": "2026-10-12",
+    "origin_main_read": "c531ecc842e90b9eef97b08600928e94de6f10a0",
+    "corrected_blocks": [43, 46, 47, 48, 49, 50],
+    "classification": "explicitly unsupported; applicability unverified pending P0; G12/P4",
+    "existing_vitest_files_passed": 6,
+    "existing_vitest_tests_passed": 141,
+    "remote_schema_fixture_java_hashes_matched": 15,
+    "legacy_table_hash_matched": true,
+    "fb43_pinned_description": "empty",
+    "checks": [
+      "Unknown/unverified meaning cannot justify a role exclusion",
+      "Source limitations still reject N/A when matrix warning is removed",
+      "Markdown/JSON FB statuses, subsets, phases and gap IDs reconcile",
+      "All 174 internal file/anchor links resolve"
+    ]
+  },
+  "per_schema": [
+    {
+      "file": "espi-v4.0.xsd",
+      "version": "4.0.20231213",
+      "role": "bounded-baseline",
+      "globals": 20,
+      "complex_types": 32,
+      "simple_types": 54
+    },
+    {
+      "file": "customer-v4.0.xsd",
+      "version": "4.0.20231213",
+      "role": "bounded-baseline",
+      "globals": 44,
+      "complex_types": 43,
+      "simple_types": 33
+    },
+    {
+      "file": "usage-v3.3.xsd",
+      "version": "3.3.20200320",
+      "role": "legacy-compatibility",
+      "globals": 20,
+      "complex_types": 32,
+      "simple_types": 54
+    },
+    {
+      "file": "retailcustomer-v3.3.xsd",
+      "version": "3.3.20200130",
+      "role": "legacy-compatibility",
+      "globals": 42,
+      "complex_types": 41,
+      "simple_types": 32
+    },
+    {
+      "file": "customer-v4.1.xsd",
+      "version": "4.0",
+      "role": "unverified-draft-delta",
+      "globals": 41,
+      "complex_types": 40,
+      "simple_types": 33
+    },
+    {
+      "file": "atom-v3.3.xsd",
+      "version": null,
+      "role": "legacy-atom-envelope",
+      "globals": 2,
+      "complex_types": 14,
+      "simple_types": 1
+    },
+    {
+      "file": "atom-v4.1.xsd",
+      "version": null,
+      "role": "unverified-draft-atom",
+      "globals": 2,
+      "complex_types": 14,
+      "simple_types": 1
+    }
+  ],
+  "limits": [
+    "Local verification only; Actions not run",
+    "No schema-validity/certification claim",
+    "No production parser/dependencies/other workers tests edited",
+    "No portal interaction, forms/terms submitted, paid standard or credentials accessed",
+    "Synthetic gap recipes specified, not implemented production tests"
+  ]
+}
