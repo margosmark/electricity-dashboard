@@ -14,9 +14,9 @@
  * ever runs (1); it never sees (2) in any form — that is the whole point of
  * client-side E2EE.
  *
- * There is NO password reset by e-mail: this deployment has no SMTP and no
- * third-party IdP (that is a scope fence from the card, not an oversight).
- * What exists instead is a recovery CODE, issued only at the moment a server
+ * Public registration/recovery use the configurable SMTP transport: the
+ * mailbox must be proven before a password verifier or session exists. The
+ * legacy recovery CODE path is retained only for the local compatibility mode.
  * copy of the data comes into existence (registration on a device that
  * already has data, or the first upload otherwise). See `POST
  * /account/recover`. Losing the password still means losing the SERVER copy —
@@ -44,8 +44,12 @@ export const ARGON2_OPTIONS = {
   parallelism: 1,
 } as const;
 
-/** NIST: at least 8 characters. Capped so one request cannot pin a core. */
-export const MIN_PASSWORD_LENGTH = 8;
+/**
+ * Minimum 15 characters: the verifier protects against offline Argon2id
+ * guessing, while this same secret derives the E2EE key from public salt and
+ * stolen ciphertext. Favor memorable passphrases; do not silently trim them.
+ */
+export const MIN_PASSWORD_LENGTH = 15;
 export const MAX_PASSWORD_LENGTH = 200;
 export const MAX_EMAIL_LENGTH = 254;
 
@@ -90,6 +94,12 @@ export function normalizeEmail(raw: unknown): CredentialResult<string> {
   return { ok: true, value: email };
 }
 
+export function validateLoginPassword(raw: unknown): CredentialResult<string> {
+  if (typeof raw !== "string" || raw.length === 0) return { ok: false, error: "Enter a password." };
+  if (raw.length > MAX_PASSWORD_LENGTH) return { ok: false, error: `Passwords are limited to ${MAX_PASSWORD_LENGTH} characters.` };
+  return { ok: true, value: raw };
+}
+
 export function validatePassword(raw: unknown): CredentialResult<string> {
   if (typeof raw !== "string" || raw.length === 0) return { ok: false, error: "Enter a password." };
   if (raw.length < MIN_PASSWORD_LENGTH) {
@@ -118,6 +128,12 @@ export function newSessionToken(): SessionToken {
 
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+/** A URL-safe, 256-bit one-use token. Only its hash is stored server-side. */
+export function newEmailToken(): { token: string; hash: string } {
+  const token = randomBytes(32).toString("base64url");
+  return { token, hash: hashToken(token) };
 }
 
 /** Constant-time compare that tolerates a length mismatch (never throws). */

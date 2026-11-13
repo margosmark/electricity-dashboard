@@ -60,6 +60,7 @@ import {
   multiplierName,
   quantityKindOf,
   uomName,
+  volumeM3FromRaw,
 } from './espiUnits';
 
 /* ==========================================================================
@@ -80,6 +81,14 @@ export type SeriesReading = {
   quality: number | null;
   /** ESPI Reading cost (hundred-thousandths of the ReadingType currency). */
   cost: number | null;
+  /**
+   * Cubic metres, present ONLY on a `volume` series: `raw × 10^potm` in the
+   * ReadingType's own scale (Enbridge gas: `427000 × 10^-3` → `427`). Kept
+   * beside `raw` (never instead of it) so the published value stays verbatim
+   * while a consumer never has to redo the unit maths — `kwh` stays null,
+   * because a volume is not energy and must never join a kWh total.
+   */
+  m3?: number;
 };
 
 /** Why a series is, or is not, usable as electricity consumption. */
@@ -88,6 +97,8 @@ export type SeriesStatus =
   | 'supported'
   /** Interval-average active power → converted with the interval duration. */
   | 'power-converted'
+  /** A volume (natural gas in m³, water …) → `m3` filled, never priced as energy. */
+  | 'volume'
   /** A register (bulk/cumulative/latching/bounded) — needs a differencing contract. */
   | 'register'
   /** Indicating / instantaneous / time-delayed spot value. */
@@ -170,6 +181,8 @@ export type SeriesNote = {
   code:
     | 'unsupported-series'
     | 'converted-to-energy'
+    | 'volume-series'
+    | 'account-details'
     | 'refused-readings'
     | 'legacy-assumption'
     | 'assumed-direction'
@@ -202,7 +215,7 @@ export type SeriesNote = {
  * `SeriesNote.params`.
  */
 export const REFUSAL_REASON_KEY: Record<
-  Exclude<SeriesStatus, 'supported' | 'power-converted'>,
+  Exclude<SeriesStatus, 'supported' | 'power-converted' | 'volume'>,
   string
 > = {
   register: 'gbseries.refusal.register',
@@ -517,7 +530,7 @@ function collectBareReadings(node: unknown, skipKeys: string[] = []): RawReading
  * ========================================================================== */
 
 const REFUSAL_REASON: Record<
-  Exclude<SeriesStatus, 'supported' | 'power-converted' | 'unresolved-reading-type'>,
+  Exclude<SeriesStatus, 'supported' | 'power-converted' | 'volume' | 'unresolved-reading-type'>,
   string
 > = {
   register:
@@ -545,7 +558,7 @@ export function classifySeries(meta: SeriesMetadata): {
   reason: string | null;
 } {
   const refuse = (
-    status: Exclude<SeriesStatus, 'supported' | 'power-converted' | 'unresolved-reading-type'>,
+    status: Exclude<SeriesStatus, 'supported' | 'power-converted' | 'volume' | 'unresolved-reading-type'>,
   ) => ({ status, reason: REFUSAL_REASON[status] });
 
   if (meta.unresolved) {
@@ -558,7 +571,15 @@ export function classifySeries(meta: SeriesMetadata): {
   if (meta.assumed) return { status: 'supported', reason: null };
 
   const commodity = commodityClassOf(meta.commodity);
-  if (commodity !== 'electricity' && commodity !== 'unspecified') return refuse('other-commodity');
+  // Natural gas in a VOLUME unit (uom 42 / 167) is recognised as data below —
+  // scaled to m³, never priced, never joined to kWh — but every OTHER
+  // non-electricity commodity still refuses here, and gas in a NON-volume unit
+  // (a kWh figure on a gas meter, say) is a contradiction this parser will not
+  // paper over either.
+  const gasVolume = commodity === 'gas' && quantityKindOf(meta.uom) === 'volume';
+  if (commodity !== 'electricity' && commodity !== 'unspecified' && !gasVolume) {
+    return refuse('other-commodity');
+  }
 
   const accumulation = accumulationClassOf(meta.accumulationBehaviour);
   if (accumulation === 'register') return refuse('register');
@@ -588,6 +609,18 @@ export function classifySeries(meta: SeriesMetadata): {
   const flow = flowClassOf(meta.flowDirection);
   if (flow === 'reverse') return refuse('reverse-flow');
   if (flow === 'net' || flow === 'total' || flow === 'quadrant') return refuse('combined-flow');
+
+  // A VOLUME series is recognised, not refused: commodity 7 (natural gas) in
+  // m³ / m³-compensated is the Enbridge EGD shape (t_fb80429a). It keeps its
+  // own status so `billableSeries` can never price it, the group's reading
+  // stream never receives it, and its readings carry `m3` instead of `kwh`.
+  // An electricity (or unspecified) meter claiming a volume unit is a
+  // contradiction of the same kind the other branches refuse.
+  if (quantity === 'volume') {
+    return commodity === 'gas' || commodity === 'unspecified'
+      ? { status: 'volume', reason: null }
+      : refuse('other-quantity');
+  }
 
   if (quantity === 'active-power') {
     if (seriesDuration(meta) === null) return refuse('unconvertible');
@@ -819,7 +852,24 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
         }
         const duration = durationOf(r, block.duration, block.readings.length, meta);
         let kwh: number | null = null;
-        if (convert) {
+        let m3: number | undefined;
+        if (series.status === 'volume') {
+          // A volume reading is validated on its OWN scale: m³ is not kWh, so
+          // MAX_INTERVAL_KWH does not apply to it, but a negative volume is
+          // as impossible as a negative increment and a value that will not
+          // scale (an absurd declared multiplier, a non-finite raw) is dropped
+          // rather than charted as NaN — both counted, never silent.
+          if (r.value < 0) {
+            series.dropped.negative += 1;
+            continue;
+          }
+          const scaled = volumeM3FromRaw(r.value, meta.powerOfTenMultiplier);
+          if (scaled === null || scaled < 0) {
+            series.dropped.negative += 1;
+            continue;
+          }
+          m3 = scaled;
+        } else if (convert) {
           // A forward/reverse register increment is non-negative by definition
           // (ESPI FlowDirectionKind); a negative here is not a small usage, it
           // is a value this parser must refuse to price.
@@ -858,6 +908,9 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
           duration_s: duration,
           raw: r.value,
           kwh,
+          // Absent (not null) on every non-volume series, so their reading
+          // shape is byte-identical to before t_fb80429a.
+          ...(m3 !== undefined ? { m3 } : {}),
           quality: r.quality ?? meta.defaultQuality,
           cost: r.cost,
         });
@@ -1010,6 +1063,22 @@ export function parseReadingSeries(parsed: Record<string, unknown>): ReadingSeri
         seriesKey: s.key,
         params: { label: s.label, uom: uomName(s.meta.uom) },
         detail: `Series ${s.label} is interval-average real power (${uomName(s.meta.uom)}); each reading was converted to energy with its own interval duration.`,
+      });
+    } else if (s.status === 'volume') {
+      // Recognised, not refused — but never silent either: the row says in
+      // what unit the series was kept and that nothing was priced. The
+      // catalogue sentence is composed from exactly these params (the
+      // seriesNote contract pins English byte-for-byte).
+      notes.push({
+        code: 'volume-series',
+        seriesKey: s.key,
+        params: {
+          label: s.label,
+          count: s.readings.length,
+          uom: uomName(s.meta.uom),
+          multiplier: multiplierName(s.meta.powerOfTenMultiplier),
+        },
+        detail: `Series ${s.label} was loaded as volume: ${s.readings.length} reading(s) in ${uomName(s.meta.uom)} scaled by ${multiplierName(s.meta.powerOfTenMultiplier)} — a quantity, not energy, so none of it was priced or added to the kWh totals.`,
       });
     } else if (s.status !== 'supported') {
       notes.push({

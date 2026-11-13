@@ -33,6 +33,8 @@ const usage = {
   userPlan: 'TOU' as const,
   startDate: '2026-10-01',
   filteredData: [],
+  hasData: false,
+  onImport: vi.fn(),
 };
 const projection = {
   ready: false,
@@ -71,7 +73,19 @@ describe('Overview actionable attention items', () => {
         efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
         onOpenMoney={vi.fn()}
         onOpenPlans={vi.fn()}
+        onOpenAnalytics={vi.fn()}
         importReview
+        rateMismatch
+        staleness={{
+          checked: true,
+          stale: {
+            oebEffectiveDate: '2026-11-01',
+            shippedEffectiveDate: '2025-11-01',
+            newSet: null,
+            deltas: [],
+            impact: null,
+          },
+        }}
         latestPeriod={null}
         usage={usage}
       />,
@@ -81,10 +95,13 @@ describe('Overview actionable attention items', () => {
     expect(alert).toContainElement(control);
     expect(control).toHaveAttribute('href', '/import');
     expect(screen.getByTestId('overview-plan-summary')).toContainElement(screen.getByRole('button', { name: 'Compare plans' }));
-    expect(screen.getByRole('link', { name: 'Fix rate schedule' })).toHaveAttribute(
-      'href',
-      'https://github.com/margosmark/electricity-dashboard/edit/main/webapp/src/app/api/rates/route.ts',
-    );
+    expect(alert.textContent).not.toMatch(/\/api\/rates|github|editor|fix rate schedule/i);
+    expect(alert.querySelector('a[href*="github"], a[href*="/api/rates"]')).toBeNull();
+    const dates = screen.getByTestId('overview-rate-dates');
+    expect(dates).toHaveTextContent('Ontario Energy Board rates are effective from');
+    expect(dates).toHaveTextContent('this dashboard currently uses rates effective from');
+    expect(dates).toHaveTextContent('2026-11-01');
+    expect(dates).toHaveTextContent('2025-11-01');
   });
 
   it('suppresses the usage delta for a partial current month and labels a zero rate delta neutrally', () => {
@@ -111,9 +128,10 @@ describe('Overview actionable attention items', () => {
         efficiency={{ allTime: null, inView: null, periods: [] } as unknown as EfficiencyReport}
         onOpenMoney={vi.fn()}
         onOpenPlans={vi.fn()}
+        onOpenAnalytics={vi.fn()}
         importReview={false}
         latestPeriod={null}
-        usage={{ ...usage, processedData: monthlyRows }}
+        usage={{ ...usage, processedData: monthlyRows, hasData: true }}
       />,
     );
     expect(screen.queryByText(/lower than last month/i)).not.toBeInTheDocument();

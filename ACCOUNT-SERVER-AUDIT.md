@@ -30,8 +30,11 @@ Card: `t_95f5ffbe`.
 > still describes the *user-visible* state; what changed is the container and
 > the route, not the surface. Enabling (or not) is Mark's call: see
 > `OPERATIONS.md` → *Account server*. The containerised gate now covers this
-> leg — `webapp/scripts/e2e-greenbutton-topology.sh`, 102/102 on `.110`,
-> both flag states plus the register/login/sync matrix through the router.
+> leg — `webapp/scripts/e2e-greenbutton-topology.sh` checks feature-off and
+> enabled-but-registration-closed routes through the router. It does not run
+> authenticated registration/login/sync; those lifecycles are covered by
+> ephemeral tests in `webapp/src/lib/account/account.test.ts` and
+> `route-matrix.test.ts`.
 
 ---
 

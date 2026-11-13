@@ -129,6 +129,17 @@ const REFUSAL_DOCS: Record<string, string> = {
 const OTHER_DOCS: Record<string, string> = {
   // Power with a duration: converted to energy with its own interval.
   convertedToEnergy: doc([pointPart('up-B', 'mr-B1', 'rt-pw', { uom: 38, kind: 37 }, 1000, T)]),
+  // Natural gas volume: recognised as m³, never priced (t_fb80429a).
+  volumeSeries: doc([pointPart('up-B', 'mr-B1', 'rt-gasvol', { uom: 42, mult: -3, commodity: 7 }, 427000, T)]),
+  // A customer/account feed: labels only, no readings or bills of its own.
+  accountDetails: doc([
+    entry('/RetailCustomer/c/Customer', '<Customer><kind>Residential Customer</kind><customerName>Test Customer</customerName></Customer>'),
+    entry('/RetailCustomer/c/Customer/x/CustomerAccount/a', '<CustomerAccount><accountId>123456789</accountId></CustomerAccount>'),
+    entry('/RetailCustomer/c/Customer/x/CustomerAccount/a/CustomerAgreement/g', '<CustomerAgreement><agreementId>555</agreementId></CustomerAgreement>'),
+    entry('/RetailCustomer/c/Customer/x/CustomerAccount/a/CustomerAgreement/g/ServiceLocation/s', '<ServiceLocation><mainAddress><streetDetail>1 MAIN ST</streetDetail><townDetail>ANYTOWN</townDetail><stateOrProvince>ON</stateOrProvince><postalCode>A1A 1A1</postalCode></mainAddress></ServiceLocation>'),
+    entry('/RetailCustomer/c/Customer/x/CustomerAccount/a/CustomerAgreement/g/ServiceSupplier/ss', '<ServiceSupplier><Organisation><organisationName>Example Gas</organisationName></Organisation></ServiceSupplier>'),
+    entry('/RetailCustomer/c/Customer/x/CustomerAccount/a/CustomerAgreement/g/ServiceLocation/s/Meter/m', '<Meter><serialNumber>999999</serialNumber><intervalLength>2592000</intervalLength></Meter>'),
+  ]),
   // Nothing describes the readings at all: the legacy compatibility path.
   legacyDocumentWide: `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi"><entry><content><espi:IntervalBlock><espi:interval><espi:duration>3600</espi:duration><espi:start>${T}</espi:start></espi:interval><espi:IntervalReading><espi:timePeriod><espi:duration>3600</espi:duration><espi:start>${T}</espi:start></espi:timePeriod><espi:value>1000</espi:value></espi:IntervalReading></espi:IntervalBlock></content></entry></feed>`,
   // A ReadingType that declares no uom.
@@ -205,6 +216,7 @@ describe('every note the parser emits carries the values its sentence needs', ()
     // The battery has to exercise the whole family, or this test is vacuous.
     expect([...codes].sort()).toEqual(
       [
+        'account-details',
         'ambiguous-inline-reading-types',
         'assumed-direction',
         'combined-series',
@@ -213,6 +225,7 @@ describe('every note the parser emits carries the values its sentence needs', ()
         'refused-readings',
         'unlinked-reading-type',
         'unsupported-series',
+        'volume-series',
       ].sort(),
     );
     for (const { name, note } of ALL_NOTES) {

@@ -61,7 +61,7 @@ function fakeSummary(startIso: string, days: number, items: number = 21): UsageS
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items: Array.from({ length: items }, (_, i) => ({
       note: `line ${i}`,
       amount: 1,

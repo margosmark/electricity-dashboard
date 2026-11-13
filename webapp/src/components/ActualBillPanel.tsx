@@ -41,6 +41,10 @@ import {
   type ProcessedPoint,
   type UsageSummary,
 } from '@/lib/energy';
+// Commodity 7: recognition + the gas period card. The electric machinery
+// above (verdicts, ¢/kWh splits, bucket grids) never runs on it.
+import { isGasFeed, isGasSummary } from '@/lib/gasBillUi';
+import GasBillPeriodCard from '@/components/GasBillPeriodCard';
 // Wave U — the receipt translates. The utility's line NOTES (item.note) stay
 // canonical inside `BillLineItem` (classification and every check read them
 // raw); what the panel PRINTS is the localized view of them via `billNoteText`
@@ -162,20 +166,20 @@ function DecompositionCard({ split }: { split: ChargeDecomposition }) {
       data-variable={split.variable === null ? '' : split.variable.toFixed(2)}
       data-max-residual={split.fit === null ? '' : split.fit.maxResidual.toFixed(2)}
       data-residual-share={split.fit === null ? '' : split.fit.residualShare.toFixed(4)}
-      className={`${tone} border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6`}
+      className={`${tone} border border-edge rounded-xl md:rounded-2xl p-4 md:p-6`}
     >
-      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4 font-black uppercase">
+      <div className="text-[8px] md:text-[10px] tracking-[0.2em] text-ink-4 font-semibold uppercase">
         {split.line === 'delivery'
           ? t('actualBill.deliverySplit')
           : t('actualBill.regulatorySplit')}
       </div>
       <div
         data-testid={`decomposition-headline-${split.line}`}
-        className="text-lg md:text-2xl font-black normal-case mt-1"
+        className="text-base md:text-lg font-semibold normal-case tabular-nums mt-1"
       >
         {split.headline}
       </div>
-      <div className="mt-1 md:mt-2 text-[11px] md:text-xs font-bold text-ink-2 normal-case">
+      <div className="mt-1 md:mt-2 text-[11px] md:text-xs font-medium text-ink-2 normal-case">
         {split.detail}
       </div>
     </div>
@@ -191,6 +195,12 @@ function PeriodCard({
 }) {
   const { t } = useTranslation();
   const { summary, totals } = rec;
+  // Commodity 7 renders its own card (UX spec t_860756c3): same panel, same
+  // period picker, but none of the electric machinery — the commodity
+  // verdict, the kWh crosscheck and the bucket grid are electricity-only
+  // claims (¢/kWh, OEB rates, "you paid" derived from totals.payable, which
+  // double-counts HST on a gas bill).
+  if (isGasSummary(summary)) return <GasBillPeriodCard rec={rec} />;
   const periodKwh = billedKwh(summary) ?? summary.consumption?.scaled ?? 0;
   const verdict = commodityVerdict(rec);
   const delta = rec.delta;
@@ -210,17 +220,17 @@ function PeriodCard({
     <div
       data-testid="actual-bill-period"
       data-period-start={summary.startDate}
-      className="border-4 border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-6"
+      className="border border-edge rounded-xl md:rounded-2xl bg-card p-4 md:p-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="font-black uppercase text-base md:text-xl">
+        <div className="font-semibold uppercase text-base md:text-xl">
           {billPeriodLabel(summary.start, summary.duration)}
         </div>
         <div className="text-right">
-          <div className="font-black italic text-xl md:text-2xl" data-testid="actual-payable">
+          <div className="font-semibold text-lg md:text-xl tabular-nums" data-testid="actual-payable">
             {statesMoney ? money(totals.payable) : '—'}
           </div>
-          <div className="text-[10px] md:text-xs text-ink-3 font-bold">
+          <div className="text-[10px] md:text-xs text-ink-3 font-medium">
             {statesMoney ? t('actualBill.youPaid') : t('actualBill.noChargeLines')} ·{' '}
             {t('actualBill.billedKwh', { kwh: kwh(periodKwh) })}
             {currencyLabel(summary.currency) ? ` · ${currencyLabel(summary.currency)}` : ''}
@@ -232,37 +242,37 @@ function PeriodCard({
       {!statesMoney ? (
         <div
           data-testid="commodity-skip"
-          className="mt-3 md:mt-4 bg-hover border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-ink-2"
+          className="mt-3 md:mt-4 bg-hover border border-edge-muted rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-semibold text-ink-2"
         >
           {t('actualBill.commoditySkip')}
         </div>
       ) : verdict === 'match' && delta !== null ? (
         <div
           data-testid="commodity-check"
-          className="mt-3 md:mt-4 bg-good-soft border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black"
+          className="mt-3 md:mt-4 bg-good-soft border border-edge-muted rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-semibold"
         >
           {t('actualBill.checkOkA')}{' '}
-          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>,{' '}
+          <span>{money(rec.commodityEstimate ?? 0)}</span>,{' '}
           {t('actualBill.checkOkB')}{' '}
-          <span className="italic">{money(rec.commodityActual)}</span> ({t('actualBill.delta', { delta: money(delta) })}, {t('actualBill.within', { tolerance: fmtMoney(COMMODITY_MATCH_TOLERANCE) })}).
+          <span>{money(rec.commodityActual)}</span> ({t('actualBill.delta', { delta: money(delta) })}, {t('actualBill.within', { tolerance: fmtMoney(COMMODITY_MATCH_TOLERANCE) })}).
         </div>
       ) : verdict === 'off' && delta !== null ? (
         <div
           data-testid="commodity-mismatch"
           role="alert"
-          className="mt-3 md:mt-4 bg-bad-soft border-4 border-bad rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-bad"
+          className="mt-3 md:mt-4 bg-bad-soft border border-bad rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-semibold text-bad"
         >
           {t('actualBill.checkOffA')}{' '}
-          <span className="italic">{money(rec.commodityEstimate ?? 0)}</span>{' '}
+          <span>{money(rec.commodityEstimate ?? 0)}</span>{' '}
           {t('actualBill.checkOffB')}{' '}
-          <span className="italic">{money(rec.commodityActual)}</span>{' '}
+          <span>{money(rec.commodityActual)}</span>{' '}
           {t('actualBill.checkOffC', { delta: money(delta) })}
           {t('actualBill.checkOffAdvice')}
         </div>
       ) : (
         <div
           data-testid="commodity-skip"
-          className="mt-3 md:mt-4 bg-hover border-2 border-edge rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-black text-ink-2"
+          className="mt-3 md:mt-4 bg-hover border border-edge-muted rounded-lg px-3 py-2 md:px-4 md:py-3 text-[11px] md:text-xs font-semibold text-ink-2"
         >
           {t('actualBill.notCompared')}{' '}
           {rec.rows.length === 0
@@ -279,7 +289,7 @@ function PeriodCard({
       {rec.billedKwh !== null && rec.meteredKwh !== null && rec.coverage >= PERIOD_MIN_COVERAGE && (
         <div
           data-testid="kwh-crosscheck"
-          className="mt-2 text-[10px] md:text-xs text-ink-3 font-bold"
+          className="mt-2 text-[10px] md:text-xs text-ink-3 font-medium"
         >
           {t('actualBill.crosscheck', {
             billed: kwh(rec.billedKwh),
@@ -307,7 +317,7 @@ function PeriodCard({
               data-testid={`bill-line-${cls}`}
               className={`flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-1.5 md:py-2 rounded-md ${
                 CLASS_STYLE[cls]
-              } ${strong ? 'font-black' : 'font-bold'} ${
+              } ${strong ? 'font-semibold' : 'font-medium'} ${
                 cls === 'info' ? 'text-ink-3 text-[10px] md:text-[11px]' : 'text-ink text-xs md:text-sm'
               }`}
             >
@@ -324,7 +334,7 @@ function PeriodCard({
                   {lineName}
                 </span>
                 {note ? (
-                  <span className="block text-[9px] md:text-[10px] text-ink-4 normal-case font-bold">
+                  <span className="block text-[9px] md:text-[10px] text-ink-4 normal-case font-medium">
                     {note}
                   </span>
                 ) : null}
@@ -344,22 +354,22 @@ function PeriodCard({
         })}
       </ul>
 
-      <div className="mt-3 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs font-black">
-        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+      <div className="mt-3 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs font-semibold">
+        <div className="bg-inset border border-edge-muted rounded-lg p-2 md:p-3">
           <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.electricity')}</div>
-          <div className="italic">{shownMoney(totals.commodity)}</div>
+          <div>{shownMoney(totals.commodity)}</div>
         </div>
-        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+        <div className="bg-inset border border-edge-muted rounded-lg p-2 md:p-3">
           <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.deliveryReg')}</div>
-          <div className="italic">{shownMoney(totals.delivery + totals.regulatory)}</div>
+          <div>{shownMoney(totals.delivery + totals.regulatory)}</div>
         </div>
-        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+        <div className="bg-inset border border-edge-muted rounded-lg p-2 md:p-3">
           <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.hst')}</div>
-          <div className="italic">{shownMoney(totals.tax)}</div>
+          <div>{shownMoney(totals.tax)}</div>
         </div>
-        <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
+        <div className="bg-inset border border-edge-muted rounded-lg p-2 md:p-3">
           <div className="text-ink-4 text-[8px] uppercase">{t('actualBill.rebate')}</div>
-          <div className="italic text-good">{shownMoney(totals.credit)}</div>
+          <div className="text-good">{shownMoney(totals.credit)}</div>
         </div>
       </div>
     </div>
@@ -369,6 +379,10 @@ function PeriodCard({
 export function ActualBillPanel({ summaries, allData, plan }: Props) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string>('all');
+  // A gas dataset never renders electric chrome: no "next to what this app
+  // estimates" blurb (gas is not estimated here), no OEB rate-assumption
+  // banner (gas has no rate assumptions), no ¢/kWh decomposition cards.
+  const isGas = isGasFeed(summaries);
 
   const recs = useMemo(
     () => reconcileBillingPeriods(summaries, allData, plan),
@@ -381,22 +395,24 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
   // per-line notes below — one fit, one truth, two places to read it.
   const decompositions = useMemo(
     () =>
-      (['delivery', 'regulatory'] as const)
-        .map((line) => chargeDecomposition(summaries, allData, line))
-        .filter((d): d is ChargeDecomposition => d !== null),
+      isGas
+        ? []
+        : (['delivery', 'regulatory'] as const)
+            .map((line) => chargeDecomposition(summaries, allData, line))
+            .filter((d): d is ChargeDecomposition => d !== null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
-    [summaries, allData, t],
+    [summaries, allData, t, isGas],
   );
 
   if (summaries.length === 0) return null;
 
   const shown = selected === 'all' ? recs : recs.filter((r) => r.summary.startDate === selected);
-  const anyMismatch = recs.some((r) => commodityVerdict(r) === 'off');
+  const anyMismatch = !isGas && recs.some((r) => commodityVerdict(r) === 'off');
 
   return (
     <section
       data-testid="actual-bill"
-      className="bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[3rem] border-4 border-edge shadow-hard-8 md:shadow-hard-16 text-ink font-black uppercase"
+      className="bg-card p-6 md:p-10 rounded-xl md:rounded-2xl border border-edge text-ink font-semibold uppercase"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -406,11 +422,13 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               ? ` · ${currencyLabel(summaries[summaries.length - 1].currency)}`
               : ''}
           </div>
-          <h2 className="text-2xl md:text-4xl italic font-black">{t('actualBill.title')}</h2>
+          <h2 className="text-base md:text-lg font-semibold uppercase tracking-[0.08em]">{t('actualBill.title')}</h2>
         </div>
-        <div className="text-[10px] md:text-xs font-bold text-ink-3 normal-case max-w-md">
-          {t('actualBill.blurb')}
-        </div>
+        {!isGas && (
+          <div className="text-[10px] md:text-xs font-medium text-ink-3 normal-case max-w-md">
+            {t('actualBill.blurb')}
+          </div>
+        )}
       </div>
 
       {summaries.length > 1 && (
@@ -423,7 +441,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
             onClick={() => setSelected('all')}
             aria-pressed={selected === 'all'}
             data-testid="actual-bill-all"
-            className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
+            className={`min-h-[44px] px-4 border border-edge-muted rounded-lg text-[10px] md:text-xs uppercase font-semibold ${
               selected === 'all' ? 'bg-accent text-accent-ink' : 'bg-inset'
             }`}
           >
@@ -436,7 +454,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
               onClick={() => setSelected(r.summary.startDate)}
               aria-pressed={selected === r.summary.startDate}
               data-testid={`actual-bill-pick-${r.summary.startDate}`}
-              className={`min-h-[44px] px-4 border-2 border-edge rounded-lg text-[10px] md:text-xs uppercase font-black ${
+              className={`min-h-[44px] px-4 border border-edge-muted rounded-lg text-[10px] md:text-xs uppercase font-semibold ${
                 selected === r.summary.startDate ? 'bg-accent text-accent-ink' : 'bg-inset'
               }`}
             >
@@ -450,7 +468,7 @@ export function ActualBillPanel({ summaries, allData, plan }: Props) {
         <div
           data-testid="rate-assumptions-banner"
           role="alert"
-          className="mt-4 md:mt-6 bg-bad-slab-strong text-on-dark border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case"
+          className="mt-4 md:mt-6 bg-bad-slab-strong text-on-dark border border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-semibold normal-case"
         >
           {t('actualBill.rateBanner')}
         </div>

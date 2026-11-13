@@ -127,7 +127,16 @@ afterEach(() => {
  * 1. Sample / demo data button
  * ========================================================================== */
 
-describe('Wave H 1 — Try with example data', () => {
+describe('Wave H 1 — sample data', () => {
+  it('does not request rate data on a fresh root load with no readings', async () => {
+    stubFetch();
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(vi.mocked(fetch).mock.calls.filter((call: unknown[]) => String(call[0]) === '/api/rates')).toHaveLength(0);
+  });
+
   it('offers itself on the empty upload screen, labelled as not real usage', async () => {
     stubFetch();
     render(<Dashboard />);
@@ -178,6 +187,12 @@ describe('Wave H 1 — Try with example data', () => {
     );
     expect(startInput.value).toBe(format(new Date(1704067200 * 1000), 'yyyy-MM-dd'));
     expect(endInput.value).toBe(format(new Date(1704070800 * 1000), 'yyyy-MM-dd'));
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Plans' }));
+    const scopes = screen.getAllByTestId('plan-card-scope');
+    expect(scopes).toHaveLength(3);
+    expect(scopes[0]).toHaveTextContent(format(new Date(`${startInput.value}T00:00:00`), 'MMM d'));
+    expect(screen.getByTestId('verdict-line')).toHaveAttribute('data-window-days', '1');
   });
 
   it('explains a failed download instead of opening an empty dashboard', async () => {
@@ -364,7 +379,7 @@ describe('Wave H 3 — semantics and labels', () => {
     // Wave R: the CHART/INSIGHTS toggle is now an ARIA tab strip — selected
     // state replaces pressed state, and exactly one tab is selected.
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
     const selected = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
     expect(selected).toHaveLength(1);
     expect(selected[0]).toBe(screen.getByRole('tab', { name: 'Overview' }));
@@ -411,9 +426,20 @@ describe('Wave H 3 — semantics and labels', () => {
 
   it('keeps the standing focus/print gates in globals.css', () => {
     const css = fs.readFileSync(path.join(WEBAPP, 'src/app/globals.css'), 'utf8');
-    // One ring that reads on white, yellow AND black chips.
-    expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #ffffff/);
-    expect(css).toMatch(/box-shadow:\s*0 0 0 6px #2563eb/);
+    // One ring that reads on white, yellow AND black chips: the Quiet
+    // Meter ring is a 2px `--focus-ring` outline at a 2px offset with the
+    // `--page` gap inside it, and the ink is a per-theme token because the
+    // accent cannot carry it in light (#c7f000 is 1.22:1 on #f6f6f3 — an
+    // invisible indicator; t_5f6b2315). The PAINTED budget in both themes
+    // is journey.spec.ts's "focus ring reads on every surface" walk.
+    expect(css).toMatch(/:focus-visible\s*{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
+    expect(css).toMatch(/:focus-visible\s*{[^}]*box-shadow:\s*0 0 0 2px var\(--page\)/);
+    expect(css).toMatch(/--focus-ring:\s*#14161a/);
+    expect(css).toMatch(/--focus-ring:\s*#e4ff57/);
+    // The retired neobrutalist ring must stay retired: if it comes back it
+    // OUTRANKS nothing (the live rule is !important) and the app would paint
+    // two competing indicators.
+    expect(css).not.toMatch(/:focus-visible\s*{[^}]*outline:\s*3px solid #ffffff/);
     expect(css).toMatch(/\.seg\s*{[^}]*min-height:\s*44px/);
     // Print contract for InsightsView.
     expect(css).toMatch(/@media print/);

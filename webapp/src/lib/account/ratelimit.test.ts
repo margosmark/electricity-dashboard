@@ -72,13 +72,11 @@ describe("attempt plans", () => {
     new Request("https://electricity.markarslan.ca/account/login", { headers });
 
   it("keys login on the address (unspoofable), the source, and the process", () => {
-    const plan = loginAttempts("mark@example.com", requestWith({ "x-forwarded-for": "203.0.113.9" }));
+    const plan = loginAttempts("mark@example.com", requestWith({ "x-forwarded-for": "spoofed", "x-real-ip": "203.0.113.9" }));
     expect(plan.map((a) => a.kind)).toEqual(["identity", "ip", "global"]);
     expect(plan[0].key).toContain("mark@example.com");
     expect(plan[1].key).toContain("203.0.113.9");
-    // Rotating the header changes the `ip` key and leaves the identity key
-    // exactly where it was — that is the whole reason both exist.
-    const other = loginAttempts("mark@example.com", requestWith({ "x-forwarded-for": "198.51.100.4" }));
+    const other = loginAttempts("mark@example.com", requestWith({ "x-forwarded-for": "spoofed", "x-real-ip": "198.51.100.4" }));
     expect(other[0].key).toBe(plan[0].key);
     expect(other[1].key).not.toBe(plan[1].key);
   });
@@ -99,7 +97,7 @@ describe("attempt plans", () => {
 
   it("hands back ONLY the identity bucket on success", () => {
     const t = 5_000_000;
-    const plan = loginAttempts("mark@example.com", requestWith({ "x-forwarded-for": "203.0.113.9" }));
+    const plan = loginAttempts("mark@example.com", requestWith({ "x-real-ip": "203.0.113.9" }));
     const [identity, , floor] = plan;
 
     // Exhaust the address bucket on its own: the plan now refuses…
@@ -124,7 +122,7 @@ describe("attempt plans", () => {
 
   it("hands the whole registration plan back after a completed registration", () => {
     const t = 6_000_000;
-    const plan = registerAttempts(requestWith({ "x-forwarded-for": "203.0.113.9" }));
+    const plan = registerAttempts(requestWith({ "x-real-ip": "203.0.113.9" }));
     for (let i = 0; i < LIMITS.registerIp.capacity; i++) spendAttempts(plan, t);
     expect(checkAttempts(plan, t).allowed).toBe(false);
     refundAttempts(plan);
@@ -142,11 +140,9 @@ describe("attempt plans", () => {
     ]);
   });
 
-  it("reads the FIRST X-Forwarded-For entry, and falls back to X-Real-IP", () => {
-    expect(clientIp(requestWith({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" }))).toBe("203.0.113.9");
+  it("ignores spoofable X-Forwarded-For and accepts only a valid ingress X-Real-IP", () => {
+    expect(clientIp(requestWith({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" }))).toBeNull();
     expect(clientIp(requestWith({ "x-real-ip": "10.0.0.7" }))).toBe("10.0.0.7");
-    // A header is a throttle key, not an identity: a client that can set it
-    // can rotate it, which is why the identity bucket exists at all.
-    expect(clientIp(requestWith({ "x-forwarded-for": "anything goes" }))).toBe("anything goes");
+    expect(clientIp(requestWith({ "x-forwarded-for": "198.51.100.1", "x-real-ip": "not-an-ip" }))).toBeNull();
   });
 });

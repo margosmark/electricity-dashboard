@@ -16,7 +16,7 @@ import { type RateSet } from '@/lib/energy';
 import { distinctSeasons, seasonForDay, seasonForMonthIndex, type Season } from '@/lib/season';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import type { PlanCosts } from '@/lib/verdict';
-import { fmtCentsAuto, fmtDay, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
+import { fmtCentsAuto, fmtDateLong, fmtDay, fmtMoney, fmtNumber, periodLabel, t, useTranslation } from '@/i18n';
 
 export type PlanCardsProps = {
   /** Per-plan cost of the window on screen. */
@@ -109,6 +109,15 @@ function planRates(planId: (typeof PLANS)[number]['id'], rates: RateSet): PlanRa
  *  edges; the edges verbatim when they will not parse — a reformatted string
  *  is still more honest than a dropped one. */
 function windowSpan(startDate: string, endDate: string): string {
+  const startYear = startDate.slice(0, 4);
+  const endYear = endDate.slice(0, 4);
+  if (startYear !== endYear) {
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      return `${fmtDateLong(start)} – ${fmtDateLong(end)}`;
+    }
+  }
   const fmt = (iso: string): string => {
     const d = new Date(`${iso}T00:00:00`);
     if (Number.isNaN(d.getTime())) return iso;
@@ -138,7 +147,7 @@ export default function PlanCards({
       : activeRateSet.tiered.thresholdWinter);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 text-ink font-black uppercase">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 text-ink">
       {PLANS.map((plan, i) => {
         // Single source of truth for the displayed rates: the RateSet in
         // force, the same one that priced the cost above. No RateSet loaded
@@ -160,25 +169,34 @@ export default function PlanCards({
                 setUserPlan(plan.id);
               }
             }}
-            className={`bg-card p-6 md:p-10 rounded-[1.5rem] md:rounded-[2rem] border-4 border-edge shadow-hard-6 md:shadow-hard-8 relative transition-all cursor-pointer ${userPlan === plan.id ? 'ring-4 md:ring-8 ring-yellow-400 ring-inset scale-[1.02]' : ''}`}
+            className={`bg-card p-4 md:p-6 rounded-xl md:rounded-2xl border border-edge relative transition-all cursor-pointer ${userPlan === plan.id ? 'border-accent' : ''}`}
           >
-            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-accent px-3 md:px-6 py-1 rounded-full border-2 border-edge font-black text-[8px] md:text-[10px] uppercase text-accent-ink shadow-sm flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
-            <h3 className="text-xl md:text-2xl mb-2 md:mb-4 font-black">{t(plan.nameKey)}</h3>
+            {/* The mockup marks the current plan with a 3px accent band across
+                the top edge — the quiet equivalent of the old yellow ring: it
+                reads as state without a shadow, a 8px radius or a scale bump. */}
+            {userPlan === plan.id && <span aria-hidden="true" className="absolute -top-px -left-px -right-px h-[3px] bg-accent rounded-t-xl md:rounded-t-2xl" />}
+            {userPlan === plan.id && <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-accent px-2.5 md:px-3 py-1 rounded border border-edge font-semibold text-[10px] md:text-[11px] uppercase tracking-[0.05em] text-accent-ink flex items-center gap-1 md:gap-2"><CheckCircle2 size={10} className="md:w-3 md:h-3" /> <span className="hidden sm:inline">{t('planCard.yourPlan')}</span><span className="sm:hidden">{t('planCard.active')}</span></div>}
+            <h3 className="text-base md:text-lg mb-1 md:mb-2 font-semibold tracking-[0.02em]">{t(plan.nameKey)}</h3>
             {/* The card's headline number used to stand alone: a 6xl dollar
                 figure with nothing saying whether it is a bill, a projection,
                 or commodity alone. It is the cost of the window on screen,
                 commodity only — the same scope the Overview banner declares —
                 so the card declares it too. */}
-            <div className="text-4xl md:text-6xl italic mb-1 md:mb-2 font-black text-ink">
+            <div
+              data-testid="plan-card-cost"
+              data-plan-id={plan.id}
+              data-cost={comparison?.[plan.id] ?? ''}
+              className="text-3xl md:text-4xl mb-1 md:mb-2 font-semibold tabular-nums text-ink"
+            >
               {comparison ? fmtMoney(comparison[plan.id]) : '—'}
             </div>
             <div
               data-testid="plan-card-scope"
-              className="text-[8px] md:text-[10px] font-bold text-ink-3 normal-case mb-6 md:mb-10"
+              className="text-xs font-medium text-ink-3 normal-case mb-4 md:mb-6"
             >
               {t('planCard.scope', { range: windowSpan(startDate, endDate) })}
             </div>
-            <div className="space-y-2 md:space-y-4 bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge text-[10px] md:text-xs font-black text-ink">
+            <div className="space-y-2 md:space-y-4 bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border border-edge text-[10px] md:text-xs font-semibold text-ink">
               {rates.map((r, j) => (
                 <div key={j} className={`flex justify-between ${r.c || ''}`}>
                   <span>{r.l}</span> <span>{r.v}</span>
@@ -190,13 +208,13 @@ export default function PlanCards({
             {plan.id === 'Tiered' && tierThreshold != null && (
               <div
                 data-testid="tier-threshold"
-                className="mt-3 md:mt-5 bg-accent-soft p-3 md:p-5 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge text-[9px] md:text-xs font-black"
+                className="mt-3 md:mt-5 bg-accent-soft p-3 md:p-5 rounded-xl md:rounded-2xl border border-edge text-[9px] md:text-xs font-semibold"
               >
                 <div className="flex justify-between">
                   <span>{t('tier.cutoff')}</span>
                   <span>{t('tier.kwhPerMonth', { kwh: fmtNumber(tierThreshold) })}</span>
                 </div>
-                <div className="mt-1 text-ink-2 font-bold normal-case">
+                <div className="mt-1 text-ink-2 font-medium normal-case">
                   {t(`season.long.${seasonOfView}`)}
                   {seasonsInView.length > 1 ? ` — ${t('tier.spansBoth')}` : ''}
                   {otherTierThreshold != null

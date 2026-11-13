@@ -48,11 +48,16 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
             className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-ink font-black uppercase"
           >
             <div role="presentation" className="w-10 md:w-12" />
+            {/* "12h" is one token: it must not break inside a 16px track
+                (t_82a4dc08 — breaking it doubled the header row, 15px -> 30px,
+                once body-level word breaking reached these cells). The track
+                itself is minmax(0, 1fr), so the label has always painted at
+                its own width. */}
             {HOURS.map((hour) => (
               <div
                 key={hour}
                 role="columnheader"
-                className="text-center text-[8px] md:text-[10px] text-ink font-black"
+                className="text-center text-[8px] md:text-[10px] text-ink font-black whitespace-nowrap"
               >
                 {hour}{t('heatmap.hourSuffix')}
               </div>

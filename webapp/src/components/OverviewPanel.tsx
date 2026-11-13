@@ -29,12 +29,15 @@ import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
 import { daysBetweenDayKeys } from '@/lib/dateSpan';
 import UsagePanel, { type UsagePanelProps } from '@/components/UsagePanel';
-import { RATES_FILE_EDIT_URL } from '@/components/RateStalenessBanner';
 import type { AxisPeriod } from '@/lib/billingAxis';
+import type { StalenessResult } from '@/hooks/useRateStaleness';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
   comparison: PlanCosts | null;
+  /** Commodity 7 dataset: no plan widget may stand over a gas bill
+   *  (epic DoD 4 — no plan-comparison surfaces on gas data). */
+  gas?: boolean;
   userPlan: PlanId;
   /** Day span the comparison covers. */
   days: number;
@@ -50,20 +53,26 @@ export type OverviewPanelProps = {
   /** Wired by Dashboard: the mini-line jumps to the MONEY tab. */
   onOpenMoney: () => void;
   onOpenPlans: () => void;
+  /** Wired by Dashboard: the Analytics CTA jumps to the ANALYTICS tab. */
+  onOpenAnalytics: () => void;
   /** Green Button / file-status chip, wired by Dashboard. */
   fileStatus?: React.ReactNode;
   /** Existing usage and insight tools, retained below the decision summary. */
   usage: Omit<UsagePanelProps, 'embedded'>;
   importReview: boolean;
   rateMismatch?: boolean;
+  staleness?: StalenessResult;
   /** Latest file-backed billing window, never a mockup month. */
   latestPeriod: AxisPeriod | null;
   /** Source-derived always-on baseline for the same data window. */
   floor?: AlwaysOnFloor | null;
+  /** Classic view keeps Usage as its own historical destination. */
+  showUsage?: boolean;
 };
 
 export default function OverviewPanel({
   comparison,
+  gas = false,
   userPlan,
   days,
   totals,
@@ -74,12 +83,15 @@ export default function OverviewPanel({
   efficiency,
   onOpenMoney,
   onOpenPlans,
+  onOpenAnalytics,
   fileStatus,
   usage,
   importReview,
   rateMismatch = false,
+  staleness,
   latestPeriod,
   floor,
+  showUsage = true,
 }: OverviewPanelProps) {
   // Wave U — locale subscription; every text useMemo below lists `t`.
   const { t } = useTranslation();
@@ -194,6 +206,8 @@ export default function OverviewPanel({
       <RateByMonth rows={usage.processedData} plan={userPlan} />
 
       <section className="grid md:grid-cols-2 gap-4" aria-label={t('overview.planAndAttention')} data-testid="overview-plan-attention">
+        {/* Commodity 7: the plan widget never stands over a gas bill. */}
+        {!gas && (
         <div className="quiet-plan-summary p-4 md:p-5" data-testid="overview-plan-summary">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h2 className="text-base font-semibold">{t('overview.yourPlan')}</h2>
@@ -213,9 +227,9 @@ export default function OverviewPanel({
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={onOpenPlans} className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.comparePlans')}</button>
-            <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium">{t('overview.rateSchedule')}</a>
           </div>
         </div>
+        )}
 
         <div className="quiet-attention p-4 md:p-5" data-testid="overview-attention">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -225,7 +239,13 @@ export default function OverviewPanel({
           {rateMismatch || importReview ? <ul className="divide-y divide-edge-muted">
             {rateMismatch && <li className="py-3 first:pt-0">
               <p className="text-sm font-medium">{t('staleness.title')}</p>
-              <a href={RATES_FILE_EDIT_URL} target="_blank" rel="noopener noreferrer" className="quiet-action mt-2 inline-flex min-h-11 items-center px-3 text-xs font-medium">{t('staleness.editLink')}</a>
+              {staleness?.stale && <p data-testid="overview-rate-dates" className="mt-1 text-xs text-ink-3">
+                {t('staleness.datesA')}{' '}
+                <span>{staleness.stale.oebEffectiveDate}</span>
+                {' — '}
+                {t('staleness.datesB')}{' '}
+                <span>{staleness.stale.shippedEffectiveDate}</span>
+              </p>}
             </li>}
             {importReview && <li className="py-3 last:pb-0">
               <p className="text-sm font-medium">{t('overview.importReviewBody')}</p>
@@ -235,6 +255,25 @@ export default function OverviewPanel({
         </div>
       </section>
 
+
+      {/* The intentional door to the dense analytics: Overview stays a
+          decision screen, and the usage analysis lives one deliberate step
+          away. Shown with OR without data — on a fresh install it is how
+          the dismissed Link Data screen gets back in. */}
+      <section className="quiet-card p-4 md:p-5 flex flex-wrap items-center justify-between gap-3" data-testid="overview-analytics-cta-row">
+        <div className="min-w-[200px]">
+          <h2 className="text-base font-semibold">{t('overview.analyticsCtaTitle')}</h2>
+          <p className="mt-1 text-xs text-ink-3 normal-case">{t('overview.analyticsCtaBody')}</p>
+        </div>
+        <button
+          type="button"
+          data-testid="overview-analytics-cta"
+          onClick={onOpenAnalytics}
+          className="quiet-action inline-flex min-h-11 items-center justify-center px-4 text-sm font-medium"
+        >
+          {t('overview.analyticsCta')}
+        </button>
+      </section>
 
       {/* 2. What the whole dataset actually cost, and how old it is. */}
       {totals && (
@@ -255,12 +294,16 @@ export default function OverviewPanel({
               data-testid="efficiency-strip"
               className="quiet-data-stat px-4 py-3"
             >
-              <div className="text-[8px] md:text-[10px] font-black">
+              {/* Micro labels: the reference retires 8px (">=11px"), and these
+                  four paint on --inset, so they carry the themed muted ink
+                  rather than the fixed --accent-ink that measured 1.13:1 on
+                  the dark card surface. */}
+              <div className="text-[11px] md:text-[11px] font-black">
 {t('overview.centsPerKwh')} {t(EFFICIENCY_SUBTITLE_KEY)}
               </div>
               <div className="flex gap-4 md:gap-6 mt-1">
                 <div>
-                  <div className="text-[8px] font-black uppercase">{t('overview.allTime')}</div>
+                  <div className="text-[11px] font-black uppercase">{t('overview.allTime')}</div>
                   <div className="flex gap-3 md:gap-4">
                     <div>
                       <div
@@ -271,7 +314,7 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.cents, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -283,14 +326,14 @@ export default function OverviewPanel({
                       >
                         {fmtCents(efficiency.allTime.centsInclTax, 1)}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <div className="text-[8px] font-black uppercase">{t('overview.inView')}</div>
+                  <div className="text-[11px] font-black uppercase">{t('overview.inView')}</div>
                   <div className="flex gap-3 md:gap-4">
                     <div>
                       <div
@@ -301,7 +344,7 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.cents, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.exclTax')}
                       </div>
                     </div>
@@ -313,14 +356,14 @@ export default function OverviewPanel({
                       >
                         {efficiency.inView ? fmtCents(efficiency.inView.centsInclTax, 1) : '—'}
                       </div>
-                      <div className="text-[8px] font-black uppercase text-accent-ink">
+                      <div className="text-[11px] font-black uppercase text-ink-3">
                         {t('efficiency.inclTax')}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="text-[8px] font-black normal-case mt-1">
+              <div className="text-[11px] font-black normal-case mt-1">
                 {t('overview.billsTotal', { count: efficiency.allTime.bills })}
                 {efficiency.inView
                   ? ` · ${t('overview.billsInView', { count: efficiency.inView.bills })}`
@@ -344,7 +387,7 @@ export default function OverviewPanel({
                 aria-pressed={costMode === mode}
                 onClick={() => setCostMode(mode)}
                 className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 md:px-5 py-2 rounded-lg md:rounded-xl text-[11px] md:text-[11px] font-black transition-all ${
-                  costMode === mode ? 'bg-inv text-inv-ink' : 'text-ink hover:bg-card'
+                  costMode === mode ? 'bg-card text-ink' : 'text-ink hover:bg-card'
                 }`}
               >
                 {mode === 'yr' ? t('overview.perYear') : t('overview.perDay')}
@@ -442,9 +485,17 @@ export default function OverviewPanel({
         <EfficiencyCard report={efficiency} onOpenMoney={onOpenMoney} />
       )}
 
-      {/* 4. Which file / feed this is, and whether it is connected. */}
-      <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
-      <UsagePanel {...usage} embedded />
+      {/* 4. Which file / feed this is, and whether it is connected.
+          The embed is data-gated: with no readings loaded there is nothing
+          to analyse, and an empty chart/heatmap here would violate the
+          calm-first Overview contract — the Analytics tab carries the
+          specific "add data" explanation instead. */}
+      {showUsage && usage.hasData && (
+        <>
+          <p className="text-xs text-ink-3">{t('tab.usageOverviewNote')}</p>
+          <UsagePanel {...usage} embedded />
+        </>
+      )}
     </div>
   );
 }

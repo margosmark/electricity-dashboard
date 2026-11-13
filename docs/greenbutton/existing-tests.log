@@ -1,0 +1,20 @@
+
+> webapp@0.1.0 test
+> vitest run src/lib/utilitySamples.test.ts src/lib/usageSummary.test.ts src/lib/localTimeParameters.test.ts src/lib/parseDiagnostic.test.ts src/lib/greenbutton/shim.test.ts src/lib/greenbutton/oauthFlow.test.ts
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:2:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.1.0 /home/hermes/.hermes/kanban/boards/electricity/workspaces/t_8c880def/checkout/webapp
+
+
+ Test Files  6 passed (6)
+      Tests  152 passed (152)
+   Start at  07:10:19
+   Duration  9.82s (import 55%, environment 19%, transform 12%, tests 9%, setup 5%)
+
+     Import  46 modules were evaluated 118 times · 13.31s total, 55% of tracked time
+             ~1.02s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

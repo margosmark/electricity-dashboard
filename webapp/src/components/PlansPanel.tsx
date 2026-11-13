@@ -30,6 +30,7 @@ import { PlanTimelineEditor } from '@/components/PlanTimelineEditor';
 import SwitchTrackRecord from '@/components/SwitchTrackRecord';
 import HindsightPanel from '@/components/HindsightPanel';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
+import { isGasFeed } from '@/lib/gasBillUi';
 import { fmtNumber, fmtPercent, useTranslation } from '@/i18n';
 
 export type PlansPanelProps = {
@@ -53,6 +54,14 @@ export type PlansPanelProps = {
   summaries: UsageSummary[];
   /** Every priced reading — a billing period is wider than the window. */
   allData: ProcessedPoint[];
+  /**
+   * The GAS section is on screen (t_a775c2a3 — AC2). `isGasFeed(summaries)`
+   * alone misses the gas section with NO stored bills (an interval-only gas
+   * file), where this panel would otherwise paint the full electric plan
+   * surface from the electric `allData`. The gas branch below — the actual
+   * bill only — is the one and only surface under gas.
+   */
+  gasView?: boolean;
 };
 
 export default function PlansPanel({
@@ -68,8 +77,25 @@ export default function PlansPanel({
   verification,
   summaries,
   allData,
+  gasView = false,
 }: PlansPanelProps) {
   const { t } = useTranslation();
+  // Commodity 7 has no plan to compare against — no ¢/kWh basis, no TOU
+  // windows, no hindsight repricing (epic DoD 4: no plan-comparison
+  // surfaces on gas data). The tab therefore shows ONLY the actual bill.
+  if (gasView || isGasFeed(summaries)) {
+    return (
+      <div
+        id="panel-plans"
+        role="tabpanel"
+        aria-labelledby="tab-plans"
+        className="order-2 space-y-6 md:space-y-10"
+        data-testid="tab-panel-plans"
+      >
+        <ActualBillPanel summaries={summaries} allData={allData} plan={userPlan} />
+      </div>
+    );
+  }
   return (
     <div id="panel-plans" role="tabpanel" aria-labelledby="tab-plans" className="order-2 space-y-6 md:space-y-10" data-testid="tab-panel-plans">
       {/* The verdict, restated where the evidence for it lives. */}
@@ -85,11 +111,11 @@ export default function PlansPanel({
       {wfh && (
         <div
           data-testid="wfh-annotation"
-          className="bg-violet-slab-pale border-2 md:border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-accent-ink font-black uppercase"
+          className="bg-violet-slab-pale border border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-accent-ink font-semibold uppercase"
         >
-          <span className="text-base md:text-2xl italic">{fmtPercent(wfh.share * 100)}</span>
+          <span className="text-base md:text-xl tabular-nums">{fmtPercent(wfh.share * 100)}</span>
           <span className="text-[10px] md:text-xs">{t('wfh.label')}</span>
-          <span className="text-[9px] md:text-[11px] font-bold text-accent-ink normal-case">
+          <span className="text-[9px] md:text-[11px] font-medium text-accent-ink normal-case">
             {t('wfh.annotation', {
               kwh: fmtNumber(wfh.kwh, 1),
               total: fmtNumber(wfh.totalKwh, 1),

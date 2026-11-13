@@ -56,6 +56,15 @@
   --on-dark: #ffffff; /* stable ink for fixed dark-color slabs */
   --accent-soft: #fefce8; /* the soft tint panels (was bg-yellow-50/100) */
 
+  /* The focus ring's ink (`:focus-visible`, see the ring rule at the bottom
+     of this file). The ACCENT cannot carry it in light: #c7f000 measures
+     1.22:1 on this canvas (#f6f6f3) and 1.32:1 on the card — an invisible
+     focus indicator, which is what the redesign shipped until t_5f6b2315.
+     Ink reads on the page (16.7:1), the card (18.1:1) and the yellow chip
+     (11.8:1); where a focused control sits on a black slab the 2px --page
+     gap inside the outline carries the indicator instead. */
+  --focus-ring: #14161a;
+
   /* The accent FAMILY used as text on an inverted chip (`--inv`). The chip is
      black in light and a light chip in dark, so the same pastel cannot serve
      both: light needs the -400 (bright on black), dark needs the -700 (dark
@@ -287,7 +296,21 @@
      (11.7:1), which is a gain, not a compromise. */
   --accent: #e4ff57;
   --accent-ink: #0a0c10;
-  --accent-soft: color-mix(in srgb, #e4ff57 12%, var(--card));
+  /* The focus ring's ink here (light uses --ink, t_5f6b2315): the accent is
+     the READABLE choice on this canvas — #e4ff57 is 17.5:1 on --page
+     (#0a0c10) and 16.5:1 on the card, where the light theme's ink would be
+     1.08:1 and the indicator would vanish. */
+  --focus-ring: #e4ff57;
+  /* The tinted sub-surface (money delta summary rows, open-period tail,
+     plan callouts). At 12% it mixed to rgb(42,48,33) — an olive the MUTED
+     ink steps could not clear AA on: ink-3 measured 4.32:1 and ink-4
+     4.4:1, both under the 4.5 floor (the painted walk in
+     tests/e2e/theme-contrast.spec.ts caught it; the token layer never
+     listed accent-soft as a surface, which is the half fixed in
+     darkMode.test.ts). 8% mixes to rgb(34,39,31), which clears the floor
+     with margin — ink-3 4.84:1, ink-4 4.93:1 — while still reading as a
+     tint rather than as the card. LIGHT is byte-identical at #fefce8. */
+  --accent-soft: color-mix(in srgb, #e4ff57 8%, var(--card));
 
   /* Same four, re-pitched for the inverted chip, which is now LIGHT. Measured
      on --inv (#e2e8f0): 6.6:1, 5.3:1, 4.8:1, 4.7:1 — every one clears AA. */
@@ -615,23 +638,11 @@ body {
   min-height: 44px;
 }
 
-/* ---------------------------------------------------------------------------
- * Wave H item 3 — one focus ring for the whole app.
- *
- * The design language is white chips, yellow chips AND black chips, so a
- * single-colour outline always loses on one of them. This ring is two-tone:
- * a white edge flush with the element (reads on black) plus a blue halo
- * outside it (reads on white and on yellow). Unlayered CSS beats Tailwind's
- * layered utilities, so it wins over the hard offset shadows while focused
- * and disappears again on blur — the neobrutalist shadow comes back intact.
- *
- * This is the standing gate documented in ARCHITECTURE.md → Accessibility.
- * ------------------------------------------------------------------------- */
-:focus-visible {
-  outline: 3px solid #ffffff;
-  outline-offset: 0;
-  box-shadow: 0 0 0 6px #2563eb;
-}
+/* The Wave H focus ring (3px white edge + 6px blue halo) retired with the
+   neobrutalist shadows in the Quiet Meter redesign; its successor — the
+   2px / 2px `--focus-ring` outline — lives with the Quiet Meter chrome at
+   the bottom of this file, and journey.spec.ts measures it on the painted
+   page in both themes. */
 
 /* Wave H item 4 — the chart shimmer (see ChartView's ChartSkeleton). */
 @keyframes skeleton-sweep {
@@ -839,7 +850,8 @@ body {
 
 .quiet-toggle [aria-pressed="true"] {
   background: var(--card);
-  box-shadow: 0 1px 2px var(--shadow);
+  color: var(--ink) !important;
+  box-shadow: none;
 }
 
 @media (min-width: 1024px) {
@@ -874,15 +886,35 @@ nav[data-testid="tab-nav"] [role="tab"][aria-selected="true"] {
   color: var(--ink) !important;
 }
 
+/* The hover affordance has to be !important too: the base rule above pins
+   every tab's colour, so the non-important `.hover:text-ink` utility on the
+   button always lost the cascade and hovering an inactive tab painted ZERO
+   change (t_656e635d — verified live: hovered Analytics computed colour ==
+   Plans, both rgb(84,92,106)). `:not([aria-selected="true"])` keeps the
+   selected tab on its own rule, so hover lifts the inactive label/icon to
+   the same ink the selected tab already uses. */
+nav[data-testid="tab-nav"] [role="tab"]:hover:not([aria-selected="true"]) {
+  color: var(--ink) !important;
+}
+
 /* Preserve the touch-target contract even where legacy utilities specified a
    smaller height; this also makes hidden icon-only actions usable on phones. */
 button,
 input,
 select,
 summary,
+a[href],
 [role="button"],
 [role="tab"] {
+  min-width: 44px !important;
   min-height: 44px !important;
+}
+
+/* Keep the floor measurable on inline anchors (min-height is ignored on
+   non-replaced inline boxes). Inline flex preserves text-flow participation. */
+a[href] {
+  display: inline-flex;
+  align-items: center;
 }
 
 [data-testid="dashboard-toolbar"] {
@@ -897,9 +929,34 @@ button {
   box-shadow: none;
 }
 
-/* App-wide focused controls use the accent ring instead of a blue halo. */
+/* --------------------------------------------------------------------------- *
+ * Wave H item 3 → Quiet Meter: ONE focus ring for the whole app.
+ *
+ * Geometry: a 2px `--page` gap flush with the element, then the 2px
+ * `--focus-ring` outline (outline-offset: 2px) — the ring breathes instead
+ * of hugging the border the way the neobrutalist 3px/6px ring did. Two
+ * layers, two jobs: the gap reads against the element it surrounds, the
+ * outline reads against whatever the element sits on.
+ *
+ * The ink is a per-theme token because NO single colour survives both
+ * canvases: the accent is 1.22:1 on the light page (#c7f000 on #f6f6f3 —
+ * the invisible indicator #110 shipped, and what journey.spec.ts used to
+ * wave through on a stale geometry match) and ink is 1.08:1 on the dark one.
+ * Light gets ink (16.7:1 on page, 18.1:1 on card), dark keeps the accent
+ * (17.5:1 / 16.5:1); both clear the 3:1 non-text floor the standing gate
+ * asks for. journey.spec.ts measures that budget on the PAINTED page — every
+ * tab stop, both themes — so a token swap that loses a surface fails there,
+ * and WaveH.test.tsx pins the rule text here.
+ *
+ * Unlayered + !important: it outranks Tailwind's layered utilities (the
+ * `focus-visible:outline-none` / `ring-4` exceptions in LocaleToggle and
+ * EfficiencyCard lose to it, so the app keeps ONE ring) and the hard offset
+ * shadows while focused; on blur it disappears and the surface comes back.
+ *
+ * Standing gate: ARCHITECTURE.md → Accessibility → "Focus is always visible".
+ * ------------------------------------------------------------------------- */
 :focus-visible {
-  outline: 2px solid var(--accent) !important;
+  outline: 2px solid var(--focus-ring) !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--page) !important;
 }
@@ -921,6 +978,50 @@ body {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
   padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* ---------------------------------------------------------------------------
+ * t_82a4dc08 — no text may push the document sideways.
+ *
+ * At a 200% root font a single French word inside a flex or grid child is
+ * wider than the column it sits in — measured: "consommation" is 402px wide
+ * at root 32 inside a 222px header row — and every flex/grid item is floored
+ * at its min-content by `min-width: auto`. The box therefore grows past the
+ * viewport instead of wrapping, and the page pans horizontally. Measured on
+ * the build this landed on, seeded page, locale fr: documentElement scrollWidth
+ * exceeded clientWidth by +112 (390px) / +75 (427px) at 200% text, by
+ * +100 / +70 / +33 (360 / 390 / 427) at default text, and the money tab sat
+ * +14 at 200% with NO border-box offender at all — pure text ink painting
+ * past its box, which only real line breaking can stop.
+ *
+ * `anywhere` does the two things a per-element patch cannot: it collapses the
+ * min-content floor that flex/grid automatic minimums read, and it lets text
+ * break when even the collapsed box is still too narrow — so content wraps
+ * inside its container instead of extending the scrollable area. It engages
+ * only where content would otherwise overflow: intrinsic (max-content)
+ * sizing is unchanged, so layout at default text is essentially unchanged.
+ * Measured by diffing every element's rect on the seeded page at root 16
+ * across 360/390/768/1280 in both locales (5,468 elements per cell, before
+ * vs after): zero padding changes, and geometry changes in exactly three
+ * places — the fr best-choice-chip at 360/390 (the defect itself: 431x44
+ * becomes 302x50 as its label wraps instead of panning the page), one dt/dd
+ * pair in the overview plan summary at fr 768 (+/-4px, inside a
+ * justify-between row that was ALREADY sitting on its min-content floor),
+ * and two spans inside the efficiency trend chip at en 360 (1px of text
+ * rounding). Every other cell is identical.
+ *
+ * Tables are exempt on purpose. A wide data surface must stay wide and
+ * scroll inside its own overflow-x container rather than break every cell:
+ * measured money-table scrollWidth 1010 vs clientWidth 724 at 390, which
+ * would collapse to the container width and wrap its columns if cells
+ * inherited the rule (the table keeps its own `min-w-[680px]` contract).
+ */
+body {
+  overflow-wrap: anywhere;
+}
+
+body table {
+  overflow-wrap: normal;
 }
 
 /**
@@ -971,6 +1072,7 @@ body {
     --edge: #000000;
     --edge-muted: rgba(0, 0, 0, 0.4);
     --ink: #000000;
+    --focus-ring: #000000; /* 20.1:1 on the printed --page #f8fafc */
     --ink-2: #475569;
     --ink-3: #59677a;
     --ink-4: #5f6d80;

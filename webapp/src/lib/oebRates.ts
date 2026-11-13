@@ -5,8 +5,11 @@
  * probes on 2026-10-02 found NO public JSON (Drupal `?_format=json` → 406),
  * NO RSS/Atom feed (404 on /rss.xml, /feed), and NO CORS headers on the
  * rates page — so a browser cannot fetch it directly. The webapp serves the
- * page through a stateless Next.js rewrite (`/oeb-rates-page`, see
- * next.config.ts) and runs THIS parser client-side, once per session.
+ * page through a stateless same-origin route handler
+ * (`webapp/src/app/oeb-rates-page/route.ts`; formerly a next.config rewrite
+ * — the handler no longer forwards OEB's own ~5 KB response headers, which
+ * 502ed this route at the edge, 2026-10-17) and runs THIS parser
+ * client-side, once per session.
  *
  * The weekly gateway cron (scripts/check_oeb_staleness.py) parses the same
  * page server-side with equivalent logic; both sides are pinned to
@@ -23,8 +26,12 @@ import {
 export const OEB_RATES_URL =
   'https://www.oeb.ca/consumer-information-and-protection/electricity-rates';
 
-/** Same-origin rewrite that proxies the OEB page (CORS-free transport). */
-export const OEB_RATES_PROXY_PATH = '/oeb-rates-page';
+/**
+ * Same-origin route handler that proxies the OEB page (CORS-free transport).
+ * The value lives in ./oebRouteCsp — src/proxy.ts needs it too (it sets that
+ * route's hardening CSP), and one source cannot drift from the other.
+ */
+export { OEB_RATES_PROXY_PATH } from './oebRouteCsp';
 
 const MONTH_TO_NUM: Record<string, string> = {
   january: '01', february: '02', march: '03', april: '04',

@@ -30,18 +30,31 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
   const verdict = buildVerdict(comparison, userPlan, days);
   if (!verdict) return null;
   const deltaVsCheapest = verdict.currentCost - verdict.costs[verdict.best];
-  const worseVsCurrent = verdict.costs[verdict.worst] - verdict.currentCost;
   const cheapestLabel = t(`planShort.${verdict.best}`);
 
+  /* The reference's own rule: "slabs do not flood colour — verdicts are
+     ink-coloured text plus a hairline tag". So the line sits on the quiet
+     callout surface (inset + a 3px accent edge, the system's marker) and the
+     eyebrow becomes a hairline tag; the accent survives only as that tag's
+     dot, never as a slab behind the sentence. */
   return (
     <p
       data-testid="verdict-line"
       data-best-plan={verdict.best}
+      data-current-plan={userPlan}
+      data-current-cost={verdict.currentCost}
+      data-best-cost={verdict.costs[verdict.best]}
+      data-delta={deltaVsCheapest}
+      data-direction={deltaVsCheapest > 0.005 ? 'cheaper-option' : 'already-best'}
       data-already-best={String(verdict.alreadyBest)}
-      className="bg-accent border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4"
+      data-window-days={verdict.days}
+      className="quiet-plan-callout px-4 md:px-6 py-3 text-ink font-semibold uppercase text-[11px] md:text-sm"
     >
-      <span className="text-[8px] md:text-[10px] tracking-[0.2em] block text-accent-ink mb-1">
-        {t('verdict.eyebrow')}
+      <span className="block mb-1.5">
+        <span className="inline-flex items-center gap-1.5 border border-edge-muted rounded-full px-2 py-0.5 text-[11px] tracking-[0.18em] text-ink-2">
+          <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+          {t('verdict.eyebrow')}
+        </span>
       </span>
       <span className="text-base md:text-xl">
         {t('verdict.planCost', {
@@ -50,21 +63,18 @@ export default function VerdictLine({ comparison, userPlan, days }: VerdictLineP
           plan: cheapestLabel,
         })}{' '}
         {deltaVsCheapest > 0 ? (
-          <span data-testid="verdict-delta" className="text-accent-ink">▲{fmtMoney0(deltaVsCheapest)}</span>
+          <span data-testid="verdict-delta">▲{fmtMoney0(deltaVsCheapest)}</span>
         ) : (
           <span data-testid="verdict-delta">{fmtMoney0(0)}</span>
         )}{' '}
         {t('verdict.cheapestBaseline')}
       </span>{' '}
-      {worseVsCurrent > 0.005 && (
-        <span className="text-accent-ink">{fmtMoney0(worseVsCurrent)} {t('verdict.worse')}</span>
-      )}{' '}
       {verdict.alreadyBest ? (
-        <span className="font-bold normal-case text-[10px] md:text-xs">
+        <span className="font-medium normal-case text-[10px] md:text-xs">
           {t('verdict.nothingToSwitch', { count: verdict.days, days: verdict.days })}
         </span>
       ) : (
-        <span className="font-bold normal-case text-[10px] md:text-xs">
+        <span className="font-medium normal-case text-[10px] md:text-xs">
           {t('verdict.winsDetail', {
             count: verdict.days,
             days: verdict.days,

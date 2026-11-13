@@ -84,7 +84,7 @@ export default function ThemeToggle() {
       data-testid="theme-toggle"
       data-theme-mode={theme}
       onKeyDown={onKeyDown}
-      className="no-print inline-flex items-center border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden shadow-hard-4 bg-card"
+      className="no-print inline-flex items-center overflow-hidden rounded-lg border border-edge-muted bg-card"
     >
       {OPTIONS.map(({ mode, icon: Icon, labelKey }) => {
         const active = theme === mode;

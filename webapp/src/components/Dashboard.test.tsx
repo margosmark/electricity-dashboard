@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { format } from 'date-fns';
 import Dashboard from './Dashboard';
@@ -52,12 +54,54 @@ describe('Dashboard', () => {
     expect(screen.getByText(/preparing optimizer/i)).toBeInTheDocument();
   });
 
-  it('renders the three-tab strip after loading, Overview selected', async () => {
+  it('renders the four-tab strip after loading, Overview selected', async () => {
     await renderLoaded();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Plans', 'Money']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Analytics', 'Plans', 'Money']);
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
+  });
+
+  it('classic variant restores the four historical destinations and Usage panel', async () => {
+    render(<Dashboard variant="classic" />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('classic-tab-nav')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Overview', 'Usage', 'Plans', 'Money',
+    ]);
+    expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
+    expect(screen.queryByTestId('overview-usage')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('classic-tab-usage'));
+    expect(screen.getByTestId('tab-panel-usage')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+  });
+
+  it('classic shell date and scope controls change the classic analytics window', async () => {
+    const user = userEvent.setup();
+    render(<Dashboard variant="classic" />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+
+    const shell = screen.getByTestId('classic-tab-nav');
+    const context = within(shell).getByTestId('dashboard-context');
+    const [startInput, endInput] = context.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    const initialDate = format(new Date(mockRawData[0].timestamp * 1000), 'yyyy-MM-dd');
+    expect(startInput).toHaveValue(initialDate);
+    expect(endInput).toHaveValue(initialDate);
+
+    await user.click(within(context).getByRole('button', { name: 'Month' }));
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
+    expect(startInput.value).not.toBe(initialDate);
+    expect(endInput.value).not.toBe(initialDate);
+
+    fireEvent.change(startInput, { target: { value: initialDate } });
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'false');
+    expect(startInput).toHaveValue(initialDate);
   });
 
   it('renders plan selection buttons', async () => {
@@ -90,10 +134,37 @@ describe('Dashboard', () => {
     expect(billingInput).toBeInTheDocument();
   });
 
+  it('labels plan verdict and cards with the same visible date span', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
+    const plans = within(screen.getByTestId('tab-panel-plans'));
+    const scopes = plans.getAllByTestId('plan-card-scope');
+    expect(scopes).toHaveLength(3);
+    for (const scope of scopes) expect(scope).toHaveTextContent('Dec 31 – Dec 31 on screen');
+    expect(plans.getByTestId('verdict-line')).toHaveTextContent(/1 day on screen/i);
+  });
+
   it('renders date inputs', async () => {
     await renderLoaded();
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs.length).toBeGreaterThanOrEqual(2);
+    expect(dateInputs).toHaveLength(2);
+  });
+
+  it('keeps the date range and scope pills in the persistent shell, not the legacy toolbar', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const shell = screen.getByTestId('tab-nav');
+    const context = screen.getByTestId('dashboard-context');
+    const toolbar = screen.getByTestId('dashboard-toolbar');
+    expect(shell).toContainElement(context);
+    expect(context.querySelectorAll('input[type="date"]')).toHaveLength(2);
+    expect(toolbar.querySelectorAll('input[type="date"]')).toHaveLength(0);
+    expect(within(context).getByRole('button', { name: 'Billing Period' })).toBeInTheDocument();
+
+    await user.click(within(context).getByRole('button', { name: 'Month' }));
+    expect(within(context).getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('renders upload button', async () => {
@@ -109,11 +180,48 @@ describe('Dashboard', () => {
   it('shows the usage analysis inside Overview', async () => {
     await renderLoaded();
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+    // Each analysis group is framed by the question it answers — in the
+    // Overview embed as well as the Analytics destination.
+    expect(screen.getByText('When do you use power?')).toBeInTheDocument();
+    expect(screen.getByText('How does weather relate to usage?')).toBeInTheDocument();
+    expect(screen.getByText('Which days were unusual?')).toBeInTheDocument();
     expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
     expect(screen.getByText(/Weekly Routine Heatmap/i)).toBeInTheDocument();
     // The chart is embedded, not exposed as a fourth tab panel.
     expect(screen.getByTestId('tab-panel-overview')).toContainElement(screen.getByTestId('overview-usage'));
-    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-analytics')).not.toBeInTheDocument();
+  });
+
+  it('routes the overview analytics call to the real Analytics panel', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await user.click(screen.getByTestId('overview-analytics-cta'));
+    expect(screen.getByRole('tab', { name: 'Analytics' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('tab-panel-analytics')).toBeInTheDocument();
+    // The analytics destination keeps the full analysis reachable.
+    expect(screen.getByTestId('chart-view')).toBeInTheDocument();
+    expect(screen.getByText(/Usage Anomalies/i)).toBeInTheDocument();
+  });
+
+  it('empty Analytics explains how to add data without rendering empty visualizations', async () => {
+    Storage.prototype.getItem = vi.fn(() => null);
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument());
+    // Dismiss the Link Data screen: what remains must be calm and specific.
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    // Fresh Overview: a next action and the Analytics door, and NOTHING
+    // empty-chart shaped — no embed, no heatmap, no zero grids.
+    expect(screen.getByTestId('overview-analytics-cta')).toBeInTheDocument();
+    expect(screen.queryByTestId('overview-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Analytics' }));
+    expect(screen.getByTestId('analytics-empty-state')).toBeInTheDocument();
+    expect(screen.getByText(/Import or try sample data/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-view')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Usage Anomalies/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Weekly Routine Heatmap/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('temp-band-card')).not.toBeInTheDocument();
   });
 
   it('shows always-on floor help modal', async () => {
@@ -284,7 +392,7 @@ describe('Dashboard', () => {
 
     // Overview is the default and the only panel on screen.
     expect(screen.getByTestId('tab-panel-overview')).toBeInTheDocument();
-    expect(screen.queryByTestId('tab-panel-usage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tab-panel-analytics')).not.toBeInTheDocument();
 
     expect(screen.getByTestId('chart-view')).toBeInTheDocument();
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
@@ -486,5 +594,240 @@ describe('Dashboard storage surfacing', () => {
     expect(store.get('some_other_app')).toBe('keep-me');
     expect(store.get('theme')).toBe('dark');
     // confirmReset then reloads; jsdom only logs its usual "not implemented" notice
+  });
+});
+
+/* ========================================================================== *
+ * Link Data — the fresh / no-data modal (card t_69a51490)
+ *
+ * These lock the Quiet Meter surface contract of the first-run dialog only:
+ * one labelled dialog, the semantic token ladder, a hairline edge with no
+ * hard-offset shadow, and the exact file inputs the handlers are wired to.
+ * They deliberately assert tokens and semantics, never a full class string.
+ * ========================================================================== */
+
+describe('Link Data fresh modal', () => {
+  async function renderFreshModal() {
+    Storage.prototype.getItem = vi.fn(() => null);
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    return screen.getByTestId('upload-modal');
+  }
+
+  it('auto-opens as a single labelled modal dialog over a quiet scrim', async () => {
+    const modal = await renderFreshModal();
+    expect(modal).toHaveAttribute('role', 'dialog');
+    expect(modal).toHaveAttribute('aria-modal', 'true');
+    expect(modal).toHaveAccessibleName('Link your Green Button data');
+    // scrim stays, but it is a plain tint — no blur layer, no second overlay
+    expect(modal.className).toContain('bg-inv/70');
+    expect(modal.className).not.toContain('backdrop-blur');
+    // and the fresh state carries no storage notice to explain
+    expect(screen.queryByTestId('storage-notice')).not.toBeInTheDocument();
+  });
+
+  it('the dialog card uses the quiet ladder: hairline edge, rounded-lg, no shadow', async () => {
+    const modal = await renderFreshModal();
+    const card = modal.firstElementChild as HTMLElement;
+    for (const token of ['bg-card', 'text-ink', 'border-edge', 'rounded-lg', 'shadow-none', 'max-w-2xl']) {
+      expect(card.classList.contains(token)).toBe(true);
+    }
+    // the legacy surface is gone: no thick border, no deep radius, no hard shadow
+    expect(card.className).not.toMatch(/border-[248]\b|rounded-\[|shadow-hard/);
+    expect(screen.getByRole('heading', { name: 'Link Data' })).toBeInTheDocument();
+    expect(screen.getByText(/privacy-first/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drop XML Here/i)).toBeInTheDocument();
+  });
+
+  it('keeps the XML and JSON file inputs exactly as wired', async () => {
+    const modal = await renderFreshModal();
+    const xml = screen.getByLabelText('Upload Green Button XML') as HTMLInputElement;
+    expect(xml.closest('[data-testid="upload-modal"]')).toBe(modal);
+    expect(xml).toHaveAttribute('type', 'file');
+    expect(xml).toHaveAttribute('accept', '.xml');
+    expect(xml).toHaveAttribute('multiple');
+    expect(xml).not.toBeDisabled();
+
+    const json = screen.getByLabelText('Import JSON backup') as HTMLInputElement;
+    expect(json.closest('[data-testid="upload-modal"]')).toBe(modal);
+    expect(json).toHaveAttribute('type', 'file');
+    expect(json).toHaveAttribute('accept', 'application/json,.json');
+  });
+
+  it('offers example data as the primary CTA and Cancel as the quiet secondary', async () => {
+    const modal = await renderFreshModal();
+    const example = screen.getByTestId('try-example-data');
+    expect(example).toBeEnabled();
+    expect(example.className).toContain('bg-accent');
+    expect(example.className).toContain('text-accent-ink');
+
+    const cancel = within(modal).getByRole('button', { name: 'Cancel' });
+    expect(cancel.className).toContain('quiet-action');
+    // Cancel really is the way out of the first-run dialog
+    await userEvent.setup().click(cancel);
+    expect(screen.queryByTestId('upload-modal')).not.toBeInTheDocument();
+  });
+
+  it('reads in hierarchy order: title, privacy, drop zone, JSON, Green Button, CTAs', async () => {
+    const modal = await renderFreshModal();
+    const card = modal.firstElementChild as HTMLElement;
+    const beats = (earlier: Element, later: Element) =>
+      Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    const title = screen.getByRole('heading', { name: 'Link Data' });
+    const privacy = screen.getByText(/privacy-first/i);
+    const dropzone = screen.getByText(/Drop XML Here/i);
+    const json = screen.getByLabelText('Import JSON backup');
+    // Fresh browser, no live-shim secret in jsdom: the block after the import
+    // choices is the Green Button card when configured, its quiet placeholder
+    // when the deployment has not switched the feature on. Both are this
+    // dialog's Green Button area and both must sit in the same slot.
+    const greenButtonSlot = card.querySelector<HTMLElement>(
+      '[data-testid="gb-connect-card"], [data-testid="gb-unconfigured"]',
+    );
+    expect(greenButtonSlot).not.toBeNull();
+    const greenButton = greenButtonSlot as HTMLElement;
+    expect(greenButton.className).toMatch(/rounded-lg/);
+    expect(greenButton.className).not.toMatch(/shadow-hard|border-[248]\b/);
+    const example = screen.getByTestId('try-example-data');
+    const cancel = within(modal).getByRole('button', { name: 'Cancel' });
+
+    for (const node of [title, privacy, dropzone, json, greenButton, example, cancel]) {
+      expect(card).toContainElement(node as HTMLElement);
+    }
+    expect(beats(title, privacy)).toBe(true);
+    expect(beats(privacy, dropzone)).toBe(true);
+    expect(beats(dropzone, json)).toBe(true);
+    expect(beats(json, greenButton)).toBe(true);
+    expect(beats(greenButton, example)).toBe(true);
+    expect(beats(example, cancel)).toBe(true);
+  });
+});
+
+/* ==========================================================================
+ * Defect R1 (QA t_13978aee): the Enbridge gas import commits BILL SUMMARIES
+ * and ZERO electric DataPoints — `energy_data_v2.points = 0`,
+ * `usage_summaries = 10`. The init gate used to ask only "are there points?",
+ * so every reload concluded "nothing to show" and reopened the first-run
+ * modal over data that was already in storage, on quiet AND classic.
+ *
+ * The whole point of these tests is the SECOND mount: storage has to PERSIST
+ * between two renders, which is why this block puts the real Storage methods
+ * back (the file-wide beforeEach swaps them for spies) instead of stubbing
+ * localStorage. Fixture: SYNTHETIC only (tests/fixtures/).
+ * ========================================================================== */
+describe('summary-only reload (defect R1)', () => {
+  const USAGE_XML = readFileSync(
+    join(__dirname, '../../tests/fixtures/enbridge-gas-synthetic.xml'),
+    'utf8',
+  );
+
+  // Captured at collection time, before any beforeEach/test body has had the
+  // chance to replace the prototypes with spies.
+  const realStorage = {
+    get: Storage.prototype.getItem,
+    set: Storage.prototype.setItem,
+    remove: Storage.prototype.removeItem,
+    clear: Storage.prototype.clear,
+  };
+
+  beforeEach(() => {
+    Storage.prototype.getItem = realStorage.get;
+    Storage.prototype.setItem = realStorage.set;
+    Storage.prototype.removeItem = realStorage.remove;
+    Storage.prototype.clear = realStorage.clear;
+    localStorage.clear();
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+
+  /** Fresh browser → first-run modal → import the gas fixture → unmount. */
+  const importGasFixture = async (variant: 'quiet' | 'classic') => {
+    const view = render(<Dashboard variant={variant} />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    // Genuinely empty storage still gets the first-run dialog (criterion 2).
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
+
+    const input = screen.getByLabelText('Upload Green Button XML') as HTMLInputElement;
+    await userEvent.upload(
+      input,
+      new File([USAGE_XML], 'enbridge-gas-synthetic.xml', { type: 'text/xml' }),
+    );
+
+    // The import landed: modal gone, ten GAS summaries stored — under the
+    // gas key (t_8a9038d6). The electric key is not addressed by a gas
+    // upload at all, which is what keeps both imports alive in one browser.
+    await waitFor(() => {
+      const raw = localStorage.getItem('gas_usage_summaries');
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw as string)).toHaveLength(10);
+    });
+    expect(screen.queryByTestId('upload-modal')).toBeNull();
+    // The exact precondition QA accepted, in the split key space: gas bills
+    // + gas intervals stored, NO electric points written.
+    const gas = localStorage.getItem('energy_gas_v2');
+    expect(gas).not.toBeNull();
+    expect(JSON.parse(gas as string).points).toHaveLength(5);
+    const energy = localStorage.getItem('energy_data_v2');
+    expect(energy).toBeNull(); // a gas upload never writes the electric key
+
+    view.unmount();
+  };
+
+  /** Reload (a fresh mount over the same storage) and see what the user sees. */
+  const reloadAndExpectData = async (variant: 'quiet' | 'classic') => {
+    render(<Dashboard variant={variant} />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    // R1: the data IS in storage, so the first-run modal must NOT come back.
+    expect(screen.queryByTestId('upload-modal')).toBeNull();
+    // ...and the data itself is on screen: ten gas periods, feed-exact money.
+    await userEvent.click(screen.getByRole('tab', { name: 'Plans' }));
+    const cards = await screen.findAllByTestId('gas-period');
+    expect(cards).toHaveLength(10);
+    expect(within(cards[0]).getByTestId('gas-amount-due').textContent).toContain('$175.76');
+    expect(within(cards[9]).getByTestId('gas-amount-due').textContent).toContain('$72.47');
+  };
+
+  it('quiet: reload opens the dashboard, not the modal, with all ten gas periods', async () => {
+    await importGasFixture('quiet');
+    await reloadAndExpectData('quiet');
+  });
+
+  it('classic: reload opens the dashboard, not the modal, with all ten gas periods', async () => {
+    await importGasFixture('classic');
+    await reloadAndExpectData('classic');
+  });
+
+  it('quiet: reload on a #tab deep link behaves the same (hash or not)', async () => {
+    await importGasFixture('quiet');
+    window.history.replaceState(null, '', `${window.location.pathname}#tab=plans`);
+    await reloadAndExpectData('quiet');
+  });
+
+  it('classic: reload on a #tab deep link behaves the same (hash or not)', async () => {
+    await importGasFixture('classic');
+    window.history.replaceState(null, '', `${window.location.pathname}#tab=plans`);
+    await reloadAndExpectData('classic');
+  });
+
+  it('genuinely empty storage still opens the modal after the same reload (control)', async () => {
+    // No import at all: two mounts over storage that never held anything.
+    const view = render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
+    view.unmount();
+
+    render(<Dashboard />);
+    await waitFor(() => {
+      expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('upload-modal')).toBeInTheDocument();
   });
 });

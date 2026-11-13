@@ -1,21 +1,17 @@
 import type { NextConfig } from "next";
 
+// NOTE: the former `rewrites()` — the `/oeb-rates-page` pass-through to
+// www.oeb.ca — is now a route handler at src/app/oeb-rates-page/route.ts.
+// A rewrite forwards the upstream response HEADERS as-is, and OEB's own
+// (~5 KB, two Drupal CSP headers among them) overflowed nginx's first-read
+// proxy buffer: `upstream sent too big header` → 502 (production,
+// 2026-10-17). The route handler streams the upstream body and reissues
+// only the headers this origin asserts, so the transport's header size is
+// no longer an oeb.ca function.
+
 const nextConfig: NextConfig = {
   output: 'standalone',
-  async rewrites() {
-    // CORS transport for the client-side rate staleness check. OEB publishes
-    // HTML only — no JSON (406), no RSS (404), and no Access-Control-Allow-
-    // Origin header — so the browser cannot fetch the page cross-origin. This
-    // fixed-destination, stateless rewrite proxies it same-origin; ALL check
-    // logic (parse/compare/banner) still runs client-side in
-    // src/hooks/useRateStaleness.ts. No server state, no backend code.
-    return [
-      {
-        source: '/oeb-rates-page',
-        destination: 'https://www.oeb.ca/consumer-information-and-protection/electricity-rates',
-      },
-    ];
-  },
+
   async headers() {
     // Baseline transport headers, on EVERY response (`/:path*` matches the
     // root and every segment count, so nothing — sw.js, the manifest, the

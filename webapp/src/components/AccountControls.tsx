@@ -20,6 +20,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Bell, BellOff, CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
+import Link from "next/link";
 import { useAccount, type AccountStatus } from "@/hooks/useAccount";
 import { useTranslation } from "@/i18n";
 
@@ -55,8 +56,7 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
   // Escape closes, exactly like every other overlay in this app. Registered
   // once (not gated on `open`) so there is never a frame where the drawer is
@@ -95,7 +95,9 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
 
   const submitAuth = async (e: FormEvent) => {
     e.preventDefault();
-    const ok = tab === "signup" ? await account.signUp(email, password) : await account.signIn(email, password);
+    const ok = tab === "signup"
+      ? await account.signUp(email, password, policyAccepted)
+      : await account.signIn(email, password);
     if (ok) {
       setPassword("");
       // Sign-in can END with a question the user has to answer (the
@@ -103,33 +105,19 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
       // drawer here would hide it, and a hidden prompt is a prompt that never
       // happened. Read from the ref, not from `prompt`: the render that carries
       // the new prompt has not happened yet when this resumes.
-      if (!account.promptRef.current) setOpen(false);
+      if (tab !== "signup" && !account.promptRef.current) setOpen(false);
     }
   };
 
   const submitRecover = async (e: FormEvent) => {
     e.preventDefault();
-    const { recover } = await import("@/lib/account/client");
-    const entered = newPassword;
+    const { requestRecovery } = await import("@/lib/account/client");
     try {
-      const res = await recover({
-        email: recoveryEmail,
-        recoveryCode: recoveryCodeInput,
-        newPassword: entered,
-      });
-      setRecoveryCodeInput("");
-      setNewPassword("");
-      setTab("signin");
-      setEmail(recoveryEmail);
-      if (res.blobDropped && res.blobDroppedReason) account.notify("error", res.blobDroppedReason);
-      else account.notify("ok", "Password updated — sign in with it.");
-      // Re-entering through the normal sign-in keeps ONE code path for
-      // "derive the key and pull"; nothing about recovery is special there.
-      await account.signIn(recoveryEmail, entered);
-      setOpen(false);
+      await requestRecovery(recoveryEmail);
+      account.notify("ok", t('account.recoveryRequest'));
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
-      account.notify("error", `Could not recover: ${detail}`);
+      account.notify("error", `Could not request recovery: ${detail}`);
     }
   };
 
@@ -328,22 +316,45 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                     className={INPUT_CLASS}
                   />
                 </div>
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="acct-password">
-                    {t('account.passwordLabel')}
-                  </label>
-                  <input
-                    id="acct-password"
-                    data-testid="account-password-input"
-                    type="password"
-                    autoComplete={tab === "signup" ? "new-password" : "current-password"}
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
-                </div>
+                {tab === "signup" && (
+                  <>
+                    <label className="flex items-start gap-2 text-[10px] leading-relaxed normal-case">
+                      <input
+                        type="checkbox"
+                        data-testid="account-policy-ack"
+                        checked={policyAccepted}
+                        required
+                        onChange={(e) => setPolicyAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-violet-600"
+                      />
+                      <span>
+                        {t('policy.terms.acknowledgement')} {" "}
+                        <Link href="/privacy" className="underline font-black">{t('policy.terms.privacyLink')}</Link>{" · "}
+                        <Link href="/terms" className="underline font-black">{t('policy.terms.termsLink')}</Link>
+                      </span>
+                    </label>
+                    <p role="status" className="border-4 border-edge bg-warn-soft p-3 text-[10px] normal-case">
+                      {t('account.registrationClosed')}
+                    </p>
+                  </>
+                )}
+                {tab !== "signup" && (
+                  <div>
+                    <label className={FIELD_LABEL} htmlFor="acct-password">
+                      {t('account.passwordLabel')}
+                    </label>
+                    <input
+                      id="acct-password"
+                      data-testid="account-password-input"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                )}
                 <button
                   type="submit"
                   data-testid={tab === "signup" ? "account-register" : "account-login"}
@@ -391,42 +402,11 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
                   className={INPUT_CLASS}
                 />
               </div>
-              <div>
-                <label className={FIELD_LABEL} htmlFor="rec-code">
-                  {t('account.recoveryCodeLabel')}
-                </label>
-                <input
-                  id="rec-code"
-                  data-testid="account-recover-code"
-                  type="text"
-                  required
-                  autoComplete="one-time-code"
-                  value={recoveryCodeInput}
-                  onChange={(e) => setRecoveryCodeInput(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </div>
-              <div>
-                <label className={FIELD_LABEL} htmlFor="rec-password">
-                  {t('account.newPasswordLabel')}
-                </label>
-                <input
-                  id="rec-password"
-                  data-testid="account-recover-password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className={INPUT_CLASS}
-                />
-              </div>
               <p className="text-[9px] text-ink-2 normal-case">
-                {t('account.recoverWarn')}
+                {t('account.recoverWarn')} {t('account.recoveryLinkHelp')}
               </p>
               <button type="submit" disabled={busy} className={BUTTON_CLASS + " bg-violet-slab"}>
-                <KeyRound size={14} strokeWidth={4} /> {t('account.setPassword')}
+                <KeyRound size={14} strokeWidth={4} /> {t('account.recoveryLinkButton')}
               </button>
             </form>
           )}

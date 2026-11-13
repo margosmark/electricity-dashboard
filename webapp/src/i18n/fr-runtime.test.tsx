@@ -486,10 +486,13 @@ describe('the refusal notice on the French page', () => {
     setLocale('fr');
     const { container } = paintNotice(NOTICE_NOTES);
 
-    // The notice is really on the page (one bullet per refusal), and it carries
-    // the sentence the deployed build shipped in English.
+    // The notice is really on the page. Aggregation (t_8a9038d6) prints one
+    // bullet per DISTINCT sentence — so no bullet may repeat — while the
+    // disclosure keeps EVERY note the parser worded, in feed order.
     const bullets = screen.getAllByTestId('series-note-detail').map((n) => n.textContent ?? '');
-    expect(bullets.length).toBe(NOTICE_NOTES.length);
+    expect(new Set(bullets).size).toBe(bullets.length);
+    const raw = screen.getAllByTestId('series-note-raw').map((n) => n.textContent ?? '');
+    expect(raw).toHaveLength(NOTICE_NOTES.length);
     expect(bullets.length).toBeGreaterThanOrEqual(12);
     expect(bullets.some((b) => b.startsWith('Aucun ReadingType ne décrivait'))).toBe(true);
 

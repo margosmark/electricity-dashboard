@@ -1,0 +1,731 @@
+[
+  {
+    "source": "UsageSummary",
+    "start": 1779667200,
+    "duration": 2505600,
+    "startDate": "2026-05-25",
+    "endDate": "2026-06-23",
+    "days": 29,
+    "billLastPeriod": 0,
+    "billToDate": 0,
+    "costAdditionalLastPeriod": 0,
+    "currency": 124,
+    "consumption": {
+      "value": 2650000,
+      "powerOfTenMultiplier": -3,
+      "uom": 72,
+      "scaled": 2650
+    },
+    "items": [
+      {
+        "note": "Amount Due",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "H.S.T. # 123456789",
+        "rawAmount": 6467000,
+        "amount": 64.67,
+        "itemKind": 5,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "On Peak-Summer",
+        "rawAmount": 9888000,
+        "amount": 98.88,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Ontario Electricity Rebate",
+        "rawAmount": -11690000,
+        "amount": -116.9,
+        "itemKind": 8,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Balance Forward",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Regulatory Charges",
+        "rawAmount": 1162000,
+        "amount": 11.62,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Delivery",
+        "rawAmount": 10278000,
+        "amount": 102.78,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer",
+        "rawAmount": 8864000,
+        "amount": 88.64,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Total Electricity Charges",
+        "rawAmount": 49745000,
+        "amount": 497.45,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Off Peak-Summer",
+        "rawAmount": 19553000,
+        "amount": 195.53,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 450000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 450
+        }
+      },
+      {
+        "note": "On Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 400000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 400
+        }
+      },
+      {
+        "note": "Off Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1800000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 1800
+        }
+      },
+      {
+        "note": "Current Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 249650000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 249650
+        }
+      },
+      {
+        "note": "Previous Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 247000000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 247000
+        }
+      },
+      {
+        "note": "Number of days in bill period",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 29,
+          "powerOfTenMultiplier": 0,
+          "uom": 114,
+          "scaled": 29
+        }
+      },
+      {
+        "note": "Distribution Loss Factor",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1037600,
+          "powerOfTenMultiplier": -6,
+          "uom": 72,
+          "scaled": 1.0375999999999999
+        }
+      },
+      {
+        "note": "Billing Period - Current Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1782190848,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1782190848
+        }
+      },
+      {
+        "note": "Billing Period - Previous Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1779685248,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1779685248
+        }
+      },
+      {
+        "note": "Due Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1783468800,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1783468800
+        }
+      },
+      {
+        "note": "Bill Post Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1780531200,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1780531200
+        }
+      }
+    ]
+  },
+  {
+    "source": "UsageSummary",
+    "start": 1782172800,
+    "duration": 2505600,
+    "startDate": "2026-06-23",
+    "endDate": "2026-07-22",
+    "days": 29,
+    "billLastPeriod": 0,
+    "billToDate": 0,
+    "costAdditionalLastPeriod": 0,
+    "currency": 124,
+    "consumption": {
+      "value": 2790000,
+      "powerOfTenMultiplier": -3,
+      "uom": 72,
+      "scaled": 2790
+    },
+    "items": [
+      {
+        "note": "Amount Due",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "H.S.T. # 123456789",
+        "rawAmount": 5247000,
+        "amount": 52.47,
+        "itemKind": 5,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "On Peak-Summer",
+        "rawAmount": 6046000,
+        "amount": 60.46,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Ontario Electricity Rebate",
+        "rawAmount": -9484000,
+        "amount": -94.84,
+        "itemKind": 8,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Balance Forward",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Regulatory Charges",
+        "rawAmount": 1925000,
+        "amount": 19.25,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Delivery",
+        "rawAmount": 10631000,
+        "amount": 106.31,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer",
+        "rawAmount": 5922000,
+        "amount": 59.22,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Total Electricity Charges",
+        "rawAmount": 40358000,
+        "amount": 403.58,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Off Peak-Summer",
+        "rawAmount": 15834000,
+        "amount": 158.34,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 480000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 480
+        }
+      },
+      {
+        "note": "On Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 410000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 410
+        }
+      },
+      {
+        "note": "Off Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1900000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 1900
+        }
+      },
+      {
+        "note": "Current Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 252440000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 252440
+        }
+      },
+      {
+        "note": "Previous Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 249650000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 249650
+        }
+      },
+      {
+        "note": "Number of days in bill period",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 29,
+          "powerOfTenMultiplier": 0,
+          "uom": 114,
+          "scaled": 29
+        }
+      },
+      {
+        "note": "Distribution Loss Factor",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1037600,
+          "powerOfTenMultiplier": -6,
+          "uom": 72,
+          "scaled": 1.0375999999999999
+        }
+      },
+      {
+        "note": "Billing Period - Current Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1784696448,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1784696448
+        }
+      },
+      {
+        "note": "Billing Period - Previous Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1782190848,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1782190848
+        }
+      },
+      {
+        "note": "Due Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1785974400,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1785974400
+        }
+      },
+      {
+        "note": "Bill Post Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1783036800,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1783036800
+        }
+      }
+    ]
+  },
+  {
+    "source": "UsageSummary",
+    "start": 1784678400,
+    "duration": 2505600,
+    "startDate": "2026-07-22",
+    "endDate": "2026-08-20",
+    "days": 29,
+    "billLastPeriod": 0,
+    "billToDate": 0,
+    "costAdditionalLastPeriod": 0,
+    "currency": 124,
+    "consumption": {
+      "value": 2640000,
+      "powerOfTenMultiplier": -3,
+      "uom": 72,
+      "scaled": 2640
+    },
+    "items": [
+      {
+        "note": "Amount Due",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "H.S.T. # 123456789",
+        "rawAmount": 6032000,
+        "amount": 60.32,
+        "itemKind": 5,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "On Peak-Summer",
+        "rawAmount": 9948000,
+        "amount": 99.48,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Ontario Electricity Rebate",
+        "rawAmount": -10904000,
+        "amount": -109.04,
+        "itemKind": 8,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Balance Forward",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Regulatory Charges",
+        "rawAmount": 1428000,
+        "amount": 14.28,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Delivery",
+        "rawAmount": 10252000,
+        "amount": 102.52,
+        "itemKind": 4,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer",
+        "rawAmount": 7085000,
+        "amount": 70.85,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Total Electricity Charges",
+        "rawAmount": 46400000,
+        "amount": 464,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Off Peak-Summer",
+        "rawAmount": 17687000,
+        "amount": 176.87,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": null
+      },
+      {
+        "note": "Mid Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 430000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 430
+        }
+      },
+      {
+        "note": "On Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 360000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 360
+        }
+      },
+      {
+        "note": "Off Peak-Summer Usage",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1850000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 1850
+        }
+      },
+      {
+        "note": "Current Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 255080000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 255080
+        }
+      },
+      {
+        "note": "Previous Meter Read",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 252440000,
+          "powerOfTenMultiplier": -3,
+          "uom": 72,
+          "scaled": 252440
+        }
+      },
+      {
+        "note": "Number of days in bill period",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 29,
+          "powerOfTenMultiplier": 0,
+          "uom": 114,
+          "scaled": 29
+        }
+      },
+      {
+        "note": "Distribution Loss Factor",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1037600,
+          "powerOfTenMultiplier": -6,
+          "uom": 72,
+          "scaled": 1.0375999999999999
+        }
+      },
+      {
+        "note": "Billing Period - Current Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1787202048,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1787202048
+        }
+      },
+      {
+        "note": "Billing Period - Previous Read Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1784696448,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1784696448
+        }
+      },
+      {
+        "note": "Due Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1788480000,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1788480000
+        }
+      },
+      {
+        "note": "Bill Post Date",
+        "rawAmount": 0,
+        "amount": 0,
+        "itemKind": 10,
+        "unitCost": 0,
+        "measurement": {
+          "value": 1785542400,
+          "powerOfTenMultiplier": 0,
+          "uom": 27,
+          "scaled": 1785542400
+        }
+      }
+    ]
+  }
+]

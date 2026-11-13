@@ -83,7 +83,11 @@ describe('i18n locale-deps gate', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+    // 30s, not the 5s default: this scan compiles the WHOLE real source tree
+    // plus the planted probe files, so under sibling-suite load it blows the
+    // default and reports false-red (solo green, batch red). The assertions
+    // above are the gate; the clock is not.
+  }, 30_000);
 
   it('has no stale memo in the tree', () => {
     const { violations } = findMissingLocaleDeps() as { violations: Violation[] };

@@ -27,13 +27,15 @@ import TabNav from './TabNav';
 import Dashboard from './Dashboard';
 import DualHeatmap from './DualHeatmap';
 import BillAccrualCurve from './BillAccrualCurve';
-import PlanSwitchTimeline from './PlanSwitchTimeline';
+import PlanSwitchTimeline, { savingDescription } from './PlanSwitchTimeline';
 import { saveEnergyData } from '@/lib/storage';
 import BestChoiceChip from './BestChoiceChip';
 import VerdictLine from './VerdictLine';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
 import { buildHeatmapData, parseUsageSummaries, processRawData, type RateSet } from '@/lib/energy';
+import { buildSwitchReport } from '@/lib/planTimeline';
 import { projectMonthBill } from '@/lib/billProjection';
+import { setLocale, t } from '@/i18n';
 
 const OEB_FIXTURE = fs.readFileSync(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/oebRates.fixture.html'),
@@ -91,7 +93,7 @@ describe('Wave R 1 — the tab strip', () => {
     expect(list).toHaveAttribute('aria-orientation', 'horizontal');
 
     const tabs = within(list).getAllByRole('tab');
-    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-plans', 'tab-money']);
+    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-analytics', 'tab-plans', 'tab-money']);
     // Only the SELECTED tab carries aria-controls: the other three panels are
     // not in the DOM, and an aria-controls naming an id nothing renders is the
     // dangling reference axe dings as aria-valid-attr-value (t_d5cc9a2d —
@@ -152,8 +154,8 @@ describe('Wave R 1 — the tab strip', () => {
 
     screen.getByRole('tab', { name: 'Overview' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(onChange).toHaveBeenLastCalledWith('plans');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Plans' }));
+    expect(onChange).toHaveBeenLastCalledWith('analytics');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Analytics' }));
 
     await user.keyboard('{ArrowLeft}');
     expect(onChange).toHaveBeenLastCalledWith('overview');
@@ -419,7 +421,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     await renderLoaded();
     expect(screen.queryByRole('button', { name: 'CHART' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'INSIGHTS' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
   });
 });
 
@@ -515,6 +517,20 @@ describe('Wave R 4b — the bill accrual curve', () => {
     );
     expect(screen.getByTestId('accrual-empty')).toHaveTextContent(/No open billing period/);
     expect(screen.queryByTestId('accrual-chart')).not.toBeInTheDocument();
+  });
+
+  it('localizes the empty billing-period note after switching to French', () => {
+    setLocale('en');
+    setLocale('fr');
+    const view = render(
+      <BillAccrualCurve rows={[]} plan="Tiered" period={null} projection={projectMonthBill([], 'Tiered', oct(10))} today={oct(10)} />,
+    );
+    expect(screen.getByTestId('accrual-empty')).toHaveTextContent(
+      'Aucune période de facturation ouverte à accumuler pour l’instant.',
+    );
+    expect(screen.getByTestId('accrual-empty')).not.toHaveTextContent('No open billing period');
+    view.unmount();
+    setLocale('en');
   });
 
   it('accrues the open period and prints every number the chart draws', () => {
@@ -647,7 +663,7 @@ describe('Wave R 4d — the card answers its own question', () => {
       billToDate: null,
       costAdditionalLastPeriod: null,
       currency: 124,
-      consumption: null,
+      consumption: null, volume: null,
       items: [
         { note: 'Off Peak-Summer', amount, rawAmount: null, itemKind: null, unitCost: null, measurement: null },
       ],
@@ -899,19 +915,131 @@ describe('Wave R 4d — the card answers its own question', () => {
  * ========================================================================== */
 
 describe('Wave R 4c — the plan-switch decision timeline', () => {
+  it('gives positive and negative signed callouts distinct, directionally correct meanings', () => {
+    const translate = (key: string, params?: Record<string, string | number>) => `${key}:${params?.amount}`;
+    expect(savingDescription(5.55, translate)).toBe('switchTimeline.potentialSaving:$5.55');
+    expect(savingDescription(-5.55, translate)).toBe('switchTimeline.actualCheaper:$5.55');
+    expect(savingDescription(0, translate)).toBe('switchTimeline.potentialSaving:$0.00');
+  });
+
+  it('localizes positive and negative meanings in English and French', () => {
+    setLocale('en');
+    expect(savingDescription(5.55, t)).toContain('Potential amount saved by switching');
+    expect(savingDescription(-5.55, t)).toContain('actual plan was cheaper');
+    setLocale('fr');
+    expect(savingDescription(5.55, t)).toContain('potentiellement économisé');
+    expect(savingDescription(-5.55, t)).toContain('était moins chère');
+    setLocale('en');
+  });
+
   const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
   const summaries = parseUsageSummaries(
     fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
   );
 
+  it('renders signed callouts from a populated report, including an untrusted model', () => {
+    const withTotal = (summary: (typeof summaries)[number], amount: number, plan?: 'TOU' | 'Tiered') => ({
+      ...summary,
+      items: summary.items.map((item) => {
+        if (item.note === 'Total Electricity Charges') return { ...item, amount };
+        if (plan === 'Tiered' && /peak/i.test(item.note)) return { ...item, note: 'Tiered' };
+        return item;
+      }),
+    });
+    const fixtureSummaries = [
+      withTotal(summaries[0], 10_000),
+      withTotal(summaries[1], 0, 'Tiered'),
+      withTotal(summaries[2], 10_000),
+    ];
+    const readings = fixtureSummaries.flatMap((summary, index) => {
+      const periodRaw: { timestamp: number; usage_kwh: number }[] = [];
+      for (let day = 0; day < summary.days; day++) {
+        const date = new Date(`${summary.startDate}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + day);
+        for (let hour = 0; hour < 24; hour++) {
+          date.setUTCHours(hour);
+          periodRaw.push({ timestamp: Math.floor(date.getTime() / 1000), usage_kwh: 1.5 });
+        }
+      }
+      const tieredWins: RateSet = index === 1
+        ? {
+            ...RATES,
+            tou: { offPeak: 100, midPeak: 100, onPeak: 100 },
+            tiered: { ...RATES.tiered, tier1: 0.1, tier2: 0.1 },
+            ulo: { overnight: 100, weekendOffPeak: 100, midPeak: 100, onPeak: 100 },
+          }
+        : RATES;
+      return processRawData(periodRaw, [tieredWins]);
+    });
+    const report = buildSwitchReport(fixtureSummaries, readings, []);
+    expect(report.rows[1].plan).toBe('Tiered');
+    expect(report.rows[1].saving).toBeLessThan(0);
+    expect(report.rows[2].saving).toBeGreaterThan(0);
+    expect(report.rows[2].counted).toBe(false);
+
+    render(<PlanSwitchTimeline summaries={fixtureSummaries} allData={readings} />);
+    const negative = screen.getByTestId(`switch-bubble-${fixtureSummaries[1].startDate}`);
+    const untrustedPositive = screen.getByTestId(`switch-bubble-${fixtureSummaries[2].startDate}`);
+    expect(negative).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[1].saving!).toFixed(2)}`));
+    expect(negative).toHaveAttribute('aria-label', expect.stringContaining('actual plan was cheaper'));
+    expect(untrustedPositive).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[2].saving!).toFixed(2)}`));
+    expect(untrustedPositive).toHaveAttribute('data-counted', 'false');
+    expect(untrustedPositive).toHaveTextContent(/untrusted/i);
+    expect(untrustedPositive).toHaveAttribute('aria-label', expect.stringContaining('Potential amount saved'));
+
+    // Focus must reveal the full label when it extends past either edge of
+    // the scrollport, regardless of which signed callout receives focus.
+    const viewport = screen.getByTestId('switch-timeline-bar');
+    Object.defineProperty(viewport, 'clientWidth', { configurable: true, value: 349 });
+    Object.defineProperty(viewport, 'clientLeft', { configurable: true, value: 0 });
+    vi.spyOn(viewport, 'getBoundingClientRect').mockReturnValue({
+      left: 100, right: 449, top: 0, bottom: 100, width: 349, height: 100, x: 100, y: 0,
+      toJSON: () => ({}),
+    });
+    for (const bubble of [negative, untrustedPositive]) {
+      const rect = vi.spyOn(bubble, 'getBoundingClientRect');
+      viewport.scrollLeft = 100;
+      rect.mockReturnValue({
+        left: 90, right: 180, top: 0, bottom: 20, width: 90, height: 20, x: 90, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(90);
+      expect(document.activeElement).toBe(bubble);
+      expect(bubble.className).toContain('focus-visible:outline');
+
+      bubble.blur();
+      viewport.scrollLeft = 0;
+      rect.mockReturnValue({
+        left: 400, right: 460, top: 0, bottom: 20, width: 60, height: 20, x: 400, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(11);
+      expect(document.activeElement).toBe(bubble);
+      rect.mockRestore();
+    }
+  });
+
   it('says what is missing when there are no bills yet', () => {
     render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
-    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/No billing periods yet/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/Usage-only analysis already works/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/export that contains bills/);
     expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
   });
 
-  it('draws one segment per billing period, coloured by its detected plan', () => {
+  it('explains the usage-only and bill-export distinction in French', () => {
+    setLocale('fr');
+    render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
+    const empty = screen.getByTestId('switch-timeline-empty');
+    expect(empty).toHaveTextContent(/L’analyse de la consommation fonctionne déjà/);
+    expect(empty).toHaveTextContent(/export contenant des factures/);
+    expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
+  });
+
+  it('draws one segment per billing period, coloured by its detected plan', async () => {
     expect(summaries.length).toBeGreaterThan(1);
+    setLocale('en');
     render(<PlanSwitchTimeline summaries={summaries} allData={[]} />);
 
     const card = screen.getByTestId('plan-switch-timeline');
@@ -921,9 +1049,23 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
       const segment = screen.getByTestId(`switch-segment-${summary.startDate}`);
       expect(segment).toHaveAttribute('data-plan', 'TOU'); // the fixture is TOU
       expect(segment).toHaveAttribute('data-counted', 'false'); // no readings supplied
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.startDate));
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.endDate));
+      expect(segment).toHaveAttribute('tabindex', '0');
     }
 
-    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/table below/i);
+    const anchors = screen.getAllByTestId('switch-month-anchor');
+    expect(anchors.length).toBeGreaterThan(1);
+    expect(anchors.every((anchor) => /\d{4}/.test(anchor.textContent ?? ''))).toBe(true);
+    expect(screen.getAllByTestId('switch-period-detail')).toHaveLength(summaries.length);
+    const details = screen.getByText('View full billing-period dates').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    await userEvent.setup().click(screen.getByText('View full billing-period dates'));
+    expect(details).toHaveAttribute('open');
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/positive amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/negative amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/green means/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/gray means/i);
     expect(screen.getByRole('heading', { name: 'Plan-switch decision timeline' })).toBeInTheDocument();
   });
 

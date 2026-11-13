@@ -66,6 +66,8 @@ export type AccountStatus = {
   vapidPublicKey: string | null;
   prefs: PushPrefs | null;
   subscriptionCount: number;
+  /** Existing accounts need a visible notice rather than a silent migration. */
+  policyAcceptanceNeeded: boolean;
 };
 
 const INITIAL: AccountStatus = {
@@ -82,6 +84,7 @@ const INITIAL: AccountStatus = {
   vapidPublicKey: null,
   prefs: null,
   subscriptionCount: 0,
+  policyAcceptanceNeeded: false,
 };
 
 /** How often the auto-push checks whether the dataset moved. */
@@ -269,6 +272,7 @@ export function useAccount(options: Options = {}) {
         vapidPublicKey: info.vapidPublicKey ?? null,
         prefs: info.prefs ?? null,
         subscriptionCount: 0,
+        policyAcceptanceNeeded: Boolean(info.policyAcceptanceNeeded),
       });
 
       if (authed && hasKey) {
@@ -437,25 +441,16 @@ export function useAccount(options: Options = {}) {
   );
 
   const signUp = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
+    // `password` stays accepted-but-void: classic's historical verbatim
+    // AccountControls still calls signUp(email), and set-password moved into
+    // the mailbox-verification flow. Making it optional changes no behavior.
+    async (email: string, password = "", policyAccepted = false): Promise<boolean> => {
+      void password;
       setBusy(true);
       busyRef.current = true;
       try {
-        const created = await api.register(email, password, sync.hasLocalData());
-        if (!(await adoptKey(password, created.kdfSalt))) return false;
-        serverRevRef.current = created.rev;
-        await applySessionInfo({
-          ...(await api.fetchSession()),
-          enabled: true,
-          authed: true,
-        } as SessionInfo);
-        if (created.recoveryCode) setRecoveryCode(created.recoveryCode);
-        say(
-          "ok",
-          sync.hasLocalData()
-            ? "Account created. Choose whether to back this device's data up to it."
-            : "Account created.",
-        );
+        await api.register(email, sync.hasLocalData(), policyAccepted);
+        say("ok", "Check your e-mail to verify the mailbox, then choose the password there.");
         return true;
       } catch (e) {
         const detail = e instanceof AccountApiError ? e.detail ?? e.code : "unknown_error";
@@ -466,7 +461,7 @@ export function useAccount(options: Options = {}) {
         busyRef.current = false;
       }
     },
-    [adoptKey, applySessionInfo, say],
+    [say, sync],
   );
 
   const signOut = useCallback(async () => {

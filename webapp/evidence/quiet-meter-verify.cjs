@@ -38,6 +38,22 @@ fs.mkdirSync(OUT, { recursive: true });
         metrics: document.querySelectorAll('[data-testid="overview-key-figures"] > div').length,
         theme: document.documentElement.dataset.theme,
         activePanel: document.querySelector('[role="tabpanel"]')?.id,
+        dateRange: (() => {
+          const rect = document.querySelector('[data-testid="dashboard-date-range"]')?.getBoundingClientRect();
+          return rect ? { top: rect.top, width: rect.width } : null;
+        })(),
+        scopeTop: document.querySelector('[data-testid="dashboard-scope"]')?.getBoundingClientRect().top ?? null,
+        dateInputs: [...document.querySelectorAll('[data-testid="dashboard-date-range"] input[type="date"]')]
+          .map((input) => {
+            const rect = input.getBoundingClientRect();
+            return {
+              width: rect.width,
+              height: rect.height,
+              clientWidth: input.clientWidth,
+              scrollWidth: input.scrollWidth,
+              value: input.value,
+            };
+          }),
         controlsBelow44: [...document.querySelectorAll('button,a,input,summary')]
           .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44); })
           .map((el) => ({ tag: el.tagName, text: el.textContent?.trim().slice(0, 40), width: Math.round(el.getBoundingClientRect().width), height: Math.round(el.getBoundingClientRect().height) }))
@@ -68,7 +84,22 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.waitForTimeout(150);
   await page.screenshot({ path: path.join(OUT, 'money-1440-dark.png'), fullPage: false });
   report.screenshots.push({ file: 'money-1440-dark.png', viewport: 1440, scroll: await page.evaluate(() => document.documentElement.scrollWidth), activePanel: await page.locator('[role="tabpanel"]').getAttribute('id') });
-  report.ok = report.screenshots.length === 6 && report.screenshots.every((shot) => shot.scroll <= shot.viewport) && report.screenshots.slice(0, 4).every((shot) => shot.metrics === 4 && shot.bars > 0) && report.errors.length === 0;
+  const overviewShots = report.screenshots.slice(0, 4);
+  const mobileDateRangeOk = overviewShots
+    .filter((shot) => shot.viewport === 390)
+    .every((shot) => shot.dateInputs.length === 2
+      && shot.dateInputs.every((date) => date.width >= 110 && date.height >= 44 && date.scrollWidth <= date.clientWidth && /^\d{4}-\d{2}-\d{2}$/.test(date.value))
+      && shot.dateRange && shot.scopeTop !== null && shot.scopeTop > shot.dateRange.top);
+  const desktopDateRangeOk = overviewShots
+    .filter((shot) => shot.viewport === 1440)
+    .every((shot) => shot.dateInputs.length === 2
+      && shot.dateRange && shot.scopeTop !== null && Math.abs(shot.scopeTop - shot.dateRange.top) <= 1);
+  report.ok = report.screenshots.length === 6
+    && report.screenshots.every((shot) => shot.scroll <= shot.viewport)
+    && overviewShots.every((shot) => shot.metrics === 4 && shot.bars > 0)
+    && mobileDateRangeOk
+    && desktopDateRangeOk
+    && report.errors.length === 0;
   fs.writeFileSync(path.join(OUT, 'verification.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   await browser.close();
