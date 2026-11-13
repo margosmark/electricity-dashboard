@@ -1,15 +1,21 @@
 # Stage 1: Build the application
 #
 # CVE-2026-111497 (Node2Shell) — pinned 2026-10-23; re-pinned 2026-11-13 to
-# node:26.13.0-alpine. This base image carries the Brotli decoder OOB write
-# fixed in Node 26.12.1, and 26.13.0 is a later release on that same line, so
-# the fix is still carried. The reason for the 26.12.1 → 26.13.0 bump is the
-# upstream release notes for 26.13.0 (2026-10-28, Node 26 'Lithium' LTS
-# transition, https://nodejs.org/en/blog/release/v26.13.0): they state that
-# "other than updating metadata, such as the process.release object, to reflect
-# that the release is LTS, no further changes from Node.js 26.12.1 are
-# included". So this bump buys the LTS line (supported through the end of April
-# 2029) with no security delta from the patch already vetted for CVE-2026-111497.
+# node:26.13.1-alpine. This base image carries the Brotli decoder OOB write
+# fixed in Node 26.12.1, and 26.13.1 is a later release on that same line, so
+# the fix is still carried.
+#
+# WHY 26.13.1 AND NOT 26.13.0 (the tag Dependabot proposed): Node's security
+# release of 2026-11-11 patched 16 CVEs across the 26.x line — 7 high, 6
+# medium, 3 low — including CVE-2026-123863 (HTTP/2 teardown assertion),
+# CVE-2026-123864 (HTTPS llhttp re-entrancy heap read) and CVE-2026-123865
+# (HTTP/2 shutdown leak), plus the llhttp 9.4.3 → 9.4.4 and undici updates;
+# the fixed 26.x version is v26.13.1, published 2026-11-11. Source:
+# https://nodejs.org/en/blog/vulnerability/november-2026-security-releases
+# 26.13.0 (2026-10-28, 'Lithium' LTS transition, see
+# https://nodejs.org/en/blog/release/v26.13.0) is metadata-only relative to
+# 26.12.1, so pinning IT would have skipped that security release — a
+# security-motivated pin must name the newest patched patch.
 #
 # The tag is PINNED to the exact patch release on purpose: the floating
 # `node:26-alpine` tag resolved to the vulnerable 26.12.0 build between its
@@ -17,7 +23,7 @@
 # remotely-exploitable runtime with nothing in the diff to show for it. Bump
 # this version DELIBERATELY, in its own commit, with a comment naming the
 # reason — never by loosening it back to a floating tag.
-FROM node:26.13.0-alpine AS builder
+FROM node:26.13.1-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
@@ -44,17 +50,19 @@ RUN npm run build
 # Stage 2: Run the application
 #
 # CVE-2026-111497 (Node2Shell) — pinned 2026-10-23; re-pinned 2026-11-13 to
-# node:26.13.0-alpine, for the same reason as the builder above: the upstream
-# 26.13.0 release notes (2026-10-28, Node 26 'Lithium' LTS transition,
-# https://nodejs.org/en/blog/release/v26.13.0) say that apart from LTS metadata
-# "no further changes from Node.js 26.12.1 are included", so the CVE-2026-111497
-# fix carried by 26.12.1 is carried here too. The RUNNER stage executes the
-# untrusted input path (HTTP request bodies), so it is the stage that carries the
-# Brotli decoder OOB write fixed in Node 26.12.1. It is pinned to the same exact
-# patch release as the builder above: the two stages must never drift apart, or a
-# rebuild could ship a patched builder and a vulnerable runtime. Bump DELIBERATELY
-# in its own commit, with a comment naming the reason.
-FROM node:26.13.0-alpine AS runner
+# node:26.13.1-alpine, for the same reason as the builder above: Node's
+# security release of 2026-11-11 patched 16 CVEs on the 26.x line (7 high, 6
+# medium, 3 low — incl. CVE-2026-123863/-123864/-123865) plus the llhttp
+# 9.4.3 → 9.4.4 and undici updates, and the fixed 26.x version is v26.13.1;
+# 26.13.0 is metadata-only versus 26.12.1, so pinning it would skip them.
+# https://nodejs.org/en/blog/vulnerability/november-2026-security-releases
+# The RUNNER stage executes the untrusted input path (HTTP request bodies), so it
+# is the stage that carries the Brotli decoder OOB write fixed in Node 26.12.1
+# and the HTTP parser that security release replaced. It is pinned to the same
+# exact patch release as the builder above: the two stages must never drift
+# apart, or a rebuild could ship a patched builder and a vulnerable runtime.
+# Bump DELIBERATELY in its own commit, with a comment naming the reason.
+FROM node:26.13.1-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
