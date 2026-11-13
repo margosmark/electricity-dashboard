@@ -162,7 +162,9 @@ describe('SeriesNotesNotice', () => {
     expect(lines).toHaveLength(1);
     // The count is stated IN WORDS on the line, not only in the badge…
     expect(lines[0].textContent).toContain('23 series were loaded as volume');
-    expect(lines[0].textContent).toContain('4 reading(s)');
+    // The count is per series and SAYS so (security L1: it must not read
+    // as a file total of 4 readings across 23 series).
+    expect(lines[0].textContent).toContain('each with 4 reading(s)');
     expect(screen.getByTestId('series-note-count').textContent).toBe('×23');
     // …and no series' label is quoted as if the line described only it.
     expect(lines[0].textContent).not.toContain('READ0001');
@@ -184,7 +186,7 @@ describe('SeriesNotesNotice', () => {
     const lines = screen.getAllByTestId('series-note-detail');
     expect(lines).toHaveLength(1);
     expect(lines[0].textContent).toContain('23 séries ont été chargées en volume');
-    expect(lines[0].textContent).toContain('4 lecture(s)');
+    expect(lines[0].textContent).toContain('chacune de 4 lecture(s)');
     expect(screen.getByTestId('series-note-count').textContent).toBe('×23');
 
     // The raw record is the parser's own sentences — in FRENCH, never the

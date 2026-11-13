@@ -692,7 +692,7 @@
   "gbseries.note.unsupportedSeries": "Series {label} was NOT loaded as consumption: it {reason} Its readings are preserved here and none of them was priced.",
   "gbseries.note.unsupportedSeriesMany": "{n} series were NOT loaded as consumption: each {reason} Their readings are preserved here and none of them was priced.",
   "gbseries.note.volumeSeries": "Series {label} was loaded as volume: {count} reading(s) in {uom} scaled by {multiplier} — a quantity, not energy, so none of it was priced or added to the kWh totals.",
-  "gbseries.note.volumeSeriesMany": "{n} series were loaded as volume: {count} reading(s) in {uom} scaled by {multiplier} — a quantity, not energy, so none of it was priced or added to the kWh totals.",
+  "gbseries.note.volumeSeriesMany": "{n} series were loaded as volume, each with {count} reading(s) in {uom} scaled by {multiplier} — a quantity, not energy, so none of it was priced or added to the kWh totals.",
   "gbseries.notice.dismiss": "Dismiss",
   "gbseries.notice.heading": "Some readings weren’t included in priced consumption",
   "gbseries.notice.repeatCount": "×{count}",

@@ -407,7 +407,7 @@ describe('the aggregate sentence', () => {
 
     const english = seriesNoteAggregateText(note, 23, t);
     expect(english).toContain('23 series were loaded as volume');
-    expect(english).toContain('4 reading(s) in m3 (uom 42)');
+    expect(english).toContain('each with 4 reading(s) in m3 (uom 42)');
     expect(english).not.toContain('READ0001');
 
     setLocale('fr');

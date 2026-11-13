@@ -692,7 +692,7 @@
   "gbseries.note.unsupportedSeries": "La série {label} n'a PAS été chargée comme consommation : {reason} Ses relevés sont conservés ici et aucun n'a été évalué.",
   "gbseries.note.unsupportedSeriesMany": "{n} séries n'ont PAS été chargées comme consommation : dans chaque cas, {reason} Leurs relevés sont conservés ici et aucun n'a été évalué.",
   "gbseries.note.volumeSeries": "La série {label} a été chargée en volume : {count} lecture(s) en {uom}, multipliée par {multiplier} — une quantité, pas de l'énergie : rien n'a été évalué ni ajouté aux totaux kWh.",
-  "gbseries.note.volumeSeriesMany": "{n} séries ont été chargées en volume : {count} lecture(s) en {uom}, multipliée par {multiplier} — une quantité, pas de l'énergie : rien n'a été évalué ni ajouté aux totaux kWh.",
+  "gbseries.note.volumeSeriesMany": "{n} séries ont été chargées en volume, chacune de {count} lecture(s) en {uom}, multipliée par {multiplier} — une quantité, pas de l'énergie : rien n'a été évalué ni ajouté aux totaux kWh.",
   "gbseries.notice.dismiss": "Masquer",
   "gbseries.notice.heading": "Certains relevés n'ont pas été inclus dans la consommation évaluée",
   "gbseries.notice.repeatCount": "×{count}",
