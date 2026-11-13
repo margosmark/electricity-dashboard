@@ -1445,6 +1445,7 @@
   "upload.parseAndImport": "Analyser et importer",
   "upload.parserFailedDetail": "Le fichier est du XML valide, mais cette application n’a pas pu le lire comme des données Green Button — il est peut-être endommagé, ou ce n’est peut-être pas un export Green Button.",
   "upload.portalRedownloadHint": "Téléchargez à nouveau l’export depuis le portail de votre utilitaire et réessayez.",
+  "upload.processFailedDetail": "Une erreur s’est produite dans votre navigateur lors du traitement de cet upload.",
   "upload.readFailedDetail": "Le navigateur n’a pas réussi à ouvrir le fichier — il a peut-être été déplacé ou verrouillé depuis votre sélection.",
   "upload.readFailedHint": "Re-sélectionnez le fichier sur le disque.",
   "upload.reading": "Lecture…",

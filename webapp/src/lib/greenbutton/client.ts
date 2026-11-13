@@ -71,12 +71,15 @@ export async function fetchGbUsage(publishedMin?: number): Promise<GbUsageResult
     }
     const xml = await res.text();
     return { ok: true, xml, bytes: xml.length };
-  } catch (e) {
-    return {
-      ok: false,
-      code: "unreachable",
-      detail: e instanceof Error ? e.message : String(e),
-    };
+  } catch {
+    // No `detail`: the sync toolbar renders `outcome.detail ??
+    // describeGbError(code).detail`, so leaving it off puts
+    // gb.unreachableDetail — a catalog sentence, in the reader's locale —
+    // in front of what the network stack wrote in English ("Failed to
+    // fetch"), instead of quoting the exception at the reader the way this
+    // catch used to (greenbutton/recovery.ts's contract, extended to this
+    // catch: it feeds the SAME rendered line as useDashboard's).
+    return { ok: false, code: "unreachable" };
   }
 }
 

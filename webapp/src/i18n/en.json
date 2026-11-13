@@ -1445,6 +1445,7 @@
   "upload.parseAndImport": "Parse and import",
   "upload.parserFailedDetail": "The file is well-formed XML, but this app could not read it as Green Button data — it may be damaged, or it may not be a Green Button export at all.",
   "upload.portalRedownloadHint": "Re-download the export from your utility portal and try again.",
+  "upload.processFailedDetail": "Something went wrong in your browser while processing that upload.",
   "upload.readFailedDetail": "The browser failed to open the file — it may have been moved or locked since you picked it.",
   "upload.readFailedHint": "Pick the file again from disk.",
   "upload.reading": "Reading…",

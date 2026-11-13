@@ -1334,7 +1334,20 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       if (outcome.ok) void storeGbCursor();
       return outcome;
     } catch (e) {
-      return { ok: false, code: "unreachable", detail: e instanceof Error ? e.message : String(e) };
+      // ONE conversion, like every other catch in this flow
+      // (greenbutton/recovery.ts): the exception's own message is developer
+      // prose, in English, and never reaches the reader. `recoveryMessage`
+      // is NOT available here — `res.xml` is scoped to the try block above,
+      // so there is no document to diagnose, and diagnosing `''` would answer
+      // "this is not a Green Button document" for what is usually a network
+      // or status failure. Leaving the `detail` off is the catalog answer
+      // instead: the toolbar renders `outcome.detail ??
+      // describeGbError(code).detail`, and `unreachable` has its own sentence
+      // there (gb.unreachableDetail) — byte-identical to the bare
+      // `{ code: "unreachable" }` return a few lines above. The message is
+      // not lost, only moved to where its audience already is.
+      console.warn("[greenbutton] live sync failed", e);
+      return { ok: false, code: "unreachable" };
     } finally {
       syncingRef.current = false;
       setGbSyncing(false);
@@ -1858,7 +1871,14 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
             : {
                 ok: false,
                 headline: t('upload.couldNotReadPlain'),
-                detail: String((e as Error)?.message ?? e),
+                // The fast path above takes every ParseDiagnostic — including
+                // the FileReader and parse failures parseOne rejects with —
+                // so what is left is a NON-document failure (a commit or
+                // storage error, a runtime throw). Its message is developer
+                // prose in English, in French included, which is the one
+                // thing the recovery contract keeps off the reader: the
+                // catalog sentence says what happened, never `e.message`.
+                detail: t('upload.processFailedDetail'),
                 hints: [t('upload.portalRedownloadHint')],
               },
         );

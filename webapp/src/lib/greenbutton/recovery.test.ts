@@ -28,6 +28,9 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CATALOGS, getLocale, setLocale, type Locale } from '@/i18n';
 import { parseGreenButtonFeed } from '@/lib/energy';
 // main's gas-aware import gate: the funnel must judge a document the way
@@ -213,5 +216,131 @@ describe('recoveryMessage over the hostile-XML corpus', () => {
     expect(detail.trim().length).toBeGreaterThan(0);
     expect(isComposed(detail, new Set(Object.values(CATALOGS.en)), composedMatchers(CATALOGS.en))).toBe(true);
     for (const prose of PARSER_PROSE) expect(detail).not.toContain(prose);
+  });
+});
+
+// --- The catches no corpus case can reach ---------------------------------
+//
+// Everything above runs DOCUMENTS through the parser. The catch sites the
+// security gate flagged (useDashboard's sync pull, the upload modal's outer
+// `.catch`) are reachable ONLY for non-document errors — fetch/status
+// failures, storage/quota errors, runtime TypeErrors — so no corpus case
+// ever exercises them and the funnel above cannot vouch for them. What can
+// is the source itself: every surface that turns a caught exception into
+// copy must take the words from the catalog, never from the exception.
+
+/** The three files whose catches feed rendered copy. */
+const SURFACES = [
+  'src/app/import/page.tsx', // the /import error box
+  'src/hooks/useDashboard.ts', // the upload modal's issue box + the sync toolbar
+  'src/lib/greenbutton/client.ts', // fetchGbUsage — feeds the SAME toolbar line
+];
+
+/**
+ * The storage notice row is a DIFFERENT, deliberate channel: storage.ts
+ * composes those messages through its own `describeError()` helper (13
+ * sites) and `StorageNoticeRow` prints the result as a secondary diagnostic
+ * line under a catalog headline. They are named here by their sentence
+ * rather than by line number or variable name, and a stale entry fails the
+ * test below — so this list can only shrink, never quietly become a hole.
+ */
+const STORAGE_DIAGNOSTIC = ['is not serializable:', 'Storage read failed:'];
+
+/** `src/lib/greenbutton` → the webapp root these paths are relative to. */
+const WEBAPP = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+/**
+ * The lines that EXECUTE, comments removed: the contract governs what the
+ * reader is shown, not what a comment says about it.
+ */
+function codeLines(source: string): string[] {
+  const lines: string[] = [];
+  let inBlockComment = false;
+  for (const raw of source.split('\n')) {
+    let line = raw;
+    if (inBlockComment) {
+      const end = line.indexOf('*/');
+      if (end === -1) continue;
+      line = line.slice(end + 2);
+      inBlockComment = false;
+    }
+    const open = line.indexOf('/*');
+    if (open !== -1) {
+      const end = line.indexOf('*/', open + 2);
+      if (end === -1) {
+        inBlockComment = true;
+        line = line.slice(0, open);
+      } else {
+        line = line.slice(0, open) + line.slice(end + 2);
+      }
+    }
+    const comment = line.indexOf('//');
+    if (comment !== -1) line = line.slice(0, comment);
+    if (line.trim().length > 0) lines.push(line);
+  }
+  return lines;
+}
+
+/** Formats a caught exception into a string a surface can render. */
+const FORMATS_RAW_MESSAGE = [/\.message\b/, /\bString\(\s*e(?:rr)?\s*\)/];
+
+describe('no catch site formats an exception into rendered copy', () => {
+  it('keeps every raw exception message off the reader', () => {
+    const offenders: string[] = [];
+    const staleAllow: string[] = [];
+
+    for (const rel of SURFACES) {
+      const source = readFileSync(join(WEBAPP, rel), 'utf8');
+      const lines = codeLines(source);
+      const seen = new Set<string>();
+
+      for (const line of lines) {
+        if (!FORMATS_RAW_MESSAGE.some((pattern) => pattern.test(line))) continue;
+        const allowed = STORAGE_DIAGNOSTIC.find((phrase) => line.includes(phrase));
+        if (allowed) {
+          seen.add(allowed);
+          continue;
+        }
+        offenders.push(`${rel}: ${line.trim()}`);
+      }
+
+      // An allow-list entry with nothing left to allow is debt, not safety:
+      // fail so the list shrinks with the code instead of outliving it.
+      for (const phrase of STORAGE_DIAGNOSTIC) {
+        if (rel === 'src/hooks/useDashboard.ts' && !seen.has(phrase)) staleAllow.push(phrase);
+      }
+    }
+
+    expect(offenders, `raw exception text reaches the reader:\n${offenders.join('\n')}`).toEqual([]);
+    expect(staleAllow, `storage-diagnostic allow-list entries with no match left: ${staleAllow.join(', ')}`).toEqual([]);
+  });
+
+  it('the two flagged catches answer from the catalog, not from the exception', () => {
+    const dash = readFileSync(join(WEBAPP, 'src/hooks/useDashboard.ts'), 'utf8');
+
+    // Site 1 (the sync pull): no `detail` at all, so the toolbar renders
+    // `outcome.detail ?? describeGbError(code).detail` — the catalog
+    // sentence for `unreachable` — instead of the exception's own words.
+    expect(dash, 'the sync catch must not attach a detail').not.toMatch(/code: "unreachable", detail:/);
+    expect(describeGbError('unreachable').detail, 'the fallback must be copy, not a code word').not.toBe('unreachable');
+    expect(describeGbError('unreachable').detail).toBe(CATALOGS.en['gb.unreachableDetail']);
+
+    // Site 2 (the upload modal's outer .catch): the fallback's detail is a
+    // catalog key in BOTH locales, translated differently in each.
+    expect(dash, 'the modal fallback must render a catalog sentence').toContain("t('upload.processFailedDetail')");
+    for (const locale of ['en', 'fr'] as Locale[]) {
+      const value = CATALOGS[locale]['upload.processFailedDetail'];
+      expect(value, `${locale}: upload.processFailedDetail is missing`).toBeTruthy();
+      expect(value, `${locale}: a raw key would paint at the reader`).not.toMatch(/^[a-z]+\.[a-zA-Z]+$/);
+      expect(value, `${locale}: an unfilled placeholder`).not.toMatch(/\{\w+\}/);
+    }
+    expect(CATALOGS.fr['upload.processFailedDetail']).not.toBe(CATALOGS.en['upload.processFailedDetail']);
+  });
+
+  it('every allow-listed storage line still exists (the list cannot rot forward)', () => {
+    const dash = readFileSync(join(WEBAPP, 'src/hooks/useDashboard.ts'), 'utf8');
+    for (const phrase of STORAGE_DIAGNOSTIC) {
+      expect(dash, `"${phrase}" is no longer in the file — drop it from STORAGE_DIAGNOSTIC`).toContain(phrase);
+    }
   });
 });
