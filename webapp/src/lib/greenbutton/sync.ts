@@ -132,7 +132,13 @@ export async function readFeed(req: FeedRequest = {}): Promise<FeedResult> {
     if (result.status === 403 || result.status === 401) return fail("grant_revoked");
     return fail("upstream", `resource server ${result.status}`);
   }
-  if (result.kind === "accepted") return fail("data_pending", result.detail);
+  if (result.kind === "accepted") {
+    // 202: the custodian is still assembling the batch. Their response
+    // body is THEIR text — it never becomes `detail` (the toolbar would
+    // quote a third-party sentence at the reader). The catalog sentence
+    // for `data_pending` says what is happening, in the reader's locale.
+    return fail("data_pending");
+  }
 
   return {
     ok: true,
@@ -272,9 +278,13 @@ async function fetchAuthorizationResource(tokens: TokenSet): Promise<PointerAtte
       cache: "no-store",
     });
   } catch (e) {
+    // The exception's own words go to the LOG as an object; `detail` keeps
+    // the phase only, because this value can reach a reader through
+    // `/greenbutton/usage`'s error body (greenbutton/recovery.test.ts).
+    console.warn("[greenbutton] authorization resource unreachable", e);
     return {
       kind: "transient",
-      detail: `authorization resource unreachable: ${e instanceof Error ? e.message : String(e)}`,
+      detail: "authorization resource unreachable",
     };
   }
   if (res.status === 401 || res.status === 403) {
@@ -306,15 +316,35 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
+/**
+ * An OAuth-layer failure, classified by `OAuthError.kind`.
+ *
+ * NO `detail` on any arm. An `OAuthError.message` is log prose (a status,
+ * the custodian's error code, our own description) and a non-OAuth
+ * exception is raw — a token-store fs error can carry a filesystem path —
+ * so both go to the LOG as objects here, and the reader gets
+ * `describeGbError(code).detail`, the catalog sentence for the code this
+ * returns (in their locale, not in ours).
+ */
 function oauthFailure(e: unknown): FeedResult {
+  console.warn("[greenbutton] oauth failure", e);
   if (e instanceof OAuthError) {
-    if (e.kind === "grant_revoked") return fail("grant_revoked", e.message);
-    if (e.kind === "client_auth") return fail("client_auth", e.message);
-    return fail("upstream", e.message);
+    if (e.kind === "grant_revoked") return fail("grant_revoked");
+    if (e.kind === "client_auth") return fail("client_auth");
+    return fail("upstream");
   }
-  return fail("upstream", e instanceof Error ? e.message : String(e));
+  return fail("upstream");
 }
 
+/**
+ * A failure the browser classifies by `error` alone.
+ *
+ * `detail` is an OPERATOR breadcrumb — phase + status, logged by the usage
+ * route and never sent to the browser, whose reader gets
+ * `describeGbError(error).detail` (catalog, their locale). It must
+ * therefore never carry an exception message or a third-party response
+ * body; pinned by greenbutton/recovery.test.ts.
+ */
 function fail(error: FeedErrorCode, detail?: string): FeedResult {
   return { ok: false, error, status: FEED_STATUS[error], detail };
 }

@@ -23,7 +23,11 @@ export type GbStatus = {
 
 export type GbUsageResult =
   | { ok: true; xml: string; bytes: number }
-  | { ok: false; code: string; detail?: string };
+  /** `code` only — the error body of `/greenbutton/usage` is a machine
+   * code and nothing else (see `jsonError`), and this result feeds the
+   * sync toolbar's `outcome.detail ?? describeGbError(code).detail`.
+   * There is deliberately no `detail` field to forward server prose with. */
+  | { ok: false; code: string };
 
 const TIMEOUT_MS = 60_000;
 
@@ -61,18 +65,22 @@ export async function fetchGbUsage(publishedMin?: number): Promise<GbUsageResult
     const res = await fetch(url.toString(), { cache: "no-store", signal: withTimeout(TIMEOUT_MS) });
     if (!res.ok) {
       let code = `http_${res.status}`;
-      let detail: string | undefined;
       try {
-        const body = (await res.json()) as { error?: string; detail?: string };
+        const body = (await res.json()) as { error?: string };
         if (body.error) code = body.error;
-        detail = body.detail;
       } catch { /* non-JSON error body: keep the status code */ }
-      return { ok: false, code, detail };
+      // NO `detail` from the body. This result feeds the sync toolbar's
+      // `outcome.detail ?? describeGbError(code).detail`, so anything read
+      // here is quoted at the reader — in English, at a French one, and
+      // for a custodian-supplied body, in words we do not control. The
+      // server logs its own breadcrumb; the catalog answers the reader
+      // (greenbutton/recovery.test.ts pins both halves of that).
+      return { ok: false, code };
     }
     const xml = await res.text();
     return { ok: true, xml, bytes: xml.length };
   } catch {
-    // No `detail`: the sync toolbar renders `outcome.detail ??
+    // No `detail` either: the sync toolbar renders `outcome.detail ??
     // describeGbError(code).detail`, so leaving it off puts
     // gb.unreachableDetail — a catalog sentence, in the reader's locale —
     // in front of what the network stack wrote in English ("Failed to
@@ -129,6 +137,17 @@ export function describeGbError(code: string): { headline: string; detail: strin
         headline: t('gb.dataPendingHeadline'),
         detail: t('gb.dataPendingDetail'),
         hints: [t('gb.dataPendingHint')],
+      };
+    case "upstream":
+      // 5xx / unreachable / malformed: the shim answered, the custodian
+      // did not. This code used to arrive WITH a server-composed `detail`;
+      // now the code alone reaches here (jsonError carries no detail), so
+      // it needs its own sentence — the default branch would echo the
+      // English word "upstream" at the reader.
+      return {
+        headline: t('gb.upstreamHeadline'),
+        detail: t('gb.upstreamDetail'),
+        hints: [t('gb.upstreamHint')],
       };
     case "unreachable":
       return {

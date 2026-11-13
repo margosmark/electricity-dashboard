@@ -136,13 +136,25 @@ export function isSameOrigin(request: Request): boolean {
   return allowed.has(origin.replace(/\/+$/, ""));
 }
 
-export function jsonError(status: number, error: string, detail?: string): NextResponse {
-  const body: Record<string, string> = { error };
-  if (detail) body.detail = detail.slice(0, 500);
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+/**
+ * The shim's error body: `{ error: <code> }` and NOTHING else.
+ *
+ * Deliberately no `detail` channel. `fetchGbUsage` reads this body and its
+ * result feeds the sync toolbar's `outcome.detail ??
+ * describeGbError(code).detail`, so any prose put here would be quoted at
+ * the reader — in English, at a French one, and (for a custodian-supplied
+ * response body) in words this app does not control. Diagnostics belong in
+ * the server log; the reader's sentence is the catalog's, in their locale.
+ * Pinned by greenbutton/recovery.test.ts.
+ */
+export function jsonError(status: number, error: string): NextResponse {
+  return NextResponse.json(
+    { error },
+    {
+      status,
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
 }
 
 export function jsonResponse(body: unknown): NextResponse {

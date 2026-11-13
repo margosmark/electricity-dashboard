@@ -29,7 +29,13 @@ export async function GET(request: Request): Promise<Response> {
   if (!isSameOrigin(request)) return jsonError(403, "cross_origin_blocked");
 
   const cfg = getConfig();
-  if (!cfg.configured) return jsonError(503, "not_configured", cfg.unconfiguredReason);
+  if (!cfg.configured) {
+    // The reason is config prose for the operator, not reader copy — it
+    // goes to the log; the browser gets the code and renders
+    // `describeGbError("not_configured")` in its own locale.
+    console.warn(`[greenbutton] usage refused: ${cfg.unconfiguredReason}`);
+    return jsonError(503, "not_configured");
+  }
 
   const store = getTokenStore(cfg.tokenFile);
   const tokens = await store.load();
@@ -50,7 +56,14 @@ export async function GET(request: Request): Promise<Response> {
 
   const feed = await readFeed({ resourcePath, publishedMin, publishedMax });
   if (!feed.ok) {
-    return jsonError(feed.status, feed.error, feed.detail);
+    // `feed.detail` is the operator breadcrumb (which phase failed, at
+    // what status): log it, do not send it. The response carries the CODE
+    // only, because `fetchGbUsage` hands this body straight to the sync
+    // toolbar, which renders `outcome.detail ?? describeGbError(code).detail`
+    // — quoting server prose (English) or a custodian's response body at
+    // the reader is the class recovery.test.ts exists to prevent.
+    if (feed.detail) console.warn(`[greenbutton] usage ${feed.error}: ${feed.detail}`);
+    return jsonError(feed.status, feed.error);
   }
 
   // The client is about to ingest this payload, so the custodian's

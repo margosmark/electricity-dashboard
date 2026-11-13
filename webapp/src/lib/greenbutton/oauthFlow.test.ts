@@ -794,3 +794,91 @@ describe("gb_session lifetime", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
+
+describe("the error body the sync toolbar reads", () => {
+  // The toolbar renders `outcome.detail ?? describeGbError(code).detail`
+  // and `fetchGbUsage` hands this body straight into that expression, so
+  // anything but the code here is quoted at the reader — in English at a
+  // French one, and for the 202 case in the CUSTODIAN's own words.
+  // recovery.test.ts pins the source that composes the body; these cases
+  // pin the response itself, for every failure mode the gate named.
+
+  /** Read the failure body and assert the contract on the raw bytes. */
+  async function errorBody(res: Response): Promise<{ body: Record<string, unknown>; text: string }> {
+    expect(res.ok, `expected a failure, got ${res.status}`).toBe(false);
+    const text = await res.text();
+    const body = JSON.parse(text) as Record<string, unknown>;
+    expect(Object.keys(body), `the error body must be { error } only: ${text}`).toEqual(["error"]);
+    expect(typeof body.error).toBe("string");
+    return { body, text };
+  }
+
+  it("answers an async 202 with the code, not the custodian's body", async () => {
+    await connect();
+    mock.setAsync202(true);
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(409);
+    const { body, text } = await errorBody(res);
+    expect(body.error).toBe("data_pending");
+    // The mock's 202 body is `{"status":"processing"}` — third-party text.
+    expect(text).not.toContain("processing");
+  });
+
+  it("answers an unreachable resource server with the code, not the fetch error", async () => {
+    await connect();
+    const raw = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    raw.subscriptionUri = "http://127.0.0.1:1/espi/1_1/resource/Batch/Subscription/x";
+    await writeFile(tokenFile, JSON.stringify(raw), { mode: 0o600 });
+    resetTokenStore();
+
+    const res = await usageGET(appRequest("/greenbutton/usage"));
+    expect(res.status).toBe(502);
+    const { body, text } = await errorBody(res);
+    expect(body.error).toBe("upstream");
+    // The exception's own words: `resource server unreachable: fetch failed`
+    // used to be composed here and rendered at the reader.
+    expect(text).not.toMatch(/fetch failed|ECONNREFUSED|unreachable|denied/i);
+    // A custodian hiccup keeps the grant (the whole classification rule).
+    expect(await fileExists(tokenFile)).toBe(true);
+  });
+
+  it("answers a dead token endpoint with the code, not the OAuth message", async () => {
+    await connect();
+    // Expire the access token so the pull MUST refresh, then point the
+    // token endpoint at a port nothing listens on: `refresh()` throws an
+    // OAuthError whose message (`token endpoint unreachable`) used to ride
+    // out as this body's `detail`.
+    const onDisk = JSON.parse(await readFile(tokenFile, "utf8")) as Record<string, unknown>;
+    onDisk.expiresAt = Date.now() - 1000;
+    await writeFile(tokenFile, JSON.stringify(onDisk), { mode: 0o600 });
+    resetTokenStore();
+
+    const savedTokenUrl = process.env.GB_TOKEN_URL;
+    process.env.GB_TOKEN_URL = "http://127.0.0.1:1/token";
+    resetConfigCache();
+    try {
+      const res = await usageGET(appRequest("/greenbutton/usage"));
+      expect(res.status).toBe(502);
+      const { body, text } = await errorBody(res);
+      expect(body.error).toBe("upstream");
+      expect(text).not.toContain("token endpoint");
+      expect(await fileExists(tokenFile)).toBe(true);
+    } finally {
+      if (savedTokenUrl !== undefined) process.env.GB_TOKEN_URL = savedTokenUrl;
+      else delete process.env.GB_TOKEN_URL;
+      resetConfigCache();
+    }
+  });
+
+  it("answers a custodian 404 with the code, not their body", async () => {
+    await connect();
+    const res = await usageGET(
+      appRequest("/greenbutton/usage?resourcePath=UsagePoint/usage-point-1"),
+    );
+    expect(res.status).toBe(502);
+    const { body, text } = await errorBody(res);
+    expect(body.error).toBe("upstream");
+    // The mock's 404 body is the plain text `not found`.
+    expect(text).not.toContain("not found");
+  });
+});

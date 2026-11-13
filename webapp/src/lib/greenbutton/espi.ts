@@ -47,11 +47,14 @@ export type ResourceResult =
       bytes: { value: number };
       url: string;
     }
-  | { kind: "accepted"; url: string; detail: string }
+  | { kind: "accepted"; url: string }
   | {
       kind: "error";
       status: number;
       url: string;
+      /** Stable breadcrumb (phase + status number) — never an exception's
+       * message and never a response body; those go to the log. Pinned by
+       * greenbutton/recovery.test.ts, because this field can reach a reader. */
       detail: string;
       /**
        * The 401/403 arrived AFTER fetch followed a redirect to another
@@ -120,35 +123,51 @@ export async function fetchResource(
       redirect: "follow",
     });
   } catch (e) {
+    // The exception's own words (ECONNREFUSED, a host:port, an fs path)
+    // stay in the LOG as an object. `detail` is a stable breadcrumb that
+    // can ride a JSON error body to a reader, so it never quotes the
+    // exception — the reader's sentence comes from the catalog instead
+    // (greenbutton/recovery.test.ts's contract).
+    console.warn("[greenbutton] resource fetch failed", e);
     return {
       kind: "error",
       status: 0,
       url,
-      detail: `resource server unreachable: ${e instanceof Error ? e.message : String(e)}`,
+      detail: "resource server unreachable",
     };
   }
 
   if (res.status === 202) {
-    const detail = (await res.text()).slice(0, 500);
-    return { kind: "accepted", url, detail };
+    // The 202 body is the CUSTODIAN's prose — text this app does not
+    // control and must not forward. It is read only to drain the socket
+    // and reported as a byte count; `data_pending` reaches the reader as
+    // catalog copy (sync.ts attaches no detail to it).
+    const pending = await res.text();
+    console.warn(`[greenbutton] resource 202 Accepted (${pending.length} bytes) — batch pending`);
+    return { kind: "accepted", url };
   }
   if (!res.ok) {
-    const detail = (await res.text()).slice(0, 500);
+    // Same rule as the 202: their body can echo anything, so the log
+    // gets the status and the size only, and `detail` gets the status
+    // number — never their prose. (`sync.ts` composes its own
+    // `resource server ${status}` line from the status anyway.)
+    const size = (await res.text()).length;
+    console.warn(`[greenbutton] resource ${res.status} (${size} bytes)`);
     return {
       kind: "error",
       status: res.status,
       url,
-      detail,
+      detail: `resource server ${res.status}`,
       redirectedCrossOrigin: isCrossOriginRedirect(url, res),
     };
   }
   if (!res.body) {
-    const detail = await res.text();
+    const size = (await res.text()).length;
     return {
       kind: "error",
       status: 502,
       url,
-      detail: `resource server returned an empty body (${detail.length} bytes)`,
+      detail: `resource server returned an empty body (${size} bytes)`,
     };
   }
 

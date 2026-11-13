@@ -29,6 +29,15 @@ export type TokenResponse = {
 
 export type OAuthErrorKind = "client_auth" | "grant_revoked" | "transient";
 
+/**
+ * Classified OAuth failure.
+ *
+ * `message` is a stable phrase written for the LOG — a status, the
+ * custodian's error code when there is one, or our own description of the
+ * failure. It is not copy: `sync.ts` never puts it on a `FeedResult
+ * detail`, so the reader's sentence for each kind comes from the catalog
+ * (`describeGbError` on the client).
+ */
 export class OAuthError extends Error {
   readonly kind: OAuthErrorKind;
   readonly status?: number;
@@ -191,7 +200,13 @@ async function attemptToken(
       cache: "no-store",
     });
   } catch (e) {
-    throw new OAuthError("transient", `token endpoint unreachable: ${describe(e)}`);
+    // The network error's own words (host, port, the cause chain) go to
+    // the LOG as an object. `OAuthError.message` itself never becomes
+    // copy: `sync.ts` attaches no detail to an OAuth failure, so every
+    // reader-facing sentence for these codes is catalog copy
+    // (greenbutton/recovery.test.ts pins that).
+    console.warn("[greenbutton] token endpoint unreachable", e);
+    throw new OAuthError("transient", "token endpoint unreachable");
   }
 
   const text = await res.text();
@@ -247,8 +262,4 @@ function errorCode(body: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-function describe(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

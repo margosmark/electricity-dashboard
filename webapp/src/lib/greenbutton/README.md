@@ -52,6 +52,12 @@ silent.
 | `POST /greenbutton/notify/[token]` | the utility's "data changed" webhook (timestamp only) |
 | `POST /greenbutton/disconnect` | wipe the token file + expire the cookie |
 
+Every failure on these routes answers `{ "error": "<code>" }` and nothing
+else: no `detail`, no exception text, no custodian prose. The code is what
+the browser translates (`describeGbError` → the catalog, in the reader's
+locale) and the diagnostics go to the server log. Pinned by
+`webapp/src/lib/greenbutton/recovery.test.ts`.
+
 ## Where it runs
 
 Three containers behind one host port (`docker-compose.yml`):

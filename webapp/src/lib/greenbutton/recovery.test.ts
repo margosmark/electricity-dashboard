@@ -229,11 +229,29 @@ describe('recoveryMessage over the hostile-XML corpus', () => {
 // is the source itself: every surface that turns a caught exception into
 // copy must take the words from the catalog, never from the exception.
 
-/** The three files whose catches feed rendered copy. */
+/**
+ * The surfaces that turn a caught exception — or, for the last four, a
+ * server's answer — into copy the reader sees.
+ *
+ * The first three are the BROWSER half (a catch that formats `e.message`
+ * into copy). The last four compose the JSON error body of
+ * `/greenbutton/usage`, which `fetchGbUsage` reads into the SAME toolbar
+ * line (`outcome.detail ?? describeGbError(code).detail`): two halves of
+ * one rendered expression, so one list guards both.
+ */
 const SURFACES = [
   'src/app/import/page.tsx', // the /import error box
   'src/hooks/useDashboard.ts', // the upload modal's issue box + the sync toolbar
   'src/lib/greenbutton/client.ts', // fetchGbUsage — feeds the SAME toolbar line
+  // Server half (F1 of gate t_b6260ed7): at 7d43192 these put an exception
+  // message (`resource server unreachable: ${e.message}`), an OAuthError
+  // message that could carry a token-store fs path, or 500 chars of a
+  // custodian's 202 body into `FeedResult.detail`, which the usage route
+  // sent as this body's `detail`.
+  'src/lib/greenbutton/sync.ts', // readFeed → FeedResult.detail → jsonError
+  'src/lib/greenbutton/espi.ts', // the fetch that produces upstream/202 detail
+  'src/lib/greenbutton/oauth.ts', // OAuthError.message → oauthFailure detail
+  'src/app/greenbutton/usage/route.ts', // the route that answers the browser
 ];
 
 /**
@@ -342,5 +360,115 @@ describe('no catch site formats an exception into rendered copy', () => {
     for (const phrase of STORAGE_DIAGNOSTIC) {
       expect(dash, `"${phrase}" is no longer in the file — drop it from STORAGE_DIAGNOSTIC`).toContain(phrase);
     }
+  });
+});
+
+// --- The other side of the same line: the JSON error body ----------------
+//
+// `/greenbutton/usage` answers a failed pull with `{ error: <code>,
+// detail? }`, `fetchGbUsage` reads it, and `useDashboard` renders
+// `outcome.detail ?? describeGbError(code).detail`. The SURFACES scan
+// above proves no server file FORMATS an exception into a `detail`; the
+// tests below prove that prose cannot CROSS the wire or be READ back into
+// copy — and that every code which used to arrive carrying prose (the
+// exception messages, the config sentence, the custodian's 202 body)
+// answers with a catalog sentence in the reader's locale instead.
+
+/** A response body read landing in a `detail` — third-party text. */
+const BODY_INTO_DETAIL = /\bdetail\b[^;\n{}]*\.text\(\)|\.text\(\)[^;\n{}]*\bdetail\b/;
+
+describe('the /greenbutton/usage error body is a code, never prose', () => {
+  const linesOf = (rel: string): string[] => codeLines(readFileSync(join(WEBAPP, rel), 'utf8'));
+
+  afterEach(() => setLocale('en'));
+
+  it("the shim's jsonError has no detail channel to put prose in", () => {
+    // tsc already rejects a third argument (the parameter is gone); this
+    // pins the helper itself, so re-adding the channel fails the contract
+    // test as well as the type check.
+    const offenders = linesOf('src/lib/greenbutton/http.ts').filter((line) => /\bdetail\b/i.test(line));
+    expect(offenders, `jsonError must answer { error } only:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('no server file reads a response body into a detail', () => {
+    const serverFiles = [
+      'src/lib/greenbutton/sync.ts',
+      'src/lib/greenbutton/espi.ts',
+      'src/lib/greenbutton/oauth.ts',
+      'src/app/greenbutton/usage/route.ts',
+    ];
+    const offenders: string[] = [];
+    for (const rel of serverFiles) {
+      for (const line of linesOf(rel)) {
+        if (BODY_INTO_DETAIL.test(line)) offenders.push(`${rel}: ${line.trim()}`);
+      }
+    }
+    expect(offenders, `third-party text in a detail:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('the client reads the code out of the body and nothing else', () => {
+    const client = readFileSync(join(WEBAPP, 'src/lib/greenbutton/client.ts'), 'utf8');
+    const clientLines = linesOf('src/lib/greenbutton/client.ts');
+    const clientCode = clientLines.join('\n');
+
+    const forwarders = clientLines.filter((line) => /body\.detail/.test(line));
+    expect(forwarders, `fetchGbUsage must not forward the body's detail:\n${forwarders.join('\n')}`).toEqual([]);
+
+    // The failure variant has no field to forward prose WITH: `detail` on
+    // it is a type error, so the boundary holds even if a future edit
+    // forgets the comment above it.
+    const from = clientCode.indexOf('export type GbUsageResult');
+    const to = clientCode.indexOf('const TIMEOUT_MS');
+    expect(from, 'GbUsageResult must still exist').toBeGreaterThan(-1);
+    expect(clientCode.slice(from, to), 'GbUsageResult must not offer a detail field').not.toContain('detail');
+    expect(client, 'the source of that type must not offer one either').not.toMatch(
+      /ok: false; code: string; detail/,
+    );
+
+    // The route must not name a detail in a jsonError call — including
+    // the config sentence it used to send for `not_configured`.
+    const route = linesOf('src/app/greenbutton/usage/route.ts').join('\n');
+    expect(route, 'the usage route must not pass a detail to jsonError').not.toMatch(
+      /jsonError\([^)]*(?:detail|unconfiguredReason)/,
+    );
+
+    // …and the hook must not re-attach one: the toolbar's first half of
+    // `outcome.detail ?? describeGbError(code).detail` has to stay empty
+    // for a server failure (the storage notice's own `res.detail` is a
+    // different `res`, which is why this is keyed on the outcome shape).
+    const dash = linesOf('src/hooks/useDashboard.ts').join('\n');
+    expect(dash, 'useDashboard must not propagate res.detail into the outcome').not.toMatch(
+      /code: res\.code, detail:/,
+    );
+  });
+
+  it('every code that used to carry raw detail answers with catalog copy', () => {
+    // These five arrived WITH a server-composed `detail` at 7d43192:
+    // raw fetch/OAuth/fs messages (upstream, grant_revoked, client_auth),
+    // the config sentence (not_configured), and up to 500 chars of the
+    // custodian's own 202 body (data_pending).
+    const codes = ['upstream', 'data_pending', 'grant_revoked', 'client_auth', 'not_configured'];
+
+    setLocale('en');
+    const enExact = new Set(Object.values(CATALOGS.en));
+    const enPatterns = composedMatchers(CATALOGS.en);
+    for (const code of codes) {
+      const detail = describeGbError(code).detail;
+      expect(detail, `${code}: the default branch would echo the code word at the reader`).not.toBe(code);
+      expect(isComposed(detail, enExact, enPatterns), `${code}: not ours: ${JSON.stringify(detail)}`).toBe(true);
+    }
+    // The two decisions this card had to make explicitly.
+    expect(describeGbError('data_pending').detail).toBe(CATALOGS.en['gb.dataPendingDetail']);
+    expect(describeGbError('upstream').detail).toBe(CATALOGS.en['gb.upstreamDetail']);
+
+    // ...and in the reader's other locale, differently.
+    setLocale('fr');
+    const frExact = new Set(Object.values(CATALOGS.fr));
+    const frUpstream = describeGbError('upstream').detail;
+    expect(frUpstream).toBe(CATALOGS.fr['gb.upstreamDetail']);
+    expect(frUpstream, 'the French sentence must not be the English one').not.toBe(
+      CATALOGS.en['gb.upstreamDetail'],
+    );
+    expect(isComposed(frUpstream, frExact, composedMatchers(CATALOGS.fr))).toBe(true);
   });
 });

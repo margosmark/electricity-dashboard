@@ -1314,7 +1314,12 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // One hour of overlap: the newest interval may have been incomplete
       // when it was last seen, and rows are deduped by timestamp anyway.
       const res = await fetchGbUsage(newest > 0 ? newest - 3600 : undefined);
-      if (!res.ok) return { ok: false, code: res.code, detail: res.detail };
+      // No `detail` to propagate: `GbUsageResult`'s failure variant carries
+      // a code only (the usage error body is `{error}` and nothing else),
+      // so the toolbar below renders `describeGbError(code).detail` — the
+      // catalog sentence, in the reader's locale — instead of whatever the
+      // server or the custodian wrote.
+      if (!res.ok) return { ok: false, code: res.code };
 
       // The pipe-through itself is what stamps lastSyncAt/lastSyncBytes on
       // the shim, so re-read status right after a successful pull. Without
