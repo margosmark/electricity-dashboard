@@ -10,6 +10,7 @@
 "use client";
 
 import { useSelectedPlan } from '@/hooks/useSelectedPlan';
+import { useSectionCommodity } from '@/hooks/useDashboard';
 import { planLabel, useTranslation } from '@/i18n';
 
 export default function ActivePlanChip() {
@@ -17,6 +18,13 @@ export default function ActivePlanChip() {
   // Wave U — subscribes to the locale so the chip re-labels on toggle;
   // `data-plan` keeps the canonical id (data stays untranslated).
   const { t } = useTranslation();
+  // t_a775c2a3 — AC2: the active plan is an ELECTRICITY fact (it prices
+  // ¢/kWh, and its title promises "the switcher below" — which the Gas
+  // section deliberately does not show). The chip therefore follows the
+  // section: reactive via the commodity broadcast, hydration-safe because
+  // useSyncExternalStore serves the server snapshot first.
+  const commodity = useSectionCommodity();
+  if (commodity === 'gas') return null;
   return (
     <span
       data-testid="active-plan-chip"

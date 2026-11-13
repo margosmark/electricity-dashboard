@@ -122,12 +122,20 @@ test.describe('Enbridge gas import journey', () => {
     // Granularity is stated, not implied: monthly, not hourly.
     await expect(first).toContainText('monthly billing periods');
 
-    // The dataset really landed in localStorage (what a reload will read back).
+    // The dataset really landed in localStorage (what a reload will read back)
+    // — under the GAS key space the commodity split (t_8a9038d6, AC1) moved it
+    // to: a gas import writes only `gas_usage_summaries` / `energy_gas_v2` and
+    // never addresses the electric keys. So on this fresh profile BOTH electric
+    // keys are ABSENT (null) — deliberately `null`, not `[]` / `{"points":[]}`:
+    // an electric key holding an empty payload would mean this gas import
+    // wrote it. (Measured at c30cf46: the only keys present are
+    // `energy_gas_v2`, `gas_usage_summaries`, `oeo_commodity`.)
     const stored = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('usage_summaries') || '[]'),
+      JSON.parse(localStorage.getItem('gas_usage_summaries') || '[]'),
     );
     expect(stored).toHaveLength(10);
-    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toContain('"points":[]');
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toBeNull();
   });
 
   test('money tab: the ten on-screen Amount Due figures sum to $1,098.64', async ({ page }) => {
@@ -209,11 +217,12 @@ test.describe('Enbridge gas import journey', () => {
     await expect(periods(page)).toHaveCount(10);
 
     await page.reload();
-    // R1 (4c6eec3): restored summary-only storage (usage_summaries=10,
-    // points=0) is DATA, not an empty profile — the first-run upload modal
-    // must NOT re-open over it. The empty-storage half of that contract is
-    // asserted in landAndImport above (modal visible on a genuinely fresh
-    // profile) and in Dashboard.test.tsx's summary-only reload suite.
+    // R1 (4c6eec3): restored summary-only storage (gas_usage_summaries=10 —
+    // the split moved the R1 data to the gas key) is DATA, not an empty
+    // profile — the first-run upload modal must NOT re-open over it. The
+    // empty-storage half of that contract is asserted in landAndImport above
+    // (modal visible on a genuinely fresh profile) and in Dashboard.test.tsx's
+    // summary-only reload suite.
     await expect(page.getByText('Drop XML Here')).toBeHidden({ timeout: 10_000 });
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -226,10 +235,15 @@ test.describe('Enbridge gas import journey', () => {
 
     await openTab(page, 'tab-money');
     await expect(page.getByTestId('gas-money-row')).toHaveCount(10);
+    // Post-reload the GAS key space carries the dataset back; the electric
+    // keys are still untouched by a gas import (absent here, as before the
+    // reload) — see the split-key comment in the first test.
     const stored = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('usage_summaries') || '[]'),
+      JSON.parse(localStorage.getItem('gas_usage_summaries') || '[]'),
     );
     expect(stored).toHaveLength(10);
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toBeNull();
     // Still no modal after the full post-reload walk — guards against a
     // late-appearing dialog over restored data (a modal that opened mid-test
     // would already have blocked the tab clicks above).

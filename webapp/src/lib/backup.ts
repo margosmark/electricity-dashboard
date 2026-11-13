@@ -22,9 +22,18 @@
 
 /* Wave U — restore errors are shown in the backup drawer, so they translate. */
 import { t } from '@/i18n';
-import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges } from './energy';
+import { EMPTY_EXTRA_CHARGES, EXTRA_CHARGE_FIELDS, type DataPoint, type ExtraCharges, type LocalTimeParams, type UsageSummary } from './energy';
 import { isValidPlanTimelineEntry, type PlanTimelineEntry } from './planTimeline';
 import { PLAN_STORAGE_KEY, PLAN_IDS, isPlanId } from '@/hooks/useSelectedPlan';
+import {
+  ENERGY_GAS_KEY,
+  GAS_LOCAL_TIME_KEY,
+  GAS_USAGE_SUMMARIES_KEY,
+  isGasStoredPayload,
+  isReadableGasSummary,
+  isReadableLocalTime,
+  type GasStoredPayload,
+} from './storage';
 
 /**
  * The flag that marks the loaded readings as the bundled example set
@@ -42,21 +51,34 @@ export const BACKUP_SCHEMA = 'ontario-energy-optimizer.backup';
  * Schema version of THIS build. Bump when the payload shape changes:
  *   - additive/optional change → also accept the previous version explicitly.
  *   - breaking change          → readers reject older/newer versions loudly.
+ *
+ * History: v2 added `selected_plan` / `energy_data_is_example` (Wave N).
+ * v3 (t_578268b7) adds the GAS section (`gas_data` + the two gas bill keys).
+ * The bump is not decoration: a v2 reader whitelists payload keys, so it
+ * would parse a v3 file happily and silently drop every gas row in it — the
+ * exact data loss this section exists to stop. Loud refusal on an old
+ * build beats a quiet half-restore.
  */
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 /**
  * Schema versions THIS build reads. An explicit set, not `<= BACKUP_VERSION`,
  * so the compatibility promise is testable in one place: v1 predates
- * `selected_plan` / `energy_data_is_example` and still restores (the file's
- * own rule: "additive/optional change → also accept the previous version").
+ * `selected_plan` / `energy_data_is_example` and still restores, and v2
+ * predates the gas section and still restores (the file's own rule:
+ * "additive/optional change → also accept the previous version").
  */
-export const SUPPORTED_BACKUP_VERSIONS: ReadonlySet<number> = new Set([1, 2]);
+export const SUPPORTED_BACKUP_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3]);
 
 const PLAN_IDS_FOR_ERROR = PLAN_IDS.map((id) => `"${id}"`).join(', ');
 
 export type BackupPayload = {
-  /** The parsed Green Button rows (same shape localStorage.energy_data holds). */
+  /**
+   * The parsed Green Button rows (same shape localStorage.energy_data holds).
+   * May be empty ONLY when this document carries a gas section — that is a
+   * gas-only export, and `parseBackup` refuses an empty array anywhere else
+   * (an empty restore is a trap).
+   */
   energy_data: DataPoint[];
   /** Billing anchor day of month, 1..31. */
   billing_day: number;
@@ -76,6 +98,24 @@ export type BackupPayload = {
    * Optional for the same reason.
    */
   energy_data_is_example?: boolean;
+  /**
+   * v3, additive (t_578268b7): the gas readings under `energy_gas_v2` — the
+   * FULL stored payload (envelope + points), not just the rows, so a restore
+   * can reproduce the stored key byte-for-byte instead of re-stamping it as
+   * a fresh import. Absent means "this export held no gas readings", and a
+   * restore of such a document must leave this browser's gas data alone.
+   */
+  gas_data?: GasStoredPayload;
+  /**
+   * v3, additive: the gas billing periods under `gas_usage_summaries`, as
+   * stored. Absent means "no gas bills to carry" — never "clear them".
+   */
+  gas_usage_summaries?: UsageSummary[];
+  /**
+   * v3, additive: the gas feed's clock rules under
+   * `gas_local_time_parameters`, when one was declared.
+   */
+  gas_local_time_parameters?: LocalTimeParams;
 };
 
 export type BackupDocument = {
@@ -95,6 +135,17 @@ export type BackupInput = {
   /** Wave N: restore must also restore the plan, not just the readings. */
   selectedPlan?: string;
   isExample?: boolean;
+  /**
+   * v3: the gas readings as a FULL stored payload (envelope + points).
+   * Validated here too — "filter, don't trust" applies to storage as much as
+   * to a file: a payload that is not a valid gas dataset is dropped rather
+   * than written into a document the importer would then refuse.
+   */
+  gasData?: GasStoredPayload;
+  /** v3: gas billing periods to carry across a restore. */
+  gasSummaries?: UsageSummary[];
+  /** v3: the gas clock rules, when the feed declared them. */
+  gasLocalTime?: LocalTimeParams | null;
   exportedAt?: Date;
 };
 
@@ -106,6 +157,24 @@ export function buildBackupDocument(input: BackupInput): BackupDocument {
   // function is concerned, and a document with an invalid entry could never
   // be parsed back by its own importer.
   const planTimeline = (input.planTimeline ?? []).filter(isValidPlanTimelineEntry);
+  const gasSummaries = (input.gasSummaries ?? []).filter(isReadableGasSummary);
+  // The gas payload is rebuilt field by field (the whitelist rule): only the
+  // four fields this build writes survive, and the points are re-emitted in
+  // GasPoint field order so the bytes a restore writes match the bytes the
+  // export read.
+  const gasData =
+    input.gasData && isGasStoredPayload(input.gasData) && input.gasData.points.length > 0
+      ? {
+          version: input.gasData.version,
+          uploadedAt: input.gasData.uploadedAt,
+          source: input.gasData.source,
+          points: input.gasData.points.map((p) => ({
+            timestamp: p.timestamp,
+            duration_s: p.duration_s,
+            volume_m3: p.volume_m3,
+          })),
+        }
+      : undefined;
   return {
     schema: BACKUP_SCHEMA,
     version: BACKUP_VERSION,
@@ -119,6 +188,14 @@ export function buildBackupDocument(input: BackupInput): BackupDocument {
       // "TOU" onto a document that means "nothing was recorded".
       ...(isPlanId(input.selectedPlan) ? { selected_plan: input.selectedPlan } : {}),
       ...(typeof input.isExample === 'boolean' ? { energy_data_is_example: input.isExample } : {}),
+      // v3 gas sections: ABSENT — not empty — when the export held none, so a
+      // document that lacks a section can never be read as "clear the gas
+      // data" (and a v1/v2 document restores without touching it at all).
+      ...(gasData ? { gas_data: gasData } : {}),
+      ...(gasSummaries.length > 0 ? { gas_usage_summaries: gasSummaries } : {}),
+      ...(input.gasLocalTime && isReadableLocalTime(input.gasLocalTime)
+        ? { gas_local_time_parameters: input.gasLocalTime }
+        : {}),
     },
   };
 }
@@ -224,7 +301,19 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
   }
   const p = payload as Record<string, unknown>;
 
-  const energyData = parseEnergyData(p.energy_data);
+  // v3 gas sections, parsed FIRST because they decide whether an empty
+  // `energy_data` is a legitimate gas-only export or the empty-restore trap.
+  // Absent ⇒ absent: a v1/v2 file (or an electricity-only export) simply has
+  // no gas opinion, and this reader must not invent one.
+  const gasData = parseGasData(p.gas_data);
+  if (!gasData.ok) return gasData;
+  const gasSummaries = parseGasSummaries(p.gas_usage_summaries);
+  if (!gasSummaries.ok) return gasSummaries;
+  const gasLocalTime = parseGasClock(p.gas_local_time_parameters);
+  if (!gasLocalTime.ok) return gasLocalTime;
+  const hasGasSection = gasData.value !== undefined || (gasSummaries.value?.length ?? 0) > 0;
+
+  const energyData = parseEnergyData(p.energy_data, hasGasSection);
   if (!energyData.ok) return energyData;
 
   let billingDay = 1;
@@ -303,17 +392,29 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
         ...(planTimeline ? { plan_timeline: planTimeline } : {}),
         ...(selectedPlan !== undefined ? { selected_plan: selectedPlan } : {}),
         ...(isExample !== undefined ? { energy_data_is_example: isExample } : {}),
+        ...(gasData.value !== undefined ? { gas_data: gasData.value } : {}),
+        ...(gasSummaries.value !== undefined && gasSummaries.value.length > 0
+          ? { gas_usage_summaries: gasSummaries.value }
+          : {}),
+        ...(gasLocalTime.value !== undefined ? { gas_local_time_parameters: gasLocalTime.value } : {}),
       },
     },
   };
 }
 
-/** Strict row validation: every row must be a finite, non-negative reading. */
-function parseEnergyData(raw: unknown): ParseResult<DataPoint[]> {
+/**
+ * Strict row validation: every row must be a finite, non-negative reading.
+ *
+ * `allowEmpty` is true ONLY when the document already proved it carries data
+ * — a non-empty gas section (t_578268b7, a gas-only export). Without one, an
+ * empty array is still the trap it always was: an empty restore wipes data.
+ */
+function parseEnergyData(raw: unknown, allowEmpty: boolean): ParseResult<DataPoint[]> {
   if (!Array.isArray(raw)) {
     return { ok: false, error: t('backup.errEnergyNotArray', { got: describe(raw) }) };
   }
   if (raw.length === 0) {
+    if (allowEmpty) return { ok: true, value: [] };
     return { ok: false, error: t('backup.errNoReadings') };
   }
   const out: DataPoint[] = [];
@@ -335,6 +436,78 @@ function parseEnergyData(raw: unknown): ParseResult<DataPoint[]> {
   return { ok: true, value: out };
 }
 
+/**
+ * The gas readings section: present ⇒ a full, valid `energy_gas_v2` payload
+ * with at least one point; absent ⇒ `undefined` (no gas opinion).
+ *
+ * The payload is re-emitted field by field — the whitelist rule again: a
+ * hostile file cannot smuggle extra fields into localStorage through this
+ * import, and a valid payload keeps the canonical key order a byte-for-byte
+ * restore depends on. An EMPTY gas payload is refused loudly rather than
+ * treated as absence: a build that means "clear the gas data" must be argued
+ * with, not guessed at by this reader.
+ */
+function parseGasData(raw: unknown): ParseResult<GasStoredPayload | undefined> {
+  if (raw === undefined || raw === null) return { ok: true, value: undefined };
+  if (!isGasStoredPayload(raw)) {
+    return { ok: false, error: t('backup.errGasShape', { got: describe(raw) }) };
+  }
+  if (raw.points.length === 0) {
+    return { ok: false, error: t('backup.errNoGasReadings') };
+  }
+  return {
+    ok: true,
+    value: {
+      version: raw.version,
+      uploadedAt: raw.uploadedAt,
+      source: raw.source,
+      points: raw.points.map((p) => ({
+        timestamp: p.timestamp,
+        duration_s: p.duration_s,
+        volume_m3: p.volume_m3,
+      })),
+    },
+  };
+}
+
+/**
+ * The gas bill periods. Absent/null/empty all mean the same thing — this
+ * document has no gas bills to carry — because an explicit empty array from
+ * a hand-edited file must not be readable as "delete the bills on restore".
+ * Rows are checked with the SAME predicate the exporter filters with, so
+ * anything a build of ours writes is restorable by this reader and nothing
+ * the app's own reader would drop can ride in.
+ */
+function parseGasSummaries(raw: unknown): ParseResult<UsageSummary[] | undefined> {
+  if (raw === undefined || raw === null) return { ok: true, value: undefined };
+  if (!Array.isArray(raw)) {
+    return { ok: false, error: t('backup.errGasSummaries', { got: describe(raw) }) };
+  }
+  if (raw.length === 0) return { ok: true, value: undefined };
+  const out: UsageSummary[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (!isReadableGasSummary(raw[i])) {
+      return {
+        ok: false,
+        error: t('backup.errGasSummaryEntry', { n: i + 1, got: describe(raw[i]) }),
+      };
+    }
+    // Passed through as stored: the row's own fields are the data, and a
+    // restore must reproduce them exactly.
+    out.push(raw[i] as UsageSummary);
+  }
+  return { ok: true, value: out };
+}
+
+/** The gas clock rules. Absent stays absent; present must be readable. */
+function parseGasClock(raw: unknown): ParseResult<LocalTimeParams | undefined> {
+  if (raw === undefined || raw === null) return { ok: true, value: undefined };
+  if (!isReadableLocalTime(raw)) {
+    return { ok: false, error: t('backup.errGasClock', { got: describe(raw) }) };
+  }
+  return { ok: true, value: raw };
+}
+
 function describe(v: unknown): string {
   if (v === null) return 'null';
   if (Array.isArray(v)) return 'an array';
@@ -343,24 +516,49 @@ function describe(v: unknown): string {
 
 /**
  * The exact localStorage writes an import performs — the same keys the app
- * already reads on boot (readings, billing day, bill add-ons, and the Wave P
- * plan timeline), so a restore is indistinguishable from a re-upload.
+ * already reads on boot, so a restore is indistinguishable from a re-upload.
+ *
+ * Both halves follow one rule: ABSENT SECTION ⇒ NO OPINION (t_578268b7).
+ * The electric profile is written only when the document carries electric
+ * rows; the gas dataset only when it carries gas. A gas-only document holds
+ * nothing but parseBackup's defaults for the electric fields (billing_day
+ * and extra_charges are ALWAYS present in a parsed payload), so writing them
+ * would reconfigure a configured browser's electric profile while the
+ * readings — deliberately untouched — stayed put.
  */
 export function storageValuesFromBackup(doc: BackupDocument): Record<string, string> {
-  const values: Record<string, string> = {
-    energy_data: JSON.stringify(doc.payload.energy_data),
-    billing_day: String(doc.payload.billing_day),
-    extra_charges: JSON.stringify(doc.payload.extra_charges),
-    plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
-  };
-  // The two v2 keys are written ONLY when the document carries them: a v1
-  // backup has no opinion, so restoring one must not silently re-plan the
-  // user's dashboard or clear the example-data banner.
-  if (doc.payload.selected_plan !== undefined) values[PLAN_STORAGE_KEY] = doc.payload.selected_plan;
-  // The example flag is ALWAYS written, even for a v1 document that never
-  // recorded one: a restore replaces the whole profile, and leaving a stale
-  // "these are demo numbers" banner over the user's real restored readings
-  // would be a lie the app has no way to detect afterwards.
-  values[EXAMPLE_DATA_KEY] = doc.payload.energy_data_is_example === true ? '1' : '';
+  const values: Record<string, string> = {};
+  if (doc.payload.energy_data.length > 0) {
+    values.energy_data = JSON.stringify(doc.payload.energy_data);
+    values.billing_day = String(doc.payload.billing_day);
+    values.extra_charges = JSON.stringify(doc.payload.extra_charges);
+    values.plan_timeline = JSON.stringify(doc.payload.plan_timeline ?? []);
+    // The v2 key keeps its own rule INSIDE the gate: the plan is written only
+    // when the document recorded one — a v1 backup has no opinion, so
+    // restoring one must not silently re-plan the user's dashboard.
+    if (doc.payload.selected_plan !== undefined) values[PLAN_STORAGE_KEY] = doc.payload.selected_plan;
+    // The example flag is ALWAYS written for a document that carries rows,
+    // even a v1 one that never recorded it: that restore replaces the
+    // readings, and leaving a stale "these are demo numbers" banner over the
+    // user's real restored readings would be a lie the app cannot detect
+    // afterwards. The gate is what keeps a GAS-only restore from touching it
+    // — that restore replaces nothing, so clearing the banner over surviving
+    // demo rows would be the same lie in reverse.
+    values[EXAMPLE_DATA_KEY] = doc.payload.energy_data_is_example === true ? '1' : '';
+  }
+  // v3 gas keys — the OPPOSITE rule from the flag above, and deliberately so:
+  // written only when the document carries the section, never as a clear.
+  // A v1/v2 backup (or an electricity-only export) has no gas opinion, so a
+  // restore must leave whatever gas data this browser holds byte-identical.
+  // `gas_usage_summaries: []` cannot reach here — parseBackup normalises an
+  // empty array to absence — so there is no path from a document to an
+  // accidental wipe of the bill periods.
+  if (doc.payload.gas_data !== undefined) values[ENERGY_GAS_KEY] = JSON.stringify(doc.payload.gas_data);
+  if (doc.payload.gas_usage_summaries !== undefined && doc.payload.gas_usage_summaries.length > 0) {
+    values[GAS_USAGE_SUMMARIES_KEY] = JSON.stringify(doc.payload.gas_usage_summaries);
+  }
+  if (doc.payload.gas_local_time_parameters !== undefined) {
+    values[GAS_LOCAL_TIME_KEY] = JSON.stringify(doc.payload.gas_local_time_parameters);
+  }
   return values;
 }
