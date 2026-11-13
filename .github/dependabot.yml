@@ -45,6 +45,21 @@ updates:
       - "dependencies"
       - "docker"
 
+  # Edge router base image: nginx:<exact> in ops/edge/Dockerfile.
+  - package-ecosystem: "docker"
+    directory: "/ops/edge"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "margosmark"
+    labels:
+      - "dependencies"
+      - "docker"
+
   # actions/checkout, actions/setup-node, upload-artifact, ... — .github/**
   # is where CI drift hides.
   - package-ecosystem: "github-actions"
