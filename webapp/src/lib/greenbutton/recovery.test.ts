@@ -28,7 +28,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOGS, getLocale, setLocale, type Locale } from '@/i18n';
@@ -230,14 +230,16 @@ describe('recoveryMessage over the hostile-XML corpus', () => {
 // copy must take the words from the catalog, never from the exception.
 
 /**
- * The surfaces that turn a caught exception — or, for the last four, a
+ * The surfaces that turn a caught exception — or, for the JSON half, a
  * server's answer — into copy the reader sees.
  *
  * The first three are the BROWSER half (a catch that formats `e.message`
- * into copy). The last four compose the JSON error body of
+ * into copy). The next four compose the JSON error body of
  * `/greenbutton/usage`, which `fetchGbUsage` reads into the SAME toolbar
  * line (`outcome.detail ?? describeGbError(code).detail`): two halves of
- * one rendered expression, so one list guards both.
+ * one rendered expression, so one list guards both. The last answers with
+ * a REDIRECT instead (`/?gb=error:<code>`) but lands on the same
+ * `describeGbError` reader in `useDashboard`.
  */
 const SURFACES = [
   'src/app/import/page.tsx', // the /import error box
@@ -252,6 +254,13 @@ const SURFACES = [
   'src/lib/greenbutton/espi.ts', // the fetch that produces upstream/202 detail
   'src/lib/greenbutton/oauth.ts', // OAuthError.message → oauthFailure detail
   'src/app/greenbutton/usage/route.ts', // the route that answers the browser
+  // The fourth server half (finding of gate t_7b7e28e9): the OAuth
+  // callback's failure arms used to put an OAuthError message, the IdP's
+  // own `error` parameter, or (for a non-OAuth throw out of the
+  // exchangeCode/store try block) a token-store fs path into a dead detail
+  // redirect parameter with zero readers. No `.message` formatting left in
+  // it — the exception now goes to the server log only.
+  'src/app/greenbutton/callback/route.ts', // 302 to /?gb=error:<code> → describeGbError
 ];
 
 /**
@@ -472,3 +481,143 @@ describe('the /greenbutton/usage error body is a code, never prose', () => {
     expect(isComposed(frUpstream, frExact, composedMatchers(CATALOGS.fr))).toBe(true);
   });
 });
+
+// --- The callback redirect: a code, never a message ------------------------
+//
+// `GET /greenbutton/callback` answers every failure with a 302 to
+// `/?gb=error:<code>`, and `useDashboard` renders that code through the
+// SAME reader as the JSON half above (`describeGbError` → the catalog).
+// Until t_d2eb2b3e four arms also appended a dead detail query parameter:
+// the custodian's own `error` parameter, an `OAuthError`'s message, a
+// static phrase, and — for ANY non-OAuth throw out of the `try` block that
+// wraps `exchangeCode` AND `store.load()`/`store.save()` — an exception
+// message that can carry the token file's fs path (ENOENT/EACCES).
+// That parameter had ZERO readers (src + scripts), so the text bought
+// nothing functional while landing in the address bar, the browser
+// history, and the access log of the follow-up GET. This is a pure
+// deletion, pinned as a source scan in the style of the SURFACES above.
+
+/** Every text file under `dir`, recursively. */
+function textFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...textFiles(p));
+    else if (/\.(?:ts|tsx|mts|cts|js|mjs|cjs|json|md)$/.test(entry.name)) out.push(p);
+  }
+  return out;
+}
+
+describe('the /greenbutton/callback redirect carries a code, never a message', () => {
+  const CALLBACK = 'src/app/greenbutton/callback/route.ts';
+  const route = readFileSync(join(WEBAPP, CALLBACK), 'utf8');
+  const routeCode = codeLines(route).join('\n');
+
+  afterEach(() => setLocale('en'));
+
+  it('every redirect of the callback is a bare `gb=` code', () => {
+    // The token this contract forbids, named here by construction so the
+    // scan below cannot match this test file itself.
+    const FORBIDDEN = ['gb', 'detail'].join('_');
+
+    // The acceptance is a whole-tree grep, not a spot check: no reader of
+    // the parameter may exist anywhere for a reintroduction to hide in.
+    const readers: string[] = [];
+    for (const root of [join(WEBAPP, 'src'), join(WEBAPP, 'scripts')]) {
+      if (!existsSync(root)) continue;
+      for (const file of textFiles(root)) {
+        if (file.endsWith(join('greenbutton', 'recovery.test.ts'))) continue; // this file names the token
+        const source = readFileSync(file, 'utf8');
+        if (source.includes(FORBIDDEN)) readers.push(file.slice(WEBAPP.length + 1));
+      }
+    }
+    expect(readers, `${FORBIDDEN} must have zero readers/writers in the webapp:\n${readers.join('\n')}`).toEqual([]);
+
+    expect(routeCode, `${FORBIDDEN} must not come back on any redirect`).not.toContain(FORBIDDEN);
+
+    // Shape, not just token: every `redirectToApp` call must be a literal
+    // the matcher understands, so a call it CANNOT parse fails the count
+    // below instead of being silently skipped.
+    const calls = routeCode.match(/redirectToApp\(/g)?.length ?? 0;
+    const args = [...routeCode.matchAll(/redirectToApp\(\s*("[^"]*"|`[^`]*`)\s*\)/g)].map((m) => m[1]);
+    expect(args.length, 'a redirectToApp call the scan could not parse — the contract would go blind').toBe(calls);
+    const offenders = args.filter((a) => !/^"gb=(?:error:[a-z_]+|connected)"$/.test(a));
+    expect(offenders, `a callback redirect carrying more than a code:\n${offenders.join('\n')}`).toEqual([]);
+    // Ten arms: not_configured, state_mismatch, denied, no_code,
+    // pkce_verifier_missing, connected, client_auth, grant_revoked, and
+    // token_exchange twice (OAuthError vs any other exception).
+    expect(calls, 'the redirect arms this contract pins are gone').toBe(10);
+  });
+
+  it("neither the IdP's raw `error` parameter nor e.message reaches the URL", () => {
+    expect(routeCode, 'the denied arm must answer with the code alone').toContain(
+      'redirectToApp("gb=error:denied")',
+    );
+    expect(routeCode, 'the IdP parameter is read only as a guard, never interpolated').not.toMatch(
+      /encodeURIComponent\(/,
+    );
+    const formatted = routeCode.split('\n').filter((line) => FORMATS_RAW_MESSAGE.some((p) => p.test(line)));
+    expect(formatted, `an exception message formatted into the redirect:\n${formatted.join('\n')}`).toEqual([]);
+  });
+
+  it('the diagnostics the redirect dropped still reach the server log', () => {
+    // README: "the diagnostics go to the server log". Before this fix the
+    // callback's diagnostics went to the URL instead — nowhere else.
+    expect(routeCode, 'the catch must log its exception server-side').toContain(
+      'console.warn("[greenbutton] callback failed"',
+    );
+  });
+
+  it('every code the callback can emit still answers from the catalog', () => {
+    const codes = [...new Set([...routeCode.matchAll(/gb=error:([a-z_]+)/g)].map((m) => m[1]))];
+    expect(codes.sort(), 'the redirect arms changed — re-pin this list').toEqual([
+      'client_auth',
+      'denied',
+      'grant_revoked',
+      'no_code',
+      'not_configured',
+      'pkce_verifier_missing',
+      'state_mismatch',
+      'token_exchange',
+    ]);
+
+    const headlines: Record<string, string> = {};
+    for (const locale of ['en', 'fr'] as Locale[]) {
+      setLocale(locale);
+      const exact = new Set(Object.values(CATALOGS[locale]));
+      const patterns = composedMatchers(CATALOGS[locale]);
+      for (const code of codes) {
+        const copy = describeGbError(code);
+        const label = `${locale}/${code}`;
+        expect(isComposed(copy.headline, exact, patterns), `${label}: headline not ours: ${copy.headline}`).toBe(true);
+        // describeGbError's default branch deliberately echoes the CODE as
+        // its detail (pinned above); anything else must be catalog copy.
+        if (copy.detail !== code) {
+          expect(isComposed(copy.detail, exact, patterns), `${label}: detail not ours: ${copy.detail}`).toBe(true);
+        }
+        expect(copy.hints.length, `${label}: a failure must say what to do next`).toBeGreaterThan(0);
+        for (const hint of copy.hints) {
+          expect(isComposed(hint, exact, patterns), `${label}: hint not ours: ${hint}`).toBe(true);
+        }
+      }
+      headlines[locale] = describeGbError('denied').headline;
+    }
+    // Locale actually applied: the French reader gets French copy.
+    expect(headlines.fr).not.toBe(headlines.en);
+  });
+
+  it('the README claim about these routes matches the code', () => {
+    const readme = readFileSync(join(WEBAPP, 'src/lib/greenbutton/README.md'), 'utf8');
+    // The sentence sits directly under the route table that lists
+    // `GET /greenbutton/callback`, so it must be true FOR the redirect.
+    expect(readme, 'the route table must still list the callback').toContain('`GET /greenbutton/callback`');
+    expect(readme, 'the claim under the route table').toContain('no `detail`, no exception text');
+    expect(readme, 'the README must not document a parameter that does not exist').not.toContain(
+      ['gb', 'detail'].join('_'),
+    );
+    // The other half of that sentence — "the diagnostics go to the server
+    // log" — is its own test above; here it is only the claim that must
+    // still be present for the route table it sits under.
+  });
+});
+

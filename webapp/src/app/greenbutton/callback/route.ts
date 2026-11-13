@@ -48,8 +48,12 @@ export async function GET(request: Request): Promise<Response> {
   if (!stateOk) return redirectToApp("gb=error:state_mismatch");
   if (oauthError) {
     // `access_denied` is the user pressing Cancel — not a failure to report
-    // as an error state, but still worth surfacing verbatim.
-    return redirectToApp(`gb=error:denied&gb_detail=${encodeURIComponent(oauthError)}`);
+    // as an error state. Only the CODE crosses the redirect: the IdP's own
+    // `error` string is third-party prose and never reaches the URL (it
+    // would land in the address bar, history and the access log with no
+    // reader — the detail parameter this route used to append had zero).
+    // The UI explains `denied` from the catalog like every other code.
+    return redirectToApp("gb=error:denied");
   }
   if (!code) return redirectToApp("gb=error:no_code");
   // PKCE is on for this attempt but no verifier came back with the state —
@@ -127,17 +131,16 @@ export async function GET(request: Request): Promise<Response> {
     });
     return out;
   } catch (e) {
+    // The message (an OAuthError's prose, or a non-OAuth exception that can
+    // carry a token-store fs path) goes to the SERVER log only. It used to
+    // ride a dead detail parameter on the redirect — zero readers, and
+    // leaking into the address bar, history and the access log.
+    console.warn("[greenbutton] callback failed", e);
     if (e instanceof OAuthError) {
-      if (e.kind === "client_auth") {
-        return redirectToApp("gb=error:client_auth&gb_detail=token endpoint rejected our client credentials");
-      }
-      if (e.kind === "grant_revoked") {
-        return redirectToApp("gb=error:grant_revoked");
-      }
-      return redirectToApp(`gb=error:token_exchange&gb_detail=${encodeURIComponent(e.message)}`);
+      if (e.kind === "client_auth") return redirectToApp("gb=error:client_auth");
+      if (e.kind === "grant_revoked") return redirectToApp("gb=error:grant_revoked");
+      return redirectToApp("gb=error:token_exchange");
     }
-    return redirectToApp(
-      `gb=error:token_exchange&gb_detail=${encodeURIComponent(e instanceof Error ? e.message : "unknown")}`,
-    );
+    return redirectToApp("gb=error:token_exchange");
   }
 }
