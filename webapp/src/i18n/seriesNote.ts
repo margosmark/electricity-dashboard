@@ -148,3 +148,86 @@ export function seriesNoteText(note: SeriesNote, t: Translate): string {
   if (!key) return note.detail;
   return t(key, seriesNoteParams(note, t));
 }
+
+/* ==========================================================================
+ * Aggregation of a repeated sentence (t_1d93a874)
+ * ========================================================================== */
+
+/**
+ * The catalog key of the sentence that words a COLLAPSED group honestly.
+ *
+ * A per-series sentence names its series in `{label}`, and that slot is unique
+ * per series — Mark's gas export rendered 23 volume sentences differing only
+ * there, so grouping by the RENDERED text (t_8a9038d6) yielded 23 groups of 1
+ * and the wall survived the first aggregation fix. Where the catalog can state
+ * the same thing for N series at once, this table names that sentence, and
+ * `seriesNoteGroupKey` then drops `{label}` from the group: every collapse is
+ * paired with a line that SAYS "N series", never a silent one.
+ *
+ * Keyed by the note's SENTENCE key rather than its code, because a code can
+ * word two sentences (`legacy-assumption`) and only one of them names a series.
+ *
+ * A sentence absent here keeps grouping by its full rendered text: identical
+ * sentences still print once with ×N, and sentences that differ only by label
+ * print in full rather than merging into a line that cannot word them.
+ */
+export const AGGREGATE_KEY: Partial<Record<string, string>> = {
+  'gbseries.note.assumedDirection': 'gbseries.note.assumedDirectionMany',
+  'gbseries.note.convertedToEnergy': 'gbseries.note.convertedToEnergyMany',
+  'gbseries.note.legacyAssumptionNoUom': 'gbseries.note.legacyAssumptionNoUomMany',
+  'gbseries.note.refusedReadings': 'gbseries.note.refusedReadingsMany',
+  'gbseries.note.unlinkedReadingType': 'gbseries.note.unlinkedReadingTypeMany',
+  'gbseries.note.unsupportedSeries': 'gbseries.note.unsupportedSeriesMany',
+  'gbseries.note.volumeSeries': 'gbseries.note.volumeSeriesMany',
+};
+
+/** The aggregate sentence for this note's sentence, when the catalog has one. */
+function aggregateKeyOf(note: SeriesNote): string | null {
+  const key = seriesNoteKey(note);
+  const aggregate = key ? AGGREGATE_KEY[key] : undefined;
+  // A key the reader's catalog lacks is no key at all — `catalogHas` is the
+  // same test `seriesNoteKey` applies, so grouping and painting can never
+  // disagree about whether this sentence can be collapsed.
+  return aggregate && catalogHas(aggregate) ? aggregate : null;
+}
+
+/**
+ * The key a notice groups by.
+ *
+ * For a sentence the catalog can word for N series: the sentence key plus every
+ * param EXCEPT `label` — so 23 series that say the same thing about different
+ * series share one group, while a different uom, count, multiplier, variant or
+ * refusal `status` still starts its own line (the VArh refusal and the gas
+ * refusal never merge).
+ *
+ * Otherwise the rendered sentence itself: a note nothing composed structured
+ * values into (`detail`), a code with no catalog key, and a sentence with no
+ * aggregate form all behave exactly as before this card existed.
+ */
+export function seriesNoteGroupKey(note: SeriesNote, t: Translate): string {
+  if (!aggregateKeyOf(note)) return seriesNoteText(note, t);
+  const params = seriesNoteParams(note, t);
+  const shared = Object.keys(params)
+    .filter((name) => name !== 'label')
+    .sort()
+    .map((name) => [name, params[name]]);
+  return `${seriesNoteKey(note)}|${JSON.stringify(shared)}`;
+}
+
+/**
+ * The line a group of N > 1 prints — or `null` when the catalog has no honest
+ * wording for that group, in which case the caller prints the group's own
+ * sentence with its ×N count, exactly as before.
+ *
+ * `{n}` is the number of SERIES in the group; every other value is the group's
+ * shared data (uom, count, multiplier, refusal status …). `label` is dropped:
+ * the line speaks for all of them, and the raw disclosure still lists every
+ * note — with its own label — in feed order.
+ */
+export function seriesNoteAggregateText(note: SeriesNote, n: number, t: Translate): string | null {
+  const aggregate = aggregateKeyOf(note);
+  if (!aggregate) return null;
+  const params: Record<string, string | number> = { ...seriesNoteParams(note, t), n };
+  delete params.label;
+  return t(aggregate, params);
+}

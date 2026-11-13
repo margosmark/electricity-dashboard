@@ -9,11 +9,34 @@
  * Run: `npx vitest run src/components/SeriesNotesNotice.test.tsx`
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SeriesNotesNotice } from './SeriesNotesNotice';
+import { parseGreenButtonFeed } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 import type { SeriesNote } from '@/lib/greenbutton/series';
+
+/** Every id here is invented for the fixture; the SHAPE is what it reproduces. */
+const WALL_FIXTURE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../tests/fixtures/volume-series-wall-fixture.xml',
+);
+
+/**
+ * Mark's real shape: ONE UsagePoint, 23 volume series, and a sentence whose
+ * only difference from its neighbour is `{label}` (`seriesLabel` renders
+ * `upId · meterId · unit`, so no two match). Parser-built, never hand-made:
+ * a hand-written note proves nothing about what the ingestion emits.
+ */
+function volumeWall(): SeriesNote[] {
+  return parseGreenButtonFeed(fs.readFileSync(WALL_FIXTURE, 'utf8')).notes;
+}
+
+afterEach(() => setLocale('en'));
 
 /** The evidenced VArh refusal, byte for byte as the parser words it. */
 const VARH_DETAIL =
@@ -115,5 +138,87 @@ describe('SeriesNotesNotice', () => {
     expect(screen.queryByTestId('series-notes-details')).toBeNull();
     expect(screen.queryByTestId('series-note-count')).toBeNull();
     expect(screen.getAllByTestId('series-note-detail')).toHaveLength(3);
+  });
+
+  /* The shape t_8a9038d6's aggregation MISSED (t_1d93a874): 23 notes, one
+     code, one uom/multiplier/count, 23 DISTINCT labels — grouping by the
+     rendered sentence gave 23 groups of 1 and the wall survived the fix. */
+  it('collapses 23 distinct-label volume notes to ONE line with ×23, and keeps all 23 raw', () => {
+    const wall = volumeWall();
+    // The fixture reproduces the shape, or this test proves nothing:
+    expect(wall).toHaveLength(23);
+    expect(new Set(wall.map((n) => n.code))).toEqual(new Set(['volume-series']));
+    expect(new Set(wall.map((n) => n.params?.label)).size).toBe(23);
+    expect(
+      new Set(wall.map((n) => `${n.params?.count}|${n.params?.uom}|${n.params?.multiplier}`)).size,
+    ).toBe(1);
+    // …and the rendered sentences really are 23 different strings (the old
+    // grouping key), which is exactly why they used to print as a wall.
+    expect(new Set(wall.map((n) => n.detail)).size).toBe(23);
+
+    render(<SeriesNotesNotice notes={wall} onDismiss={vi.fn()} />);
+
+    const lines = screen.getAllByTestId('series-note-detail');
+    expect(lines).toHaveLength(1);
+    // The count is stated IN WORDS on the line, not only in the badge…
+    expect(lines[0].textContent).toContain('23 series were loaded as volume');
+    expect(lines[0].textContent).toContain('4 reading(s)');
+    expect(screen.getByTestId('series-note-count').textContent).toBe('×23');
+    // …and no series' label is quoted as if the line described only it.
+    expect(lines[0].textContent).not.toContain('READ0001');
+
+    // Disclosure: EVERY note, in feed order, each with its own label.
+    expect(screen.getByTestId('series-notes-details')).toBeInTheDocument();
+    const raw = screen.getAllByTestId('series-note-raw');
+    expect(raw).toHaveLength(23);
+    expect(raw.map((n) => n.textContent)).toEqual(wall.map((n) => n.detail));
+    expect(new Set(raw.map((n) => n.textContent)).size).toBe(23);
+  });
+
+  it('paints that one line in French, with the raw record still in the file’s words', () => {
+    setLocale('fr');
+    const wall = volumeWall();
+
+    render(<SeriesNotesNotice notes={wall} onDismiss={vi.fn()} />);
+
+    const lines = screen.getAllByTestId('series-note-detail');
+    expect(lines).toHaveLength(1);
+    expect(lines[0].textContent).toContain('23 séries ont été chargées en volume');
+    expect(lines[0].textContent).toContain('4 lecture(s)');
+    expect(screen.getByTestId('series-note-count').textContent).toBe('×23');
+
+    // The raw record is the parser's own sentences — in FRENCH, never the
+    // English `detail`, and still one entry per series, in feed order, each
+    // quoting its own label (nobody's line is dropped from the record).
+    const raw = screen.getAllByTestId('series-note-raw');
+    expect(raw).toHaveLength(23);
+    expect(raw[0].textContent).toContain('chargée en volume');
+    expect(raw[0].textContent).not.toBe(wall[0].detail);
+    expect(raw.map((n) => n.textContent)).toEqual(
+      wall.map((n) => expect.stringContaining(String(n.params?.label))),
+    );
+  });
+
+  it('keeps series that differ in DATA on their own lines — only the label collapses', () => {
+    const one: SeriesNote = {
+      code: 'volume-series',
+      detail: 'Series A was loaded as volume: 1 reading(s) in m3 scaled by m.',
+      params: { label: 'UP · MR1 · m3', count: 1, uom: 'm3', multiplier: 'm' },
+    };
+    const many: SeriesNote = {
+      code: 'volume-series',
+      detail: 'Series B was loaded as volume: 9 reading(s) in m3 scaled by m.',
+      params: { label: 'UP · MR2 · m3', count: 9, uom: 'm3', multiplier: 'm' },
+    };
+
+    render(<SeriesNotesNotice notes={[one, many]} onDismiss={vi.fn()} />);
+
+    const lines = screen.getAllByTestId('series-note-detail');
+    expect(lines).toHaveLength(2);
+    expect(lines[0].textContent).toContain('1 reading(s)');
+    expect(lines[1].textContent).toContain('9 reading(s)');
+    // Nothing repeated ⇒ no count badge, no disclosure — no invented merge.
+    expect(screen.queryByTestId('series-note-count')).toBeNull();
+    expect(screen.queryByTestId('series-notes-details')).toBeNull();
   });
 });

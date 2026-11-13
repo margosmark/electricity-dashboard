@@ -33,9 +33,12 @@ import { parseGreenButtonFeed } from '@/lib/energy';
 import { REFUSAL_REASON_KEY, type SeriesNote } from '@/lib/greenbutton/series';
 import { CATALOGS, getLocale, setLocale, t } from '@/i18n';
 import {
+  AGGREGATE_KEY,
   NOTE_KEY,
   VARIANT_KEY,
   TRANSLATED_CODES,
+  seriesNoteAggregateText,
+  seriesNoteGroupKey,
   seriesNoteKey,
   seriesNoteText,
 } from './seriesNote';
@@ -339,5 +342,117 @@ describe('the catalogs carry every key the module names', () => {
   it('is read through the live catalog, not a copy', () => {
     expect(CATALOGS[getLocale()]).toBe(en);
     expect(Object.keys(CATALOGS.fr).length).toBe(Object.keys(en).length);
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * Aggregation of a repeated sentence (t_1d93a874)
+ *
+ * A per-series sentence interpolates `{label}`, which is unique per series:
+ * Mark's gas export rendered 23 volume sentences differing ONLY there, so the
+ * rendered-text grouping of t_8a9038d6 yielded 23 groups of 1 and the wall
+ * survived. These pin the contract that stops that happening for ANY code —
+ * the aggregate sentence exists, in both catalogs, for every sentence that
+ * names a series, and the group key collapses label-only differences while
+ * splitting every real one.
+ * -------------------------------------------------------------------------- */
+
+/** The `{…}` tokens a string interpolates, in order. */
+const slots = (s: string) => s.match(/\{\w+\}/g) ?? [];
+
+describe('the aggregate sentence', () => {
+  it('is defined in BOTH catalogs, translated, with identical placeholders', () => {
+    expect(Object.keys(AGGREGATE_KEY).length).toBeGreaterThanOrEqual(7);
+    // `AGGREGATE_KEY` is a Partial lookup table (a missing key is `undefined`
+    // at runtime), so the entries are narrowed here rather than assumed.
+    const entries = Object.entries(AGGREGATE_KEY) as [string, string][];
+    for (const [source, aggregate] of entries) {
+      expect(en, `en is missing ${aggregate}`).toHaveProperty(aggregate);
+      expect(fr, `fr is missing ${aggregate}`).toHaveProperty(aggregate);
+      expect(fr[aggregate as keyof typeof fr], `${aggregate} is not translated`).not.toBe(
+        en[aggregate as keyof typeof en],
+      );
+      expect(slots(fr[aggregate as keyof typeof fr]), `${aggregate}: placeholders differ`).toEqual(
+        slots(en[aggregate as keyof typeof en]),
+      );
+      // The sentence it stands in for is a real catalog sentence, not a typo.
+      expect(en, `no source sentence for ${aggregate}`).toHaveProperty(source);
+      expect(slots(en[aggregate as keyof typeof en]), `${aggregate} keeps {label}`).not.toContain(
+        '{label}',
+      );
+    }
+  });
+
+  it('covers EXACTLY the sentences whose params carry {label} — no code keeps its wall', () => {
+    const labelBearing = [
+      ...new Set(
+        ALL_NOTES.filter(({ note }) => note.params && 'label' in note.params).map(
+          ({ note }) => seriesNoteKey(note),
+        ),
+      ),
+    ].sort();
+    // The battery parses at least one document per label-bearing sentence, so
+    // a NEW code with a {label} and no aggregate wording fails here rather
+    // than shipping another wall.
+    expect(labelBearing.length).toBeGreaterThanOrEqual(7);
+    expect(labelBearing).toEqual(Object.keys(AGGREGATE_KEY).sort());
+  });
+
+  it('words N series in English and French, without quoting one series’ label', () => {
+    const note: SeriesNote = {
+      code: 'volume-series',
+      detail: 'Series FEED0001 · READ0001 was loaded as volume: 4 reading(s) …',
+      params: { label: 'FEED0001 · READ0001 · m3 (uom 42)', count: 4, uom: 'm3 (uom 42)', multiplier: 'm (10^-3)' },
+    };
+
+    const english = seriesNoteAggregateText(note, 23, t);
+    expect(english).toContain('23 series were loaded as volume');
+    expect(english).toContain('4 reading(s) in m3 (uom 42)');
+    expect(english).not.toContain('READ0001');
+
+    setLocale('fr');
+    const french = seriesNoteAggregateText(note, 23, t);
+    expect(french).toContain('23 séries ont été chargées en volume');
+    expect(french).not.toBe(english);
+
+    // A note nothing composed has no aggregate line to print — the caller
+    // falls back to the sentence it actually carries.
+    expect(seriesNoteAggregateText({ code: 'volume-series', detail: 'raw words' }, 23, t)).toBeNull();
+  });
+});
+
+describe('the grouping key', () => {
+  const volume = (label: string, over: Record<string, string | number> = {}): SeriesNote => ({
+    code: 'volume-series',
+    detail: `Series ${label} was loaded as volume …`,
+    params: { label, count: 4, uom: 'm3', multiplier: 'm', ...over },
+  });
+
+  it('collapses notes that differ ONLY by label', () => {
+    expect(seriesNoteGroupKey(volume('UP · A · m3'), t)).toBe(
+      seriesNoteGroupKey(volume('UP · B · m3'), t),
+    );
+  });
+
+  it('splits notes that differ in any real value', () => {
+    const base = seriesNoteGroupKey(volume('UP · A · m3'), t);
+    expect(seriesNoteGroupKey(volume('UP · A · m3', { count: 9 }), t)).not.toBe(base);
+    expect(seriesNoteGroupKey(volume('UP · A · m3', { uom: 'ft3' }), t)).not.toBe(base);
+    expect(seriesNoteGroupKey(volume('UP · A · m3', { multiplier: 'k' }), t)).not.toBe(base);
+    // A different refusal status is a different reason — never one line.
+    const varh: SeriesNote = {
+      code: 'unsupported-series',
+      detail: '…',
+      params: { label: 'UP · A · VArh', status: 'other-quantity' },
+    };
+    const gas: SeriesNote = { ...varh, params: { ...varh.params, status: 'other-commodity' } };
+    expect(seriesNoteGroupKey(varh, t)).not.toBe(seriesNoteGroupKey(gas, t));
+  });
+
+  it('falls back to the rendered sentence for a note nothing composed', () => {
+    const raw: SeriesNote = { code: 'volume-series', detail: 'the parser’s own words' };
+    expect(seriesNoteGroupKey(raw, t)).toBe('the parser’s own words');
+    // …which still collapses identical sentences, exactly as before.
+    expect(seriesNoteGroupKey(raw, t)).toBe(seriesNoteGroupKey({ ...raw }, t));
   });
 });
