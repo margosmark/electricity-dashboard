@@ -208,6 +208,8 @@ describe('the anomaly card\u2019s weather line', () => {
     render(
       <UsagePanel
         {...chartProps()}
+        hasData={true}
+        onImport={vi.fn()}
         staleness={STALENESS}
         anomalies={hot}
         heatmapData={heatmap}
@@ -226,6 +228,8 @@ describe('the anomaly card\u2019s weather line', () => {
     render(
       <UsagePanel
         {...chartProps()}
+        hasData={true}
+        onImport={vi.fn()}
         staleness={STALENESS}
         anomalies={cold}
         heatmapData={heatmap}
@@ -246,6 +250,8 @@ describe('the anomaly card\u2019s weather line', () => {
     render(
       <UsagePanel
         {...chartProps()}
+        hasData={true}
+        onImport={vi.fn()}
         staleness={STALENESS}
         anomalies={hot}
         heatmapData={heatmap}

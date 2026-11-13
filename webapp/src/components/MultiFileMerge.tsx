@@ -20,6 +20,7 @@ import {
 } from '@/lib/energy';
 import type { MergeFileChoice } from '@/hooks/useDashboard';
 import { useTranslation } from '@/i18n';
+import { usagePointLabel } from '@/i18n/usagePointLabel';
 
 export type { MergeFileChoice };
 
@@ -112,7 +113,7 @@ export default function MultiFileMerge({
                         checked={file.chosen === j}
                         onChange={() => setChoice(i, j)}
                       />
-                      {g.label} · {g.readings.length} {t('merge.readings', { count: g.readings.length })}
+                      {usagePointLabel(g, t)} · {g.readings.length} {t('merge.readings', { count: g.readings.length })}
                     </label>
                   ))}
                   <label
@@ -135,7 +136,7 @@ export default function MultiFileMerge({
 
         <div
           data-testid="merge-summary"
-          className="mt-4 md:mt-6 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
+          className="mt-4 md:mt-6 bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5"
         >
           <div className="flex flex-wrap gap-4 md:gap-8">
             <div>
@@ -157,9 +158,25 @@ export default function MultiFileMerge({
               </div>
             </div>
           </div>
+          {/*
+            The per-file line was composed in a template literal, so it was
+            invisible to the coverage gate and shipped English on the fr page
+            (t_dd0263c0). It now reads through the catalog: `merge.fileKept`
+            carries the `{rows} kept` agreement (the line's primary count drives
+            `_one`/`_other`), and the duplicate clause is its OWN key so the
+            SECOND count (`duplicates`) gets French agreement too — one `t()`
+            call can only key off one `count`. The English pair is identical, so
+            the en page keeps its existing wording byte for byte.
+          */}
           <div className="text-[9px] md:text-[11px] font-bold mt-2">
             {merged.files
-              .map((f) => `${f.name}: ${f.rows} kept${f.duplicates ? `, ${f.duplicates} duplicate` : ''}`)
+              .map(
+                (f) =>
+                  t('merge.fileKept', { count: f.rows, name: f.name, rows: f.rows }) +
+                  (f.duplicates
+                    ? t('merge.fileDuplicates', { count: f.duplicates, duplicates: f.duplicates })
+                    : ''),
+              )
               .join(' · ')}
           </div>
           {awaitingMeterChoice && (
@@ -174,7 +191,7 @@ export default function MultiFileMerge({
             data-testid="merge-confirm"
             onClick={() => onConfirm(merged.readings)}
             disabled={!canConfirm}
-            className="flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+            className="flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-info-slab transition-colors"
           >
             <CheckCircle2 size={16} strokeWidth={4} /> {t('merge.importBtn')} {merged.mergedRows.toLocaleString()} {t('merge.rows', { count: merged.mergedRows })}
           </button>

@@ -1,0 +1,1504 @@
+{
+  "schema_version": 1,
+  "generated_from": "origin/main",
+  "base_sha": "ab2a892e90290d0d5988a41ad31716f45685cf98",
+  "scope": "webapp/src/components; executable source lines only; tests/comments excluded",
+  "counts": {
+    "tracked_source_occurrences": 190,
+    "text_white": 8,
+    "svg_chart_hex_occurrences": 18
+  },
+  "occurrences": [
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 171,
+      "occurrence": "bg-slate-100",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded\""
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 171,
+      "occurrence": "bg-slate-200",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-1 hover:bg-slate-100 active:bg-slate-200 rounded\""
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 177,
+      "occurrence": "text-slate-600",
+      "category": "utility-class",
+      "source": "<p className=\"text-[9px] md:text-[10px] leading-relaxed text-slate-600 font-black mb-4 normal-case\">"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 189,
+      "occurrence": "bg-yellow-100",
+      "category": "utility-class",
+      "source": "className=\"mb-4 p-3 rounded-lg border-4 border-black bg-yellow-100 text-[10px] leading-relaxed normal-case\""
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 199,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": "className={BUTTON_CLASS + \" bg-emerald-300 flex-1\"}"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 218,
+      "occurrence": "bg-orange-100",
+      "category": "utility-class",
+      "source": "className=\"mb-4 p-3 rounded-lg border-4 border-black bg-orange-100 text-[10px] leading-relaxed normal-case\""
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 228,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": "className={BUTTON_CLASS + \" bg-emerald-300 flex-1\"}"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 248,
+      "occurrence": "bg-purple-100",
+      "category": "utility-class",
+      "source": "className=\"mb-4 p-3 rounded-lg border-4 border-black bg-purple-100 text-[10px] leading-relaxed normal-case\""
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 275,
+      "occurrence": "text-slate-500",
+      "category": "utility-class",
+      "source": "<div className=\"text-[9px] text-slate-500 normal-case\" data-testid=\"account-sync-status\">"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 288,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className={BUTTON_CLASS + \" bg-yellow-400\"}"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 311,
+      "occurrence": "bg-slate-100",
+      "category": "utility-class",
+      "source": "<div className=\"mb-3 p-2 border-4 border-black bg-slate-100 text-[10px] normal-case\">"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 351,
+      "occurrence": "bg-purple-300",
+      "category": "utility-class",
+      "source": "className={BUTTON_CLASS + \" bg-purple-300\"}"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 425,
+      "occurrence": "text-slate-600",
+      "category": "utility-class",
+      "source": "<p className=\"text-[9px] text-slate-600 normal-case\">"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 428,
+      "occurrence": "bg-purple-300",
+      "category": "utility-class",
+      "source": "<button type=\"submit\" disabled={busy} className={BUTTON_CLASS + \" bg-purple-300\"}>"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 440,
+      "occurrence": "text-red-600",
+      "category": "utility-class",
+      "source": "(message.tone === \"error\" ? \"text-red-600\" : \"text-emerald-700\")"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 440,
+      "occurrence": "text-emerald-700",
+      "category": "utility-class",
+      "source": "(message.tone === \"error\" ? \"text-red-600\" : \"text-emerald-700\")"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 526,
+      "occurrence": "text-slate-600",
+      "category": "utility-class",
+      "source": "<div className=\"text-[9px] text-slate-600 normal-case\">"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 538,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": "className={BUTTON_CLASS + (subscribed ? \" bg-white\" : \" bg-emerald-300\") + \" flex-1\"}"
+    },
+    {
+      "file": "webapp/src/components/AccountControls.tsx",
+      "line": 559,
+      "occurrence": "text-slate-500",
+      "category": "utility-class",
+      "source": "<span className=\"block text-slate-500\">{t(`account.interval.${topic}`)}</span>"
+    },
+    {
+      "file": "webapp/src/components/ActivePlanChip.tsx",
+      "line": 24,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"inline-flex items-center gap-2 px-3 py-1 mt-3 bg-yellow-400 border-2 border-edge rounded-lg text-[10px] md:text-xs font-black uppercase text-accent-ink shadow-hard-3\""
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 67,
+      "occurrence": "border-blue-500",
+      "category": "utility-class",
+      "source": "commodity: 'border-l-8 border-blue-500',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 68,
+      "occurrence": "border-violet-500",
+      "category": "utility-class",
+      "source": "delivery: 'border-l-8 border-violet-500',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 69,
+      "occurrence": "border-violet-400",
+      "category": "utility-class",
+      "source": "regulatory: 'border-l-8 border-violet-400',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 70,
+      "occurrence": "border-amber-500",
+      "category": "utility-class",
+      "source": "tax: 'border-l-8 border-amber-500',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 71,
+      "occurrence": "border-emerald-500",
+      "category": "utility-class",
+      "source": "credit: 'border-l-8 border-emerald-500',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 74,
+      "occurrence": "border-orange-400",
+      "category": "utility-class",
+      "source": "other: 'border-l-8 border-orange-400',"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 151,
+      "occurrence": "bg-amber-50",
+      "category": "utility-class",
+      "source": "? 'bg-amber-50'"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 427,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "selected === 'all' ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 440,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "selected === r.summary.startDate ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'"
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 453,
+      "occurrence": "bg-red-600",
+      "category": "utility-class",
+      "source": "className=\"mt-4 md:mt-6 bg-red-600 text-white border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case\""
+    },
+    {
+      "file": "webapp/src/components/ActualBillPanel.tsx",
+      "line": 453,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "className=\"mt-4 md:mt-6 bg-red-600 text-white border-4 border-edge rounded-xl px-4 py-3 md:px-6 md:py-4 text-xs md:text-sm font-black normal-case\""
+    },
+    {
+      "file": "webapp/src/components/AppErrorBoundary.tsx",
+      "line": 181,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"flex-1 py-4 bg-yellow-400 border-4 border-edge rounded-xl font-black uppercase text-xs md:text-sm shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all\""
+    },
+    {
+      "file": "webapp/src/components/BackupControls.tsx",
+      "line": 165,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-4 border-edge bg-yellow-400 text-[11px] shadow-hard-3 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40\""
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 56,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}"
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 56,
+      "occurrence": "#F59E0B",
+      "category": "hex-literal",
+      "source": "fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}"
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 78,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "fill=\"#2563EB\""
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 80,
+      "occurrence": "#cbd5e1",
+      "category": "hex-literal",
+      "source": "token: on dark that would be a #cbd5e1 line between every pair of"
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 83,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 48,
+      "occurrence": "border-yellow-400",
+      "category": "utility-class",
+      "source": "colours simply swap roles (was bg-black + border-yellow-400 + yellow"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 50,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "#000 at 13.7:1 in BOTH themes, so nothing here needs a dark variant. */"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 51,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "className=\"bg-accent text-[#000] p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-[#000] shadow-hard-12 md:shadow-hard-24 flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase\""
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 51,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "className=\"bg-accent text-[#000] p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] border-4 md:border-8 border-[#000] shadow-hard-12 md:shadow-hard-24 flex flex-col lg:flex-row items-center justify-between gap-6 md:gap-10 font-black uppercase\""
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 62,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<div className=\"text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.5em] text-[#000] font-black\">"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 67,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<span className=\"text-4xl sm:text-6xl md:text-8xl text-[#000] not-italic block mt-1 md:mt-2 font-black\">"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceBanner.tsx",
+      "line": 71,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<p className=\"text-[9px] md:text-[11px] font-bold text-[#000] normal-case\">"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceChip.tsx",
+      "line": 77,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "? 'bg-emerald-400 text-accent-ink shadow-hard-3'"
+    },
+    {
+      "file": "webapp/src/components/BestChoiceChip.tsx",
+      "line": 78,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": ": 'bg-yellow-400 text-accent-ink shadow-hard-blue-3'"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 168,
+      "occurrence": "#7C3AED",
+      "category": "hex-literal",
+      "source": "stroke=\"#7C3AED\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 179,
+      "occurrence": "#7C3AED",
+      "category": "hex-literal",
+      "source": "fill=\"#7C3AED\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 234,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "stroke=\"#FACC15\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 264,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "<circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill=\"#FACC15\" stroke=\"var(--ink)\" strokeWidth={3} />"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 314,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "stroke=\"#FACC15\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 396,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "? { tone: 'bg-red-400 text-accent-ink', direction: 'above' as const, text: t('accrual.chipAbove', { amount: money(curve.paceVsAvg) }) }"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 397,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": ": { tone: 'bg-emerald-300 text-accent-ink', direction: 'below' as const, text: t('accrual.chipBelow', { amount: money(-curve.paceVsAvg) }) };"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 480,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"md:hidden mt-2 w-full min-h-[44px] border-2 border-edge rounded-xl bg-hover text-[10px] font-black uppercase hover:bg-yellow-400 hover:text-accent-ink active:bg-accent-soft0\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 503,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<div className=\"bg-yellow-400 text-accent-ink p-3 md:p-4 rounded-xl border-4 border-edge\">"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 514,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "overPace === null ? 'bg-hover' : overPace ? 'bg-red-400 text-accent-ink' : 'bg-emerald-300 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 514,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": "overPace === null ? 'bg-hover' : overPace ? 'bg-red-400 text-accent-ink' : 'bg-emerald-300 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 38,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "className=\"bg-emerald-400 border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-8 py-4 md:py-6 flex flex-wrap items-center gap-4 md:gap-8 text-accent-ink font-black uppercase\""
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 52,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "`text-accent-ink` painted #000 on #0f172a in dark \u2014 1.18:1. LIGHT is"
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 52,
+      "occurrence": "#0f172a",
+      "category": "hex-literal",
+      "source": "`text-accent-ink` painted #000 on #0f172a in dark \u2014 1.18:1. LIGHT is"
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 53,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "byte-identical: --ink and --accent-ink are both #000 there; dark is"
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 54,
+      "occurrence": "#f8fafc",
+      "category": "hex-literal",
+      "source": "#f8fafc on #0f172a = 17.06:1. */}"
+    },
+    {
+      "file": "webapp/src/components/BillProjectionBanner.tsx",
+      "line": 54,
+      "occurrence": "#0f172a",
+      "category": "hex-literal",
+      "source": "#f8fafc on #0f172a = 17.06:1. */}"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 31,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "start: '#2563EB',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 32,
+      "occurrence": "#8B5CF6",
+      "category": "hex-literal",
+      "source": "add: '#8B5CF6',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 33,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "credit: '#059669',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 34,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "subtotal: '#FACC15',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 39,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "commodity: '#2563EB',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 40,
+      "occurrence": "#8B5CF6",
+      "category": "hex-literal",
+      "source": "delivery: '#8B5CF6',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 41,
+      "occurrence": "#A78BFA",
+      "category": "hex-literal",
+      "source": "regulatory: '#A78BFA',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 42,
+      "occurrence": "#F59E0B",
+      "category": "hex-literal",
+      "source": "tax: '#F59E0B',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 43,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "credit: '#059669',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 44,
+      "occurrence": "#FB923C",
+      "category": "hex-literal",
+      "source": "other: '#FB923C',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 45,
+      "occurrence": "#FB923C",
+      "category": "hex-literal",
+      "source": "gap: '#FB923C',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 46,
+      "occurrence": "#FB923C",
+      "category": "hex-literal",
+      "source": "drift: '#FB923C',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 47,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "subtotal: '#FACC15',"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 127,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'"
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 212,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<Bar dataKey=\"value\" stackId=\"w\" stroke=\"#000\" strokeWidth={2}>"
+    },
+    {
+      "file": "webapp/src/components/ChartView.tsx",
+      "line": 150,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-label={t('chart.prevAria')} onClick={() => navigatePeriod('prev')} className=\"no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none\"><ChevronLeft size={16} className=\"md:w-6 md:h-6\" strokeWidth={4} /></button>"
+    },
+    {
+      "file": "webapp/src/components/ChartView.tsx",
+      "line": 150,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-label={t('chart.prevAria')} onClick={() => navigatePeriod('prev')} className=\"no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none\"><ChevronLeft size={16} className=\"md:w-6 md:h-6\" strokeWidth={4} /></button>"
+    },
+    {
+      "file": "webapp/src/components/ChartView.tsx",
+      "line": 152,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-label={t('chart.nextAria')} onClick={() => navigatePeriod('next')} className=\"no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none\"><ChevronRight size={16} className=\"md:w-6 md:h-6\" strokeWidth={4} /></button>"
+    },
+    {
+      "file": "webapp/src/components/ChartView.tsx",
+      "line": 152,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-label={t('chart.nextAria')} onClick={() => navigatePeriod('next')} className=\"no-print min-h-11 min-w-11 inline-flex items-center justify-center p-1 md:p-2 border-2 md:border-4 border-edge rounded-lg md:rounded-xl hover:bg-yellow-400 hover:text-accent-ink active:bg-yellow-400 active:text-accent-ink shadow-hard-2 md:shadow-hard-4 active:translate-y-1 active:shadow-none\"><ChevronRight size={16} className=\"md:w-6 md:h-6\" strokeWidth={4} /></button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 83,
+      "occurrence": "bg-red-600",
+      "category": "utility-class",
+      "source": "<div role=\"alert\" data-testid=\"storage-notice\" className=\"flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase\">"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 83,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "<div role=\"alert\" data-testid=\"storage-notice\" className=\"flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase\">"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 550,
+      "occurrence": "border-yellow-400",
+      "category": "utility-class",
+      "source": "<div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-accent-soft' : 'border-edge bg-inset'} rounded-xl md:rounded-[2rem] text-center`}><div className=\"text-lg md:text-2xl font-black uppercase text-ink\">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 573,
+      "occurrence": "bg-red-50",
+      "category": "utility-class",
+      "source": "<div data-testid=\"parse-diagnostic\" role=\"alert\" className=\"mt-4 md:mt-6 border-4 border-edge bg-red-50 rounded-xl md:rounded-2xl p-4 md:p-6 text-left\">"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 592,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait\""
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 626,
+      "occurrence": "bg-red-600",
+      "category": "utility-class",
+      "source": "<button type=\"button\" onClick={confirmReset} title={t('reset.confirmTitle')} className=\"min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors\">{t('reset.confirm')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 626,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "<button type=\"button\" onClick={confirmReset} title={t('reset.confirmTitle')} className=\"min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors\">{t('reset.confirm')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 626,
+      "occurrence": "bg-red-700",
+      "category": "utility-class",
+      "source": "<button type=\"button\" onClick={confirmReset} title={t('reset.confirmTitle')} className=\"min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors\">{t('reset.confirm')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 691,
+      "occurrence": "#999999",
+      "category": "hex-literal",
+      "source": "#999999 = 2.84:1 at 10px (axe color-contrast \u2014 small text"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 692,
+      "occurrence": "#475569",
+      "category": "hex-literal",
+      "source": "needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 704,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 706,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 708,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<button type=\"button\" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 759,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "<button type=\"button\" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup=\"dialog\" className=\"bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4\">"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 759,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "<button type=\"button\" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup=\"dialog\" className=\"bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4\">"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 887,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "<button type=\"button\" onClick={() => setShowFloorHelp(false)} className=\"w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4\">{t('common.gotIt')}</button>"
+    },
+    {
+      "file": "webapp/src/components/Dashboard.tsx",
+      "line": 887,
+      "occurrence": "bg-blue-700",
+      "category": "utility-class",
+      "source": "<button type=\"button\" onClick={() => setShowFloorHelp(false)} className=\"w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4\">{t('common.gotIt')}</button>"
+    },
+    {
+      "file": "webapp/src/components/EfficiencyCard.tsx",
+      "line": 118,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "improving: 'bg-emerald-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/EfficiencyCard.tsx",
+      "line": 119,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "worsening: 'bg-red-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/EfficiencyCard.tsx",
+      "line": 412,
+      "occurrence": "#facc15",
+      "category": "hex-literal",
+      "source": "fill=\"#facc15\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 166,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "className=\"bg-emerald-400 text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 246,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "plan === 'ULO' ? 'bg-emerald-400 text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'"
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 277,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 292,
+      "occurrence": "bg-sky-100",
+      "category": "utility-class",
+      "source": "className=\"border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-100\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 305,
+      "occurrence": "bg-emerald-300",
+      "category": "utility-class",
+      "source": "className=\"bg-emerald-300 text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 379,
+      "occurrence": "bg-sky-100",
+      "category": "utility-class",
+      "source": "className=\"border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-100 text-[10px] md:text-xs font-bold normal-case text-accent-ink-2\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 439,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "className=\"bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6\""
+    },
+    {
+      "file": "webapp/src/components/EvScenarioCard.tsx",
+      "line": 480,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "className=\"mt-4 bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6\""
+    },
+    {
+      "file": "webapp/src/components/ExportCsvButton.tsx",
+      "line": 51,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "'hover:bg-yellow-400 hover:text-accent-ink active:translate-y-0.5 active:shadow-none transition-all ' +"
+    },
+    {
+      "file": "webapp/src/components/GreenButtonSync.tsx",
+      "line": 121,
+      "occurrence": "bg-green-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 px-2 md:px-3 flex items-center gap-1 bg-green-600 text-accent-ink font-black uppercase text-[10px] disabled:opacity-60\""
+    },
+    {
+      "file": "webapp/src/components/GreenButtonSync.tsx",
+      "line": 147,
+      "occurrence": "bg-green-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-edge rounded-xl md:rounded-2xl bg-green-600 text-accent-ink shadow-hard-blue-4 active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]\""
+    },
+    {
+      "file": "webapp/src/components/GreenButtonSync.tsx",
+      "line": 197,
+      "occurrence": "bg-green-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 py-3 px-5 bg-green-600 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60\""
+    },
+    {
+      "file": "webapp/src/components/GreenButtonSync.tsx",
+      "line": 224,
+      "occurrence": "bg-green-600",
+      "category": "utility-class",
+      "source": "className=\"mt-3 min-h-11 w-full py-3 md:py-4 bg-green-600 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all\""
+    },
+    {
+      "file": "webapp/src/components/HindsightPanel.tsx",
+      "line": 118,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "unknown ? 'bg-track' : 'bg-yellow-400 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 25,
+      "occurrence": "#10B981",
+      "category": "hex-literal",
+      "source": "'Off-Peak': '#10B981',"
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 26,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "'Mid-Peak': '#FACC15',"
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 27,
+      "occurrence": "#EF4444",
+      "category": "hex-literal",
+      "source": "'On-Peak': '#EF4444',"
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 28,
+      "occurrence": "#94A3B8",
+      "category": "hex-literal",
+      "source": "other: '#94A3B8',"
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 143,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<Bar dataKey=\"cents\" name=\"cents\" stroke=\"#000\" strokeWidth={1}>"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 112,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "open: { text: 'Estimate', cls: 'bg-yellow-400 text-accent-ink border-edge', key: 'money.badge.estimate' },"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 385,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-yellow-400 hover:text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 487,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<div className=\"bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3\">"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 554,
+      "occurrence": "#FFFFFF",
+      "category": "hex-literal",
+      "source": "on a dark chart a literal #FFFFFF here paints solid"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 615,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 628,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 662,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "stroke=\"#059669\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 715,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<line x1=\"0\" y1=\"5\" x2=\"34\" y2=\"5\" stroke=\"#000\" strokeWidth=\"3\" strokeDasharray={dash} />"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 729,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "<line x1=\"0\" y1=\"5\" x2=\"34\" y2=\"5\" stroke=\"#059669\" strokeWidth=\"4\" />"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 834,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<span className=\"text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 text-accent-ink border-edge\">"
+    },
+    {
+      "file": "webapp/src/components/MultiFileMerge.tsx",
+      "line": 139,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"mt-4 md:mt-6 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-5\""
+    },
+    {
+      "file": "webapp/src/components/MultiFileMerge.tsx",
+      "line": 194,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "className=\"flex-1 py-3 md:py-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/NotificationToggle.tsx",
+      "line": 185,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "availability === \"on\" ? \"bg-emerald-400 text-accent-ink\" : \"bg-yellow-400 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/NotificationToggle.tsx",
+      "line": 185,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "availability === \"on\" ? \"bg-emerald-400 text-accent-ink\" : \"bg-yellow-400 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/OpenPeriodPanel.tsx",
+      "line": 73,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"border-4 border-edge bg-yellow-400 text-accent-ink px-3 py-1 rounded-lg text-[10px] md:text-xs font-black\""
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 109,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge\""
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 223,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "text-accent-ink is #000 in both themes, which is what these"
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 227,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "? 'bg-emerald-400 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 229,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "? 'bg-red-400 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 244,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<div className=\"bg-yellow-400 text-accent-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge\">"
+    },
+    {
+      "file": "webapp/src/components/OverviewPanel.tsx",
+      "line": 265,
+      "occurrence": "bg-amber-300",
+      "category": "utility-class",
+      "source": "freshness?.stale ? 'bg-amber-300 text-accent-ink' : 'bg-hover'"
+    },
+    {
+      "file": "webapp/src/components/PeriodDeltaTable.tsx",
+      "line": 73,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "c.estimated ? 'bg-yellow-400 text-accent-ink' : 'bg-track'"
+    },
+    {
+      "file": "webapp/src/components/PlanCards.tsx",
+      "line": 165,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "{userPlan === plan.id && <div className=\"absolute top-2 right-2 md:top-4 md:right-4 bg-yellow-400 px-3 md:px-6 py-1 rounded-full border-2 border-edge font-black text-[8px] md:text-[10px] uppercase text-accent-ink shadow-sm flex items-center gap-1 md:gap-2\"><CheckCircle2 size={10} className=\"md:w-3 md:h-3\" /> <span className=\"hidden sm:inline\">{t('planCard.yourPlan')}</span><span className=\"sm:hidden\">{t('planCard.active')}</span></div>}"
+    },
+    {
+      "file": "webapp/src/components/PlanSwitchTimeline.tsx",
+      "line": 172,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "segment.counted ? 'bg-yellow-400 text-accent-ink' : 'bg-track text-ink-2'"
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 52,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "detected: 'bg-yellow-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 53,
+      "occurrence": "bg-blue-200",
+      "category": "utility-class",
+      "source": "declared: 'bg-blue-200 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 202,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 px-4 md:px-6 py-2 bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-yellow-300 active:bg-accent-soft0 transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 202,
+      "occurrence": "bg-yellow-300",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 px-4 md:px-6 py-2 bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg font-black text-[10px] md:text-xs uppercase hover:bg-yellow-300 active:bg-accent-soft0 transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 275,
+      "occurrence": "bg-red-100",
+      "category": "utility-class",
+      "source": "className=\"ml-auto min-h-11 min-w-11 px-3 border-2 border-edge rounded-lg bg-card hover:bg-red-100 active:bg-red-200 font-black text-xs uppercase\""
+    },
+    {
+      "file": "webapp/src/components/PlanTimelineEditor.tsx",
+      "line": 275,
+      "occurrence": "bg-red-200",
+      "category": "utility-class",
+      "source": "className=\"ml-auto min-h-11 min-w-11 px-3 border-2 border-edge rounded-lg bg-card hover:bg-red-100 active:bg-red-200 font-black text-xs uppercase\""
+    },
+    {
+      "file": "webapp/src/components/PlansPanel.tsx",
+      "line": 88,
+      "occurrence": "bg-purple-200",
+      "category": "utility-class",
+      "source": "className=\"bg-purple-200 border-2 md:border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-center gap-3 md:gap-6 text-accent-ink font-black uppercase\""
+    },
+    {
+      "file": "webapp/src/components/RateStalenessBanner.tsx",
+      "line": 32,
+      "occurrence": "bg-orange-400",
+      "category": "utility-class",
+      "source": "className=\"relative z-[100] bg-orange-400 p-4 md:p-6 rounded-xl md:rounded-[2rem] border-4 border-edge shadow-hard-8 text-accent-ink font-black uppercase space-y-3\""
+    },
+    {
+      "file": "webapp/src/components/RateStalenessBanner.tsx",
+      "line": 86,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "className=\"inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/RateStalenessBanner.tsx",
+      "line": 86,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "className=\"inline-flex items-center gap-2 bg-inv text-accent-orange px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl border-2 border-edge text-xs md:text-sm font-black uppercase hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 45,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "className=\"relative z-[100] bg-emerald-400 border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-6 px-4 md:px-6 py-3 md:py-4 flex flex-wrap items-start gap-3 md:gap-4 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 52,
+      "occurrence": "text-emerald-950",
+      "category": "utility-class",
+      "source": "<p className=\"text-[10px] md:text-xs font-bold normal-case text-emerald-950\">"
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 55,
+      "occurrence": "text-emerald-950/70",
+      "category": "utility-class",
+      "source": "<p className=\"text-[9px] md:text-[10px] font-black uppercase text-emerald-950/70\">"
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 72,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-inv text-accent-emerald border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 72,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-inv text-accent-emerald border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 96,
+      "occurrence": "bg-sky-300",
+      "category": "utility-class",
+      "source": "className=\"relative z-[100] bg-sky-300 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-center gap-3 md:gap-4 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 110,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "className=\"ml-auto min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-card text-ink border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/RefreshNoticeBanner.tsx",
+      "line": 110,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "className=\"ml-auto min-h-11 min-w-11 inline-flex items-center justify-center p-3 bg-card text-ink border-4 border-edge rounded-lg md:rounded-xl hover:bg-blue-600 hover:text-white transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 45,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "'very-consistent': 'bg-emerald-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 48,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "irregular: 'bg-red-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 53,
+      "occurrence": "bg-orange-400",
+      "category": "utility-class",
+      "source": "'plan-switch-required': 'bg-orange-400 text-accent-ink',"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 120,
+      "occurrence": "bg-blue-300",
+      "category": "utility-class",
+      "source": "className=\"inline-flex items-center border-2 border-edge rounded-full px-2 md:px-2.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase whitespace-nowrap bg-blue-300 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 146,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "rank === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 265,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "i === 0 ? 'bg-yellow-400 text-accent-ink' : 'bg-card'"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 287,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"bg-yellow-400 border-4 border-edge rounded-[1.25rem] md:rounded-[2rem] shadow-hard-6 p-4 md:p-7 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 327,
+      "occurrence": "bg-blue-300",
+      "category": "utility-class",
+      "source": "className=\"bg-blue-300 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-accent-ink\""
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 367,
+      "occurrence": "border-yellow-400",
+      "category": "utility-class",
+      "source": "<div className=\"bg-inv text-inv-ink p-5 md:p-8 rounded-[1.5rem] md:rounded-[3rem] border-4 border-yellow-400 shadow-hard-8 flex flex-wrap items-center justify-between gap-4\">"
+    },
+    {
+      "file": "webapp/src/components/ShiftOptimizer.tsx",
+      "line": 377,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "<div className=\"bg-yellow-400 text-accent-ink px-4 md:px-7 py-3 md:py-5 rounded-xl md:rounded-2xl border-4 border-white text-center\">"
+    },
+    {
+      "file": "webapp/src/components/ShiftVerificationCard.tsx",
+      "line": 18,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "improved: { box: 'bg-emerald-400 text-accent-ink', icon: <ArrowUpRight size={16} strokeWidth={4} /> },"
+    },
+    {
+      "file": "webapp/src/components/ShiftVerificationCard.tsx",
+      "line": 19,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "worse: { box: 'bg-red-400 text-accent-ink', icon: <ArrowDownRight size={16} strokeWidth={4} /> },"
+    },
+    {
+      "file": "webapp/src/components/ShiftVerificationCard.tsx",
+      "line": 20,
+      "occurrence": "bg-orange-400",
+      "category": "utility-class",
+      "source": "diverged: { box: 'bg-orange-400', icon: <Scale size={16} strokeWidth={4} /> },"
+    },
+    {
+      "file": "webapp/src/components/ShiftVerificationCard.tsx",
+      "line": 22,
+      "occurrence": "bg-blue-300",
+      "category": "utility-class",
+      "source": "'no-offpeak': { box: 'bg-blue-300', icon: <Scale size={16} strokeWidth={4} /> },"
+    },
+    {
+      "file": "webapp/src/components/ShiftVerificationCard.tsx",
+      "line": 37,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className={`border-2 md:border-4 border-edge rounded-xl md:rounded-2xl p-3 md:p-4 ${accent ? 'bg-yellow-400 text-accent-ink' : 'bg-card'}`}"
+    },
+    {
+      "file": "webapp/src/components/SwitchTrackRecord.tsx",
+      "line": 75,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "unknown ? 'bg-track' : 'bg-yellow-400 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/TempBandCard.tsx",
+      "line": 191,
+      "occurrence": "#facc15",
+      "category": "hex-literal",
+      "source": "fill=\"#facc15\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 83,
+      "occurrence": "bg-red-500",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-edge rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 83,
+      "occurrence": "text-white",
+      "category": "text-white",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-edge rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 83,
+      "occurrence": "bg-red-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 min-w-11 inline-flex items-center justify-center p-2 border-2 md:border-4 border-edge rounded-xl hover:bg-red-500 hover:text-white active:bg-red-600 transition-all\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 102,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-yellow-400 hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 152,
+      "occurrence": "bg-blue-600",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 active:bg-blue-700 transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/UsagePointPicker.tsx",
+      "line": 152,
+      "occurrence": "bg-blue-700",
+      "category": "utility-class",
+      "source": "className=\"min-h-11 flex-1 flex items-center justify-center gap-2 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs hover:bg-blue-600 active:bg-blue-700 transition-colors\""
+    },
+    {
+      "file": "webapp/src/components/VerdictLine.tsx",
+      "line": 38,
+      "occurrence": "bg-yellow-400",
+      "category": "utility-class",
+      "source": "className=\"bg-yellow-400 border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 text-accent-ink font-black uppercase text-[11px] md:text-sm shadow-hard-4\""
+    },
+    {
+      "file": "webapp/src/components/YearOverYearPanel.tsx",
+      "line": 171,
+      "occurrence": "bg-red-400",
+      "category": "utility-class",
+      "source": "? 'bg-red-400 text-accent-ink'"
+    },
+    {
+      "file": "webapp/src/components/YearOverYearPanel.tsx",
+      "line": 173,
+      "occurrence": "bg-emerald-400",
+      "category": "utility-class",
+      "source": "? 'bg-emerald-400 text-accent-ink'"
+    }
+  ],
+  "svg_chart_hex_occurrences": [
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 56,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}"
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 56,
+      "occurrence": "#F59E0B",
+      "category": "hex-literal",
+      "source": "fill={s.season === 'winter' ? '#2563EB' : '#F59E0B'}"
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 78,
+      "occurrence": "#2563EB",
+      "category": "hex-literal",
+      "source": "fill=\"#2563EB\""
+    },
+    {
+      "file": "webapp/src/components/BarChartPanel.tsx",
+      "line": 83,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 168,
+      "occurrence": "#7C3AED",
+      "category": "hex-literal",
+      "source": "stroke=\"#7C3AED\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 179,
+      "occurrence": "#7C3AED",
+      "category": "hex-literal",
+      "source": "fill=\"#7C3AED\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 234,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "stroke=\"#FACC15\""
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 264,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "<circle cx={x(curve.points.length)} cy={y(last.cumulative)} r={6} fill=\"#FACC15\" stroke=\"var(--ink)\" strokeWidth={3} />"
+    },
+    {
+      "file": "webapp/src/components/BillAccrualCurve.tsx",
+      "line": 314,
+      "occurrence": "#FACC15",
+      "category": "hex-literal",
+      "source": "stroke=\"#FACC15\""
+    },
+    {
+      "file": "webapp/src/components/BillWaterfall.tsx",
+      "line": 212,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<Bar dataKey=\"value\" stackId=\"w\" stroke=\"#000\" strokeWidth={2}>"
+    },
+    {
+      "file": "webapp/src/components/EfficiencyCard.tsx",
+      "line": 412,
+      "occurrence": "#facc15",
+      "category": "hex-literal",
+      "source": "fill=\"#facc15\""
+    },
+    {
+      "file": "webapp/src/components/HourCostHistogram.tsx",
+      "line": 143,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<Bar dataKey=\"cents\" name=\"cents\" stroke=\"#000\" strokeWidth={1}>"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 615,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 628,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "stroke=\"#000\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 662,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "stroke=\"#059669\""
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 715,
+      "occurrence": "#000",
+      "category": "hex-literal",
+      "source": "<line x1=\"0\" y1=\"5\" x2=\"34\" y2=\"5\" stroke=\"#000\" strokeWidth=\"3\" strokeDasharray={dash} />"
+    },
+    {
+      "file": "webapp/src/components/MoneyStackedChart.tsx",
+      "line": 729,
+      "occurrence": "#059669",
+      "category": "hex-literal",
+      "source": "<line x1=\"0\" y1=\"5\" x2=\"34\" y2=\"5\" stroke=\"#059669\" strokeWidth=\"4\" />"
+    },
+    {
+      "file": "webapp/src/components/TempBandCard.tsx",
+      "line": 191,
+      "occurrence": "#facc15",
+      "category": "hex-literal",
+      "source": "fill=\"#facc15\""
+    }
+  ],
+  "migration_report": {
+    "status": "migrated",
+    "verified_against_worktree": true,
+    "baseline_occurrences": 190,
+    "live_baseline_occurrences_remaining": 0,
+    "baseline_text_white_migrated_to": "text-on-dark",
+    "baseline_text_white_occurrences": 8,
+    "yellow_fill_migrated_to": "bg-accent",
+    "chart_svg_paint_migrated_to": "CSS custom properties in globals.css",
+    "comment_only_legacy_color_mentions": 11,
+    "exceptions": [],
+    "p4_decision": "deferred—not mapped to a safe current chart",
+    "p4_rationale": "Preserve EfficiencyCard's truthful dynamic all-in bill cents/kWh scale; do not force a 0–14¢ commodity-only domain or invent a rate-history chart without a real source/metric and dynamic-domain accessibility specification.",
+    "p4_mechanical_assertion": "not included in this candidate/QA gate",
+    "ink3_contrast_evidence": {
+      "light": {
+        "ink": "#666d7a",
+        "page": {"surface": "#f5f6f8", "ratio": 4.81},
+        "card": {"surface": "#ffffff", "ratio": 5.21},
+        "inset": {"surface": "#f8fafc", "ratio": 4.98},
+        "hover": {"surface": "#f1f5f9", "ratio": 4.75}
+      },
+      "dark": {
+        "ink": "#94a3b8",
+        "page": {"surface": "#020617", "ratio": 7.87},
+        "card": {"surface": "#0f172a", "ratio": 6.96},
+        "inset": {"surface": "#1e293b", "ratio": 5.71},
+        "hover": {"surface": "#263449", "ratio": 4.9}
+      },
+      "derived_from": "globals.css token declarations and WCAG relative-luminance formula"
+    }
+  },
+  "exceptions": []
+}

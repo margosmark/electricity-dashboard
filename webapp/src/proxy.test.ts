@@ -34,9 +34,13 @@ describe("x-gb-process proxy", () => {
     const csp = proxy().headers.get("Content-Security-Policy");
     expect(csp).toBeTruthy();
 
-    // The OEB page is proxied onto OUR origin, so same-origin script execution
-    // is the threat this controls. `object-src`/`base-uri`/`frame-ancestors`
-    // are the ones that cannot be worked around with markup.
+    // Same-origin script execution is the threat this controls — but note
+    // WHICH surface that sentence is about: this is the policy for this
+    // app's own pages. `/oeb-rates-page` (third-party HTML, a navigable
+    // document) is answered with a different, stricter policy — see the
+    // "sandbox" test below and src/lib/oebRouteCsp.ts. `object-src`/
+    // `base-uri`/`frame-ancestors` are the directives that cannot be worked
+    // around with markup on either surface.
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'none'");
@@ -105,6 +109,43 @@ describe("x-gb-process proxy", () => {
     );
   });
 
+  it("answers /oeb-rates-page with the SANDBOX policy — the F2 fix (t_9ae84620)", () => {
+    // F2 (t_0d85b1f8): this path serves www.oeb.ca's HTML as a navigable
+    // document on our origin, and the app-wide policy's `script-src
+    // 'unsafe-inline'` let OEB's 4 inline <script> blocks run here with this
+    // origin's localStorage in reach (browser-proven before the fix:
+    // window.a2a_config / dataLayer / $buoop all became objects).
+    //
+    // This is the layer that MATTERS: measured with curl against a production
+    // build (2026-11-09), Next applies these proxy headers AFTER the route
+    // handler's, so the route's own `content-security-policy` never reaches
+    // the browser — whatever this function returns for the path is the wire.
+    const csp = (url: string) => proxy(new NextRequest(url)).headers.get("Content-Security-Policy");
+
+    const oeb = csp("http://localhost:3000/oeb-rates-page");
+    expect(oeb).toBe("sandbox; default-src 'none'");
+    // Nothing in a sandboxed policy can permit inline script — the directive
+    // that opened F2 must be absent entirely, not merely overridden.
+    expect(oeb).not.toContain("unsafe-inline");
+
+    // The sandbox must not leak onto the app's own pages, and a near-miss
+    // path must not inherit it either (exact-path match, not prefix).
+    for (const url of [
+      "http://localhost:3000/",
+      "http://localhost:3000/import",
+      "http://localhost:3000/api/rates",
+      "http://localhost:3000/oeb-rates-page-clone",
+    ]) {
+      expect(csp(url), url).toContain("default-src 'self'");
+      expect(csp(url), url).not.toContain("sandbox");
+    }
+
+    // A query string is not a different path — pathname strips it, so the
+    // policy cannot be dodged by `?` … (and it is the shape /import's
+    // probe-style links take).
+    expect(csp("http://localhost:3000/oeb-rates-page?probe=1")).toBe("sandbox; default-src 'none'");
+  });
+
   it("ships the cheap companion headers", () => {
     const res = proxy();
     expect(res.headers.get("Permissions-Policy")).toContain("camera=()");
@@ -121,6 +162,10 @@ describe("x-gb-process proxy", () => {
     expect(re.test("/")).toBe(true);
     expect(re.test("/greenbutton/status")).toBe(true);
     expect(re.test("/api/rates")).toBe(true);
+    // The path whose CSP branch lives in `proxy()` — if the matcher ever stops
+    // covering it, that branch never runs and only the route's own header
+    // stands between OEB's inline scripts and this origin.
+    expect(re.test("/oeb-rates-page")).toBe(true);
     expect(re.test("/_next/static/chunks/x.js")).toBe(false);
     expect(re.test("/_next/static/media/font.woff2")).toBe(false);
     expect(re.test("/sw.js")).toBe(false);

@@ -22,10 +22,10 @@ import type { ProcessedPoint } from '@/lib/energy';
 import { fmtCents, fmtMoney, fmtNumber, periodLabel, planLabel, useTranslation } from '@/i18n';
 
 const WINDOW_COLOR: Record<string, string> = {
-  'Off-Peak': '#10B981',
-  'Mid-Peak': '#FACC15',
-  'On-Peak': '#EF4444',
-  other: '#94A3B8',
+  'Off-Peak': 'var(--chart-money-offpeak)',
+  'Mid-Peak': 'var(--chart-money-midpeak)',
+  'On-Peak': 'var(--chart-money-onpeak)',
+  other: 'var(--ink-3)',
 };
 
 const money = (n: number) => fmtMoney(n);
@@ -38,7 +38,8 @@ export default function HourCostHistogram({
   plan: PlanId;
 }) {
   const { t } = useTranslation();
-  const profile = useMemo(() => hourCostProfile(rows, plan), [rows, plan]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const profile = useMemo(() => hourCostProfile(rows, plan), [rows, plan, t]);
 
   return (
     <div
@@ -118,7 +119,7 @@ export default function HourCostHistogram({
                         <div className="text-[10px] font-bold text-ink-3">
                           {t('hourCost.tooltipDetail', {
                             cost: money(b.cost),
-                            kwh: b.kwh.toFixed(1),
+                            kwh: fmtNumber(b.kwh, 1),
                             window: periodLabel(b.dominant),
                           })}
                         </div>
@@ -139,7 +140,7 @@ export default function HourCostHistogram({
                     fontWeight: 900,
                   }}
                 />
-                <Bar dataKey="cents" name="cents" stroke="#000" strokeWidth={1}>
+                <Bar dataKey="cents" name="cents" stroke="var(--edge)" strokeWidth={1}>
                   {profile.buckets.map((b) => (
                     <Cell key={b.hour} fill={WINDOW_COLOR[b.dominant] ?? WINDOW_COLOR.other} />
                   ))}

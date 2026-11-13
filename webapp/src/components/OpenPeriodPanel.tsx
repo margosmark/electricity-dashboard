@@ -50,8 +50,7 @@ export default function OpenPeriodPanel({
     : null;
   const estimate = open ? open.totals.payable : 0;
   const metered = open?.usageTotal ?? 0;
-  const cents =
-    open && metered > 0 ? ((estimate / metered) * 100).toFixed(1) : null;
+  const cents = open && metered > 0 ? (estimate / metered) * 100 : null;
 
   return (
     <section
@@ -71,7 +70,7 @@ export default function OpenPeriodPanel({
         {open && (
           <span
             data-testid="open-period-badge"
-            className="border-4 border-edge bg-yellow-400 text-accent-ink px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
+            className="border-4 border-edge bg-accent text-accent-ink px-3 py-1 rounded-lg text-[10px] md:text-xs font-black"
           >
             {t('openPeriod.badge')}
           </span>
@@ -120,7 +119,7 @@ export default function OpenPeriodPanel({
                 kwh: fmtKwh(metered),
                 coverage: fmtPercent(Math.round(open.coverage * 100)),
               })}
-              {cents ? ` · ${fmtCents(Number(cents))}` : ''}
+              {cents !== null ? ` · ${fmtCents(cents)}` : ''}
             </div>
           </div>
         )}

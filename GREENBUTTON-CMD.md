@@ -310,18 +310,34 @@ value, only a `docker compose up -d`).
 
 ### After registration
 
-1. Oakville issues `client_id` / `client_secret` → put them in
-   `docker-compose.yml` as `GB_CLIENT_ID` / `GB_CLIENT_SECRET` (or an `.env`
-   next to it, which compose reads automatically) and `docker compose up -d`.
+1. Oakville issues `client_id` / `client_secret` → run the re-point ceremony
+   once, from the dev clone:
+
+   ```bash
+   GB_CONFIRM_GO_LIVE=yes webapp/scripts/greenbutton-repoint.sh --apply \
+       --host hermescomputer --env-file ~/.oakville-creds.env --loop-gate
+   ```
+
+   It validates the pair against Oakville's token endpoint, proves the
+   credentials reach `greenbutton-shim` and **not** the dashboard container,
+   writes the untracked `.env`, recreates the containers and re-verifies the
+   split and the notify gate. Full checklist, flags and rollback:
+   **[GREENBUTTON-REPOINT.md](GREENBUTTON-REPOINT.md)**. (The untracked `.env`
+   next to `docker-compose.yml` works too — `docker compose up -d`, no rebuild
+   — but then none of the checks run and a key typo looks exactly like
+   "Oakville has not issued them yet".)
 2. Connectivity Testing must be completed **within 90 days** of acceptance
    (agreement §2). That is the production loop: connect a real Oakville
    account, confirm readings land in localStorage, revoke in Oakville's UI,
    confirm the shim reports `grant_revoked` and wipes its token file.
    `webapp/scripts/e2e-greenbutton-loop.sh` is the smoke test to rerun after
    any change; point `GB_AUTHORIZE_URL` / `GB_TOKEN_URL` at the real endpoints
-   for a live variant.
+   for a live variant, or set `GB_E2E_TARGET=real` for the whole contract.
 3. If Oakville asks for a sandbox first, use the same flow with their sandbox
-   URLs — only the two env vars change.
+   URLs — `GB_AUTHORIZE_URL`/`GB_TOKEN_URL` in the untracked `.env`, then
+   `docker compose up -d`. Those two keys are named in `docker-compose.yml`
+   precisely so the ceremony can verify which custodian the container is
+   actually pointed at.
 
 ---
 
@@ -377,6 +393,19 @@ npm run build
 
 # End-to-end OAuth loop against a mock custodian (29 checks):
 ./scripts/e2e-greenbutton-loop.sh
+
+# Same loop against a REAL custodian (Oakville, or their sandbox) — nothing is
+# inlined, and the grant-gated sections report SKIP rather than pass when no
+# customer account is connected yet:
+GB_E2E_TARGET=real GB_E2E_EXTERNAL=1 BASE=https://electricity.markarslan.ca \
+  GB_E2E_ACCOUNT=0 GB_CLIENT_ID=… GB_CLIENT_SECRET=… GB_SCOPE=… \
+  GB_AUTHORIZE_URL=… GB_TOKEN_URL=… GB_NOTIFY_TOKEN=… \
+  ./scripts/e2e-greenbutton-loop.sh
+
+# The re-point ceremony (preflight now, one command at go-live) — see
+# GREENBUTTON-REPOINT.md:
+./scripts/greenbutton-repoint.sh --check --host hermescomputer --loop-gate
+./scripts/greenbutton-repoint.sh --rehearse --host hermescomputer --loop-gate
 
 # Same loop through the CONTAINERISED router topology (46 checks: 4 routing
 # + 4 upstream-recreate + 3 access-log canary + 6 security-header assertions

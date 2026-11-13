@@ -2,9 +2,10 @@
 
 /**
  * Client-side rate staleness check — runs ONCE PER SESSION, fetches the OEB
- * page through the stateless `/oeb-rates-page` rewrite (OEB has no CORS/JSON/
- * RSS — see next.config.ts), parses it with the shared pure parser, and
- * compares effectiveDate against the shipped /api/rates set.
+ * page through the stateless `/oeb-rates-page` same-origin route handler
+ * (formerly a next.config rewrite; OEB has no CORS/JSON/RSS — see
+ * src/app/oeb-rates-page/route.ts), parses it with the shared pure parser,
+ * and compares effectiveDate against the shipped /api/rates set.
  *
  * The session guard stores the RESULT (stale payload or clean marker), so the
  * banner stays persistent across reloads within the same tab session without

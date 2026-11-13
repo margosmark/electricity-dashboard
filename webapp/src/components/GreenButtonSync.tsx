@@ -11,12 +11,19 @@
  * The component never holds a credential: connect is a full-page navigation
  * to the shim's /greenbutton/start, and everything after that rides the
  * HttpOnly session cookie.
+ *
+ * INK (t_3e571ddb): the `bg-good-slab-deep` slab is a FIXED literal (#00a63e) that
+ * does not flip with the theme, so its ink is fixed too — `text-accent-ink`
+ * (#000 both themes, 6.52:1). It previously carried `text-white`, which
+ * measured 3.22:1 and went red on the theme-contrast walk the moment the
+ * ledger was emptied; the colour call's rule ("ink inside a fixed slab is
+ * fixed") is what decides this, not a re-pick of the green.
  */
 
 "use client";
 
 /* Wave U — user-visible copy translates; lib/hook code reads the module locale. */
-import { t, useTranslation } from "@/i18n";
+import { fmtNumber, t, useTranslation } from "@/i18n";
 import { RefreshCw, Link2, Unplug } from "lucide-react";
 import type { GbStatus } from "@/lib/greenbutton/client";
 
@@ -54,7 +61,7 @@ export function gbUiState(status: GbStatus | null): GbUiState {
 function lastSyncLine(status: GbStatus): string {
   if (!status.lastSyncAt) return t("gb.authorisedNoData");
   const at = new Date(status.lastSyncAt);
-  const mb = status.lastSyncBytes !== null ? ` · ${(status.lastSyncBytes / 1024).toFixed(0)} KB` : "";
+  const mb = status.lastSyncBytes !== null ? ` · ${fmtNumber(status.lastSyncBytes / 1024)} KB` : "";
   return `Synced ${at.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}${mb}`;
 }
 
@@ -69,12 +76,12 @@ export function GreenButtonSync({
         <div
           data-testid="gb-unconfigured"
           data-gb-state="unconfigured"
-          className="mt-4 md:mt-6 border-2 border-dashed border-edge/40 rounded-xl md:rounded-2xl p-4 text-left"
+          className="mt-4 md:mt-6 border border-dashed border-edge-muted rounded-lg p-4 text-left bg-inset"
         >
-          <div className="text-[11px] md:text-xs font-black uppercase text-ink-3">
+          <div className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">
             {t("gb.liveSyncTitle")}
           </div>
-          <p className="mt-1 text-[10px] md:text-xs font-bold text-ink-3 normal-case">
+          <p className="mt-1 text-[10px] md:text-xs font-medium text-ink-3 normal-case">
             {t("gb.notSwitchedOn")}
           </p>
         </div>
@@ -111,7 +118,7 @@ export function GreenButtonSync({
               disabled={syncing}
               title={lastSyncLine(status)}
               aria-label={t("gb.syncNowAria")}
-              className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-green-600 text-white font-black uppercase text-[10px] disabled:opacity-60"
+              className="min-h-11 px-2 md:px-3 flex items-center gap-1 bg-good-slab-deep text-accent-ink font-black uppercase text-[10px] disabled:opacity-60"
             >
               <RefreshCw size={14} strokeWidth={4} className={syncing ? "animate-spin" : ""} />
               <span className="hidden md:inline">
@@ -137,7 +144,7 @@ export function GreenButtonSync({
             type="button"
             data-testid="gb-connect"
             onClick={onConnect}
-            className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-edge rounded-xl md:rounded-2xl bg-green-600 text-white shadow-hard-blue-4 active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
+            className="min-h-11 px-2 md:px-3 flex items-center gap-1 border-4 border-edge rounded-xl md:rounded-2xl bg-good-slab-deep text-accent-ink shadow-hard-blue-4 active:translate-y-0.5 active:shadow-none transition-all font-black uppercase text-[10px]"
           >
             <Link2 size={14} strokeWidth={4} />
             <span className="hidden md:inline">{t("gb.authorise")}</span>
@@ -152,7 +159,7 @@ export function GreenButtonSync({
     <div
       data-testid="gb-connect-card"
       data-gb-state={state}
-      className="mt-4 md:mt-6 border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-left bg-inset"
+      className="mt-4 md:mt-6 border border-edge-muted rounded-lg p-4 md:p-5 text-left bg-inset"
     >
       <div className="flex items-center gap-2">
         <Link2 size={16} strokeWidth={4} />
@@ -187,7 +194,7 @@ export function GreenButtonSync({
               data-testid="gb-sync"
               onClick={onSync}
               disabled={syncing}
-              className="min-h-11 py-3 px-5 bg-green-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60"
+              className="min-h-11 py-3 px-5 bg-good-slab-deep text-accent-ink border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs transition-colors disabled:opacity-60"
             >
               {syncing ? t("gb.syncing") : t("gb.syncNow")}
             </button>
@@ -199,7 +206,7 @@ export function GreenButtonSync({
                   onDisconnect();
                 }
               }}
-              className="min-h-11 py-3 px-5 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs"
+              className="min-h-11 py-3 px-5 bg-card text-bad border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs"
             >
               {t("gb.disconnect")}
             </button>
@@ -214,7 +221,7 @@ export function GreenButtonSync({
             type="button"
             data-testid="gb-connect"
             onClick={onConnect}
-            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-green-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
+            className="mt-3 min-h-11 w-full py-3 md:py-4 bg-good-slab-deep text-accent-ink border border-edge-muted rounded-lg font-semibold uppercase text-[11px] md:text-xs transition-colors"
           >
             {t("gb.authorise")}
           </button>

@@ -1,0 +1,161 @@
+{
+  "screenshots": [
+    {
+      "file": "overview-1440-light.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "bars": 13,
+      "metrics": 4,
+      "theme": "light",
+      "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 92,
+        "width": 343.71875
+      },
+      "scopeTop": 92,
+      "dateInputs": [
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2026-10-06"
+        }
+      ],
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "bars": 13,
+      "metrics": 4,
+      "theme": "dark",
+      "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 92,
+        "width": 343.71875
+      },
+      "scopeTop": 92,
+      "dateInputs": [
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 152,
+          "height": 44,
+          "clientWidth": 152,
+          "scrollWidth": 152,
+          "value": "2026-10-06"
+        }
+      ],
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-390-light.png",
+      "viewport": 390,
+      "scroll": 390,
+      "bars": 13,
+      "metrics": 4,
+      "theme": "light",
+      "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 128,
+        "width": 358
+      },
+      "scopeTop": 190,
+      "dateInputs": [
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2026-10-06"
+        }
+      ],
+      "controlsBelow44": []
+    },
+    {
+      "file": "overview-390-dark.png",
+      "viewport": 390,
+      "scroll": 390,
+      "bars": 13,
+      "metrics": 4,
+      "theme": "dark",
+      "activePanel": "panel-overview",
+      "dateRange": {
+        "top": 128,
+        "width": 358
+      },
+      "scopeTop": 190,
+      "dateInputs": [
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2025-10-01"
+        },
+        {
+          "width": 159.140625,
+          "height": 44,
+          "clientWidth": 159,
+          "scrollWidth": 159,
+          "value": "2026-10-06"
+        }
+      ],
+      "controlsBelow44": []
+    },
+    {
+      "file": "plans-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "activePanel": "panel-plans"
+    },
+    {
+      "file": "money-1440-dark.png",
+      "viewport": 1440,
+      "scroll": 1440,
+      "activePanel": "panel-money"
+    }
+  ],
+  "interactions": [
+    {
+      "action": "keyboard-focus-rate-bar",
+      "focusedReadout": "OCT 25 · 9.5¢",
+      "accessibleName": "OCT 25: 9.5¢ average rate across 906 kilowatt-hours"
+    },
+    {
+      "action": "open-rate-data-table",
+      "rows": 13
+    },
+    {
+      "action": "select-plans-tab",
+      "selected": "true"
+    },
+    {
+      "action": "select-money-tab",
+      "selected": "true"
+    }
+  ],
+  "errors": [],
+  "ok": true
+}

@@ -1,3 +1,14 @@
+secrets:
+  acct_smtp_username:
+    # Empty, non-secret placeholder keeps the disabled stack startable. An
+    # enabled deployment must override this with its 0400 host secret path;
+    # config.ts rejects the empty placeholder and fails closed.
+    file: ${ACCT_SMTP_USERNAME_FILE:-./ops/account/empty-secret}
+  acct_smtp_password:
+    file: ${ACCT_SMTP_PASSWORD_FILE:-./ops/account/empty-secret}
+  acct_smtp_events_secret:
+    file: ${ACCT_SMTP_EVENTS_SECRET_FILE:-./ops/account/empty-secret}
+
 services:
   # ------------------------------------------------------------------
   # electricity.markarslan.ca on .110 — four containers, one host port.
@@ -22,6 +33,17 @@ services:
     build:
       context: ./webapp
       dockerfile: Dockerfile
+      # The commit this image stamps ITSELF with. The deploy runbook
+      # (`~/bin/deploy-energy-dashboard.sh` on .110) exports
+      # `GIT_SHA=$(git rev-parse HEAD)` before `docker compose up -d --build`,
+      # and the Dockerfile's builder stage runs
+      # `scripts/bump-build-info.mjs` with it in the environment, which
+      # COMPILES it into the bundle the image serves — so the deployed app
+      # answers its own commit at `GET /api/version`, and no runtime
+      # environment can relabel it. Unset ⇒ the app reports 'unknown' (a local
+      # build has no commit; it must never inherit someone else's).
+      args:
+        GIT_SHA: ${GIT_SHA:-}
     image: electricity-dashboard-energy-dashboard:latest
     container_name: energy-dashboard
     restart: always
@@ -44,6 +66,15 @@ services:
       GB_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       GB_REDIRECT_URI: https://electricity.markarslan.ca/greenbutton/callback
       GB_SCOPE: ${GB_SCOPE:-FB=1_3_4_5}
+      # Endpoints. The defaults ARE Oakville production (config.ts defaults to
+      # the same two URLs), so the re-point ceremony only sets these for a
+      # SANDBOX, or to pin a value explicitly rather than inheriting it from
+      # the build. They are named here because the ceremony's render check
+      # asserts what the CONTAINER received — an inherited default is not
+      # observable, and "which custodian is this stack actually talking to" is
+      # the one question a bad re-point gets wrong silently.
+      GB_AUTHORIZE_URL: ${GB_AUTHORIZE_URL:-https://greenbutton.oakvillehydro.com/oauth/authorize}
+      GB_TOKEN_URL: ${GB_TOKEN_URL:-https://greenbutton.oakvillehydro.com/oauth/token}
       # Notification URI path token. PINNED, not derived: the form records
       # this URL BEFORE Oakville issues the client secret, and a
       # secret-derived default would change the moment credentials arrive,
@@ -105,6 +136,9 @@ services:
       - "3000"
     environment:
       ACCT_ENABLED: ${ACCT_ENABLED:-false}
+      ACCT_DATA_DIR: /data
+      ACCT_DATA_DIR_HOST: ${ACCT_DATA_DIR:?set ACCT_DATA_DIR to an external uid-1001 directory - see OPERATIONS.md}
+      ACCT_REPO_HOST_DIR: ${ACCT_REPO_HOST_DIR:-${PWD}}
       ACCT_DB_PATH: /data/accounts.db
       ACCT_PUBLIC_ORIGIN: https://electricity.markarslan.ca
       # Shared with greenbutton-shim for the data_available fan-out. The
@@ -113,6 +147,19 @@ services:
       ACCT_INTERNAL_TOKEN: ${ACCT_INTERNAL_TOKEN:-}
       ACCT_RATES_URL: http://energy-dashboard:3000/api/rates
       ACCT_MAX_ACCOUNTS: ${ACCT_MAX_ACCOUNTS:-10}
+      # Verified mailbox registration/recovery. SMTP secrets are injected by
+      # the approved host secret mechanism; no values belong in this file.
+      ACCT_EMAIL_VERIFICATION_ENABLED: ${ACCT_EMAIL_VERIFICATION_ENABLED:-false}
+      ACCT_SMTP_HOST: ${ACCT_SMTP_HOST:-}
+      ACCT_SMTP_PORT: ${ACCT_SMTP_PORT:-}
+      ACCT_SMTP_TLS_MODE: ${ACCT_SMTP_TLS_MODE:-}
+      ACCT_SMTP_USERNAME_FILE: /run/secrets/acct_smtp_username
+      ACCT_SMTP_PASSWORD_FILE: /run/secrets/acct_smtp_password
+      ACCT_SMTP_EVENTS_SECRET_FILE: /run/secrets/acct_smtp_events_secret
+      ACCT_SMTP_HELO: ${ACCT_SMTP_HELO:-}
+      ACCT_SMTP_FROM: ${ACCT_SMTP_FROM:-}
+      ACCT_SMTP_REPLY_TO: ${ACCT_SMTP_REPLY_TO:-}
+      ACCT_SMTP_TIMEOUT_MS: ${ACCT_SMTP_TIMEOUT_MS:-}
       # Push is optional: without these three the account server still runs
       # sync and reports pushConfigured:false instead of failing to boot.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
@@ -121,7 +168,14 @@ services:
     volumes:
       # accounts.db is user data (ciphertext, but still theirs) — see the
       # backup story in OPERATIONS.md.
-      - ${ACCT_DATA_DIR:-./.account}:/data
+      - ${ACCT_DATA_DIR:?set ACCT_DATA_DIR to an external uid-1001 directory - see OPERATIONS.md}:/data
+    secrets:
+      - source: acct_smtp_username
+        target: acct_smtp_username
+      - source: acct_smtp_password
+        target: acct_smtp_password
+      - source: acct_smtp_events_secret
+        target: acct_smtp_events_secret
     depends_on:
       - energy-dashboard
 

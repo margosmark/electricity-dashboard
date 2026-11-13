@@ -1,0 +1,3952 @@
+[
+ {
+  "fields": {
+   "billingPeriod": "1766620800/2764800",
+   "billLastPeriod": "175760",
+   "billToDate": "175760",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "429000"
+   },
+   "qualityOfReading": "12",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "175760",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1771286400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1769558400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "18630",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "84740",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "34130",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1769385600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1766534400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1175000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "748000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "426569"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-4310",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "84740",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "161890",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "204037",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-11703",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "192334",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28700",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "33"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1769472000/2505600",
+   "billLastPeriod": "153060",
+   "billToDate": "153060",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "388000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "153060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1773792000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1772064000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "17610",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "79170",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "31910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1771977600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1769385600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1561000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1175000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "385801"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-4540",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "79170",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "153060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "204037",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-11703",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "192334",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "30"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1772064000/2332800",
+   "billLastPeriod": "117350",
+   "billToDate": "117350",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "270000"
+   },
+   "qualityOfReading": "12",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "117350",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1776297600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1774569600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "13500",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "55090",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "23010",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1774396800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1771977600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1829000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1561000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "268470"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-3160",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "55090",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "117350",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "204037",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-11703",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "192334",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "28"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1774483200/2764800",
+   "billLastPeriod": "84750",
+   "billToDate": "84750",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "177000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "84750",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1779148800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1777334400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "9750",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "32220",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "15250",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1777248000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1774396800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2005000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "1829000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "175997"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-1380",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "32220",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "84750",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "176410",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-6830",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "169580",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "33"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1777334400/2419200",
+   "billLastPeriod": "65450",
+   "billToDate": "65450",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "113000"
+   },
+   "qualityOfReading": "12",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "65450",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1781654400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1779926400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "7530",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "19930",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "9850",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1779753600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1777248000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2117000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2005000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "112360"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-770",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "19930",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "65450",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "176410",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-6830",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "169580",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "29"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1779840000/2332800",
+   "billLastPeriod": "132060",
+   "billToDate": "132060",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "349000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "132060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1784160000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1782432000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "15190",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "61570",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "28770",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1782172800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1779753600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2464000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2117000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "347022"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "-2380",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "61570",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "132060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "176410",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "-6830",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "169580",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "28"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1782259200/2764800",
+   "billLastPeriod": "85370",
+   "billToDate": "85370",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "162000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "85370",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1787011200"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1785283200"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "9210",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "26710",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "13930",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1785024000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1782172800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2625000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2464000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "161082"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "1310",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "26710",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "80070",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "161833",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "12038",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "173871",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "33"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1785110400/2592000",
+   "billLastPeriod": "119040",
+   "billToDate": "119040",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "297000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "119040",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1789603200"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1787875200"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "13690",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "48060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "24800",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1787702400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1785024000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2920000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2625000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "295317"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "3580",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "48060",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "119040",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "161833",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "12038",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "173871",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "31"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1787788800/2419200",
+   "billLastPeriod": "93330",
+   "billToDate": "93330",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "207000"
+   },
+   "qualityOfReading": "12",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "93330",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1792368000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1790553600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "10740",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "33500",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "17690",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1790208000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1787702400"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "3126000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "2920000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "205827"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "2490",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "33500",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "93330",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "161833",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "12038",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "173871",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "29"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ },
+ {
+  "fields": {
+   "billingPeriod": "1790294400/2678400",
+   "billLastPeriod": "72470",
+   "billToDate": "72470",
+   "costAdditionalLastPeriod": "0",
+   "currency": "124",
+   "overallConsumptionLastPeriod": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "0"
+   },
+   "currentBillingPeriodOverAllConsumption": {
+    "powerOfTenMultiplier": "-3",
+    "timeStamp": "1794016927",
+    "uom": "42",
+    "value": "113000"
+   },
+   "qualityOfReading": "19",
+   "statusTimeStamp": "1794016927"
+  },
+  "lines": [
+   {
+    "note": "Amount Due",
+    "amount": "72470",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Due Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1794873600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Bill Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1793145600"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "HST ($)",
+    "amount": "7620",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Gas Supply Charge",
+    "amount": "17450",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "3"
+   },
+   {
+    "note": "Gas Delivery Variable Charge",
+    "amount": "9800",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Federal Carbon Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "5"
+   },
+   {
+    "note": "Billing Period - Current Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1792972800"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Billing Period - Previous Read Date",
+    "amount": null,
+    "measurement": {
+     "uom": "27",
+     "potm": "0",
+     "value": "1790208000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Current Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "3238000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Meter Read",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-3",
+     "value": "3126000"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Usage (unadjusted)",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "112360"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Balance ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Payments Received ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "9"
+   },
+   {
+    "note": "Balance Forward ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Transportation Charge ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Gas Cost Adjustment ($)",
+    "amount": "2510",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Charges from Other Companies ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Service Provider Admin Fee ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Gas Service Provider Supply Charge ($)",
+    "amount": "17450",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   },
+   {
+    "note": "Total Gas Charges ($)",
+    "amount": "66290",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Other Gas Charges ($)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Adjustment Factor (atmospheric)",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-6",
+     "value": "1005700"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Reversal of Previously billed charges",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Supply Rate \u00a2/m3",
+    "amount": "153548",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Gas Cost Adjustment \u00a2/m3",
+    "amount": "23461",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Total Gas Supply Rate \u00a2/m3 (net)",
+    "amount": "177009",
+    "measurement": {
+     "uom": "80",
+     "potm": "-4",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Customer charge",
+    "amount": "28910",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Hydrogen Blended credit",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Direct Purchase Admin Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "4"
+   },
+   {
+    "note": "Expansion Surcharge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Pressure factor",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "-14",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Previous Usage consumption",
+    "amount": null,
+    "measurement": {
+     "uom": "167",
+     "potm": "-3",
+     "value": "0"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Number of days in bill period",
+    "amount": null,
+    "measurement": {
+     "uom": "114",
+     "potm": "0",
+     "value": "32"
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Contract Demand charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Load Balancing Charge",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "10"
+   },
+   {
+    "note": "Transportation to Enbridge (LVB)",
+    "amount": "0",
+    "measurement": {
+     "uom": "80",
+     "potm": "-3",
+     "value": null
+    },
+    "itemKind": "2"
+   }
+  ]
+ }
+]

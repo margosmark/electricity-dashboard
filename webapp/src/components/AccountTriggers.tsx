@@ -39,6 +39,7 @@
 import { useEffect, useRef } from "react";
 import type { Anomaly } from "@/lib/energy";
 import { notify } from "@/lib/account/client";
+import { fmtNumber, fmtNumberAuto } from "@/i18n";
 
 /** Session-scoped marker: "we already asked the server about this event". */
 const SENT_MARKER = "account_anomaly_notified";
@@ -79,7 +80,7 @@ export function AccountTriggers({ anomalies, thresholdRatio = 1.5 }: Props) {
     sentFor.current = key;
     const date = worst!.date;
     const title = `Unusual usage on ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-    const body = `${Math.round(worst!.usage)} kWh that day — about ${(worst!.usage / worst!.expected).toFixed(1)}x the usual for a ${date.toLocaleDateString(undefined, { weekday: "long" })}.`;
+    const body = `${fmtNumber(Math.round(worst!.usage))} kWh that day — about ${fmtNumberAuto(worst!.usage / worst!.expected, 1)}x the usual for a ${date.toLocaleDateString(undefined, { weekday: "long" })}.`;
 
     void notify({ topic: "anomaly", title, body })
       .then(() => {

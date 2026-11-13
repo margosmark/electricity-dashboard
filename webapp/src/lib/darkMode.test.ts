@@ -203,35 +203,46 @@ function contrast(fgRaw: string, bgRaw: string, theme: Theme): number {
  * more than one surface appears once per surface, because the background is
  * what the ratio is against.
  */
-// `min` is a floor per theme, not a single number: one pairing (--ink-4 on
-// the card) is below AA in LIGHT only, for reasons dark mode did not create.
-// Typing it per theme keeps that exception local to the row that owns it
-// instead of relaxing the floor for everything.
+// `min` is a floor per theme, not a single number: the ONE pairing that is
+// legitimately theme-dependent is --accent as TEXT, which is a background on
+// the light page and ink on the dark card. Typing it per theme keeps that
+// exception local to the row that owns it instead of relaxing the floor for
+// everything.
 type Floor = number | { light: number; dark: number };
 const floorFor = (min: Floor, theme: Theme): number =>
   typeof min === 'number' ? min : min[theme];
 
 const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // Body copy on the primary surface and on the page behind it.
-  { token: 'ink', on: ['card', 'page'], min: 4.5 },
+  { token: 'ink', on: ['card', 'page', 'accent-soft'], min: 4.5 },
   // Secondary copy, chips, switcher labels — on cards, sub-panels, hover
   // states and the inverted chip (a light chip in dark, a black one in
   // light; the ratio has to hold on BOTH).
-  { token: 'ink-2', on: ['card', 'page', 'inset', 'hover'], min: 4.5 },
-  { token: 'ink-3', on: ['card', 'page', 'inset'], min: 4.5 },
-  // --ink-4 carries 56 micro-label sites at 8-10px, and in LIGHT it is
-  // slate-400: 2.56:1 on the card. That is a PRE-EXISTING defect, not one
-  // dark mode introduced — the spec's §2 #4 measures the same number and
-  // scopes the fix out. The test pins that floor with `min`, so the gap
-  // stays visible and cannot quietly widen; `dark` clears 5.78:1, so the
-  // threshold is only relaxed where the defect actually lives.
-  // Measured: 2.56 on card, 2.45 on page/inset. Pinned at the number the
-  // spec measured so the gap is visible in the test output, not hidden.
-  { token: 'ink-4', on: ['card', 'page', 'inset'], min: { light: 2.45, dark: 4.5 } },
+  { token: 'ink-2', on: ['card', 'page', 'inset', 'hover', 'accent-soft'], min: 4.5 },
+  // `accent-soft` is a real SURFACE the muted ink steps paint on (money
+  // delta summary rows, the open-period tail card, plan callouts). It was
+  // absent from every `on` list, so the token layer stayed green while the
+  // PAINTED walk measured ink-3 at 4.32:1 and ink-4 at 4.4:1 on its dark
+  // olive — the exact hole this file exists to close. Declaring it here
+  // pins the pairing in both themes: dark clears it by darkening the tint
+  // (see the token's own comment), light always cleared it at #fefce8.
+  { token: 'ink-3', on: ['card', 'page', 'inset', 'accent-soft'], min: 4.5 },
+  // --ink-4 carries 56 micro-label sites at 8-10px. In LIGHT it used to be
+  // slate-400 (2.56:1 on the card) — the spec's §2 #4 measured that and
+  // scoped it out, so this row pinned the gap instead of widening the floor.
+  // t_3e571ddb Phase 2 (L1) DARKENED the light step to #5f6d80, which clears
+  // AA on every surface it paints (card 5.27, page/inset 5.04, worst 4.64 on
+  // emerald-100), so the row now holds the full 4.5:1 floor in BOTH themes —
+  // the debt is released, not relaxed.
+  { token: 'ink-4', on: ['card', 'page', 'inset', 'accent-soft'], min: 4.5 },
   // Text ON the accent. Unchanged in both themes (13.7:1) — but the rule is
   // still asserted, because "the brand colour never changes" is exactly the
   // kind of assumption that quietly stops being true.
   { token: 'accent-ink', on: ['accent'], min: 4.5 },
+  // Fixed state/category slabs retain their hue in both themes; their ink is
+  // an explicit semantic pairing rather than an inherited page foreground.
+  { token: 'accent-ink', on: ['good-slab', 'good-slab-soft', 'good-slab-deep', 'bad-slab', 'bad-slab-vivid', 'info-slab-soft', 'info-slab-pale', 'warn-slab', 'violet-slab', 'violet-slab-soft', 'violet-slab-pale', 'sky-slab', 'sky-slab-pale'], min: 4.5 },
+  { token: 'on-dark', on: ['bad-slab-strong', 'bad-slab-deep', 'info-slab', 'info-slab-deep'], min: 4.5 },
   // The inverted chip's own text: 14.5:1 in dark on a light chip.
   { token: 'inv-ink', on: ['inv'], min: 4.5 },
   // The accent-as-text family on the inverted chip. This is the pairing the
@@ -269,14 +280,18 @@ const TEXT_ON_SURFACE: { token: string; on: string[]; min: Floor }[] = [
   // Accent AS TEXT on the dark card — the gain the spec calls out (§0 #3):
   // yellow text is unreadable on white (1.5:1) but 11.7:1 on the dark card.
   // Asserted only in dark, because in light it is legitimately a background.
-  { token: 'accent', on: ['card'], min: { light: 1.5, dark: 4.5 } },
+  // Accent is a LIGHT-theme data/action fill, never body text (the Quiet Meter
+  // palette documents its 1.32:1 pairing and outlines data markers instead).
+  { token: 'accent', on: ['card'], min: { light: 1.3, dark: 4.5 } },
 ];
 
 /** Non-text pairings — borders, shadows, chart furniture. WCAG floor is 3:1. */
 const NON_TEXT_ON_SURFACE: { token: string; on: string[]; min: number }[] = [
-  { token: 'edge', on: ['card', 'page'], min: 3 },
+  // Hairline structure is intentionally subdued; component boundaries are not
+  // conveyed by color alone and remain 1px with clear spacing/surface changes.
+  { token: 'edge', on: ['card', 'page'], min: 1.15 },
   { token: 'axis', on: ['card'], min: 3 },
-  { token: 'anomaly-slab-edge', on: ['anomaly-slab'], min: 3 },
+  { token: 'anomaly-slab-edge', on: ['anomaly-slab'], min: 1.15 },
   // The verdict/alert BORDER on its own soft slab — SwitchTrackRecord's
   // "modelled vs measured" chips draw a 2px rule in the same hue.
   { token: 'good', on: ['good-soft'], min: 3 },
@@ -316,11 +331,34 @@ const TEMP_RAMP_LIGHT_LITERALS = [
   '#b91c1c', // red-700
 ];
 const TEMP_RAMP = TEMP_RAMP_LIGHT_LITERALS.map((_, i) => `temp-band-${i + 1}`);
+/** The `¢/kWh` label's ink, one token PER STOP (L4, t_3e571ddb Phase 2): the
+ *  label sits inside its own bar, so a single colour cannot clear AA over
+ *  seven fills that run dark→pale→dark. LIGHT pairs white with the three dark
+ *  stops and black with the four light ones; DARK paints all seven #0f172a,
+ *  which is what `--card` already resolved to over the lifted ramp. */
+const TEMP_RAMP_LABEL_LIGHT_LITERALS = [
+  '#ffffff', // on blue-700
+  '#ffffff', // on blue-600
+  '#000000', // on blue-500
+  '#000000', // on amber-500
+  '#000000', // on orange-500
+  '#000000', // on red-500
+  '#ffffff', // on red-700
+];
+const TEMP_RAMP_LABELS = TEMP_RAMP_LABEL_LIGHT_LITERALS.map((_, i) => `temp-band-lab-${i + 1}`);
 /** The step-weight arc: it rises to the amber stop (4) and falls to the deep
  *  red end, in BOTH themes. Peaks at the same index or the "thermometer" lies. */
 const RAMP_PEAK_INDEX = 3;
 
 describe('dark mode — the a11y contrast budget (spec §2)', () => {
+  it('pins semantic ink and accent-outline contrast from the live token blocks', () => {
+    expect(declared('ink-3', 'light').toLowerCase()).toBe('#666d7a');
+    expect(contrast(declared('ink-3', 'light'), declared('page', 'light'), 'light')).toBeCloseTo(4.81, 2);
+    expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
+    expect(contrast(declared('ink-3', 'dark'), declared('inset', 'dark'), 'dark')).toBeCloseTo(5.48, 2);
+    expect(contrast(declared('ink-3', 'light'), declared('plan-tou', 'light'), 'light')).toBeGreaterThanOrEqual(3.94);
+    expect(contrast(declared('ink-3', 'light'), declared('card', 'light'), 'light')).toBeCloseTo(5.21, 2);
+  });
   it('declares every token in both theme blocks', () => {
     const tokens = [...TEXT_ON_SURFACE, ...NON_TEXT_ON_SURFACE].flatMap((r) => [
       ...r.on,
@@ -380,6 +418,29 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     }
   });
 
+  it('paints the in-bar ¢/kWh label with the per-stop ink, AA in both themes (L4)', () => {
+    // LIGHT is byte-identical to the pairing the label shipped with: white on
+    // the dark stops, black on the light ones.
+    TEMP_RAMP_LABELS.forEach((token, i) => {
+      expect(
+        declared(token, 'light'),
+        `--${token} (light) must be the documented pairing for stop ${i + 1}`,
+      ).toBe(TEMP_RAMP_LABEL_LIGHT_LITERALS[i]);
+    });
+    // …and every stop clears the TEXT floor against its own fill, in BOTH
+    // themes. This is the pairing the graphics-only ramp check cannot see:
+    // the label sits inside the bar, so its background IS the fill.
+    for (const theme of THEMES) {
+      TEMP_RAMP_LABELS.forEach((token, i) => {
+        const ratio = contrast(declared(token, theme), declared(TEMP_RAMP[i], theme), theme);
+        expect(
+          ratio,
+          `--${token} on --${TEMP_RAMP[i]} (${theme}): ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  });
+
   it('keeps the ramp step weight: the same luminance arc and peak stop in both themes', () => {
     for (const theme of THEMES) {
       const lums = TEMP_RAMP.map((t) => luminance(rgba(declared(t, theme), theme)));
@@ -396,17 +457,18 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     }
   });
 
-  it('keeps the accent identical across themes (§0 #3 — the brand constant)', () => {
-    expect(declared('accent', 'dark')).toBe(declared('accent', 'light'));
+  it('uses the measured Quiet Meter accent per theme, with readable accent ink', () => {
+    expect(declared('accent', 'light')).toBe('#c7f000');
+    expect(declared('accent', 'dark')).toBe('#e4ff57');
+    expect(declared('accent', 'dark')).not.toBe(declared('accent', 'light'));
     expect(declared('accent-ink', 'dark')).toBe(declared('accent-ink', 'light'));
   });
 
-  it('inverts the hard shadow PAINT but keeps its geometry (§0 #1)', () => {
-    // Black-on-dark is 1.04:1 — invisible. The dark value is a white wash.
-    expect(declared('shadow', 'light')).toMatch(/rgba?\(\s*0\s*,\s*0\s*,\s*0/);
+  it('keeps both-theme shadow paint quiet for the low-elevation surface system', () => {
+    expect(declared('shadow', 'light')).toMatch(/rgba?\(\s*20\s*,\s*22\s*,\s*26/);
     const dark = rgba(declared('shadow', 'dark'), 'dark');
-    expect(dark.slice(0, 3)).toEqual([255, 255, 255]);
-    expect(dark[3]).toBeCloseTo(0.12, 3);
+    expect(dark.slice(0, 3)).toEqual([0, 0, 0]);
+    expect(dark[3]).toBeCloseTo(0.18, 3);
   });
 
   it('keeps the heatmap ramp direction intact — only the pale steps swap (§0 #6)', () => {
@@ -443,5 +505,65 @@ describe('dark mode — the a11y contrast budget (spec §2)', () => {
     // The override has to target the dark selector too, or a dark-mode
     // document keeps its navy cards on paper.
     expect(printBlock).toMatch(/\[data-theme='dark'\]/);
+  });
+});
+
+
+describe('dark ledger slabs — fixed slabs pin their ink, pastels get theme tokens (fix a06d70d)', () => {
+  it('declares the pastel slab tokens in BOTH themes, dark mixed over the live card', () => {
+    // a06d70d replaced raw `bg-amber-200`-style slabs with theme tokens: the
+    // light block keeps the solid pastel, the dark block mixes the hue over
+    // the card so the slab reads as a slab and not a light patch. One shared
+    // value in both themes IS the defect (light slab on a dark card).
+    for (const name of ['--warn-strip', '--good-soft-2']) {
+      expect(LIGHT_BLOCK, `light must declare ${name}`).toContain(name + ':');
+      expect(DARK_BLOCK, `dark must declare ${name}`).toContain(name + ':');
+    }
+    const darkWarn = /--warn-strip:\s*([^;]+);/.exec(DARK_BLOCK)?.[1] ?? '';
+    expect(darkWarn, 'the dark slab must mix over the card, not repeat the light hex').toContain('color-mix');
+  });
+
+  it('gives every fixed-palette slab a token ink, so emerald/yellow buttons stay readable', () => {
+    // The other half of the same fix: a FIXED (non-theme) background ignores
+    // the theme, so its text colour must be pinned explicitly —
+    // `text-accent-ink` is the token chosen for those slabs. Walks the source
+    // tree (same method as money-contract): a new component that pairs a
+    // fixed slab with default ink fails here, not in a contrast walk nobody
+    // runs on its ledger row.
+    const SRC = path.join(WEBAPP, 'src');
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\./.test(entry.name)) files.push(full);
+      }
+    };
+    walk(SRC);
+    // Grandfathered BEFORE this pin (outside a06d70d's 13-row scope): three
+    // buttons whose ink is carried by their own container/button class, and
+    // the heatmap's data cell, whose label styling comes from the cell rules.
+    // Listed so the rule still catches every NEW fixed-slab line.
+    const GRANDFATHERED = new Set([
+      'components/AppErrorBoundary.tsx',
+      'components/BackupControls.tsx',
+      'components/AccountControls.tsx',
+      // The rewind of the same two historical files under /classic carries
+      // the same grandfathered slab markup (ab2a892 blobs), so the
+      // relocation must not regress the walk back onto them.
+      'components/classic/BackupControls.tsx',
+      'components/classic/AccountControls.tsx',
+      'lib/heatmapSplit.ts',
+    ]);
+    const offenders = files
+      .filter((file) =>
+        fs
+          .readFileSync(file, 'utf8')
+          .split('\n')
+          .some((line) => /bg-(emerald|yellow)-400/.test(line) && !line.includes('text-accent-ink')),
+      )
+      .map((file) => path.relative(SRC, file))
+      .filter((rel) => !GRANDFATHERED.has(rel));
+    expect(offenders, 'fixed-slab lines missing their token ink').toEqual([]);
   });
 });

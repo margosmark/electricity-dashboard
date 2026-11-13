@@ -7,7 +7,7 @@
 #                             ├─ /account/*          → account-server  (verifiers, VAPID key)
 #                             └─ everything else     → energy-dashboard (no creds)
 #
-# It reuses the 29 checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
+# It reuses the checks in e2e-greenbutton-loop.sh (GB_E2E_EXTERNAL=1) and
 # adds what only makes sense at the edge: which location the router matched
 # and which container actually answered, whether a credential-bearing query
 # string reaches the access log, the baseline security headers on a real
@@ -19,11 +19,15 @@
 # (`/account/internal/*` → 403 from nginx). The account leg runs in BOTH
 # states, because "off" is what ships by default: off first (the public
 # surface unchanged), then with ACCT_ENABLED=true, where the pairing and the
-# real register/login/sync matrix (`tests/e2e/account_smoke.sh`) run through
-# the router — the only way to exercise them the way a browser reaches them.
+# closed, enumeration-safe registration surface (`tests/e2e/account_smoke.sh`)
+# run through the router. The enabled leg only checks the signed-out session,
+# generic registration-pending responses and registration-closed route methods;
+# it does NOT exercise authenticated registration/login/sync lifecycle.
+# Those lifecycle fixtures live in webapp/src/lib/account/account.test.ts and
+# route-matrix.test.ts.
 #
-# Nothing in this script touches the live stack: the router binds 3940, the
-# mock 8099, and every container name is prefixed gb-topo-.
+# Nothing in this script touches the live stack: the router/mock use dedicated
+# configurable host ports, and every container name is prefixed gb-topo-.
 #
 # Usage: webapp/scripts/e2e-greenbutton-topology.sh   (from anywhere; it cds)
 
@@ -34,6 +38,7 @@ WEBAPP="$(cd "$HERE/.." && pwd)"
 REPO="$(cd "$WEBAPP/.." && pwd)"
 COMPOSE_FILE="$REPO/ops/edge/topology-test.compose.yml"
 PORT="${PORT:-3940}"
+MOCK_PORT="${GB_TOPO_MOCK_PORT:-8099}"
 BASE="http://localhost:$PORT"
 PASS=0
 FAIL=0
@@ -46,7 +51,7 @@ check() { # check <label> <condition-exit-status>
   fi
 }
 
-IMAGE="electricity-dashboard-energy-dashboard:latest"
+IMAGE="${GB_TOPO_APP_IMAGE:-electricity-dashboard-energy-dashboard:latest}"
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "ERROR: $IMAGE not built here. Run: docker compose build" >&2
   exit 1
@@ -54,7 +59,7 @@ fi
 
 # The router runs the BUILT edge-router image (ops/edge/Dockerfile), so the
 # gate exercises the nginx config that actually ships to production.
-ROUTER_IMAGE="electricity-dashboard-edge-router:latest"
+ROUTER_IMAGE="${GB_TOPO_ROUTER_IMAGE:-electricity-dashboard-edge-router:latest}"
 if ! docker image inspect "$ROUTER_IMAGE" >/dev/null 2>&1; then
   echo "ERROR: $ROUTER_IMAGE not built here. Run: docker compose build" >&2
   exit 1
@@ -67,17 +72,30 @@ chmod 777 "$TOKEN_DIR"
 
 # The account server runs as the same uid (1001 `nextjs`) and creates its
 # SQLite file — plus the `-wal`/`-shm` siblings — INSIDE this mount, so the
-# directory has to be writable by it. Throwaway like TOKEN_DIR: the account
-# leg registers real accounts against it and the whole tree is deleted after.
+# directory has to be writable by it. Throwaway like TOKEN_DIR: the closed
+# registration flow touches no rows, and the temporary tree is deleted after.
 ACCT_DIR="$(mktemp -d)"
-chmod 777 "$ACCT_DIR"
+chmod 700 "$ACCT_DIR"
+HOST_UID="$(id -u)"
+HOST_GID="$(id -g)"
+# The host operator is normally non-root, so host chown cannot assign uid
+# 1001. Use the already-built app image as a disposable root helper: the bind
+# mount is only this unique throwaway directory, and account-server still
+# enforces its uid/mode contract independently at startup.
+if ! docker run --rm --user 0 --entrypoint sh \
+  -v "$ACCT_DIR:/data" "$IMAGE" \
+  -c 'chown 1001:1001 /data && chmod 700 /data'; then
+  echo "ERROR: could not provision disposable account data directory as uid 1001" >&2
+  rm -rf "$TOKEN_DIR" "$ACCT_DIR"
+  exit 1
+fi
 
 # The mock has to be reachable from TWO places with ONE URL: the shim
 # container (over the network) and the curl "browser" running on this host.
 HOST_IP="${GB_TOPO_HOST_IP:-$(hostname -I | awk '{print $1}')}"
 export GB_TOPO_TOKEN_DIR="$TOKEN_DIR"
-export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:8099"
 export GB_TOPO_ACCT_DIR="$ACCT_DIR"
+export GB_TOPO_REPO_DIR="$REPO"
 # The shipping default, stated explicitly rather than relied on as a compose
 # default: section 0d flips this and recreates the container.
 export GB_TOPO_ACCT_ENABLED=false
@@ -86,8 +104,19 @@ cleanup() {
   docker rm -f gb-topo-iphold-1 gb-topo-iphold-2 gb-topo-iphold-3 >/dev/null 2>&1 || true
   if [ "$FAIL" -eq 0 ]; then
     docker compose -p gb-topo -f "$COMPOSE_FILE" down --remove-orphans >/dev/null 2>&1
-    rm -rf "$TOKEN_DIR" "$ACCT_DIR"
-    printf '\nTOPOLOGY OK — %d checks passed\n' "$PASS"
+    # account-server creates files in a uid-1001 mode-0700 bind mount. Give
+    # the invoking host user ownership back before removing the disposable dir.
+    if ! docker run --rm --user 0 --entrypoint sh -v "$ACCT_DIR:/data" "$IMAGE" \
+      -c "chown $HOST_UID:$HOST_GID /data && chmod 700 /data"; then
+      echo "ERROR: could not restore host ownership of the disposable account data dir" >&2
+      FAIL=$((FAIL + 1))
+    fi
+    if [ "$FAIL" -eq 0 ]; then
+      rm -rf "$TOKEN_DIR" "$ACCT_DIR"
+      printf '\nTOPOLOGY OK — %d checks passed\n' "$PASS"
+    else
+      printf '\nTOPOLOGY FAILED — %d passed, %d failed\n' "$PASS" "$FAIL"
+    fi
   else
     printf '\nTOPOLOGY FAILED — %d passed, %d failed\n' "$PASS" "$FAIL"
     printf '  token dir (kept for inspection): %s\n' "$TOKEN_DIR"
@@ -98,14 +127,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for p in "$PORT" 8099; do
+for p in "$PORT" "$MOCK_PORT"; do
   if ss -ltnH "sport = :$p" | grep -q .; then
     echo "ERROR: host port $p is already in use — free it first." >&2
     exit 1
   fi
 done
 
-echo "== bringing up the topology stack (router:$PORT mock:8099) =="
+echo "== bringing up the topology stack (router:$PORT mock:$MOCK_PORT) =="
+export GB_TOPO_PORT="$PORT" GB_TOPO_MOCK_PORT="$MOCK_PORT"
+export GB_TOPO_APP_IMAGE="$IMAGE" GB_TOPO_ROUTER_IMAGE="$ROUTER_IMAGE"
+export GB_TOPO_MOCK_ORIGIN="http://$HOST_IP:$MOCK_PORT"
+export GB_TOPO_PUBLIC_ORIGIN="http://localhost:$PORT"
 if ! docker compose -p gb-topo -f "$COMPOSE_FILE" up -d; then
   echo "ERROR: compose up failed" >&2
   FAIL=$((FAIL + 1)); exit 1
@@ -275,18 +308,17 @@ DENY2="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/account/internal
 check "feature ON: /account/internal/notify is still $DENY2 at the edge" $?
 
 echo
-echo "== the account matrix through the REAL router (register → login → sync) =="
-# tests/e2e/account_smoke.sh is the same gate CI runs, but every request here
-# has crossed nginx first: the session cookie has to survive the location
-# boundary, the 409/401 statuses have to pass through unaltered, and the
-# router must not turn any of it into a redirect or a 502. jq-only dependency,
-# checked so a host without it fails loudly instead of silently skipping.
+echo "== the closed-registration account surface through the REAL router =="
+# The public registration endpoint must remain generic and must never create
+# an account or issue a session before verified mailbox ownership. Authenticated
+# database/sync behavior is covered by ephemeral fixtures in
+# src/lib/account/account.test.ts and route-matrix.test.ts.
 if ! command -v jq >/dev/null 2>&1; then
-  echo "ERROR: jq is required for the account matrix" >&2
+  echo "ERROR: jq is required for registration-closed account route checks" >&2
   FAIL=$((FAIL + 1))
 else
   ACCT_LOG="$(mktemp)"
-  "$WEBAPP/tests/e2e/account_smoke.sh" "$BASE" 2>&1 | tee "$ACCT_LOG"
+  "$WEBAPP/tests/e2e/account_smoke.sh" "$BASE" --expect-registration-closed 2>&1 | tee "$ACCT_LOG"
   ACCT_STATUS=${PIPESTATUS[0]}
   N_PASS="$(grep -c '^  PASS' "$ACCT_LOG" || true)"
   N_FAIL="$(grep -c '^  FAIL' "$ACCT_LOG" || true)"
@@ -305,7 +337,7 @@ LOOP_LOG="$(mktemp)"
 # The token file inside the shim container is uid 1001 / mode 0600 by
 # design, so the gate reads it THROUGH the container rather than through a
 # permission it is in the middle of asserting.
-GB_E2E_EXTERNAL=1 PORT="$PORT" TOKEN_FILE="$TOKEN_DIR/tokens.json" \
+GB_E2E_EXTERNAL=1 PORT="$PORT" MOCK_PORT="$MOCK_PORT" TOKEN_FILE="$TOKEN_DIR/tokens.json" \
   GB_E2E_TOKEN_READ_CMD="docker exec gb-topo-shim cat /var/lib/greenbutton/tokens.json" \
   "$HERE/e2e-greenbutton-loop.sh" 2>&1 | tee "$LOOP_LOG"
 LOOP_STATUS=${PIPESTATUS[0]}
@@ -318,6 +350,68 @@ if [ "$LOOP_STATUS" -ne 0 ] && [ "$N_FAIL" -eq 0 ]; then
   FAIL=$((FAIL + 1))
 fi
 rm -f "$LOOP_LOG"
+
+echo
+echo "== public account edge size/rate/privacy controls =="
+# Exercise nginx's 6 MiB body cap with a unique marker. A 413 plus the edge
+# location header and absence of the account-process identity proves nginx
+# rejected it before the request reached the app container.
+BODY_FILE="$(mktemp)"
+BODY_CANARY="acct-body-$(date +%s)-$$"
+# Private, run-unique dumps: the response of this probe used to be written to
+# fixed /tmp names, which a stale file from a privileged run (or a concurrent
+# gate) can make unwritable — curl then answers `23` and the 413 cell would
+# fail for a reason that has nothing to do with the edge. mktemp owns the name.
+EDGE_HDR="$(mktemp)"
+EDGE_BODY="$(mktemp)"
+head -c 6291457 /dev/zero >"$BODY_FILE"
+BODY_CODE="$(curl -sS --max-time 15 -D "$EDGE_HDR" -o "$EDGE_BODY" \
+  -w '%{http_code}' -H 'content-type: application/octet-stream' \
+  --data-binary "@$BODY_FILE" "$BASE/account/session?body=$BODY_CANARY")"
+rm -f "$BODY_FILE"
+BODY_EDGE="$(grep -i '^x-edge-location:' "$EDGE_HDR" | tr -d '\r' | awk '{print $2}')"
+BODY_APP="$(grep -i '^x-gb-process:' "$EDGE_HDR" | tr -d '\r' | awk '{print $2}')"
+rm -f "$EDGE_HDR" "$EDGE_BODY"
+check "body >6 MiB rejected as 413 at account ingress" "$([ "$BODY_CODE" = 413 ] && echo 0 || echo 1)"
+check "oversized body response is edge-owned, not app-owned" \
+  "$([ "$BODY_EDGE" = account ] && [ "$BODY_APP" != account ] && echo 0 || echo 1)"
+
+# After the paced route sweep the bucket has recovered. More than the
+# configured burst in one instant must yield explicit client 429 responses,
+# never an upstream-looking 503.
+RATE_429=0
+RATE_503=0
+for _ in $(seq 1 25); do
+  CODE="$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "$BASE/account/session")"
+  [ "$CODE" = 429 ] && RATE_429=$((RATE_429 + 1))
+  [ "$CODE" = 503 ] && RATE_503=$((RATE_503 + 1))
+done
+check "rapid /account burst receives explicit 429 rate-limit response" \
+  "$([ "$RATE_429" -gt 0 ] && [ "$RATE_503" -eq 0 ] && echo 0 || echo 1)"
+
+# Put unique markers in a URI (to prove this exact request was logged), query,
+# spoofable forwarding header, and cookie. Only the path marker may appear in
+# the router's access log; all other values are secret-bearing canaries.
+LOG_TAG="acct-log-$(date +%s)-$$"
+QUERY_CANARY="query-$LOG_TAG"
+IP_CANARY="198.51.100.$(( $$ % 200 + 1 ))"
+COOKIE_CANARY="cookie-$LOG_TAG"
+curl -sS --max-time 5 -o /dev/null \
+  -H "X-Forwarded-For: $IP_CANARY" \
+  -H "Cookie: acct_session=$COOKIE_CANARY" \
+  "$BASE/account/$LOG_TAG?probe=$QUERY_CANARY" || true
+sleep 1
+ACCOUNT_LOG="$(docker logs gb-topo-router 2>&1)"
+case "$ACCOUNT_LOG" in
+  *"GET /account/$LOG_TAG"*) check "unique account canary request itself is present in router log" 0 ;;
+  *) check "unique account canary request itself is present in router log" 1 ;;
+esac
+for CANARY in "$QUERY_CANARY" "$IP_CANARY" "$COOKIE_CANARY"; do
+  case "$ACCOUNT_LOG" in
+    *"$CANARY"*) check "account query/IP/cookie canary is absent from router log" 1 ;;
+    *) check "account query/IP/cookie canary is absent from router log" 0 ;;
+  esac
+done
 
 echo
 echo "== OAuth credential material never reaches the edge log =="
@@ -393,6 +487,33 @@ case "$ROUTER_LOG2" in
 esac
 
 echo
+echo "== early-phase 414 never logs the query (F3) =="
+# nginx answers 414 while it is still READING the request line — before any
+# location is selected — so the matched location's `access_log` cannot cover
+# it; only the SERVER-level `gb_noquery` default can (F3: an oversized
+# `?d=` link used to be written in the image's stock format, query string
+# included, i.e. the base64 meter payload, into the rotated docker log).
+# The canary sits at the HEAD of a query longer than the 8k header buffer,
+# so the truncated request line that lands in the log would carry it. Both
+# halves are asserted — the 414 line must BE present (otherwise "no canary"
+# would pass vacuously by never logging anything), and the canary must not.
+F3_TAG="f3-$(date +%s)-$$"
+F3_QUERY="${F3_TAG}$(head -c 8900 /dev/zero | tr '\0' 'A')"
+F3_CODE="$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "$BASE/import?d=$F3_QUERY" || echo 000)"
+check "oversized ?d= request answered 414 at the edge ($F3_CODE)" \
+  "$([ "$F3_CODE" = 414 ] && echo 0 || echo 1)"
+sleep 1
+F3_LOG="$(docker logs gb-topo-router 2>&1)"
+case "$F3_LOG" in
+  *'" 414'*) check "the 414 itself IS logged (so the canary check below means something)" 0 ;;
+  *)         check "the 414 itself IS logged (so the canary check below means something)" 1 ;;
+esac
+case "$F3_LOG" in
+  *"$F3_TAG"*) check "early-phase 414 never reaches any edge log (F3)" 1 ;;
+  *)           check "early-phase 414 never reaches any edge log (F3)" 0 ;;
+esac
+
+echo
 echo "== baseline security headers, CSP and rate limit, through the real router =="
 HDRS="$(curl -sSI "$BASE/" | tr -d '\r')"
 for h in strict-transport-security x-content-type-options referrer-policy x-frame-options; do
@@ -436,19 +557,33 @@ check "GET / carries Cross-Origin-Opener-Policy" $?
 # high enough that one connect flow (~19 requests) never trips it, so honest
 # traffic is never the thing being refused. 15 against the strict zone must
 # reach the ceiling AT THE ROUTER rather than the shim.
-for i in $(seq 1 15); do
-  curl -s -m 5 -o /dev/null "$BASE/greenbutton/start" || true
-done
-sleep 1
-case "$(docker logs gb-topo-router 2>&1)" in
-  *"limiting requests"*) check "rate limit engages on /greenbutton/start" 0 ;;
-  *)                     check "rate limit engages on /greenbutton/start" 1 ;;
-esac
-# And the soft zone must NOT have fired — if it did, this gate (which makes
+#
+# Since F3 the router's error_log threshold is `crit` at SERVER level —
+# nginx's own line for a tripped limit quotes `$request` with the query
+# string, the exact thing this file exists to keep out of the log — so the
+# limit can no longer be observed as a log line. Observe it as the RESPONSE
+# instead: a router-owned rejection never reached an upstream and therefore
+# carries no `x-gb-process` identity header, while every upstream answer
+# sets one (the same discriminator section 0 uses for the 403 deny).
+router_rejects() { # router_rejects <url> <samples> → count of 503s with NO x-gb-process
+  local n=0 i hdr code proc
+  for i in $(seq 1 "$2"); do
+    hdr="$(curl -s -m 5 -D - -o /dev/null "$1" | tr -d '\r' || true)"
+    code="$(printf '%s\n' "$hdr" | awk 'NR==1 {print $2}')"
+    proc="$(printf '%s\n' "$hdr" | awk 'tolower($1) == "x-gb-process:" {print $2}')"
+    if [ "$code" = 503 ] && [ -z "$proc" ]; then n=$((n + 1)); fi
+  done
+  echo "$n"
+}
+START_REJECTS="$(router_rejects "$BASE/greenbutton/start" 15)"
+check "rate limit engages AT THE ROUTER on /greenbutton/start ($START_REJECTS of 15 rejected with no upstream identity)" \
+  "$([ "$START_REJECTS" -gt 0 ] && echo 0 || echo 1)"
+# …and the soft zone must NOT have fired — if it did, this gate (which makes
 # ~19 legitimate requests above) would itself be the thing being throttled.
-case "$(docker logs gb-topo-router 2>&1)" in
-  *'by zone "gb_soft"'*) check "gb_soft never fires on legitimate traffic" 1 ;;
-  *)                     check "gb_soft never fires on legitimate traffic" 0 ;;
-esac
+# Same response-side signal: an honest /greenbutton/status is served by the
+# shim in every state of this run, and must never arrive router-rejected.
+SOFT_REJECTS="$(router_rejects "$BASE/greenbutton/status" 15)"
+check "gb_soft never rejects legitimate /greenbutton traffic ($SOFT_REJECTS of 15)" \
+  "$([ "$SOFT_REJECTS" -eq 0 ] && echo 0 || echo 1)"
 
 exit "$FAIL"

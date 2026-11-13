@@ -160,15 +160,14 @@ export function seedTemps() {
 /**
  * The Mark-shaped dashboard PLUS temperatures — what the thermometer-ramp
  * probe needs, and nothing else needs. Reloads, because the hook reads the
- * cache on mount, and opens the USAGE tab, because the card lives inside the
- * panel: a panel that is not mounted has no bars to measure.
+ * cache on mount. The card now lives inside the default Overview panel, so it
+ * is mounted immediately after the reload.
  */
 export async function seedMarkShapedWithTemps(page: Page) {
   const seeded = await page.evaluate(seedTemps);
   expect(seeded.seeded, 'hourly temperatures written for the readings span').toBeGreaterThan(0);
   await page.reload();
   await page.getByTestId('totals-strip').waitFor({ timeout: 60_000 });
-  await page.getByTestId('tab-usage').click();
   await page.getByTestId('temp-band-bar').first().waitFor({ timeout: 60_000 });
   await page.waitForTimeout(500);
   return seeded;

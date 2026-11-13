@@ -95,7 +95,7 @@ export const COST_SLICE_ORDER: CostSliceKey[] = [
 /* Wave U — every user-visible reason/note in this file comes from the
  * locale catalog at call time; the bucket keys and classifier regexes stay
  * canonical English (they are data). */
-import { fmtMoney, fmtNumber, planLabel, t } from '@/i18n';
+import { fmtMoney, fmtNumber, fmtPercent, planLabel, t } from '@/i18n';
 /** Wave U — the catalog key the display layer translates instead. */
 export const ESTIMATE_KEY_LABEL_KEY = 'moneyViz.estimateKeyLabel';
 
@@ -113,17 +113,17 @@ export const COST_SLICE_META: Record<
   CostSliceKey,
   { label: string; short: string; color: string; labelKey: string; shortKey: string }
 > = {
-  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: '#10B981', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
-  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: '#FACC15', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
-  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: '#EF4444', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
+  offPeak: { label: 'Commodity · off-peak', short: 'Off-peak', color: 'var(--chart-money-offpeak)', labelKey: 'slice.offPeak.label', shortKey: 'slice.offPeak.short' },
+  midPeak: { label: 'Commodity · mid-peak', short: 'Mid-peak', color: 'var(--chart-money-midpeak)', labelKey: 'slice.midPeak.label', shortKey: 'slice.midPeak.short' },
+  onPeak: { label: 'Commodity · on-peak', short: 'On-peak', color: 'var(--chart-money-onpeak)', labelKey: 'slice.onPeak.label', shortKey: 'slice.onPeak.short' },
   tier1: { label: 'Tier 1', short: 'Tier 1', color: 'var(--data-tier1)', labelKey: 'rate.tier1', shortKey: 'rate.tier1' },
-  tier2: { label: 'Tier 2', short: 'Tier 2', color: '#93C5FD', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
-  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: '#2563EB', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
-  delivery: { label: 'Delivery', short: 'Delivery', color: '#8B5CF6', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },
-  regulatory: { label: 'Regulatory', short: 'Regulatory', color: '#A78BFA', labelKey: 'slice.regulatory', shortKey: 'slice.regulatory' },
-  other: { label: 'Other lines', short: 'Other', color: '#FB923C', labelKey: 'slice.other.label', shortKey: 'slice.other.short' },
-  tax: { label: 'HST', short: 'HST', color: '#F59E0B', labelKey: 'slice.tax', shortKey: 'slice.tax' },
-  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: '#059669', labelKey: 'slice.credit.label', shortKey: 'slice.credit.short' },
+  tier2: { label: 'Tier 2', short: 'Tier 2', color: 'var(--chart-money-tier2)', labelKey: 'rate.tier2', shortKey: 'rate.tier2' },
+  commodityOther: { label: 'Commodity · not split by window', short: 'Commodity', color: 'var(--chart-money-commodity)', labelKey: 'slice.commodityOther.label', shortKey: 'slice.commodityOther.short' },
+  delivery: { label: 'Delivery', short: 'Delivery', color: 'var(--chart-money-delivery)', labelKey: 'slice.delivery', shortKey: 'slice.delivery' },
+  regulatory: { label: 'Regulatory', short: 'Regulatory', color: 'var(--chart-money-regulatory)', labelKey: 'slice.regulatory', shortKey: 'slice.regulatory' },
+  other: { label: 'Other lines', short: 'Other', color: 'var(--chart-money-other)', labelKey: 'slice.other.label', shortKey: 'slice.other.short' },
+  tax: { label: 'HST', short: 'HST', color: 'var(--chart-money-tax)', labelKey: 'slice.tax', shortKey: 'slice.tax' },
+  credit: { label: 'Ontario Electricity Rebate', short: 'OEB rebate', color: 'var(--chart-money-credit)', labelKey: 'slice.credit.label', shortKey: 'slice.credit.short' },
 };
 
 /**
@@ -848,7 +848,7 @@ export function billWaterfall(summary: UsageSummary): Waterfall {
     kwh > 0
       ? t('wf.perKwhSuffix', {
           cents: fmtNumber((amount / kwh) * 100, 2),
-          kwh: kwh.toFixed(0),
+          kwh: fmtNumber(kwh),
         })
       : '';
 
@@ -1114,11 +1114,23 @@ export function planOverlay(
     periods: summaries.length,
     chargesSource: charges.xmlSource ? 'bill' : 'typed',
     rebateRate,
+    // Wave U: the modelling notes are read by a person, so they come from the
+    // catalog at call time like every other sentence in the panel.
     assumptions: [
-      `Modelled over ${coveredPeriods.length} fully-covered billing period${coveredPeriods.length === 1 ? '' : 's'} (${days.toFixed(0)} days, ${totalKwh.toFixed(0)} kWh of your own readings).`,
-      `The lines plot the PER-PERIOD average of those totals (total ÷ ${coveredPeriods.length}), because the bars are per period; the totals are in the key underneath.`,
-      `Delivery, regulatory and HST priced at your bill's own rates${charges.xmlSource ? ` (${charges.xmlSource.label})` : ' (the ones in Settings)'}; the observed rebate (${((rebateRate ?? 0) * 100).toFixed(1)}% of the subtotal) is applied the same way the bill applies it.`,
-      'Delivery and regulatory are assumed to follow the same $/kWh + fixed model under every plan — that is a modelling assumption, not the utility’s tariff.',
+      t('moneyViz.assumeCovered', {
+        count: coveredPeriods.length,
+        periods: fmtNumber(coveredPeriods.length),
+        days: fmtNumber(days),
+        kwh: fmtNumber(totalKwh),
+      }),
+      t('moneyViz.assumePerPeriod', { periods: fmtNumber(coveredPeriods.length) }),
+      t('moneyViz.assumePriced', {
+        source: charges.xmlSource
+          ? ` (${charges.xmlSource.label})`
+          : t('moneyViz.assumePricedSettings'),
+        rebate: fmtPercent((rebateRate ?? 0) * 100, 1),
+      }),
+      t('moneyViz.assumeModel'),
     ],
   };
 }

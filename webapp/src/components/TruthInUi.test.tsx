@@ -38,6 +38,7 @@ import PeriodDeltaTable from './PeriodDeltaTable';
 import PlanCards from './PlanCards';
 import SwitchTrackRecord from './SwitchTrackRecord';
 import VerdictLine from './VerdictLine';
+import BestChoiceBanner from './BestChoiceBanner';
 import { getLocale, planLabel, setLocale } from '@/i18n';
 import { buildPeriodStacks, periodDeltaRows, type PlanOverlay } from '@/lib/moneyViz';
 import {
@@ -194,6 +195,15 @@ describe('Truth in UI — plan cards', () => {
     }
   });
 
+  it('includes both years when the visible plan period crosses calendar years', () => {
+    render(<PlanCards {...props} startDate="2025-10-01" endDate="2026-10-06" />);
+    const scopes = screen.getAllByTestId('plan-card-scope');
+    expect(scopes).toHaveLength(3);
+    for (const scope of scopes) {
+      expect(scope).toHaveTextContent('Oct 1, 2025 – Oct 6, 2026 on screen');
+    }
+  });
+
   it('prints THIS schedule on the chips, never the removed hardcoded table', () => {
     render(<PlanCards {...props} />);
     // One value per plan from the prop: TOU off-peak 7.4¢, Tiered tier 1
@@ -232,6 +242,20 @@ describe('Truth in UI — plan cards', () => {
     const line = screen.getByTestId('verdict-line').textContent ?? '';
     expect(line.match(/Shift advice and the switch/g)).toHaveLength(1);
     expect(line).toContain('track record below can move this');
+  });
+
+  it('derives the Overview recommendation and ledger deltas from the plan figures', () => {
+    const comparison = { TOU: 2765.61, Tiered: 2131.93, ULO: 1946.10 };
+    render(<BestChoiceBanner comparison={comparison} userPlan="Tiered" days={30} />);
+    expect(screen.getByTestId('cheaper-alternative')).toHaveTextContent(
+      'Cheaper alternative → 5¢ Overnight',
+    );
+
+    render(<VerdictLine comparison={comparison} userPlan="Tiered" days={30} />);
+    const lineNode = screen.getByTestId('verdict-line');
+    expect(lineNode).toHaveTextContent('Current plan $2,132 vs $1,946 (5¢ Overnight, cheapest) ▲$186 more');
+    expect(lineNode).not.toHaveTextContent(/\$634 worse/);
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('▲$186');
   });
 });
 
@@ -293,12 +317,12 @@ describe('Truth in UI — the disclosures survive the French toggle', () => {
 
   it('keeps the plan-card scope caption, its window and its rates in French', () => {
     setLocale('fr');
-    const { container } = render(<PlanCards {...PLAN_PROPS} />);
+    const { container } = render(<PlanCards {...PLAN_PROPS} startDate="2025-05-25" endDate="2026-06-23" />);
     const scopes = container.querySelectorAll('[data-testid="plan-card-scope"]');
     expect(scopes).toHaveLength(3);
     for (const scope of scopes) {
       expect(scope).toHaveTextContent('électricité seulement');
-      expect(scope).toHaveTextContent(/25 mai – 23 juin à l’écran/);
+      expect(scope).toHaveTextContent(/25 mai 2025 – 23 juin 2026 à l’écran/);
     }
     expect(screen.queryByText('commodity only')).not.toBeInTheDocument();
     // The chips read the same prop and format it for fr-CA: 7,4 ¢, not 7.4¢.

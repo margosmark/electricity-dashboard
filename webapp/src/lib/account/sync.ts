@@ -18,11 +18,22 @@ import {
   BACKUP_VERSION,
   EXAMPLE_DATA_KEY,
   parseBackup,
-  storageValuesFromBackup,
   serializeBackup,
   type BackupDocument,
 } from "@/lib/backup";
 import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
+import {
+  BILLING_DAY_KEY,
+  ENERGY_GAS_KEY,
+  ENERGY_KEY_V2,
+  GAS_LOCAL_TIME_KEY,
+  GAS_USAGE_SUMMARIES_KEY,
+  LEGACY_ENERGY_KEY,
+  loadEnergyData,
+  loadGasBillSections,
+  loadGasData,
+  saveEnergyData,
+} from "@/lib/storage";
 
 /**
  * The dataset keys a sync moves, and the one bookkeeping key it owns.
@@ -31,13 +42,22 @@ import { PLAN_STORAGE_KEY } from "@/hooks/useSelectedPlan";
  * to. It is what makes "is the server ahead of me, or am I ahead of it?"
  * answerable without guessing, and what turns a blind overwrite into a
  * 409-and-ask. It is not sensitive: a revision number, not a credential.
+ *
+ * The three gas keys ride along (t_578268b7): a logout that wiped only the
+ * electric half would strand the gas dataset in the browser after the user
+ * signed out of the account that was carrying it.
  */
 export const SYNC_DATASET_KEYS = [
-  "energy_data",
-  "billing_day",
+  ENERGY_KEY_V2,
+  LEGACY_ENERGY_KEY,
+  BILLING_DAY_KEY,
   "extra_charges",
   PLAN_STORAGE_KEY,
   EXAMPLE_DATA_KEY,
+  "plan_timeline",
+  ENERGY_GAS_KEY,
+  GAS_USAGE_SUMMARIES_KEY,
+  GAS_LOCAL_TIME_KEY,
 ] as const;
 
 export const SYNC_REV_KEY = "account_sync_rev";
@@ -132,19 +152,44 @@ function readJson<T>(raw: string | null): T | null {
  * banner of a sync.
  */
 export function readLocalDocument(now: Date = new Date()): BackupDocument | null {
-  const energyRaw = safeGet(localStorage, "energy_data");
-  if (energyRaw === null) return null;
+  // The account feature must follow the same versioned storage contract as the
+  // dashboard. In particular, current profiles have no legacy `energy_data`
+  // key to read. `loadEnergyData` also gives an old profile one safe migration
+  // path, without allowing a corrupt payload to become an empty upload.
+  const energy = loadEnergyData();
+  const electric = energy.ok ? energy.value : null;
+  // Gas (t_578268b7): same disk-sourced snapshot as the electric half — the
+  // envelope travels verbatim so a pull on another device reproduces
+  // `energy_gas_v2` byte-for-byte instead of re-stamping it.
+  const gas = loadGasData();
+  const gasPayload = gas.ok && gas.value !== null && gas.value.points.length > 0 ? gas.value : null;
+  const gasBill = loadGasBillSections();
+  const gasSummaries = gasBill.summaries.length > 0 ? gasBill.summaries : undefined;
+
+  // Nothing worth syncing ⇒ null, exactly as before — and a gas-only browser
+  // now counts as "something". Gas BILLS without gas intervals count too (the
+  // F2 bills-only documents are real), mirroring how they count for an
+  // export. A corrupt ELECTRIC half no longer blocks a valid gas sync: the
+  // document below carries `energy_data: []` for it, so what leaves this
+  // device is gas and nothing unreadable — never garbage under the banner of
+  // a sync.
+  const hasElectric = electric !== null && electric.points.length > 0;
+  if (!hasElectric && !gasPayload && !gasSummaries) return null;
 
   const candidate = {
     schema: BACKUP_SCHEMA,
     version: BACKUP_VERSION,
     exportedAt: now.toISOString(),
     payload: {
-      energy_data: readJson<unknown>(energyRaw) ?? [],
-      billing_day: Number(safeGet(localStorage, "billing_day") ?? 1),
+      energy_data: electric?.points ?? [],
+      billing_day: Number(safeGet(localStorage, BILLING_DAY_KEY) ?? 1),
       extra_charges: readJson<unknown>(safeGet(localStorage, "extra_charges")) ?? {},
+      plan_timeline: readJson<unknown>(safeGet(localStorage, "plan_timeline")) ?? [],
       selected_plan: safeGet(localStorage, PLAN_STORAGE_KEY) ?? undefined,
       energy_data_is_example: safeGet(localStorage, EXAMPLE_DATA_KEY) === "1",
+      ...(gasPayload !== null ? { gas_data: gasPayload } : {}),
+      ...(gasSummaries !== undefined ? { gas_usage_summaries: gasSummaries } : {}),
+      ...(gasBill.localTime !== null ? { gas_local_time_parameters: gasBill.localTime } : {}),
     },
   };
 
@@ -152,10 +197,65 @@ export function readLocalDocument(now: Date = new Date()): BackupDocument | null
   return parsed.ok ? parsed.value : null;
 }
 
-/** Apply a document the server handed back. Every key is written or cleared. */
+/** Apply a document the server handed back. Every key it HAS an opinion about is written or cleared. */
 export function applyDocument(doc: BackupDocument): { written: string[] } {
-  const values = storageValuesFromBackup(doc);
-  const written: string[] = [];
+  // `storageValuesFromBackup` is intentionally a backup/import representation
+  // and names the historical `energy_data` field. Account sync writes through
+  // the live storage service instead, so a remote apply cannot leave a stale
+  // v2 payload beside a newly-written legacy payload.
+  //
+  // The electric reads write stays first and all-or-nothing, and it is
+  // SKIPPED when the document carries none (a gas-only document has no
+  // opinion about this device's electricity — writing `[]` here would be the
+  // very clobber a section-less document promises not to do).
+  //
+  // EVERY other electric-side write rides the same gate (t_578268b7 review):
+  // billing_day, extra_charges, plan_timeline, selected_plan and the example
+  // flag are all ELECTRIC profile. A gas-only payload carries only
+  // parseBackup's defaults for them (billing_day and extra_charges are
+  // mandatory in every payload), so applying them unconditionally would
+  // reconfigure this device's billing anchor, add-ons, plan and banner while
+  // deliberately keeping its readings — and clearing `energy_data_is_example`
+  // over surviving demo rows is exactly the lie the flag rule exists to
+  // prevent. Absent electric section ⇒ no electric opinion, symmetric with
+  // the gas-key rule below: no write, no clear, no deletion.
+  const hasElectric = doc.payload.energy_data.length > 0;
+  let written: string[] = [];
+  if (hasElectric) {
+    const savedEnergy = saveEnergyData(doc.payload.energy_data, {
+      source: "account-sync",
+      uploadedAt: doc.exportedAt || new Date().toISOString(),
+    });
+    if (!savedEnergy.ok) return { written: [] };
+    written = [ENERGY_KEY_V2];
+  }
+
+  const values: Record<string, string> = {
+    ...(hasElectric
+      ? {
+          billing_day: String(doc.payload.billing_day),
+          extra_charges: JSON.stringify(doc.payload.extra_charges),
+          plan_timeline: JSON.stringify(doc.payload.plan_timeline ?? []),
+          ...(doc.payload.selected_plan !== undefined ? { [PLAN_STORAGE_KEY]: doc.payload.selected_plan } : {}),
+          [EXAMPLE_DATA_KEY]: doc.payload.energy_data_is_example === true ? "1" : "",
+        }
+      : {}),
+    // v3 gas keys — written ONLY when the document carries the section. A v1/v2
+    // or electricity-only document has no gas opinion, so pulling it must
+    // leave this device's gas dataset exactly as it is; a document that DOES
+    // carry gas writes the bytes verbatim (`gas_data` already went through
+    // parseBackup's canonical field order), so a pull reproduces the sender's
+    // stored payload instead of re-stamping it as a fresh sync.
+    ...(doc.payload.gas_data !== undefined
+      ? { [ENERGY_GAS_KEY]: JSON.stringify(doc.payload.gas_data) }
+      : {}),
+    ...(doc.payload.gas_usage_summaries !== undefined && doc.payload.gas_usage_summaries.length > 0
+      ? { [GAS_USAGE_SUMMARIES_KEY]: JSON.stringify(doc.payload.gas_usage_summaries) }
+      : {}),
+    ...(doc.payload.gas_local_time_parameters !== undefined
+      ? { [GAS_LOCAL_TIME_KEY]: JSON.stringify(doc.payload.gas_local_time_parameters) }
+      : {}),
+  };
   for (const [key, value] of Object.entries(values)) {
     if (value === "") safeRemove(localStorage, key);
     else safeSet(localStorage, key, value);
@@ -222,5 +322,12 @@ export function wipeLocalDataset(): { removed: string[] } {
 
 /** Does this browser hold a dataset a sync could move? */
 export function hasLocalData(): boolean {
-  return safeGet(localStorage, "energy_data") !== null;
+  const result = loadEnergyData();
+  if (result.ok && result.value !== null && result.value.points.length > 0) return true;
+  // A gas-only browser (t_578268b7) holds a dataset too — same gate
+  // `readLocalDocument` uses, so "is there something to sync?" can never
+  // disagree between the two.
+  const gas = loadGasData();
+  if (gas.ok && gas.value !== null && gas.value.points.length > 0) return true;
+  return loadGasBillSections().summaries.length > 0;
 }

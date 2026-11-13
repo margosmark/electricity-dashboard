@@ -44,7 +44,10 @@ const BILINGUALLY_IDENTICAL_OK = new Set([
   'ev.signedNegative', // "−{amount}" — the minus glyph is the same in both
   'ev.categoriesAnd', // " + " — the joiner between period names is glyph-only
   'account.quietFormat', // "HH:MM-HH:MM" — a clock-format code, identical in fr
-  'hindsight.moveSaved', // "−{amount}" — the minus glyph is the same in both
+  'gasBill.m3Unit', // "m³" — the cubic-metre glyph, identical in fr
+  'gasBill.rateUnit', // "¢/m³" — the unit glyph, identical in fr
+  'gasBill.supplier', // "Enbridge Gas Distribution" — the utility's own name
+  'gbseries.notice.repeatCount', // "×{count}" — the × glyph is the same in fr
 ]);
 
 describe('i18n catalogs', () => {
@@ -62,6 +65,15 @@ describe('i18n catalogs', () => {
     for (const [key, value] of Object.entries(fr)) {
       expect(value.length, `fr.${key}`).toBeGreaterThan(0);
     }
+  });
+
+  it('preserves the root registration-closed copy exactly', () => {
+    expect(en['account.registrationClosed']).toBe(
+      'Registration is closed until mailbox verification and the concrete retention policy are configured. You will choose a passphrase only after proving control of your email address.',
+    );
+    expect(fr['account.registrationClosed']).toBe(
+      "La création de compte est fermée jusqu'à la configuration de la vérification par courriel et de la politique concrète de conservation. Vous ne choisirez une phrase secrète qu'après avoir prouvé que cette adresse vous appartient.",
+    );
   });
 
   it('translates every key except the whitelisted proper nouns', () => {

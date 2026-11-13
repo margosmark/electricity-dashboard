@@ -14,21 +14,25 @@
  * is actually rendered may point at it.
  *
  * Layout: icons + short labels, `overflow-x-auto` so the four still fit as
- * one row at 390 px without shrinking the touch targets below 44 px.
+ * one row at 390 px without shrinking the touch targets below 44 px; when
+ * text scales up (150/200%) each pill keeps its full label — width floors at
+ * the label's min-content — and the strip scrolls instead of clipping. The
+ * active pill is re-anchored into the visible strip on render, resize and
+ * content reflow, so rotation can never leave it stranded off-strip.
  * `no-print` because a printed report is the active section, not the chrome
  * that chose it.
  */
 
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Banknote, Gauge, Scale, TrendingUp } from 'lucide-react';
 import { TABS, type TabId } from '@/lib/tabs';
 import { useTranslation } from '@/i18n';
 
 const ICONS: Record<TabId, typeof Gauge> = {
   overview: Gauge,
-  usage: TrendingUp,
+  analytics: TrendingUp,
   plans: Scale,
   money: Banknote,
 };
@@ -36,9 +40,11 @@ const ICONS: Record<TabId, typeof Gauge> = {
 export type TabNavProps = {
   active: TabId;
   onChange: (tab: TabId) => void;
+  /** Global display preferences belong in the shell, not below page content. */
+  shellTools?: ReactNode;
 };
 
-export default function TabNav({ active, onChange }: TabNavProps) {
+export default function TabNav({ active, onChange, shellTools }: TabNavProps) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   // Wave U — `lib/tabs.ts` keeps the canonical English definitions (pure
   // data, unit-tested); the strip renders the localized view of them.
@@ -84,25 +90,156 @@ export default function TabNav({ active, onChange }: TabNavProps) {
     event.preventDefault();
   };
 
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Keep the ACTIVE pill inside the strip's visible box.
+   *
+   * The strip scrolls horizontally whenever its content outgrows it — 200%
+   * text scaling, landscape rotation, long `fr` labels. Measured on the
+   * deployed build (79b7d00): after rotating to 844×390 at 200% the strip
+   * had scrolled 186px while the selected money pill sat entirely outside
+   * the visible box, and nothing ever pulled it back. Manual scrollLeft math
+   * instead of scrollIntoView so the PAGE can never be scrolled as a side
+   * effect: only the strip moves, and only by the exact overshoot.
+   *
+   * Three triggers, one per way the strip's geometry can change:
+   *   - every render — active tab, locale or other props changed;
+   *   - window resize — orientation / browser-chrome changes;
+   *   - ResizeObserver over the pills — any content reflow (text scaling)
+   *     that changes a pill's box without either of the above firing.
+   * Idempotent: it only nudges when the pill is actually out of view, and a
+   * non-scrolling strip clamps scrollLeft to 0, so the default layout is
+   * untouched.
+   */
+  useEffect(() => {
+    const reveal = () => {
+      const list = listRef.current;
+      const pill = buttons.current[TABS.findIndex((t) => t.id === active)];
+      if (!list || !pill) return;
+      const strip = list.getBoundingClientRect();
+      const box = pill.getBoundingClientRect();
+      if (box.left < strip.left) list.scrollLeft -= strip.left - box.left;
+      else if (box.right > strip.right) list.scrollLeft += box.right - strip.right;
+    };
+    reveal();
+    window.addEventListener('resize', reveal);
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(reveal);
+      buttons.current.forEach((button) => button && observer?.observe(button));
+    }
+    return () => {
+      window.removeEventListener('resize', reveal);
+      observer?.disconnect();
+    };
+  });
+
+  /**
+   * t_2d4a97e6 — three load-bearing numbers on the <nav> class below, all
+   * measured on the deployed build (79b7d00):
+   *
+   * - `-mx-4 md:-mx-6 px-4 md:px-6` must mirror `main`'s own horizontal
+   *   padding (`px-4 md:px-6` in page.tsx) exactly, in the SAME rem unit.
+   *   The redesign (#110) narrowed main but left these at -mx-8/px-8, so at
+   *   every ≥768px width the strip overhung the viewport by 8px (16px at
+   *   200% text, where the 2rem vs 1.5rem mismatch doubles) and the whole
+   *   page panned sideways on rotation.
+   * - the calc() padding-top carrying env(safe-area-inset-top, 0px): the
+   *   strip pins at top:0 and body's env() rules only cover
+   *   left/right/bottom, so in the standalone PWA (viewport-fit: cover) the
+   *   strip slid under the status bar. env() reports 0 in every automation
+   *   browser (measured in headless Chromium), hence the var(--safe-top, …)
+   *   test seam: the e2e sets --safe-top:47px on :root to measure the
+   *   geometry a notched device produces, while real devices fall through
+   *   to env(). (Phrased in prose, not as a bracketed utility literal: the
+   *   Tailwind scanner picks class-shaped text out of comments too and
+   *   would emit the ellipsis version as a broken rule.)
+   * - `pb-[3px]` + `border-b-2` = the sticky rule (D1): one pixel of the
+   *   opaque inset surface between the last content row and the 2px
+   *   `--edge` rule — no blur, no translucent slab (t_a52a774/8868a43).
+   */
   return (
     <nav
-      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-8 px-4 md:px-8 py-2 md:py-3 bg-inset/95 backdrop-blur-sm border-b-4 border-edge"
+      className="no-print sticky top-0 z-[250] -mx-4 md:-mx-6 px-4 md:px-6 pt-[calc(0.5rem_+_var(--safe-top,env(safe-area-inset-top,0px)))] md:pt-[calc(0.75rem_+_var(--safe-top,env(safe-area-inset-top,0px)))] pb-[3px] bg-inset border-b-2 border-edge"
       data-testid="tab-nav"
     >
       {/*
-        D2 (t_fcbba376): the selected pill's `shadow-hard-blue-3` is a 3px hard
-        offset, and at gap-1 it ate 4 of the 4px gap — the blue band welded
-        itself to the next pill. gap-2 leaves 8 − 3 = 5px of clear air; the
-        360px fit still holds (4 × 76px + 3 × 8px = 328px).
+        D2 (t_fcbba376, restated after the #110 redesign): the selected
+        pill's marker is now its own `border-b-2 border-b-accent` underline —
+        the hard blue `shadow-hard-blue-3` of the pre-redesign strip is gone
+        (measured: boxShadow 'none'), so there is no 3px offset bleeding into
+        the gap any more and the marker paints INSIDE the pill's own box. The
+        pill gap itself is the tablist's `gap-1` below md / `md:gap-3` above
+        it; the label floor the 4-tab era carried (`min-w-[76px]`) is gone
+        from the strip — it overrode flexbox's automatic min-content minimum,
+        so at 200% text labels escaped their own pill box (+14px on the
+        deployed build) while the strip wrongly reported "fits". Pills floor
+        at their content and the strip does the scrolling.
       */}
-      <div
-        role="tablist"
-        aria-label={t('tabnav.aria')}
-        aria-orientation="horizontal"
-        onKeyDown={onKeyDown}
-        className="flex gap-2 md:gap-3 overflow-x-auto"
-      >
-        {TABS.map((tab, index) => {
+      {/*
+        t_bb120a04 — where #113's Quiet Meter shell meets this strip's fit
+        gate. Every number below was measured on the merged tree (9de692c +
+        df271fd) before this line changed:
+
+        - 162px of strip scroll at 1024×768. #113 moved the date window,
+          scope switcher and theme toggle into this row as `shellTools`, and
+          their natural row is 800px in en / 938.5px in fr. The row packed
+          them next to the strip because the tablist's flex-basis is 0% (its
+          hypothetical size is 0, so 0 + 12 + 800 still "fits" the 976px row)
+          — the strip then grew into the 164px left over while its three pills
+          needed 326px.
+        - 83px of strip scroll in fr at EVERY xl width (1280, 1440 and 1536
+          alike). This shell caps the row at 1180px (measured: nav 1228px at
+          1440 AND at 1536), and 313 fr pills + 12 gap + 938.5 toolbar =
+          1263px — so `xl:flex-nowrap`, which makes the two share one row
+          from xl up, can only ever work in en. That is the measured verdict
+          on the "is xl:flex-nowrap the intended row rule?" question: it
+          cannot be, because the strip may never scroll at default text in
+          either locale. The row therefore keeps `flex-wrap` at every width
+          and the toolbar keeps `basis-full`: the gap (8/12px) plus a 100%
+          basis can never share a line with the strip, so the strip owns line
+          1 and the toolbar owns line 2 — full width, deterministic in both
+          locales, with no locale-dependent nav height to shift on a language
+          toggle.
+
+        QA-1 (t_9991d1f2) still stands underneath it: `min-w-0` + `flex-1`
+        gave the strip a flex basis of ZERO, so flex-wrap never sent the shell
+        tools to their own row — the tools always fit beside the strip's basis
+        and starved its box instead (1024 EN: 164px box for 448px of tabs;
+        1440: Money painted 18 of 98px with clicks falling through to the date
+        input). The toolbar's own `basis-full` is what now forces line 2, so
+        the strip can never be asked to share a line it cannot fill, and
+        QA-1's other half — `md:min-w-max`, which pins the strip's minimum to
+        its CONTENT width — is deliberately dropped here (integration
+        t_21de1552): with the strip owning a full row the hypothetical width
+        is no longer what starved it, while `min-w-max` actively makes the
+        box unshrinkable. Measured on 128e3fa5's markup at 844×390 with 200%
+        text (money tab): max-content of the four pills is 888px inside an
+        844px viewport, so the tablist itself painted to 888 and the document
+        scrolled 888 vs 844 — a page pan that tabnav-resilience (rotation)
+        and panel-content-resilience (money rotation) both gate. Below md
+        nothing changes — tabs are `flex-1` there and shrink to the 360px
+        contract.
+
+        - 672px of document scrollWidth at 390×844 with 200% text. The date
+          inputs floor at 7rem each (224px at root 32), so
+          dashboard-date-range's min-content is 640px and this wrapper's
+          automatic minimum size (min-width: auto) pushed line 2 out to 640px
+          inside a 358px viewport. min-w-0 drops that floor;
+          overflow-x-auto gives the toolbar the strip's own answer — the
+          container scrolls, the page never pans.
+      */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+        <div
+          role="tablist"
+          aria-label={t('tabnav.aria')}
+          aria-orientation="horizontal"
+          onKeyDown={onKeyDown}
+          ref={listRef}
+          className="flex min-w-0 flex-1 gap-1 overflow-x-auto md:gap-3"
+        >
+          {TABS.map((tab, index) => {
           const Icon = ICONS[tab.id];
           const selected = tab.id === active;
           return (
@@ -116,22 +253,46 @@ export default function TabNav({ active, onChange }: TabNavProps) {
               id={`tab-${tab.id}`}
               aria-controls={selected ? `panel-${tab.id}` : undefined}
               aria-selected={selected}
+              aria-current={selected ? 'page' : undefined}
+              data-go={tab.id}
               data-testid={`tab-${tab.id}`}
               data-active={String(selected)}
               tabIndex={selected ? 0 : -1}
               title={t(`tab.desc.${tab.id}`)}
               onClick={() => onChange(tab.id)}
-              className={`inline-flex min-h-11 min-w-[76px] flex-1 md:flex-none items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 rounded-lg md:rounded-xl border-2 md:border-4 border-edge font-black uppercase text-[10px] md:text-xs whitespace-nowrap transition-all ${
+              className={`inline-flex min-h-11 min-w-[64px] flex-1 md:flex-none items-center justify-center gap-1 md:gap-2 px-1.5 md:px-5 py-2 rounded-lg md:rounded-xl border border-edge font-medium normal-case text-[10px] md:text-xs whitespace-nowrap transition-all motion-reduce:transition-none ${
                 selected
-                  ? 'bg-inv text-accent-yellow shadow-hard-blue-3'
-                  : 'bg-card text-ink-3 hover:text-ink hover:bg-hover'
+                  ? 'bg-card text-ink border-b-2 border-b-accent'
+                  : 'bg-inset text-ink-2 hover:text-ink'
               }`}
             >
               <Icon size={14} strokeWidth={4} aria-hidden="true" className="shrink-0" />
               <span>{t(`tab.${tab.id}`)}</span>
             </button>
           );
-        })}
+          })}
+        </div>
+      {/*
+        The wrapper's own two numbers, measured on that same tree:
+
+        - 672px of document scrollWidth at 390×844 with 200% text. The date
+          inputs floor at 7rem each (224px at root 32), so
+          dashboard-date-range's min-content is 640px and this wrapper's
+          automatic minimum size (min-width: auto) pushed line 2 out to 640px
+          inside a 358px viewport (150% text read 514). min-w-0 drops that
+          floor; overflow-x-auto gives the toolbar the strip's own answer —
+          the container scrolls, the page never pans. Measured after: 390 at
+          both 150% and 200%.
+        - `basis-full` is what puts this wrapper on its OWN line at every
+          width: with a positive row gap, a 100% flex-basis can never share a
+          line with the strip, so the row rule above holds by construction
+          rather than by breakpoint.
+      */}
+      {shellTools && (
+        <div className="order-2 basis-full sm:order-none min-w-0 overflow-x-auto">
+          {shellTools}
+        </div>
+      )}
       </div>
     </nav>
   );

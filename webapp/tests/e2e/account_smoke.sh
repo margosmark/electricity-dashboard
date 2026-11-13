@@ -1,30 +1,47 @@
 #!/usr/bin/env bash
-# Wave N account gate — register → login → PUT sync → a SECOND profile →
-# GET sync → stale-revision 409 → logout kills the cookie, over real HTTP
-# against a real SQLite file in a booted container.
+# Wave N account gate — registration-closed HTTP routing checks.
 #
-# Two modes, because the feature has two ship criteria:
+# Modes:
+#   account_smoke.sh <base_url>                         # registration-closed checks
+#   account_smoke.sh <base_url> --expect-disabled       # app process answers 404 for every account route
+#   account_smoke.sh <base_url> --expect-registration-closed
 #
-#   account_smoke.sh <base_url>                   # ACCT_ENABLED=true required
-#   account_smoke.sh <base_url> --expect-disabled  # every /account/* × every method → 404
-#
-# The disabled mode is the "public app is unchanged with the feature off"
-# gate (P0): the app container carries no ACCT_* env at all, so it must
-# answer 404 — indistinguishable from "no such route" — rather than admit
-# that an account API exists somewhere else.
-#
-# No secrets, no fixtures, no jq dependency beyond what CI already ships.
-# Runtime: a few seconds (argon2id dominates: ~4 hashes).
+# The registration-closed mode deliberately does not create accounts or claim
+# delivery: it proves enumeration-safe pending responses and route behavior.
+# Authenticated registration/login/sync lifecycle behavior is covered by
+# ephemeral fixtures in src/lib/account/account.test.ts and route-matrix.test.ts.
 
 set -euo pipefail
 
 BASE="${1:?usage: account_smoke.sh <base_url> [--expect-disabled]}"
-MODE="${2:-enabled}"
+MODE="${2:---expect-registration-closed}"
 MAX_WAIT="${SMOKE_WAIT_SECS:-30}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 JAR="$(mktemp -d)/cookies.txt"
 JAR2="$(mktemp -d)/cookies.txt"
-trap 'rm -rf "$(dirname "$JAR")" "$(dirname "$JAR2")"' EXIT
+JAR3="$(mktemp -d)/cookies.txt"
+
+# Where every response of this gate is written down.
+#
+# These dumps used to be two FIXED paths under the shared /tmp (named
+# `acct.hdr` and `acct.body` there).
+# A shared sticky /tmp is name-addressed, not run-addressed: a file left behind
+# by another, privileged run stays root-owned 0644, and neither `>`, `unlink`
+# nor `mktemp`-style replacement can take that name back — so curl fails on the
+# FIRST request of this script with
+#
+#     curl: (23) Failed writing received data to disk/application
+#
+# and `set -e` aborts the whole gate before a single cell is counted (the
+# topology gate then reports the early exit as one anonymous failure). A
+# private mktemp -d directory belongs to this run alone: no stale file from
+# another run, no collision with a concurrent run, no privilege question.
+SCRATCH="$(mktemp -d)"
+HDR="$SCRATCH/headers"
+BODY="$SCRATCH/body"
+trap 'rm -rf "$SCRATCH" "$(dirname "$JAR")" "$(dirname "$JAR2")" "$(dirname "$JAR3")"' EXIT
 
 PASS=0
 FAIL=0
@@ -33,26 +50,147 @@ check() { # check <label> <condition-exit-status>
   else FAIL=$((FAIL + 1)); printf '  FAIL  %s\n' "$1"; fi
 }
 
-# HTTP verb helpers: body + status + headers land in /tmp so greps are cheap.
+# ONE place every request of this gate is written down: headers land in $HDR,
+# the body in $BODY, the HTTP status is echoed for the caller.
+#
+# A transport or output failure is a REPORTED CELL, never an abort. curl's own
+# exit status here is not evidence about the server, so the dumps are cleared
+# (a previous response must never be read as this one), `000` is echoed — which
+# every expectation in this script already treats as "not the answer I want" —
+# and the reason is printed to stderr for the operator. Without this, `set -e`
+# kills the script at its first request and the gate reports one anonymous
+# early exit instead of the cells that actually failed.
+curl_dump() { # curl_dump <method> <path> <curl options…>
+  local method="$1" path="$2"
+  shift 2
+  local out="" rc=0
+  out="$(curl -sS -D "$HDR" -o "$BODY" -w '%{http_code}' "$@")" || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    printf '%s' "$out"
+    return 0
+  fi
+  { : >"$HDR" && : >"$BODY"; } 2>/dev/null || true
+  printf '  note  curl %s %s failed (exit %d) — dumps cleared, cell reports 000\n' \
+    "$method" "$path" "$rc" >&2
+  printf '000'
+  return 0
+}
+
+# The route probe sends `{}` for body-carrying verbs. The closed-registration
+# branch below checks the signed-out route surface only; authenticated behavior
+# is not exercised by this HTTP smoke script.
+matrix_req() { # matrix_req <cookie|-> <method> <path>
+  local cookie="$1" method="$2" path="$3" body="" hdr_args=()
+  [ "$cookie" != "-" ] && hdr_args=(-H "cookie: $cookie")
+  case "$method" in POST|PUT|PATCH|DELETE) body='{}' ;; esac
+  if [ -n "$body" ]; then
+    curl_dump "$method" "$path" "${hdr_args[@]}" -X "$method" \
+      -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+  elif [ "$method" = "HEAD" ]; then
+    curl_dump "$method" "$path" "${hdr_args[@]}" --head "${BASE}${path}"
+  else
+    curl_dump "$method" "$path" "${hdr_args[@]}" -X "$method" "${BASE}${path}"
+  fi
+}
+
+# HTTP verb helpers: body + status + headers land in $HDR/$BODY so greps are cheap.
 req() { # req <jar|-> <method> <path> [json-body]
   local jar="$1" method="$2" path="$3" body="${4:-}"
   local jar_args=()
   [ "$jar" != "-" ] && jar_args=(-c "$jar" -b "$jar")
   if [ -n "$body" ]; then
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" -H 'content-type: application/json' --data "$body" "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" -X "$method" \
+      -H 'content-type: application/json' --data "$body" "${BASE}${path}"
   elif [ "$method" = "HEAD" ]; then
     # --head, not -X HEAD: with -X HEAD curl waits for a body that never
     # comes and exits 18, which `set -e` would take as a dead server.
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      --head "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" --head "${BASE}${path}"
   else
-    curl -sS "${jar_args[@]}" -D /tmp/acct.hdr -o /tmp/acct.body -w '%{http_code}' \
-      -X "$method" "${BASE}${path}"
+    curl_dump "$method" "$path" "${jar_args[@]}" -X "$method" "${BASE}${path}"
   fi
 }
 
-jget() { jq -r "$1" < /tmp/acct.body 2>/dev/null; }
+jget() { jq -r "$1" < "$BODY" 2>/dev/null; }
+
+# True when $1 equals any of the remaining arguments — for the cells whose
+# contract has more than one correct answer (see `matrix_expect`).
+accepts() { local code="$1"; shift; local w; for w in "$@"; do [ "$code" = "$w" ] && return 0; done; return 1; }
+
+# The `acct_session` value curl stored in a jar (netscape format: name is
+# field 6, value field 7).
+cookie_from_jar() { awk -v n='acct_session' '$6 == n { print $7 }' "$1" | tail -1; }
+
+# A cookie that was never issued to anybody: no row can exist behind it.
+forged_token() { printf '%s%s' "$(date +%s%N)" "$$" | sha256sum | cut -c1-48; }
+
+# ---------------------------------------------------------------------------
+# The surface
+#
+# ONE list, used by the guard, the disabled method sweep and the enabled,
+# registration-closed signed-out route sweep — so a path can never be probed in
+# one mode and forgotten.
+# `/account/internal/*` is excluded ON PURPOSE: it is denied at the edge with
+# 403 and never reaches an app container (the containerised topology gate owns
+# that leg).
+# ---------------------------------------------------------------------------
+MATRIX_PATHS="/account/login /account/notify /account/recover /account/register
+              /account/session /account/sync /account/push/preferences
+              /account/push/subscribe /account/logout"
+
+# The paths this script probes and the route files on disk must be the SAME
+# set. A new `/account/*` route that nobody adds here would otherwise ship
+# outside the gate — the whole reason this guard exists. Skipped (with a note)
+# when the script is run from outside a checkout, e.g. against a deployment.
+surface_guard() {
+  local dir="$SCRIPT_DIR/../../src/app/account"
+  if [ ! -d "$dir" ]; then
+    echo "  note  route surface not checked (no checkout next to this script)"
+    return 0
+  fi
+  local on_disk declared
+  on_disk=$(cd "$dir" && find . -name route.ts \
+    | sed -e 's#^\./##' -e 's#/route\.ts$##' -e 's#^#/account/#' \
+    | grep -v '^/account/internal/' | sort)
+  declared=$(printf '%s\n' $MATRIX_PATHS | sort)
+  if [ "$on_disk" != "$declared" ]; then
+    echo "FAIL: the route files and this gate's path list disagree" >&2
+    diff <(printf '%s\n' "$on_disk") <(printf '%s\n' "$declared") >&2 || true
+    exit 1
+  fi
+  echo "  note  surface guard: $(printf '%s\n' "$declared" | wc -l) app-owned /account routes, all probed"
+}
+
+# ---------------------------------------------------------------------------
+# The expected answer for one enabled-but-registration-closed, signed-out route cell.
+# `HEAD` is answered by the route's `GET`; every verb a route does not export is
+# the shared `wrongMethod` stub (405, naming the method). Session-gated routes
+# answer 401 in this signed-out sweep.
+# ---------------------------------------------------------------------------
+matrix_expect() { # matrix_expect <path> <method>
+  local path="$1" method="$2" verbs eff
+  case "$path" in
+    /account/register|/account/login|/account/logout|/account/notify|/account/recover) verbs="POST" ;;
+    /account/session) verbs="GET" ;;
+    /account/sync|/account/push/preferences) verbs="GET PUT" ;;
+    /account/push/subscribe) verbs="POST DELETE" ;;
+    *) echo "UNKNOWN"; return ;;
+  esac
+  eff="$method"
+  [ "$method" = "HEAD" ] && eff="GET"
+  case " $verbs " in
+    *" $eff "*) : ;;
+    *) echo 405; return ;;
+  esac
+  case "$path $eff" in
+    "/account/register POST"|"/account/login POST"|"/account/recover POST") echo 400 ;;
+    "/account/logout POST") echo 200 ;;
+    "/account/session GET") echo 200 ;;
+    "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT"|\
+    "/account/sync PUT"|"/account/notify POST"|"/account/push/subscribe DELETE"|\
+    "/account/push/subscribe POST") echo 401 ;;
+    *) echo "UNKNOWN" ;;
+  esac
+}
 
 # --- Wait for the server ----------------------------------------------------
 for i in $(seq 1 "${MAX_WAIT}"); do
@@ -60,6 +198,8 @@ for i in $(seq 1 "${MAX_WAIT}"); do
   [ "$i" = "${MAX_WAIT}" ] && { echo "FAIL: server did not come up within ${MAX_WAIT}s at ${BASE}" >&2; exit 1; }
   sleep 1
 done
+
+surface_guard
 
 if [ "$MODE" = "--expect-disabled" ]; then
   echo "account gate (expecting the feature OFF): ${BASE}"
@@ -72,7 +212,7 @@ if [ "$MODE" = "--expect-disabled" ]; then
     $([ "$code" = "404" ] && echo 0 || echo 1)
   # The identity header must say WHO answered: the process with no ACCT_* is
   # the app, and that is the half of the H1 contract this side can prove.
-  proc=$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')
+  proc=$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}' || true)
   check "x-gb-process: app on an account path (process identity, not path)" \
     $([ "$proc" = "app" ] && echo 0 || echo 1)
   # Every METHOD, on every app-owned /account/* path — not just the verb each
@@ -84,143 +224,82 @@ if [ "$MODE" = "--expect-disabled" ]; then
   # 204 + Allow — admitting an account API on a deployment that claims to
   # have none. /account/internal/* is skipped on purpose: that path is
   # denied at the edge with 403, so it is not this process's answer to give.
-  for path in /account/login /account/logout /account/notify /account/recover \
-              /account/register /account/session /account/sync \
-              /account/push/preferences /account/push/subscribe; do
+  for path in $MATRIX_PATHS; do
     for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
-      code=$(req - "$method" "$path") || code=000
+      code=$(matrix_req - "$method" "$path") || code=000
       check "${method} ${path} → 404 (no such route, whatever the method)" \
         $([ "$code" = "404" ] && echo 0 || echo 1)
     done
   done
+  # …and no cookie may change that answer. The full method × auth-state OFF
+  # matrix runs in-process (`src/lib/account/route-matrix.test.ts`); over HTTP
+  # this is the representative sweep, with a cookie the server never issued.
+  FORGED="acct_session=$(forged_token)"
+  for path in $MATRIX_PATHS; do
+    for method in GET POST; do
+      code=$(matrix_req "$FORGED" "$method" "$path") || code=000
+      check "${method} ${path} [forged cookie] → 404 (a cookie cannot reveal a route)" \
+        $([ "$code" = "404" ] && echo 0 || echo 1)
+    done
+  done
+  # The header tells the 2c8ca8d story: a `405`, or an auto-`OPTIONS 204`, would
+  # have carried `Allow` — a machine-readable list of the verbs this origin
+  # answers, the one thing an OFF deployment must never emit.
+  code=$(matrix_req - DELETE /account/session) || code=000
+  check "DELETE /account/session → 404 (not 405)" $([ "$code" = "404" ] && echo 0 || echo 1)
+  check "…and the answer carries no Allow header" \
+    $(grep -qi '^allow:' "$HDR" && echo 1 || echo 0)
   [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
   echo "account gate OK (feature off): ${PASS} checks"
   exit 0
 fi
 
-echo "account gate (expecting the feature ON): ${BASE}"
+if [ "$MODE" = "--expect-registration-closed" ]; then
+  echo "account gate (feature enabled, registration closed): ${BASE}"
+  code=$(req - GET /account/session)
+  check "GET /account/session → 200 from enabled account process" $([ "$code" = "200" ] && echo 0 || echo 1)
+  check "session reports enabled and signed out" \
+    $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
+  check "account identity headers agree" \
+    $([ "$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] \
+      && [ "$(grep -i '^x-edge-location:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
 
-# --- 1. Signed-out session is honest and uncacheable ------------------------
-code=$(req - GET /account/session)
-check "GET /account/session → 200 when signed out" $([ "$code" = "200" ] && echo 0 || echo 1)
-check "session says enabled:true, authed:false" \
-  $([ "$(jget '.enabled')" = "true" ] && [ "$(jget '.authed')" = "false" ] && echo 0 || echo 1)
-check "session is Cache-Control: no-store" \
-  $(grep -qi '^cache-control: no-store' /tmp/acct.hdr && echo 0 || echo 1)
-check "process identifies itself as account" \
-  $([ "$(grep -i '^x-gb-process:' /tmp/acct.hdr | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
-check "no VAPID keys ⇒ pushConfigured:false (inert, not broken)" \
-  $([ "$(jget '.pushConfigured')" = "false" ] && echo 0 || echo 1)
+  attacker='attacker-owned-password'
+  code=$(req - POST /account/register "{\"email\":\"known@example.com\",\"password\":\"$attacker\"}")
+  known_body=$(cat "$BODY")
+  check "registration returns generic 202 verification_pending" \
+    $([ "$code" = "202" ] && [ "$(jget '.status')" = "verification_pending" ] && echo 0 || echo 1)
+  check "registration creates no session cookie" \
+    $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
+  check "response never echoes password or claims email was sent" \
+    $(grep -qF "$attacker" "$BODY" && echo 1 || echo 0)
 
-# --- 2. Register ------------------------------------------------------------
-PW='correct horse battery staple'
-code=$(req "$JAR" POST /account/register "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "POST /account/register → 201" $([ "$code" = "201" ] && echo 0 || echo 1)
-check "register signs the caller in (cookie set)" \
-  $(grep -qi '^set-cookie: acct_session=' /tmp/acct.hdr && echo 0 || echo 1)
-check "acct_session is HttpOnly + SameSite=Lax + Path=/" \
-  $(grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'HttpOnly' \
-    && grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'SameSite=Lax' \
-    && grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'Path=/' \
-    && echo 0 || echo 1)
-# Secure only when the origin is https: a local http run cannot set it, and
-# the production origin (ACCT_PUBLIC_ORIGIN=https://…) must.
-if [[ "$BASE" == https://* ]]; then
-  check "acct_session is Secure (https origin)" \
-    $(grep -i '^set-cookie: acct_session=' /tmp/acct.hdr | grep -q 'Secure' && echo 0 || echo 1)
+  code=$(req - POST /account/register '{"email":"unknown@example.com"}')
+  check "unknown address gets identical status and body (no enumeration)" \
+    $([ "$code" = "202" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
+  check "unknown address also creates no session cookie" \
+    $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
+
+  for path in $MATRIX_PATHS; do
+    for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
+      # nginx's public account limiter is 60r/m with burst=20. Pace the
+      # complete registration-closed matrix below that sustained rate rather
+      # than weakening the production edge control to make this gate pass.
+      sleep 1.1
+      want=$(matrix_expect "$path" "$method")
+      code=$(matrix_req - "$method" "$path") || code=000
+      if accepts "$code" ${want//|/ }; then ok=0; else ok=1; fi
+      check "${method} ${path} [signed out] → ${code} (want ${want})" "$ok"
+      if [ "$code" != "405" ]; then
+        check "  …and it names no verbs (no Allow header)" \
+          $(grep -qi '^allow:' "$HDR" && echo 1 || echo 0)
+      fi
+    done
+  done
+  [ "$FAIL" -eq 0 ] || { echo "account gate: ${FAIL} failed" >&2; exit 1; }
+  echo "account gate OK (registration closed): ${PASS} checks"
+  exit 0
 fi
 
-check "register returns the KDF salt the browser needs" \
-  $([ -n "$(jget '.kdfSalt')" ] && [ "$(jget '.kdfSalt')" != "null" ] && echo 0 || echo 1)
-check "no recovery code without data (issued iff a server copy exists)" \
-  $([ "$(jget '.recoveryCode')" = "null" ] && echo 0 || echo 1)
-check "no password material in any response body" \
-  $(grep -qF "$PW" /tmp/acct.body && echo 1 || echo 0)
-
-code=$(req - POST /account/register "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "duplicate e-mail → 409 email_taken" \
-  $([ "$code" = "409" ] && [ "$(jget '.error')" = "email_taken" ] && echo 0 || echo 1)
-
-code=$(req - POST /account/register '{"email":"smoke@example.com","password":"short"}')
-check "short password → 400 invalid_password" \
-  $([ "$code" = "400" ] && [ "$(jget '.error')" = "invalid_password" ] && echo 0 || echo 1)
-
-# --- 3. Login, right and wrong ---------------------------------------------
-code=$(req "$JAR2" POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"$PW\"}")
-check "POST /account/login (second device) → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-check "login hands back the SAME kdf salt (the key is derivable there too)" \
-  $([ -n "$(jget '.kdfSalt')" ] && echo 0 || echo 1)
-SALT="$(jget '.kdfSalt')"
-
-code=$(req - POST /account/login "{\"email\":\"smoke@example.com\",\"password\":\"not the password\"}")
-check "wrong password → 401 invalid_credentials" \
-  $([ "$code" = "401" ] && [ "$(jget '.error')" = "invalid_credentials" ] && echo 0 || echo 1)
-code=$(req - POST /account/login '{"email":"nobody@example.com","password":"not the password"}')
-check "unknown address → the SAME 401 code (no account enumeration)" \
-  $([ "$code" = "401" ] && [ "$(jget '.error')" = "invalid_credentials" ] && echo 0 || echo 1)
-
-# --- 4. Sync: ciphertext in, ciphertext out ---------------------------------
-IV="$(printf 'wave-n-iv-12' | base64)"            # 12 bytes — GCM's IV size
-BLOB="$(printf '{"ciphertext":"not readable by the server"}' | base64)"
-
-code=$(req - PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "PUT /account/sync without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "PUT /account/sync → 200 with rev 1" \
-  $([ "$code" = "200" ] && [ "$(jget '.rev')" = "1" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" GET /account/sync)
-check "GET /account/sync returns the stored blob byte-for-byte" \
-  $([ "$code" = "200" ] && [ "$(jget '.iv')" = "$IV" ] && [ "$(jget '.data')" = "$BLOB" ] && echo 0 || echo 1)
-check "…and nothing that looks like a decrypted payload" \
-  $(grep -q 'billing_day\|energy_data\|"payload"' /tmp/acct.body && echo 1 || echo 0)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"$BLOB\",\"baseRev\":0}")
-check "stale baseRev → 409 carrying the current revision" \
-  $([ "$code" = "409" ] && [ "$(jget '.currentRev')" = "1" ] && echo 0 || echo 1)
-
-code=$(req "$JAR" PUT /account/sync "{\"iv\":\"$IV\",\"data\":\"not-base64!!\",\"baseRev\":1}")
-check "non-base64 ciphertext → 400, never stored" \
-  $([ "$code" = "400" ] && echo 0 || echo 1)
-
-# --- 5. Multi-device: the second profile sees the same copy -----------------
-code=$(req "$JAR2" GET /account/sync)
-check "second device, after login, pulls the same revision" \
-  $([ "$code" = "200" ] && [ "$(jget '.rev')" = "1" ] && [ "$(jget '.data')" = "$BLOB" ] && echo 0 || echo 1)
-
-# --- 6. Preferences are the documented defaults -----------------------------
-code=$(req "$JAR" GET /account/push/preferences)
-check "push preferences → 200 defaults (4 topics, cap 3, quiet 22:00–07:00)" \
-  $([ "$code" = "200" ] && [ "$(jget '.prefs.dailyCap')" = "3" ] \
-    && [ "$(jget '.prefs.topics | length')" = "4" ] \
-    && [ "$(jget '.prefs.quietStart')" = "1320" ] \
-    && [ "$(jget '.prefs.quietEnd')" = "420" ] && echo 0 || echo 1)
-code=$(req - GET /account/push/preferences)
-check "push preferences without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-
-# --- 7. Notify fan-out is session-gated -------------------------------------
-code=$(req - POST /account/notify '{"topic":"plan_change","title":"x"}')
-check "POST /account/notify without a session → 401" $([ "$code" = "401" ] && echo 0 || echo 1)
-# The topic split is part of the contract (SECURITY.md §5.11): a browser may
-# emit only the client-origin half of the trigger table, and it reaches only
-# its own account. Both halves are asserted here because a fan-out that
-# reaches the wrong account is invisible to every other check in this script.
-code=$(req "$JAR" POST /account/notify '{"topic":"anomaly","title":"Unusual usage"}')
-check "POST /account/notify (client-origin topic, own session) → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-code=$(req "$JAR" POST /account/notify '{"topic":"oeb_rates","title":"x"}')
-check "a browser may not claim a server-origin topic → 400 invalid_topic" \
-  $([ "$code" = "400" ] && [ "$(jget '.error')" = "invalid_topic" ] && echo 0 || echo 1)
-
-# --- 8. Logout invalidates the SESSION, not just the cookie -----------------
-code=$(req "$JAR" POST /account/logout)
-check "POST /account/logout → 200" $([ "$code" = "200" ] && echo 0 || echo 1)
-code=$(req "$JAR" GET /account/sync)
-check "the cookie it left behind no longer authenticates (401)" \
-  $([ "$code" = "401" ] && echo 0 || echo 1)
-code=$(req "$JAR2" GET /account/sync)
-check "the OTHER device's session survives this logout" \
-  $([ "$code" = "200" ] && echo 0 || echo 1)
-
-echo "account gate: ${PASS} passed, ${FAIL} failed"
-[ "$FAIL" -eq 0 ] || exit 1
+echo "account gate (legacy authenticated fixture mode is unsupported; use --expect-registration-closed): ${BASE}" >&2
+exit 2

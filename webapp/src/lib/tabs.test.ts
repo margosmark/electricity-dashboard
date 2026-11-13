@@ -11,8 +11,8 @@ import {
 } from './tabs';
 
 describe('tabs — the contract', () => {
-  it('has exactly the four sections the IA rework defines, overview first', () => {
-    expect(TAB_IDS).toEqual(['overview', 'usage', 'plans', 'money']);
+  it('has exactly the four decision surfaces, overview first', () => {
+    expect(TAB_IDS).toEqual(['overview', 'analytics', 'plans', 'money']);
     expect(DEFAULT_TAB).toBe('overview');
     expect(TABS.map((t) => t.id)).toEqual([...TAB_IDS]);
   });
@@ -46,14 +46,27 @@ describe('tabHash / tabFromHash', () => {
   });
 
   it('tolerates surrounding whitespace but nothing else', () => {
-    expect(tabFromHash(' #tab=usage ')).toBe('usage');
+    expect(tabFromHash(' #tab=plans ')).toBe('plans');
     expect(tabFromHash('#tab=usage=extra')).toBeNull();
+  });
+
+  it('maps the retired `usage` deep link onto its successor, Analytics', () => {
+    // A shared link must keep working: `usage` WAS the usage analysis, and
+    // that destination is now Analytics — not a silent fall back to Overview.
+    expect(tabFromHash('#tab=usage')).toBe('analytics');
   });
 });
 
 describe('tabFromStorage', () => {
   it('accepts a stored tab', () => {
     expect(tabFromStorage('money')).toBe('money');
+  });
+
+  it('remembers a stored `usage` as the Analytics destination', () => {
+    // The classic strip shares this storage key and still writes `usage`;
+    // switching back to the quiet view must land where the user was, not
+    // reset them to Overview.
+    expect(tabFromStorage('usage')).toBe('analytics');
   });
 
   it('degrades to the default instead of poisoning the strip', () => {

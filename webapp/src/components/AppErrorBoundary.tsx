@@ -178,7 +178,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
                 type="button"
                 data-testid="crash-reset"
                 onClick={this.reset}
-                className="flex-1 py-4 bg-yellow-400 border-4 border-edge rounded-xl font-black uppercase text-xs md:text-sm shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
+                className="flex-1 py-4 bg-accent border-4 border-edge rounded-xl font-black uppercase text-xs md:text-sm shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all"
               >
                 {t('error.tryAgain')}
               </button>

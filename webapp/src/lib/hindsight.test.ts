@@ -1,15 +1,17 @@
 /**
- * Wave V — the HINDSIGHT engine.
+ * Wave V (corrected) — the HINDSIGHT engine: what another PLAN would have cost
+ * for a closed bill, on the SAME metered readings.
  *
- * Everything here runs against readings built by the real `processRawData`
- * (not hand-stamped categories), so the TOU/ULO windows, the Ontario holiday
- * rule and the per-reading rate-set versioning are the app's own — a test
- * that hand-set `touCategory` would agree with itself and prove nothing.
+ * Two things this file is deliberately strict about:
  *
- * The bills are built so that the model reproduces them to the cent (the
- * commodity lines sum to Σ of the readings' own priced cost, and delivery,
- * regulatory, HST and the rebate are laid out the way Oakville lays them out),
- * which is what makes a period *countable* on both levers.
+ *  1. Everything runs against readings built by the real `processRawData` (not
+ *     hand-stamped categories), so the TOU/ULO windows, the Ontario holiday
+ *     rule and the per-reading rate-set versioning are the app's own — a test
+ *     that hand-set `touCategory` would agree with itself and prove nothing.
+ *  2. It pins the SCOPE, not just the numbers: the report carries no behaviour,
+ *     load-shift or hypothetical-usage surface at all, and every repriced
+ *     figure is recomputed here independently from the same readings at their
+ *     own timestamps and quantities.
  *
  * The real 2-year and 3-month exports never enter this repo (privacy rule):
  * they are exercised by the deployed browser check, which pins their sha256
@@ -29,16 +31,7 @@ import {
   type UsageSummary,
 } from './energy';
 import { buildSwitchReport, type PlanTimelineEntry } from './planTimeline';
-import {
-  MERGE_LEVEL_RATIO,
-  MIN_BLOCK_KWH_PER_HOUR,
-  MIN_MOVE_SAVING,
-  buildHindsight,
-  blockLabel,
-  destinationRateCents,
-  pickLever,
-  scanPeriodBlocks,
-} from './hindsight';
+import { MIN_SAVING, buildHindsight } from './hindsight';
 
 /* -------------------------------------------------------------------------- *
  * Rates — the app's own three shipped sets
@@ -106,7 +99,7 @@ function makeSummary(day: string, days: number, items: BillLineItem[]): UsageSum
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items,
   };
 }
@@ -148,7 +141,11 @@ function bill(plan: 'TOU' | 'Tiered' | 'ULO', commodity: number, season: 'Winter
           line(`On Peak-${season}`, Math.round(commodity * 0.55 * 100) / 100),
         ]
       : plan === 'ULO'
-        ? [line('Ultra-Low Overnight', Math.round(commodity * 100) / 100)]
+        ? // The overnight line still has to classify as COMMODITY (the app's
+          // own classifier keys off the note): "Ultra-Low Overnight" alone
+          // lands in `other`, which would make the model check fail for a
+          // reason that has nothing to do with the plan comparison.
+          [line('Overnight Off-Peak', Math.round(commodity * 100) / 100)]
         : [line(`BLOCK 1 - ${season}`, Math.round(commodity * 100) / 100)];
   // The two TOU lines are rounded to the cent: give the last one the remainder
   // so the commodity sums to the readings' own cost exactly.
@@ -165,6 +162,26 @@ function bill(plan: 'TOU' | 'Tiered' | 'ULO', commodity: number, season: 'Winter
     line('Regulatory', regulatory, 4),
     line('H.S.T. # 123456789', hst, 5),
     line('Ontario Electricity Rebate', rebate, 8),
+    line('Total Electricity Charges', Math.round(total * 100) / 100),
+  ];
+}
+
+/**
+ * A bill that states money and a commodity charge but fingerprints NO plan:
+ * "Energy Charge" classifies as commodity (so the period is modelable) while
+ * matching none of the plan patterns — the declared timeline is then the only
+ * thing that can name the plan.
+ */
+function silentBill(commodity: number): BillLineItem[] {
+  const delivery = 75.5;
+  const regulatory = 8.6;
+  const total = commodity + delivery + regulatory;
+  return [
+    line('Energy Charge', Math.round(commodity * 100) / 100),
+    line('Delivery', delivery, 4),
+    line('Regulatory', regulatory, 4),
+    line('H.S.T. # 123456789', Math.round(total * 0.13 * 100) / 100, 5),
+    line('Ontario Electricity Rebate', -Math.round(total * 0.235 * 100) / 100, 8),
     line('Total Electricity Charges', Math.round(total * 100) / 100),
   ];
 }
@@ -191,6 +208,11 @@ function houseBlock(
   );
 }
 
+/** Readings that only ever run overnight, 00:00–06:00 (an off-peak shape). */
+function overnightLoad(day: string, days: number, kwh = 3.0, rates: RateSet[] = [RATES_2025]) {
+  return hourly(day, days, (dt) => (dt.getHours() < 6 ? kwh : 0), rates);
+}
+
 /** Readings + a matching bill, for one plan. */
 function fixture(
   day: string,
@@ -198,224 +220,238 @@ function fixture(
   opts: {
     plan: 'TOU' | 'Tiered' | 'ULO';
     season: 'Winter' | 'Summer';
-    blockHours?: number[];
-    blockKwh?: number;
-    baseKwh?: number;
+    rows?: ProcessedPoint[];
+    commodityDelta?: number;
     rates?: RateSet[];
   },
 ) {
-  const rows =
-    opts.blockHours && opts.blockHours.length > 0
-      ? houseBlock(day, days, opts.blockHours, opts.blockKwh ?? 3, opts.baseKwh ?? 0.4, opts.rates)
-      : hourly(day, days, () => opts.baseKwh ?? 0.4, opts.rates);
-  const commodity = planCostFor(rows, opts.plan);
+  const rows = opts.rows ?? hourly(day, days, () => 0.4, opts.rates);
+  const commodity = planCostFor(rows, opts.plan) + (opts.commodityDelta ?? 0);
   return { rows, summaries: [makeSummary(day, days, bill(opts.plan, commodity, opts.season))] };
 }
 
+/** Independent recompute of a period's payable per plan, straight off the
+ *  readings: the SAME rows, each priced with its own `activeRateSet`. */
+function repricedPayable(summary: UsageSummary, rows: ProcessedPoint[]) {
+  const inPeriod = rows.filter(
+    (r) => r.timestamp >= summary.start && r.timestamp < summary.start + summary.duration,
+  );
+  const totals = billTotals(summary);
+  const commodity = {
+    TOU: inPeriod.reduce((acc, r) => acc + r.costTOU, 0),
+    ULO: inPeriod.reduce((acc, r) => acc + r.costULO, 0),
+    Tiered: planCostFor(inPeriod, 'Tiered'),
+  };
+  const hstRate = totals.total > 0 ? totals.tax / totals.total : 0.13;
+  const creditRate = totals.total > 0 ? totals.credit / totals.total : 0;
+  const nonCommodity = totals.total - totals.commodity;
+  const payable = {} as Record<'TOU' | 'Tiered' | 'ULO', number>;
+  for (const plan of ['TOU', 'Tiered', 'ULO'] as const) {
+    const modeled = nonCommodity + commodity[plan];
+    payable[plan] = modeled + modeled * hstRate + modeled * creditRate;
+  }
+  return { payable, commodity, kwh: inPeriod.reduce((acc, r) => acc + r.usage_kwh, 0) };
+}
+
 /* -------------------------------------------------------------------------- *
- * scanPeriodBlocks
+ * Scope: this module compares plans, and nothing else
  * -------------------------------------------------------------------------- */
 
-describe('scanPeriodBlocks — the recurring routine inside one period', () => {
-  it('finds a weekday block, prices it twice, and reports the real difference', () => {
-    // 28 days from a Monday: exactly 4 weeks, 20 weekdays.
-    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
-    const scan = scanPeriodBlocks(rows, 'TOU');
-
-    expect(scan.weeksAvailable).toBe(4);
-    expect(scan.flatRate).toBe(false);
-    expect(scan.moves).toHaveLength(5); // Mon…Fri, one block each
-
-    const mon = scan.moves.find((m) => m.id === 'mon-7-10');
-    expect(mon).toBeDefined();
-    // 4 Mondays × 3 hours × 3.4 kWh (3.0 block + 0.4 base) = 40.8 kWh
-    expect(mon!.kwh).toBeCloseTo(40.8, 6);
-    expect(mon!.weeksSeen).toBe(4);
-    expect(mon!.weeksAvailable).toBe(4);
-    expect(mon!.consistencyCv).toBeCloseTo(0, 6);
-    expect(mon!.destination.key).toBe('offpeak-tou');
-    // winter weekday 07:00–10:00 is On-Peak: 20.3¢ paid, 9.8¢ in the target
-    expect(mon!.actualRateCents).toBeCloseTo(20.3, 6);
-    expect(mon!.destRateCents).toBeCloseTo(9.8, 6);
-    expect(mon!.saving).toBeCloseTo((40.8 * (20.3 - 9.8)) / 100, 6);
-    expect(mon!.shiftedCost).toBeLessThan(mon!.actualCost);
-    expect(mon!.classification.signature).toBe('fixed-schedule');
-    expect(mon!.label).toBe(blockLabel(1, 7, 10));
+describe('hindsight scope — plans only, on unchanged actual usage', () => {
+  it('exposes no behaviour / load-shift / hypothetical surface', async () => {
+    const mod = await import('./hindsight');
+    const removed = [
+      'scanPeriodBlocks',
+      'pickLever',
+      'blockLabel',
+      'destinationRateCents',
+      'MIN_MOVE_SAVING',
+      'MIN_BLOCK_KWH_PER_HOUR',
+      'MIN_WEEK_SHARE',
+      'MERGE_LEVEL_RATIO',
+      'LEVER_TIE_TOLERANCE',
+      'EMPTY_HINDSIGHT_BEHAVIOUR',
+    ];
+    for (const name of removed) expect(name in mod, name).toBe(false);
+    // …and the surface that replaced them is exactly the plan surface.
+    for (const name of ['buildHindsight', 'MIN_SAVING', 'EMPTY_HINDSIGHT']) {
+      expect(name in mod, name).toBe(true);
+    }
   });
 
-  it('does not glue a small base-load hour onto a big appliance block', () => {
-    // Hours 10–11 follow the 07–09 block but carry only the 0.4 kWh/h floor:
-    // one 3-hour block, not "07:00–12:00".
+  it('carries no behaviour field anywhere in the report', () => {
     const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
-    const scan = scanPeriodBlocks(rows, 'TOU');
-    expect(scan.moves.map((m) => m.id).sort()).toEqual([
-      'fri-7-10',
-      'mon-7-10',
-      'thu-7-10',
-      'tue-7-10',
-      'wed-7-10',
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
+    const report = buildHindsight(summaries, rows, []);
+
+    expect(Object.keys(report).sort()).toEqual([
+      'auditedKwh',
+      'emptyReason',
+      'note',
+      'periods',
+      'planMiss',
+      'planPeriods',
+      'uncounted',
+      'worstPeriod',
     ]);
-    for (const m of scan.moves) expect(m.endHour - m.startHour).toBe(3);
-    expect(MERGE_LEVEL_RATIO).toBeGreaterThan(0);
+    expect(Object.keys(report.periods[0]).sort()).toEqual([
+      'conflict',
+      'counted',
+      'kwh',
+      'label',
+      'origin',
+      'plan',
+      'planBest',
+      'planExcluded',
+      'planMiss',
+      'planReason',
+      'planVerdict',
+      'season',
+      'straddlesSeason',
+      'summary',
+      'switchRow',
+    ]);
+    // A deep sweep: no nested number is called a behaviour / shift / lever.
+    expect(JSON.stringify(report)).not.toMatch(/behaviour|shiftable|moves|lever/i);
   });
 
-  it('ignores the always-on floor — a flat 0.4 kWh/h hour is not a routine to move', () => {
-    const rows = hourly('2026-11-02', 28, () => 0.4);
-    const scan = scanPeriodBlocks(rows, 'TOU');
-    expect(scan.moves).toHaveLength(0);
-    expect(MIN_BLOCK_KWH_PER_HOUR).toBe(0.5);
-  });
-
-  it('prices a ULO block against ULO overnight, not against a TOU rate', () => {
-    // ULO peak window is the weekday 16:00–21:00.
-    const rows = houseBlock('2026-11-02', 28, [17, 18, 19, 20], 2.0);
-    const scan = scanPeriodBlocks(rows, 'ULO');
-    expect(scan.moves.length).toBeGreaterThan(0);
-    const mon = scan.moves.find((m) => m.id === 'mon-17-21')!;
-    expect(mon).toBeDefined();
-    expect(mon.destination.key).toBe('overnight-ulo');
-    expect(mon.actualRateCents).toBeCloseTo(RATES_2025.ulo.onPeak, 6);
-    expect(mon.destRateCents).toBeCloseTo(RATES_2025.ulo.overnight, 6);
-    expect(mon.shiftedCost).toBeLessThan(mon.actualCost);
-  });
-
-  it('answers nothing at all for Tiered — and says that is a flat rate', () => {
+  it('reports the period kWh as metered — the quantity never changes', () => {
     const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
-    const scan = scanPeriodBlocks(rows, 'Tiered');
-    expect(scan.moves).toHaveLength(0);
-    expect(scan.flatRate).toBe(true);
-  });
-
-  it('claims nothing when the period is too short to establish a routine', () => {
-    const rows = houseBlock('2026-11-02', 14, [7, 8, 9], 3.0);
-    const scan = scanPeriodBlocks(rows, 'TOU');
-    expect(scan.weeksAvailable).toBe(2);
-    expect(scan.moves).toHaveLength(0);
-  });
-
-  it('keeps a load that runs every other week out of the answer (recurrence share)', () => {
-    // Only the first and third weeks carry the block: 2 of 5 weeks.
-    const set = new Set([7, 8, 9]);
-    const rows = hourly('2026-11-02', 35, (dt) => {
-      const dow = dt.getDay();
-      if (dow === 0 || dow === 6) return 0.4;
-      const dayIdx = Math.round(
-        (new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime() -
-          localStart('2026-11-02').getTime()) /
-          86400000,
-      );
-      const weekIdx = Math.floor(dayIdx / 7);
-      return 0.4 + (set.has(dt.getHours()) && (weekIdx === 0 || weekIdx === 2) ? 3 : 0);
-    });
-    const scan = scanPeriodBlocks(rows, 'TOU');
-    expect(scan.weeksAvailable).toBe(5);
-    expect(scan.moves).toHaveLength(0);
-  });
-
-  it('splits a season-straddling block by neither tier nor season — it stays one routine', () => {
-    // Oct 19 → Nov 15 straddles Nov 1: the same 07:00–10:00 weekday hours are
-    // Mid-Peak under the summer window and On-Peak under the winter one.
-    const rows = houseBlock('2026-10-19', 28, [7, 8, 9], 3.0, 0.4, RATE_HISTORY);
-    const scan = scanPeriodBlocks(rows, 'TOU');
-    const mon = scan.moves.find((m) => m.id === 'mon-7-10');
-    expect(mon).toBeDefined();
-    expect(mon!.tierMixed).toBe(true);
-    expect(mon!.weeksSeen).toBeGreaterThanOrEqual(3);
-    // Each week's kWh is priced with the rate set in force on its own day, so
-    // the blended rate sits between the old and the new Mid-/On-Peak ones.
-    expect(mon!.actualRateCents).toBeGreaterThan(RATES_2025.tou.offPeak);
-    expect(mon!.actualRateCents).toBeLessThan(RATES_2026.tou.onPeak);
-    expect(mon!.shiftedCost).toBeLessThan(mon!.actualCost);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
+    const report = buildHindsight(summaries, rows, []);
+    const inPeriod = rows.filter(
+      (r) => r.timestamp >= summaries[0].start && r.timestamp < summaries[0].start + summaries[0].duration,
+    );
+    expect(report.periods[0].kwh).toBeCloseTo(
+      inPeriod.reduce((acc, r) => acc + r.usage_kwh, 0),
+      9,
+    );
+    expect(report.auditedKwh).toBeCloseTo(report.periods[0].kwh, 9);
   });
 });
 
 /* -------------------------------------------------------------------------- *
- * buildHindsight — the plan side reuses Wave P, the behaviour side is new
+ * The plan comparison, recomputed independently
  * -------------------------------------------------------------------------- */
 
-describe('buildHindsight — two levers per closed period', () => {
-  it('is additive: the total is the plan miss plus the behaviour miss', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-      blockKwh: 3.0,
-    });
-    const report = buildHindsight(summaries, rows, []);
-
-    expect(report.planMiss).not.toBeNull();
-    expect(report.behaviourMiss).not.toBeNull();
-    expect(report.totalMiss).toBeCloseTo((report.planMiss ?? 0) + (report.behaviourMiss ?? 0), 9);
-    expect(report.behaviourMiss).toBeGreaterThan(0);
-  });
-
+describe('buildHindsight — the same readings repriced across the three plans', () => {
   it('reads the plan side straight off Wave P — never re-prices it', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-    });
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
     const p = buildSwitchReport(summaries, rows, []);
     const h = buildHindsight(summaries, rows, []);
+
     expect(h.planMiss).toBe(p.overpaid);
-    expect(h.periods[0].switchRow.actual).toBe(p.rows[0].actual);
     expect(h.periods[0].switchRow).toEqual(p.rows[0]);
     expect(h.periods[0].planMiss).toBe(p.rows[0].saving);
     expect(h.periods[0].planBest).toBe(p.rows[0].bestPlan);
+    expect(h.periods[0].planVerdict).toBe('overpaid');
+    expect(h.periods[0].counted).toBe(true);
+    expect(h.planPeriods).toBe(1);
   });
 
-  it('the behaviour lever is computed with the plan held FIXED', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-      blockKwh: 3.0,
-    });
+  it('prices all three plans on the same rows, at each reading’s own rates', () => {
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
     const h = buildHindsight(summaries, rows, []);
-    const period = h.periods[0];
-    expect(period.behaviourVerdict).toBe('moveable');
-    expect(period.behaviourMiss).toBeCloseTo(
-      period.moves.reduce((acc, m) => acc + m.saving, 0),
-      9,
-    );
-    const mon = period.moves.find((m) => m.id === 'mon-7-10')!;
-    expect(mon.destination.plan).toBe('TOU');
-    expect(mon.destRateCents).toBeCloseTo(RATES_2025.tou.offPeak, 9);
+    const row = h.periods[0].switchRow;
+    const expected = repricedPayable(summaries[0], rows);
+
+    expect(row.modeled).not.toBeNull();
+    for (const plan of ['TOU', 'Tiered', 'ULO'] as const) {
+      expect(row.modeled![plan]).toBeCloseTo(expected.payable[plan], 6);
+    }
+    // The plan actually billed reproduces the bill it explains (the $1 check),
+    // which is exactly why this row is countable.
+    expect(Math.abs((row.modelDelta ?? 99))).toBeLessThanOrEqual(1);
+    // Every alternative is priced off MORE OF THE SAME ROWS, not a different
+    // schedule: ULO's own commodity can only be the rows priced at ULO rates.
+    expect(expected.commodity.ULO).toBeGreaterThan(0);
+    expect(expected.kwh).toBeCloseTo(h.periods[0].kwh, 9);
   });
 
-  it('reports Tiered as a REAL zero, not as an unknown', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'Tiered',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-    });
+  it('says "already the cheapest" when the alternatives cost more', () => {
+    // Usage only in the 00:00–06:00 window, billed on ULO: nothing else can be
+    // cheaper on the same kWh, so the verdict is a real zero-or-better.
+    const rows = overnightLoad('2026-11-02', 28, 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'ULO', season: 'Winter', rows });
     const h = buildHindsight(summaries, rows, []);
     const period = h.periods[0];
+
+    expect(period.plan).toBe('ULO');
+    expect(period.planVerdict).toBe('best');
+    expect(period.planMiss).toBeLessThanOrEqual(MIN_SAVING);
+    expect(h.planMiss).toBeLessThanOrEqual(MIN_SAVING);
+    expect(MIN_SAVING).toBe(0.5);
+  });
+
+  it('names the cheapest alternative when the billed plan was not it', () => {
+    // Same off-peak-only shape, billed on the FLAT plan: TOU/ULO both price
+    // those hours below tier 1, so Tiered is the expensive one.
+    const rows = overnightLoad('2026-11-02', 28, 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'Tiered', season: 'Winter', rows });
+    const h = buildHindsight(summaries, rows, []);
+    const period = h.periods[0];
+
     expect(period.plan).toBe('Tiered');
-    expect(period.behaviourVerdict).toBe('flat-rate');
-    expect(period.behaviourMiss).toBe(0);
-    expect(period.moves).toHaveLength(0);
-    expect(period.behaviourReason).toBeTruthy();
-    // …and it still counts on the plan lever, so the total is not suppressed.
-    expect(h.behaviourMiss).toBe(0);
-    expect(h.totalMiss).toBeCloseTo(h.planMiss ?? 0, 9);
+    expect(period.planVerdict).toBe('overpaid');
+    expect(period.planMiss).toBeGreaterThan(MIN_SAVING);
+    expect(period.planBest).toBe('ULO'); // the overnight plan wins on overnight kWh
+    expect(h.planMiss).toBeCloseTo(period.planMiss ?? 0, 9);
   });
 
-  it('claims nothing when there is no recurring block — and invents no number', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      baseKwh: 0.4,
-    });
+  it('judges a season-straddling bill with the rate set each reading was on', () => {
+    // Oct 19 → Nov 15 straddles Nov 1: one period, two real rate sets.
+    const rows = houseBlock('2026-10-19', 28, [7, 8, 9], 3.0, 0.4, RATE_HISTORY);
+    const { summaries } = fixture('2026-10-19', 28, { plan: 'TOU', season: 'Summer', rows });
     const h = buildHindsight(summaries, rows, []);
     const period = h.periods[0];
-    expect(period.behaviourVerdict).toBe('nothing-to-shift');
-    expect(period.behaviourMiss).toBe(0);
-    expect(period.moves).toHaveLength(0);
-    expect(period.behaviourReason).toBeTruthy();
+
+    expect(period.straddlesSeason).toBe(true);
+    expect(period.season).toBe('summer'); // the season the bill's first day was in
+    const before = rows.find((r) => r.dayStr === '2026-10-20' && r.dateObj.getHours() === 7)!;
+    const after = rows.find((r) => r.dayStr === '2026-11-04' && r.dateObj.getHours() === 7)!;
+    expect(before.activeRateSet.effectiveDate).toBe('2025-11-01');
+    expect(after.activeRateSet.effectiveDate).toBe('2026-11-01');
+
+    // The three repriced plans equal an independent sum over the SAME rows,
+    // each reading at its own day's rates — so the two halves of the period
+    // really are priced on the two rate sets.
+    const expected = repricedPayable(summaries[0], rows);
+    for (const plan of ['TOU', 'Tiered', 'ULO'] as const) {
+      expect(period.switchRow.modeled![plan]).toBeCloseTo(expected.payable[plan], 6);
+    }
+    expect(period.planMiss).toBe(period.switchRow.saving);
+    expect(period.counted).toBe(true);
   });
 
-  it('leaves both levers null when the plan cannot be known', () => {
+  it('walks a declared timeline when the bill fingerprint is silent', () => {
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const timeline: PlanTimelineEntry[] = [
+      { id: 'x', plan: 'TOU', from: '2026-10-01', to: '2026-12-31' },
+    ];
+    // "Energy Charge" classifies as COMMODITY (so the period really is
+    // modelable) while fingerprinting no plan at all — the timeline is then
+    // the only thing that can name the plan.
+    const commodity = planCostFor(rows, 'TOU');
+    const summary = makeSummary('2026-11-02', 28, silentBill(commodity));
+    const p = buildSwitchReport([summary], rows, []);
+    expect(p.rows[0].plan).toBe('unknown'); // silent without the timeline
+
+    const h = buildHindsight([summary], rows, timeline);
+    expect(h.periods[0].plan).toBe('TOU');
+    expect(h.periods[0].origin).toBe('declared');
+    expect(h.periods[0].counted).toBe(true);
+    expect(h.periods[0].planMiss).toBe(h.periods[0].switchRow.saving);
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * The honest refusals
+ * -------------------------------------------------------------------------- */
+
+describe('buildHindsight — nothing is claimed without evidence', () => {
+  it('claims nothing at all when the plan cannot be known', () => {
     const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
     const items = [
       line('Monthly Basic Charge', 18.4),
@@ -424,242 +460,122 @@ describe('buildHindsight — two levers per closed period', () => {
     ];
     const h = buildHindsight([makeSummary('2026-11-02', 28, items)], rows, []);
     const period = h.periods[0];
+
     expect(period.plan).toBe('unknown');
     expect(period.planVerdict).toBe('unknown');
     expect(period.planMiss).toBeNull();
-    expect(period.behaviourVerdict).toBe('unknown');
-    expect(period.behaviourMiss).toBeNull();
-    expect(h.totalMiss).toBeNull();
-    expect(h.lever).toBe('unknown');
-  });
-
-  it('excludes a period the readings do not cover — from BOTH totals', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-    });
-    // Only the first 10 days of readings: 36% coverage.
-    const partial = rows.filter((r) => r.timestamp < summaries[0].start + 10 * 86400);
-    const h = buildHindsight(summaries, partial, []);
-    const period = h.periods[0];
-    expect(period.counted).toBe(false);
-    expect(period.planVerdict).toBe('skipped');
-    expect(period.planMiss).toBeNull();
-    expect(period.behaviourMiss).toBeNull();
-    expect(period.behaviourVerdict).toBe('skipped');
+    expect(period.planBest).toBeNull();
+    expect(period.planReason).toBeTruthy();
+    // …while the modeled reference the switch row carries stays available.
+    expect(period.switchRow.modeled).not.toBeNull();
     expect(h.planMiss).toBeNull();
-    expect(h.behaviourMiss).toBeNull();
-    expect(h.totalMiss).toBeNull();
+    expect(h.planPeriods).toBe(0);
+    expect(h.uncounted).toBe(1);
     expect(h.emptyReason).toBe('nothing-countable');
   });
 
-  it('sums over several periods and ranks the worst first', () => {
-    const a = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-      blockKwh: 3.0,
-    });
-    const b = fixture('2026-12-01', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-      blockKwh: 1.0,
-    });
-    const h = buildHindsight([...a.summaries, ...b.summaries], [...a.rows, ...b.rows], []);
-    expect(h.periods).toHaveLength(2);
-    expect(h.behaviourPeriods).toBe(2);
-    expect(h.behaviourMiss).toBeCloseTo(
-      h.periods.reduce((acc, p) => acc + (p.behaviourMiss ?? 0), 0),
-      9,
-    );
-    // Worst first: the 3 kWh/h house left more on the table than the 1 kWh/h one.
-    expect(h.periods[0].kwh).toBeGreaterThan(h.periods[1].kwh);
-    expect(h.worstPeriod?.summary.start).toBe(a.summaries[0].start);
-    expect(h.shiftableKwh).toBeCloseTo(
-      h.moves.reduce((acc, m) => acc + m.kwh, 0),
-      9,
-    );
-    expect(h.moves.length).toBeGreaterThan(0);
-    for (const m of h.moves) expect(m.saving).toBeGreaterThan(MIN_MOVE_SAVING);
+  it('excludes a period the readings do not cover — with its reason', () => {
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
+    const partial = rows.filter((r) => r.timestamp < summaries[0].start + 10 * 86400);
+    const h = buildHindsight(summaries, partial, []);
+    const period = h.periods[0];
+
+    expect(period.counted).toBe(false);
+    expect(period.planVerdict).toBe('skipped');
+    expect(period.planReason).toBeTruthy();
+    expect(period.planMiss).toBeNull();
+    expect(h.planMiss).toBeNull();
+    expect(h.auditedKwh).toBe(0);
+    expect(h.emptyReason).toBe('nothing-countable');
   });
 
-  it('places a straddling period with the rate set each reading was really on', () => {
-    const { rows, summaries } = fixture('2026-10-19', 28, {
+  it('shows but does not count a period whose model cannot reproduce its bill', () => {
+    // The bill overstates the commodity by $40: the re-priced actual plan
+    // misses it by far more than the $1 the model check allows.
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, {
       plan: 'TOU',
-      season: 'Summer',
-      blockHours: [7, 8, 9],
-      blockKwh: 3.0,
-      rates: RATE_HISTORY,
+      season: 'Winter',
+      rows,
+      commodityDelta: 40,
     });
     const h = buildHindsight(summaries, rows, []);
     const period = h.periods[0];
-    expect(period.straddlesSeason).toBe(true);
-    const before = rows.find((r) => r.dayStr === '2026-10-20' && r.dateObj.getHours() === 7)!;
-    const after = rows.find((r) => r.dayStr === '2026-11-04' && r.dateObj.getHours() === 7)!;
-    expect(before.activeRateSet.effectiveDate).toBe('2025-11-01');
-    expect(after.activeRateSet.effectiveDate).toBe('2026-11-01');
 
-    // The block's actual cost is exactly the sum of each reading priced with
-    // its OWN day's rate set — recomputed here, independently of the engine.
-    const move = period.moves.find((m) => m.id === 'tue-7-10')!;
-    expect(move).toBeDefined();
-    const blockRows = rows.filter(
-      (r) => r.dateObj.getDay() === 2 && r.dateObj.getHours() >= 7 && r.dateObj.getHours() < 10,
-    );
-    const expected = blockRows.reduce((acc, r) => acc + r.costTOU, 0);
-    expect(move.actualCost).toBeCloseTo(expected, 9);
-    expect(move.kwh).toBeCloseTo(
-      blockRows.reduce((acc, r) => acc + r.usage_kwh, 0),
-      9,
-    );
-    // The destination is priced on the same per-reading sets.
-    const expectedDest = blockRows.reduce(
-      (acc, r) => acc + (r.usage_kwh * r.activeRateSet.tou.offPeak) / 100,
-      0,
-    );
-    expect(move.shiftedCost).toBeCloseTo(expectedDest, 9);
+    expect(period.counted).toBe(false);
+    expect(period.planVerdict).toBe('untrusted');
+    expect(period.planMiss).toBeNull();
+    expect(period.planExcluded).not.toBeNull();
+    expect(period.planReason).toBeTruthy();
+    expect(h.planMiss).toBeNull();
+    expect(h.periods[0].switchRow.saving).not.toBeNull(); // a number exists…
+    expect(h.emptyReason).toBe('nothing-countable'); // …it just enters no total
   });
 
-  it('walks a declared timeline when the bill fingerprint is silent', () => {
-    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
-    const items = [
+  it('sums only the countable periods, worst-first, and reports their kWh', () => {
+    // Same shape, two volumes: the over-payment scales with the kWh, so the
+    // bigger period really does leave more on the table.
+    const bigRows = overnightLoad('2026-11-02', 28, 3.0);
+    const smallRows = overnightLoad('2026-12-01', 28, 1.0);
+    const big = fixture('2026-11-02', 28, { plan: 'Tiered', season: 'Winter', rows: bigRows });
+    const small = fixture('2026-12-01', 28, { plan: 'Tiered', season: 'Winter', rows: smallRows });
+    const unknownRows = overnightLoad('2027-01-04', 28, 3.0);
+    const unknownSummary = makeSummary('2027-01-04', 28, [
       line('Monthly Basic Charge', 18.4),
       line('Standard Service Charge', 5.0, 4),
-      line('Total Charges', 23.4),
-    ];
-    const timeline: PlanTimelineEntry[] = [
-      { id: 'x', plan: 'TOU', from: '2026-10-01', to: '2026-12-31' },
-    ];
-    const commodity = planCostFor(rows, 'TOU');
-    const summary = makeSummary('2026-11-02', 28, [
-      ...items.slice(0, 2),
-      line('Off Peak-Winter', Math.round(commodity * 100) / 100),
-      line('Delivery', 75.5, 4),
-      line('Regulatory', 8.6, 4),
-      line('H.S.T. # 123456789', Math.round((commodity + 84.1) * 0.13 * 100) / 100, 5),
-      line('Total Electricity Charges', Math.round((commodity + 84.1) * 100) / 100),
+      line('Total Electricity Charges', 23.4),
     ]);
-    // Nothing in the itemized lines fingerprints a plan beyond the single
-    // "Off Peak-Winter" line, which does: the timeline only has to agree.
-    const h = buildHindsight([summary], rows, timeline);
-    expect(h.periods[0].plan).toBe('TOU');
-    expect(h.periods[0].origin).toBe('detected');
-    expect(h.periods[0].behaviourMiss).not.toBeNull();
+
+    const h = buildHindsight(
+      [...big.summaries, ...small.summaries, unknownSummary],
+      [...big.rows, ...small.rows, ...unknownRows],
+      [],
+    );
+
+    expect(h.periods).toHaveLength(3);
+    expect(h.planPeriods).toBe(2);
+    expect(h.uncounted).toBe(1);
+    expect(h.planMiss).toBeCloseTo(
+      h.periods.reduce((acc, p) => acc + (p.planMiss ?? 0), 0),
+      9,
+    );
+    expect(h.periods[0].planVerdict).toBe('overpaid');
+    expect(h.periods[0].kwh).toBeGreaterThan(h.periods[1].kwh);
+    // Worst-first is a real ordering, not a fixture coincidence: every
+    // countable figure is >= the one after it, and the nulls sink to the end.
+    const counted = h.periods.filter((p) => p.planMiss !== null).map((p) => p.planMiss as number);
+    expect(counted).toEqual([...counted].sort((a, b) => b - a));
+    expect(h.periods[2].planMiss).toBeNull();
+    expect(h.worstPeriod?.summary.start).toBe(big.summaries[0].start);
+    expect(h.auditedKwh).toBeCloseTo(
+      h.periods.filter((p) => p.planMiss !== null).reduce((acc, p) => acc + p.kwh, 0),
+      9,
+    );
   });
 
   it('returns the empty shape for a file with no bills', () => {
     const h = buildHindsight([], [], []);
     expect(h.periods).toHaveLength(0);
-    expect(h.totalMiss).toBeNull();
+    expect(h.planMiss).toBeNull();
     expect(h.emptyReason).toBe('no-bills');
     expect(h.note).toBeTruthy();
   });
-});
 
-/* -------------------------------------------------------------------------- *
- * pickLever
- * -------------------------------------------------------------------------- */
-
-describe('pickLever — which lever actually mattered', () => {
-  it('names the bigger lever and calls a near-tie a tie', () => {
-    expect(pickLever(300, 100)).toBe('plan');
-    expect(pickLever(100, 300)).toBe('behaviour');
-    expect(pickLever(100, 100.5)).toBe('neither');
-    expect(pickLever(0.2, 0.4)).toBe('neither');
+  it('is deterministic — the same bill priced twice is stable', () => {
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
+    expect(JSON.stringify(buildHindsight(summaries, rows, []))).toBe(
+      JSON.stringify(buildHindsight(summaries, rows, [])),
+    );
   });
 
-  it('never calls a lever of zero dollars a winner over a real one', () => {
-    expect(pickLever(-20, 5)).toBe('behaviour');
-    expect(pickLever(-20, 0)).toBe('neither');
-    expect(pickLever(0, 5)).toBe('behaviour');
-  });
-
-  it('is unknown — not zero — when a side could not be measured', () => {
-    expect(pickLever(null, 10)).toBe('unknown');
-    expect(pickLever(10, null)).toBe('unknown');
-    expect(pickLever(null, null)).toBe('unknown');
-  });
-});
-
-/* -------------------------------------------------------------------------- *
- * Honesty invariants that must hold for every fixture in this file
- * -------------------------------------------------------------------------- */
-
-describe('honesty invariants', () => {
-  it('every reported move is strictly cheaper after the shift', () => {
-    const cases = [
-      fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', blockHours: [7, 8, 9], blockKwh: 3 }),
-      fixture('2026-07-06', 28, { plan: 'TOU', season: 'Summer', blockHours: [11, 12, 13], blockKwh: 2 }),
-      fixture('2026-11-02', 28, { plan: 'ULO', season: 'Winter', blockHours: [17, 18, 19, 20], blockKwh: 2 }),
-      fixture('2026-10-19', 28, {
-        plan: 'TOU',
-        season: 'Summer',
-        blockHours: [7, 8, 9],
-        blockKwh: 3,
-        rates: RATE_HISTORY,
-      }),
-    ];
-    let seen = 0;
-    for (const c of cases) {
-      const report = buildHindsight(c.summaries, c.rows, []);
-      for (const p of report.periods) {
-        for (const m of p.moves) {
-          seen += 1;
-          expect(m.saving).toBeCloseTo(m.actualCost - m.shiftedCost, 9);
-          expect(m.shiftedCost).toBeLessThan(m.actualCost);
-          expect(m.saving).toBeGreaterThan(MIN_MOVE_SAVING);
-          expect(m.weeksSeen).toBeGreaterThanOrEqual(3);
-          expect(m.weeksSeen).toBeLessThanOrEqual(m.weeksAvailable);
-          expect(m.consistencyCv).toBeLessThanOrEqual(0.4);
-          expect(m.kwh).toBeGreaterThan(0);
-        }
-      }
-    }
-    expect(seen).toBeGreaterThan(10);
-  });
-
-  it('a move never claims a saving on a block that is the destination itself', () => {
-    const rows = hourly('2026-11-02', 28, () => 0.4);
-    for (const plan of ['TOU', 'ULO', 'Tiered'] as const) {
-      const scan = scanPeriodBlocks(rows, plan);
-      for (const m of scan.moves) {
-        expect(m.destRateCents).toBeLessThan(m.actualRateCents);
-      }
-    }
-  });
-
-  it('mother of all: the same bill priced by the engine twice is stable', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-    });
-    const a = buildHindsight(summaries, rows, []);
-    const b = buildHindsight(summaries, rows, []);
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-  });
-
-  it('destinationRateCents reads the reading’s own rate set', () => {
-    const rows = houseBlock('2026-10-19', 28, [7, 8, 9], 3.0, 0.4, RATE_HISTORY);
-    const october = rows.find((r) => r.dayStr === '2026-10-20')!;
-    const november = rows.find((r) => r.dayStr === '2026-11-04')!;
-    expect(destinationRateCents(october, 'offpeak-tou')).toBe(RATES_2025.tou.offPeak);
-    expect(destinationRateCents(november, 'offpeak-tou')).toBe(RATES_2026.tou.offPeak);
-    expect(destinationRateCents(november, 'overnight-ulo')).toBe(RATES_2026.ulo.overnight);
-  });
-
-  it('the bill the model explains is the bill the plan side judges', () => {
-    const { rows, summaries } = fixture('2026-11-02', 28, {
-      plan: 'TOU',
-      season: 'Winter',
-      blockHours: [7, 8, 9],
-    });
+  it('the bill the model explains is the bill the panel judges', () => {
+    const rows = houseBlock('2026-11-02', 28, [7, 8, 9], 3.0);
+    const { summaries } = fixture('2026-11-02', 28, { plan: 'TOU', season: 'Winter', rows });
     const totals = billTotals(summaries[0]);
     const h = buildHindsight(summaries, rows, []);
     expect(h.periods[0].switchRow.actual).toBeCloseTo(totals.payable, 6);
-    // …and the model reproduces it, which is why the row is countable.
     expect(h.periods[0].counted).toBe(true);
     expect(Math.abs(h.periods[0].switchRow.modelDelta ?? 99)).toBeLessThanOrEqual(1);
   });

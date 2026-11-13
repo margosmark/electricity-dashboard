@@ -17,6 +17,19 @@ import { test, expect, type Page } from '@playwright/test';
  * GB_E2E_REQUIRED=1 says a skip would be a lie.
  */
 
+/**
+ * The client secret VALUE this run's shim actually holds.
+ *
+ * Under the mock gate that is the literal below. When the driver points the
+ * shim at a REAL custodian (GB_CLIENT_SECRET in the environment) a scan for
+ * `mock-client-secret` alone would be vacuously green — the "no token material
+ * in browser storage" assertion would pass while the production secret sat in
+ * localStorage. So the pattern follows the secret this run actually used. The
+ * value is never printed; it only ever becomes a regex.
+ */
+const CLIENT_SECRET = process.env.GB_CLIENT_SECRET || 'mock-client-secret';
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /** Anything token-shaped that must never appear in browser-readable storage. */
 const TOKEN_PATTERNS: Array<[RegExp, string]> = [
   [/refresh[-_]?token/i, 'refresh token'],
@@ -24,7 +37,7 @@ const TOKEN_PATTERNS: Array<[RegExp, string]> = [
   [/access[-_]?token/i, 'access token'],
   [/access-[a-z0-9]/i, 'mock access token value'],
   [/client_secret/i, 'client secret field'],
-  [/mock-client-secret/, 'client secret value'],
+  [new RegExp(escapeRe(CLIENT_SECRET)), 'client secret value'],
   [/authorization_code/, 'authorization_code grant'],
   [/Bearer\s+[A-Za-z0-9._-]{8,}/, 'bearer credential'],
 ];
@@ -181,7 +194,9 @@ test.describe('Green Button connect flow (browser)', () => {
     expect(cookieNames, `cookies left behind: ${snap.cookies.join(', ')}`).toEqual(['gb_session']);
     expect(snap.documentCookie, 'the session cookie is HttpOnly, invisible to JS').toBe('');
     const html = await page.content();
-    expect(html).not.toContain('mock-client-secret');
+    // The secret VALUE this run's shim holds — mock literal under the mock
+    // gate, the real one when the driver is re-pointed (see CLIENT_SECRET).
+    expect(html).not.toContain(CLIENT_SECRET);
     expect(html).not.toMatch(/"refreshToken"|"refresh_token"/);
 
     // ---- 7. revoke from the UI, and the data stays ---------------------

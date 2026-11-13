@@ -14,7 +14,7 @@
 
 import { addDays, format } from 'date-fns';
 // Wave U — the weekly before/after verdict speaks the active language.
-import { fmtKwh, fmtMoney, fmtPercent, fmtDay, t } from '@/i18n';
+import { fmtMoney, fmtNumber, fmtPercent, fmtDay, t } from '@/i18n';
 import { planCostFor, type ProcessedPoint } from './energy';
 import type { PlanId } from './planIds';
 
@@ -148,7 +148,12 @@ function windowStats(
     n += 1;
     kwh += d.kwh;
     offPeakKwh += d.offPeakKwh;
-    inWindow.push(...d.rows);
+    // Append ONE at a time. `inWindow.push(...d.rows)` passes the day's rows as
+    // CALL ARGUMENTS, and a day's reading count comes from the uploaded export
+    // (one reading per IntervalReading entry), so a six-figure day is reachable
+    // and V8 throws `RangeError: Maximum call stack size exceeded` past the
+    // argument limit (~123 000 on node v22.23.3). A loop is bounded by memory.
+    for (const r of d.rows) inWindow.push(r);
   }
   // Priced as a window: on Tiered the per-reading cost is tier 1 only, and a
   // week over the (day-prorated) threshold is not a tier-1 week.
@@ -251,7 +256,7 @@ export function analyzeShiftVerification(
     (w.offPeakShare !== null ? `${pct(w.offPeakShare)} ${t('verify.offPeakWord')} · ` : '') +
     t('verify.windowTail', {
       cost: fmtMoney(w.totalCost),
-      kwh: fmtKwh(w.totalKwh),
+      kwh: fmtNumber(w.totalKwh, 1),
       count: w.days,
       days: w.days,
     });
@@ -284,18 +289,18 @@ export function analyzeShiftVerification(
   if (shareUp && !dearer) {
     verdict = 'improved';
     headline = t(cheaper ? 'verify.improvedBetter' : 'verify.improvedFlat', {
-      pts: pts.toFixed(0),
+      pts: fmtNumber(pts),
       cost: money(costDelta),
     });
   } else if (shareDown && !cheaper) {
     verdict = 'worse';
-    headline = t('verify.worse', { pts: pts.toFixed(0), cost: money(costDelta) });
+    headline = t('verify.worse', { pts: fmtNumber(pts), cost: money(costDelta) });
   } else if (shareUp && dearer) {
     verdict = 'diverged';
-    headline = t('verify.divergedCost', { pts: pts.toFixed(0), cost: money(costDelta) });
+    headline = t('verify.divergedCost', { pts: fmtNumber(pts), cost: money(costDelta) });
   } else if (shareDown && cheaper) {
     verdict = 'diverged';
-    headline = t('verify.divergedShare', { pts: pts.toFixed(0), cost: money(costDelta) });
+    headline = t('verify.divergedShare', { pts: fmtNumber(pts), cost: money(costDelta) });
   } else {
     verdict = 'no-change';
     headline = t('verify.noChange');
@@ -306,7 +311,7 @@ export function analyzeShiftVerification(
       ? ''
       : ` ${t('verify.deltaLine', {
           shareSign: shareDeltaPts >= 0 ? '+' : '−',
-          share: Math.abs(shareDeltaPts).toFixed(1),
+          share: fmtNumber(Math.abs(shareDeltaPts), 1),
           costSign: costDelta >= 0 ? '+' : '−',
           cost: money(costDelta),
         })}`;

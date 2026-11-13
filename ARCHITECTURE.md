@@ -66,7 +66,14 @@ stubs the verbs its handler does not export, because the router answers a
 method mismatch (and auto-`OPTIONS`) by path, from inside the bundle,
 before the handler's feature-flag check could run. So a deployment without
 accounts behaves exactly as it did before Wave N — no `405`, no `204 +
-Allow`, nothing that says an account API is registered here.
+Allow`, nothing that says an account API is registered here. That contract is
+asserted over the **whole surface** rather than route by route:
+`webapp/src/lib/account/route-matrix.test.ts` reads the route files off disk
+and drives every path × every method × {no cookie, live session, forged,
+expired, stale} × both flag states, so a new route or a new verb fails the
+gate until it is declared; `webapp/tests/e2e/account_smoke.sh` proves the
+routing half over real HTTP in both states and refuses to run if the route
+files and its path list disagree.
 
 1. **Parse** — `parseGreenButtonXML` walks the feed object stack, pulls every
    `IntervalReading` (`timePeriod.start` unix seconds + `value` in Wh → kWh).
@@ -151,12 +158,18 @@ a test that fails if it regresses — `src/components/WaveH.test.tsx` for DOM
 behaviour, `tests/e2e/journey.spec.ts` for anything that needs real CSS
 cascade or real event dispatch (focus rings, `@media print`, crash dispatch).
 
-**1. Focus is always visible.** One rule in `globals.css`: a white edge plus a
-blue halo (`:focus-visible`), chosen because the design language has white,
-yellow *and* black chips and a single-colour outline always loses on one of
-them. Any interactive element must be Tab-reachable and must show that ring;
-a `div` with `onClick` must carry `role="button"`, `tabIndex={0}` and an
-Enter/Space handler (the plan cards are the worked example).
+**1. Focus is always visible.** One rule in `globals.css`: a 2px `--focus-ring`
+outline at a 2px offset, with the 2px `--page` gap inside it (Quiet Meter; the
+neobrutalist white-edge-plus-blue-halo ring retired with the redesign). The ink
+is a per-theme token — ink in light, the accent in dark — because no single
+colour reads on both canvases: the accent is 1.22:1 on the light page and ink is
+1.08:1 on the dark one, i.e. an invisible indicator in each case. Any interactive
+element must be Tab-reachable and must show that ring; a `div` with `onClick`
+must carry `role="button"`, `tabIndex={0}` and an Enter/Space handler (the plan
+cards are the worked example). The budget — DRAWN, and ≥3:1 against whatever the
+element sits on — is measured on the painted page in both themes by
+`tests/e2e/journey.spec.ts` ("focus ring reads on every surface"), not asserted
+against one era's hex values.
 
 **2. Escape closes the top overlay.** The listener lives in `Dashboard.tsx`
 and walks the stack top-down: always-on floor help → UsagePoint picker →

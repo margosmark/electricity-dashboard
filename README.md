@@ -66,6 +66,9 @@ and [`GREENBUTTON-CMD.md`](GREENBUTTON-CMD.md) §3.
 - [`REGISTRATION-OAKVILLE.md`](REGISTRATION-OAKVILLE.md) — Mark's step-by-step
   for Oakville Hydro's third-party registration form (every field value,
   copy-paste ready)
+- [`GREENBUTTON-REPOINT.md`](GREENBUTTON-REPOINT.md) — the one command that
+  switches the shim from unconfigured to a real custodian, the checks it runs
+  before it writes anything, and how to roll it back
 
 ## Development
 
@@ -80,6 +83,13 @@ npm run typecheck && npm run lint
 # `npm run start -- -p 3107` or `node .next/standalone/server.js`
 # (what CI's container runs)
 SMOKE_BASE_URL=http://localhost:3107 npx playwright test toolbar-layout
+
+# dark-mode regression suite: the theme store + toggle pins (vitest), then the
+# FOUC, toggle/persistence and per-panel contrast specs against a local
+# production build it starts itself. Writes evidence/dark-mode-regression.json.
+# Actions is workflow-disabled, so this IS the gate — run it before touching
+# globals.css or any themed ink.
+npm run test:theme
 ```
 
 Python parser prototype (legacy, tests only):

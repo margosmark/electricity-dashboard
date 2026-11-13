@@ -1,0 +1,211 @@
+{
+  "base": "http://127.0.0.1:3211/",
+  "fixture": "usage-summary-open-tail.xml",
+  "locales": {
+    "en": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 6,
+        "textLength": 2149
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 1,
+        "textLength": 3285
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 163,
+        "textLength": 18206
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 145,
+        "textLength": 10084
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 315,
+      "untranslated": []
+    },
+    "fr": {
+      "overview": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 12,
+        "textLength": 2877
+      },
+      "usage": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 2,
+        "textLength": 3830
+      },
+      "plans": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [
+          "Ontario Electricity Rebate",
+          "Billing Period - Current Read Date",
+          "Billing Period - Previous Read Date"
+        ],
+        "moneyRenders": 322,
+        "textLength": 23143
+      },
+      "money": {
+        "hits": {
+          "doubledSymbol": [],
+          "frSymbolBeforeNumber": [],
+          "doubledUnit": [],
+          "wrongDecimal": []
+        },
+        "untranslated": [],
+        "moneyRenders": 286,
+        "textLength": 12802
+      },
+      "totals": {
+        "doubledSymbol": 0,
+        "frSymbolBeforeNumber": 0,
+        "doubledUnit": 0,
+        "wrongDecimal": 0
+      },
+      "moneyRenders": 622,
+      "untranslated": [
+        "plans: Ontario Electricity Rebate",
+        "plans: Billing Period - Current Read Date",
+        "plans: Billing Period - Previous Read Date"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "en/overview painted real content",
+      "ok": true,
+      "detail": "2149 chars"
+    },
+    {
+      "name": "en/usage painted real content",
+      "ok": true,
+      "detail": "3285 chars"
+    },
+    {
+      "name": "en/plans painted real content",
+      "ok": true,
+      "detail": "18206 chars"
+    },
+    {
+      "name": "en/money painted real content",
+      "ok": true,
+      "detail": "10084 chars"
+    },
+    {
+      "name": "en: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "315 money strings"
+    },
+    {
+      "name": "en: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 doubled units (kWh kWh / ¢ ¢ / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "en: 0 fr-comma decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr/overview painted real content",
+      "ok": true,
+      "detail": "2877 chars"
+    },
+    {
+      "name": "fr/usage painted real content",
+      "ok": true,
+      "detail": "3830 chars"
+    },
+    {
+      "name": "fr/plans painted real content",
+      "ok": true,
+      "detail": "23143 chars"
+    },
+    {
+      "name": "fr/money painted real content",
+      "ok": true,
+      "detail": "12802 chars"
+    },
+    {
+      "name": "fr: money renders found (a sweep that sees nothing is broken)",
+      "ok": true,
+      "detail": "622 money strings"
+    },
+    {
+      "name": "fr: 0 doubled currency symbols",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 doubled units (kWh kWh / ¢ ¢ / % %)",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 en-dot decimals",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "fr: 0 money strings with $ in front of the number",
+      "ok": true,
+      "detail": "none"
+    }
+  ],
+  "passed": 17,
+  "failed": 0
+}

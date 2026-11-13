@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MultiFileMerge, { type MergeFileChoice } from './MultiFileMerge';
 import type { DataPoint, UsagePointGroup } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 
 const at = (day: number, hour = 3) => Math.floor(new Date(2026, 9, day, hour).getTime() / 1000);
 
@@ -14,7 +15,7 @@ function range(from: number, to: number, kwh = 1): DataPoint[] {
 }
 
 function group(label: string, readings: DataPoint[], id = label): UsagePointGroup {
-  return { id, label, readings, blocks: 1 };
+  return { id, label, readings, blocks: 1, series: [], notes: [] };
 }
 
 /** The component is controlled — this is the state it would sit in on screen. */
@@ -140,5 +141,112 @@ describe('MultiFileMerge', () => {
     await user.click(screen.getByTestId('merge-cancel'));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The meter rows' HEADINGS — the picker's second render site (t_203c6445).
+ *
+ * `lib/energy.ts` words the group label in English (`UsagePoint <id>`, or
+ * `Meter` for a point the feed never identifies) and this dialog is the other
+ * place it reaches the screen. The painted sweep over the picker itself lives
+ * in `src/i18n/fr-runtime.test.tsx`; this pins the site those tests cannot
+ * mount, in both locale paths.
+ */
+describe('the meter rows on the French page', () => {
+  afterEach(() => setLocale('en'));
+
+  const dualFile = (): MergeFileChoice[] => [
+    {
+      name: 'dual.xml',
+      groups: [
+        group('UsagePoint up-bravo', range(1, 5), 'up-bravo'),
+        // The feed identifies no UsagePoint for this one — the parser's `Meter`.
+        group('Meter', range(6, 8), ''),
+      ],
+      chosen: null,
+    },
+  ];
+
+  it('names each meter in the reader’s language, not in the parser’s English', () => {
+    setLocale('fr');
+    render(<Harness initial={dualFile()} />);
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('Point de consommation up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Compteur');
+    expect(screen.getByTestId('merge-meter-0-1')).not.toHaveTextContent('Meter');
+    // The id the row carries is the file's own data and stays canonical.
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('up-bravo');
+  });
+
+  it('re-paints the headings when the locale flips', async () => {
+    setLocale('en');
+    render(<Harness initial={dualFile()} />);
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('UsagePoint up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Meter');
+
+    await act(async () => setLocale('fr'));
+    expect(screen.getByTestId('merge-meter-0-0')).toHaveTextContent('Point de consommation up-bravo');
+    expect(screen.getByTestId('merge-meter-0-1')).toHaveTextContent('Compteur');
+  });
+});
+
+/**
+ * The PER-FILE SUMMARY LINE — "file1.xml: 5 kept · file2.xml: 5 kept, 2
+ * duplicate" (t_dd0263c0).
+ *
+ * It was one template literal inside JSX, so it was invisible to the i18n
+ * coverage gate and shipped English on the French page. It now reads through
+ * the catalog, in two keys because the line carries TWO counts: `_one`/`_other`
+ * keys off exactly one `count`, so the `{rows} kept` agreement rides
+ * `merge.fileKept` and the duplicate clause is its own key.
+ *
+ * The English wording is pinned byte for byte HERE — including the quirk the
+ * catalog deliberately keeps: the clause reads "1 duplicate" AND "2 duplicate"
+ * (the English pair is identical), so the en page does not change. The French
+ * gets real agreement on BOTH counts.
+ */
+describe('the per-file summary line on the French page', () => {
+  afterEach(() => setLocale('en'));
+
+  // file1 keeps Oct 1–5; file2 repeats Oct 4–5 (2 duplicates) and keeps Oct 6–10.
+  const overlapping = () => mergeFiles(range(1, 5), range(4, 10));
+  // file1 keeps Oct 1; file2 repeats it and keeps Oct 2 — the singular counts.
+  const singleRow = () => mergeFiles(range(1, 1), range(1, 2));
+
+  it('keeps the English page byte for byte, quirk included', () => {
+    render(<Harness initial={overlapping()} />);
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent(
+      'file1.xml: 5 kept · file2.xml: 5 kept, 2 duplicate',
+    );
+    cleanup();
+    render(<Harness initial={singleRow()} />);
+    // "1 duplicate", not "1 duplicates" — the English pair is identical.
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent(
+      'file1.xml: 1 kept · file2.xml: 1 kept, 1 duplicate',
+    );
+  });
+
+  it('agrees on both counts in French', () => {
+    setLocale('fr');
+    render(<Harness initial={overlapping()} />);
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent(
+      'file1.xml : 5 conservés · file2.xml : 5 conservés, 2 doublons',
+    );
+    cleanup();
+    render(<Harness initial={singleRow()} />);
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent(
+      'file1.xml : 1 conservé · file2.xml : 1 conservé, 1 doublon',
+    );
+  });
+
+  it('re-paints the line when the locale flips', async () => {
+    setLocale('en');
+    render(<Harness initial={overlapping()} />);
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent('2 duplicate');
+    expect(screen.getByTestId('merge-summary')).not.toHaveTextContent('doublon');
+
+    await act(async () => setLocale('fr'));
+    expect(screen.getByTestId('merge-summary')).toHaveTextContent('2 doublons');
+    expect(screen.getByTestId('merge-summary')).not.toHaveTextContent('duplicate');
   });
 });

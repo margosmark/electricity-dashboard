@@ -27,6 +27,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// Wave U rule: the banner text is written by the lib at call time in the
+// active language, so this derivation depends on `locale`.
+import { useTranslation } from '@/i18n';
 import type { FullDataTotals, ProcessedPoint } from '@/lib/energy';
 import type { PlanId } from '@/hooks/useSelectedPlan';
 import {
@@ -71,6 +74,7 @@ export function useRefreshNotices(input: {
   refreshTick: number;
 }): RefreshNoticeState {
   const { connected, totals, processedData, currentPlan, refreshTick } = input;
+  const { locale } = useTranslation();
 
   // Bumped only from an event handler (a dismissal), never from an effect.
   const [revision, setRevision] = useState(0);
@@ -93,7 +97,7 @@ export function useRefreshNotices(input: {
     // acknowledgements from storage (a refresh just landed, or the user just
     // dismissed a banner).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [connected, totals, processedData, currentPlan, refreshTick, revision],
+    [connected, totals, processedData, currentPlan, refreshTick, revision, locale],
   );
 
   // Ids already raised as OS notifications, seeded from disk so reopening the

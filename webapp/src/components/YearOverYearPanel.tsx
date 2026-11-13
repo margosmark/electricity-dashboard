@@ -20,7 +20,7 @@ import {
 import { TrendingUp } from 'lucide-react';
 import type { ProcessedPoint } from '@/lib/energy';
 import { buildYearOverYear, monthLabelsFor } from '@/lib/trend';
-import { fmtKwh, useTranslation } from '@/i18n';
+import { fmtKwh, fmtPercent, useTranslation } from '@/i18n';
 
 /**
  * One token per year (globals.css `--data-year-1..4`). LIGHT is byte-identical
@@ -38,7 +38,7 @@ const YEAR_COLORS = [
 ];
 
 const fmtDelta = (pct: number | null): string =>
-  pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`;
+  pct === null ? '—' : `${pct > 0 ? '+' : ''}${fmtPercent(pct, 0)}`;
 
 export default function YearOverYearPanel({
   processedData,
@@ -46,7 +46,10 @@ export default function YearOverYearPanel({
   processedData: ProcessedPoint[];
 }) {
   const { t, locale } = useTranslation();
-  const trend = useMemo(() => buildYearOverYear(processedData), [processedData]);
+  // `locale` (not just `t`): the trend lib labels its months with the same
+  // locale-aware helper the headers below use.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const trend = useMemo(() => buildYearOverYear(processedData), [processedData, locale]);
   // Wave U — the 12 month headers come from the same locale-aware helper
   // the trend lib uses, so the axis and the delta row can never disagree.
   // Pass `locale` explicitly so the memo genuinely re-runs on a switch.
@@ -115,7 +118,15 @@ export default function YearOverYearPanel({
                     background: 'var(--card)', color: 'var(--ink)',
                   }}
                 />
-                <Legend wrapperStyle={{ fontWeight: 900, fontSize: 12 }} />
+                {/* L3 (t_3e571ddb Phase 2): the legend LABEL is prose, not a
+                    data mark — it must not wear the series hue (light orange
+                    on white measured 2.80:1). The SWATCH keeps the hue, so
+                    the colour→series mapping is untouched; only the text
+                    moves to --ink-2 (light 7.58:1, dark 12.02:1). */}
+                <Legend
+                  wrapperStyle={{ fontWeight: 900, fontSize: 12 }}
+                  formatter={(value) => <span style={{ color: 'var(--ink-2)' }}>{value}</span>}
+                />
                 {trend.series.map((s, i) => (
                   <Bar
                     key={s.year}
@@ -157,9 +168,9 @@ export default function YearOverYearPanel({
                     // hover surface — under the 4.5 floor at 10px.
                     ? 'bg-hover text-ink'
                     : pct > 5
-                      ? 'bg-red-400 text-accent-ink'
+                      ? 'bg-bad-slab text-accent-ink'
                       : pct < -5
-                        ? 'bg-emerald-400 text-accent-ink'
+                        ? 'bg-good-slab text-accent-ink'
                         : 'bg-track text-ink';
                   return (
                     <div key={m} className="text-center">

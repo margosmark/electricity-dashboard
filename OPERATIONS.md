@@ -49,7 +49,15 @@ cd ~/electricity-dashboard && docker compose down   # stop
 
 The deploy script (`~/bin/deploy-energy-dashboard.sh` on .110) refuses to run
 concurrently (`DEPLOY_REFUSED`, exit 3) so sibling agents can't swap the image
-mid-verification. `--no-fetch` skips the git step for tar-pushed deploys.
+mid-verification. `--no-fetch` skips the git step for tar-pushed deploys. It
+also exports `GIT_SHA=$(git rev-parse HEAD)` before the build, so every image
+it produces names its own commit at `GET /api/version` (§ Deploying changes) —
+the clone is a branch that gets `reset --hard origin/main`, so this export is
+the only place the deployed SHA is read. The value is **compiled into the
+bundle** by `webapp/scripts/bump-build-info.mjs` (the `prebuild` lifecycle, read
+out of the builder stage's environment), not read from the container's
+environment at request time — so a container started some way other than this
+compose file still names the commit it was built from.
 
 **Check disk before a deploy.** This host runs the **vfs** storage driver
 (`/var/lib/docker/vfs/dir` ≈ 92 G), so an image build can eat several GB of
@@ -117,7 +125,7 @@ one point or "Combine all", and only the chosen rows are written to
 
 User recovery: re-upload the Oakville Hydro Green Button XML. There is nothing
 else to back up — **unless** the account server is in use, in which case the
-encrypted copy in `.account/accounts.db` is a second source (see
+encrypted copy in the external `ACCT_DATA_DIR/accounts.db` is a second source only after the separately gated account-server activation (see
 `## Account server (Wave N)`).
 
 ## Data source
@@ -154,11 +162,11 @@ notifications.
 
 | Task | Command |
 | --- | --- |
-| Set credentials after Oakville issues them | put `GB_CLIENT_ID` / `GB_CLIENT_SECRET` in the untracked `.env` (never in `docker-compose.yml`), then `docker compose up -d` — no rebuild |
+| Set credentials after Oakville issues them | run the re-point ceremony: `GB_CONFIRM_GO_LIVE=yes webapp/scripts/greenbutton-repoint.sh --apply --host hermescomputer --env-file ~/.oakville-creds.env --loop-gate` — it validates the pair, proves the secret reaches only the shim, writes the untracked `.env` and recreates the containers (no rebuild). Checklist: [GREENBUTTON-REPOINT.md](GREENBUTTON-REPOINT.md). Hand-editing `.env` still works but skips every check |
 | Scope no longer accepted by the platform | change `GB_SCOPE`, `docker compose up -d` |
 | Turn PKCE on (once Oakville confirms the platform accepts `code_challenge`) | `GB_PKCE=true` in the untracked `.env`, then `docker compose up -d greenbutton-shim` |
 | Re-run the full OAuth loop | `cd webapp && ./scripts/e2e-greenbutton-loop.sh` (29 checks, needs docker only for the second) |
-| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (**102 checks**: all three upstreams recreated under a running router, the `/account` leg in BOTH flag states — off, then `ACCT_ENABLED=true` — plus the real register/login/sync matrix through the router; binds :3940 + :8099, tears itself down) |
+| Re-run it through the **containerised router topology** | `cd webapp && ./scripts/e2e-greenbutton-topology.sh` (checks all three upstreams recreated under a running router, plus `/account` routes with the feature off and enabled-but-registration-closed; it does not run authenticated registration/login/sync, which are covered by ephemeral tests in `webapp/src/lib/account/account.test.ts` and `route-matrix.test.ts`; binds :3940 + :8099, tears itself down) |
 | Re-run the **browser** connect flow | `cd webapp && ./scripts/e2e-greenbutton-browser.sh` — builds, boots a mock custodian + a *configured* shim on :3941, then runs the whole Playwright suite against it: the Authorise button → authorize → callback → localStorage loop with a "no token material in browser storage" assertion, plus `/import` and the journey specs with the feature switched on |
 | Diagnose a "reconnect" complaint | `docker compose logs greenbutton-shim \| grep greenbutton` — look for `invalid_client` (our secret is wrong) vs `invalid_grant` (the grant was revoked) |
 | Shim unreachable (`/greenbutton/*` 502) | `docker compose ps` (shim stopped?) then `docker compose logs edge-router` |
@@ -179,22 +187,18 @@ answers **404** on the public app process by design. (The shim is the one
 deliberate exception to "only this container sees `ACCT_*`": it gets
 `ACCT_NOTIFY_URL` + `ACCT_INTERNAL_TOKEN` and nothing that opens the
 database.) **The feature is off until you turn it on:** `ACCT_ENABLED`
-defaults to `false`, so a deploy of this change is a no-op for the site. To
-enable it (and to disable it again), set `ACCT_ENABLED=true` in the untracked
-`.env` and `docker compose up -d account-server`; the data file stays on disk
-whichever way it is set, and the container stays running either way so the
-path answers 404 rather than 502.
+defaults to `false`, and must remain false until the separate activation gates pass. This P0 release deliberately keeps self-service registration closed: `/account/register` returns the same generic `202 verification_pending` response for known/unknown addresses, but sends no mail and stores no pending password. A future flow must verify mailbox ownership before it asks for a password or creates an account. Do not enable this feature from these notes.
 
-```bash
-# one-time: turn the feature on. Push keys and the shared shim→account token
-# both go in the untracked .env, never in docker-compose.yml.
-cd ~/electricity-dashboard/webapp && npx web-push generate-vapid-keys   # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
-openssl rand -hex 32                                                     # → ACCT_INTERNAL_TOKEN
-cd .. && printf 'ACCT_ENABLED=true
-' >> .env
-docker compose up -d account-server
-docker compose up -d --build edge-router   # the /account locations are BAKED into that image
-```
+Configuration contract (names only; no values belong in source or task notes):
+
+- `ACCT_ENABLED` — defaults to `false`.
+- `ACCT_DATA_DIR` — required absolute host bind source outside the checkout; compose mounts it as `/data`. `ACCT_DATA_DIR_HOST` mirrors that source and `ACCT_REPO_HOST_DIR` identifies the checkout (compose defaults it from `PWD`) so startup rejects repository-local sources; the mounted `/data` must be uid 1001-owned, mode 0700 (or stricter). The account process validates the host paths and mount at startup, then repeats ownership/mode checks before serving account routes.
+- `ACCT_DB_PATH` — fixed inside the container at `/data/accounts.db`; do not point it into the repository.
+- Email boundary keys (not configured by this P0): `ACCT_EMAIL_MODE=off|test|live`; live additionally requires `ACCT_EMAIL_PROVIDER=postmark|resend`, `ACCT_EMAIL_FROM`, and `ACCT_EMAIL_API_KEY_FILE` mounted read-only with mode 0600. Validation does not send mail or read/log the credential. Provider selection, sender/DKIM alignment, secret provisioning, real adapter, verification/recovery endpoints and staging evidence remain activation gates.
+- Existing optional keys remain `ACCT_PUBLIC_ORIGIN`, `ACCT_INTERNAL_TOKEN`, `ACCT_MAX_ACCOUNTS`, `ACCT_RATES_URL`, and `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`.
+
+No user, database, secret, email credential, or external storage is created by this release. The disabled feature remains invisible and durable data is not deleted by switching the flag off. When explicitly enabled after release gates, nginx limits account requests to 60/minute per observed peer (burst 20; max 10 concurrent), rejects bodies above 6 MiB before proxying, and buffers requests at the edge. The account access log records only method, fixed route and status—no source IP, query, referer, cookie or body; error lines are suppressed below `crit` to avoid echoing request targets.
+
 
 The router rebuild is only needed when `ops/edge/default.conf.template`
 changes; the `/account/*` locations shipped with this change, so it is a
@@ -206,33 +210,72 @@ one-time step for this upgrade.
 | API answers | `curl -fs http://localhost:3939/account/session` → `{"enabled":true,…}` |
 | Right container answered | response carries `x-gb-process: account` **and** `X-Edge-Location: account` (a mismatch = the split is inverted, H1's failure mode) |
 | Push configured | same payload has `pushConfigured:true` once `VAPID_*` are set; `false` means sync works and notifications are simply inert |
-| Data file | `sudo ls -l .account/` → `accounts.db` (created on first register) |
+| Data file | `sudo ls -l "$ACCT_DATA_DIR"` → `accounts.db` once account storage has been explicitly provisioned |
+| Activation preflight (read-only) | `https://electricity.markarslan.ca/account/preflight` → the three prerequisites (SMTP provisioning, `ACCT_ENABLED`, `ACCT_EMAIL_VERIFICATION_ENABLED`) each shown pass/pending, plus the fail-closed statement and the activation checklist |
 
-**Backup.** `.account/accounts.db` is user data — ciphertext, but theirs. It
-is a bind mount for exactly that reason: include `.account/` next to
-`.greenbutton/` in whatever copies this host's state off-box. SQLite runs in
-WAL mode here, so a *live* copy of `accounts.db` alone can be behind by the
-last few writes — copy `accounts.db`, `accounts.db-wal` and `accounts.db-shm`
-together with the service stopped (a second of downtime at family scale):
+**Activation preflight.** `/account/preflight` is the read-only answer to
+"why can't this be activated?". It is a **page** served by the account
+container (the same shape as `/account/terms`), not an API route, so every
+`/account/*` route handler still answers the indistinguishable 404 while
+`ACCT_ENABLED` is off — the API contract is untouched. It shows the three
+prerequisites as **pass/pending** (never a silent failure), states in plain
+language that activation stays fail-closed **until SMTP is live**, and lists
+what must be true before activation is even considered. It renders booleans
+only: no SMTP host, address, path or credential appears in either language,
+and it changes no flag, no SMTP setting, no credential and no account —
+`evidence/account-preflight-verify.cjs` asserts all of that against a real
+browser in en and fr.
 
-```bash
-cd ~/electricity-dashboard
-docker compose stop account-server && sudo cp -a .account "/backup/account-$(date +%F)" && docker compose start account-server
-```
+**Backup.** The external `ACCT_DATA_DIR` holds the SQLite database and WAL. It is user data even though the blob is ciphertext. Configure an encrypted, off-host backup and prove a restore before enabling accounts; a file copy is not an acceptable launch backup plan. SQLite is in WAL mode, so a consistent manual copy requires the account service stopped and the database, `-wal`, and `-shm` files copied together. This release does not configure or claim a retention/backup job.
 
-Losing the file costs the *server* copy only: every device that still holds
-the derived key and its own `localStorage` is unaffected, and re-registering
-starts a fresh account.
+Losing the file costs the server copy only: any device that still holds its local data and key is unaffected. Re-registration remains closed until verified email delivery is implemented.
+**Passphrases and recovery.** New credentials require at least 15 characters (maximum 200). This is an offline-ciphertext-theft policy: the password derives both an Argon2id login verifier and the browser-only PBKDF2/AES-GCM key from a public salt; E2EE cannot compensate for a guessable passphrase. Encourage memorable multi-word passphrases, never trim or log them, and preserve existing shorter passwords for login. Recovery codes restore authentication only; changing the password drops ciphertext encrypted under the old key unless a trusted device can re-sync it. They do not decrypt old data.
 
-**Passwords.** There is no SMTP and no reset e-mail. A one-time recovery code
-is shown once, at the first upload into an account, and stored only as an
-argon2id hash. It is enforced in the UI and in `SECURITY.md` §5:
+There is no active email recovery sender. The provider-agnostic outbound boundary currently has no adapter and registration does not deliver mail or accept/store a password. Future recovery email must use a purpose-bound, one-use verification token and may not claim to restore E2EE data.
 
-- code + forgotten password → a new password can be set, but the stored blob
-  (encrypted with the old one) is dropped — the code recovers the *account*,
-  not the data; re-sync from a device that still has it.
-- no code → the server copy is unrecoverable; local data is untouched and a
-  new account can be registered.
+**Mailbox verification, SMTP contract and rollback.** Public registration and
+password recovery are mailbox-proofed before a password verifier or session is
+created. The account server requires a complete SMTP contract in its approved
+secret mechanism (never in git, cards or chat):
+
+| Variable | Contract |
+| --- | --- |
+| `ACCT_SMTP_HOST` / `ACCT_SMTP_PORT` | relay host and port; default port is 587 |
+| `ACCT_SMTP_TLS_MODE` | `starttls` (default) or `implicit`; certificate verification is always on |
+| `ACCT_SMTP_HELO` | stable deployment hostname used in EHLO |
+| `ACCT_SMTP_USERNAME` / `ACCT_SMTP_PASSWORD` | optional SMTP AUTH pair, injected as secrets together |
+| `ACCT_SMTP_FROM` | exact aligned From mailbox on the dedicated sender subdomain |
+| `ACCT_SMTP_REPLY_TO` | monitored Reply-To mailbox |
+| `ACCT_SMTP_EVENTS_SECRET` | HMAC secret for signed relay bounce/complaint POSTs to `/account/smtp-events` |
+
+`ACCT_EMAIL_VERIFICATION_ENABLED` defaults to `false` and is independent of
+`ACCT_ENABLED`. When either flag is false, email-dependent registration,
+recovery and verification routes return indistinguishable 404s without creating
+accounts, sessions, tokens or outbox rows. When it is true, the complete SMTP
+contract is required; missing or invalid SMTP configuration fails closed with
+`503 email_unavailable`. The link GET is scanner-safe; only the explicit
+verification POST consumes its one-use, 30-minute, purpose-bound token. Tokens
+are SHA-256 hashed at rest and never logged. A relay's permanent SMTP failure
+or a signed bounce/complaint adds the address to the suppression table without
+exposing it to the caller. Signed events use `HMAC-SHA256(timestamp + "." + rawBody)`,
+a five-minute clock window, and a replay table.
+
+The sender must have strict DKIM/DMARC alignment and the Reply-To must be
+monitored before public enablement. The external release gate is Mark's
+non-secret provisioning attestation; this code candidate does not claim a
+controlled-mailbox send until that attestation and staging proof exist.
+
+To roll back, set `ACCT_ENABLED=false` and recreate only `account-server`; all
+account paths return indistinguishable 404s and no email is sent. To disable
+mail while retaining an already-enabled account database, remove the SMTP
+secret set and restart: registration/recovery return `503 email_unavailable`,
+while existing sign-in/sync behavior remains available. Do not delete the
+ciphertext database during an SMTP incident.
+
+**Passwords and E2EE boundary.** A recovery link can set a new authentication
+verifier, but the stored blob (encrypted with the old password) is dropped —
+mailbox proof recovers the *account*, not the data; re-sync from a device that
+still has it. A recovery event never returns or derives the blob data key.
 
 **VAPID rotation.** Replacing `VAPID_PRIVATE_KEY` invalidates every existing
 subscription silently (pushes fail and are dropped as dead on a 410). After a
@@ -244,9 +287,11 @@ the attempt budget below are what actually bound it. Hitting it returns `403
 account_limit`.
 
 **Attempt budget.** `login`, `recover` and `register` refuse after a bounded
-number of attempts (token buckets per e-mail, per source address and
+number of attempts (token buckets per e-mail, per trusted ingress address and
 process-wide — `webapp/src/lib/account/ratelimit.ts`), answering `429` with a
 `Retry-After` header instead of a generic error. Operational notes:
+
+**VAPID rotation.** Replacing `VAPID_PRIVATE_KEY` invalidates existing push subscriptions; after a rotation, users re-enable notifications on their devices.
 
 - Counters are **in the account-server process**. `docker compose restart
   account-server` clears them; that is a convenience for you and not a hole,
@@ -257,30 +302,20 @@ process-wide — `webapp/src/lib/account/ratelimit.ts`), answering `429` with a
 - If you ever need to see why a request was refused, the body carries
   `retryAfterSeconds` and the header carries the same number.
 
-### Removing an account (undoes `ACCT_MAX_ACCOUNTS` squatting)
+### Removing an account (operator maintenance)
 
-Registration is open, so a stranger who reaches the endpoint can occupy all
-ten slots with junk e-mail addresses. The attempt budget makes that slow, the
-cap makes it finite, and this makes it reversible — `sessions`, `blobs`,
-`push_subs` and `push_prefs` all carry `ON DELETE CASCADE`, so one statement
-cleans the whole account:
+Account deletion is an operator-only maintenance action, not a public endpoint. The schema cascades deletion through sessions, ciphertext, subscriptions, preferences, and notification metadata. Stop the service, delete the account row with foreign keys enabled, verify the dependent counts, then restart it. Use the provisioned external `ACCT_DATA_DIR`; never assume data lives in the checkout.
 
 ```bash
 cd ~/electricity-dashboard
 docker compose stop account-server
-# -cmd is not decoration: sqlite3 starts with foreign_keys OFF, so without
-# the PRAGMA this DELETE would leave orphaned sessions/blobs/subscriptions.
-sudo sqlite3 -cmd "PRAGMA foreign_keys=ON;" .account/accounts.db \
-  "DELETE FROM accounts WHERE email = 'squatter@example.com';"
+sudo sqlite3 -cmd "PRAGMA foreign_keys=ON;" "$ACCT_DATA_DIR/accounts.db" \
+  "DELETE FROM accounts WHERE email = 'address@example.com';"
+sudo sqlite3 "$ACCT_DATA_DIR/accounts.db" "SELECT id,email FROM accounts;"
 docker compose start account-server
-sudo sqlite3 .account/accounts.db "SELECT id, email, datetime(created_at/1000,'unixepoch') FROM accounts;"
 ```
 
-Nothing else needs doing: the squatter never held a session that survives the
-delete, their ciphertext (if any) goes with the row, and their push
-subscriptions are dropped by the cascade. To free every slot at once,
-`DELETE FROM accounts;` — every other device keeps its local `localStorage`
-copy, because the server copy is the only thing being removed.
+The P0 release does not enable registration or create account storage. For databases provisioned later, the deletion cascade is covered by integration tests; do not delete durable account data as a rollback action.
 
 ## Rate data updates
 
@@ -326,7 +361,30 @@ cd webapp && npm run lint && npm run typecheck && npm run test && npm run build
 cd .. && pytest tests/ -v        # only if root parser changed
 ```
 
-Then commit/push and rebuild the container. CI's workflow is
+Then commit/push and rebuild the container. Every image stamps the commit it
+was built from — the deploy runbook exports `GIT_SHA=$(git rev-parse HEAD)`
+and `docker-compose.yml` forwards it as a build arg — so the deployed app
+names its own build at `GET /api/version` (`{"sha": …, "buildId": …}`, with
+`"unknown"` for a local build):
+
+```bash
+curl -s http://10.10.11.110:3939/api/version   # → {"sha":"<the deployed commit>",…}
+```
+
+The SHA is **compiled into the bundle**, not read at runtime: `GIT_SHA` reaches
+`webapp/scripts/bump-build-info.mjs` (wired into `prebuild`) in the builder
+stage's environment, and that script writes the committed constant
+`webapp/src/lib/buildInfo.generated.ts` (`'unknown'` — the placeholder a fresh
+clone carries — when nothing supplies it). So the answer is a literal in the
+emitted server chunk, the image config declares no stamp at all, and
+`docker run -e NEXT_PUBLIC_BUILD_SHA=deadbeef… <image>` still answers the commit
+the image was built from. A build with `GIT_SHA` set dirties exactly that one
+tracked file (the `public/sw.js` precedent) — restore it and stage by name,
+never `git add -A`.
+
+Read that instead of inferring identity from built bytes. A wrong `sha` means
+the container was not recreated by the deploy; `buildId` changes on every
+build, so it distinguishes a rebuild of the same commit. CI's workflow is
 **disabled server-side** (2026-10-10, Actions minutes exhausted — push/PR
 runs died in 3–4s with zero steps scheduled, so the run-history reds were
 billing, not failures; see the header in
@@ -336,6 +394,23 @@ is the gate, and merges land on local-green. The triggers on main are
 alone cannot resurrect the push/PR reds — but there is still no CI
 budget, so leave the workflow disabled until Actions minutes are topped
 up. The `husky` pre-commit hook runs on every local commit.
+
+### Local previews carry the same stamp
+
+A local production-mode preview built with a bare `npm run build` answers
+`{"sha":"unknown"}` at `/api/version`, so no exact-SHA claim about it can be
+checked (seen in QA, 2026-10-24). Build the preview the way the image is
+built:
+
+```bash
+cd webapp && PORT=3210 npm run preview   # exports GIT_SHA=$(git rev-parse HEAD), builds, serves
+curl -s http://127.0.0.1:3210/api/version   # → {"sha":"<the commit you built>",…}
+```
+
+`webapp/scripts/preview-prod.sh` does the export, so the served preview
+names its own commit. Do not weaken CSP or run `next dev` to make a preview
+work — build it in production mode and read `/api/version` to prove which
+build answered.
 
 ## Known sharp edges
 

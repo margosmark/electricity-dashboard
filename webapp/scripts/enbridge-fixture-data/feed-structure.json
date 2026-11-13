@@ -1,0 +1,745 @@
+{
+ "root_attrs": {
+  "{http://www.w3.org/2001/XMLSchema-instance}schemaLocation": "http://www.w3.org/2005/Atom https://greenbuttondata.org/xsd/3_3/atom.xsd http://naesb.org/espi https://www.naesb.org/espi.xsd"
+ },
+ "feed_children": [
+  "id",
+  "title",
+  "updated",
+  "link"
+ ],
+ "entries": [
+  {
+   "title": "DST For North America",
+   "id": "urn:uuid:a0000001-0000-4000-8000-000000000001",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/LocalTimeParameters",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/LocalTimeParameters/002026"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/LocalTimeParameters",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/LocalTimeParameters"
+    }
+   ],
+   "kind": "LocalTimeParameters",
+   "lt": {
+    "dstEndRule": "6AE6E370",
+    "dstOffset": "3600",
+    "dstStartRule": "69AD1E70",
+    "tzOffset": "-18"
+   }
+  },
+  {
+   "title": "Usage Point",
+   "id": "urn:uuid:a0000002-0000-4000-8000-000000000002",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/LocalTimeParameters",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/LocalTimeParameters/002026"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    }
+   ],
+   "kind": "UsagePoint",
+   "up": {
+    "ServiceCategory": {
+     "kind": "1"
+    }
+   }
+  },
+  {
+   "title": "Meter Reading",
+   "id": "urn:uuid:a0000003-0000-4000-8000-000000000003",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000003-0000-4000-8000-000000000003"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000003-0000-4000-8000-000000000003/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000004-0000-4000-8000-000000000004"
+    }
+   ],
+   "kind": "MeterReading"
+  },
+  {
+   "title": "Meter Reading",
+   "id": "urn:uuid:a0000005-0000-4000-8000-000000000005",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000005-0000-4000-8000-000000000005"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000005-0000-4000-8000-000000000005/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000006-0000-4000-8000-000000000006"
+    }
+   ],
+   "kind": "MeterReading"
+  },
+  {
+   "title": "Meter Reading",
+   "id": "urn:uuid:a0000007-0000-4000-8000-000000000007",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000007-0000-4000-8000-000000000007"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000007-0000-4000-8000-000000000007/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000008-0000-4000-8000-000000000008"
+    }
+   ],
+   "kind": "MeterReading"
+  },
+  {
+   "title": "Meter Reading",
+   "id": "urn:uuid:a0000009-0000-4000-8000-000000000009",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000009-0000-4000-8000-000000000009"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000009-0000-4000-8000-000000000009/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a000000a-0000-4000-8000-00000000000a"
+    }
+   ],
+   "kind": "MeterReading"
+  },
+  {
+   "title": "Meter Reading",
+   "id": "urn:uuid:a000000b-0000-4000-8000-00000000000b",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a000000b-0000-4000-8000-00000000000b"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading"
+    },
+    {
+     "rel": "related",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a000000b-0000-4000-8000-00000000000b/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a000000c-0000-4000-8000-00000000000c"
+    }
+   ],
+   "kind": "MeterReading"
+  },
+  {
+   "title": "Reading Type",
+   "id": "urn:uuid:a000000c-0000-4000-8000-00000000000c",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a000000c-0000-4000-8000-00000000000c"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType"
+    }
+   ],
+   "kind": "ReadingType",
+   "rt": {
+    "accumulationBehaviour": "4",
+    "commodity": "7",
+    "currency": "124",
+    "dataQualifier": "12",
+    "flowDirection": "1",
+    "intervalLength": "  86400",
+    "kind": "58",
+    "powerOfTenMultiplier": "-3",
+    "uom": "42"
+   }
+  },
+  {
+   "title": "Reading Type",
+   "id": "urn:uuid:a000000a-0000-4000-8000-00000000000a",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a000000a-0000-4000-8000-00000000000a"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType"
+    }
+   ],
+   "kind": "ReadingType",
+   "rt": {
+    "accumulationBehaviour": "4",
+    "commodity": "7",
+    "currency": "124",
+    "dataQualifier": "12",
+    "flowDirection": "1",
+    "intervalLength": "2764800",
+    "kind": "58",
+    "powerOfTenMultiplier": "-3",
+    "uom": "42"
+   }
+  },
+  {
+   "title": "Reading Type",
+   "id": "urn:uuid:a0000004-0000-4000-8000-000000000004",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000004-0000-4000-8000-000000000004"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType"
+    }
+   ],
+   "kind": "ReadingType",
+   "rt": {
+    "accumulationBehaviour": "4",
+    "commodity": "7",
+    "currency": "124",
+    "dataQualifier": "12",
+    "flowDirection": "1",
+    "intervalLength": "2419200",
+    "kind": "58",
+    "powerOfTenMultiplier": "-3",
+    "uom": "42"
+   }
+  },
+  {
+   "title": "Reading Type",
+   "id": "urn:uuid:a0000006-0000-4000-8000-000000000006",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000006-0000-4000-8000-000000000006"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType"
+    }
+   ],
+   "kind": "ReadingType",
+   "rt": {
+    "accumulationBehaviour": "4",
+    "commodity": "7",
+    "currency": "124",
+    "dataQualifier": "12",
+    "flowDirection": "1",
+    "intervalLength": "2592000",
+    "kind": "58",
+    "powerOfTenMultiplier": "-3",
+    "uom": "42"
+   }
+  },
+  {
+   "title": "Reading Type",
+   "id": "urn:uuid:a0000008-0000-4000-8000-000000000008",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType/a0000008-0000-4000-8000-000000000008"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/ReadingType",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/ReadingType"
+    }
+   ],
+   "kind": "ReadingType",
+   "rt": {
+    "accumulationBehaviour": "4",
+    "commodity": "7",
+    "currency": "124",
+    "dataQualifier": "12",
+    "flowDirection": "1",
+    "intervalLength": "2851200",
+    "kind": "58",
+    "powerOfTenMultiplier": "-3",
+    "uom": "42"
+   }
+  },
+  {
+   "title": "Meter data",
+   "id": "urn:uuid:a000000d-0000-4000-8000-00000000000d",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000007-0000-4000-8000-000000000007/IntervalBlock/a000000d-0000-4000-8000-00000000000d"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000007-0000-4000-8000-000000000007/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000007-0000-4000-8000-000000000007"
+    }
+   ],
+   "kind": "IntervalBlock",
+   "block": {
+    "start": "1766620800",
+    "duration": "2851200",
+    "r_start": "1766620800",
+    "r_duration": "2851200",
+    "value": "427000",
+    "qual": null
+   }
+  },
+  {
+   "title": "Meter data",
+   "id": "urn:uuid:a000000e-0000-4000-8000-00000000000e",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000005-0000-4000-8000-000000000005/IntervalBlock/a000000e-0000-4000-8000-00000000000e"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000005-0000-4000-8000-000000000005/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000005-0000-4000-8000-000000000005"
+    }
+   ],
+   "kind": "IntervalBlock",
+   "block": {
+    "start": "1769472000",
+    "duration": "2592000",
+    "r_start": "1769472000",
+    "r_duration": "2592000",
+    "value": "386000",
+    "qual": null
+   }
+  },
+  {
+   "title": "Meter data",
+   "id": "urn:uuid:a000000f-0000-4000-8000-00000000000f",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000003-0000-4000-8000-000000000003/IntervalBlock/a000000f-0000-4000-8000-00000000000f"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000003-0000-4000-8000-000000000003/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000003-0000-4000-8000-000000000003"
+    }
+   ],
+   "kind": "IntervalBlock",
+   "block": {
+    "start": "1772064000",
+    "duration": "2419200",
+    "r_start": "1772064000",
+    "r_duration": "2419200",
+    "value": "268000",
+    "qual": null
+   }
+  },
+  {
+   "title": "Meter data",
+   "id": "urn:uuid:a0000010-0000-4000-8000-000000000010",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000009-0000-4000-8000-000000000009/IntervalBlock/a0000010-0000-4000-8000-000000000010"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000009-0000-4000-8000-000000000009/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a0000009-0000-4000-8000-000000000009"
+    }
+   ],
+   "kind": "IntervalBlock",
+   "block": {
+    "start": "1774483200",
+    "duration": "2764800",
+    "r_start": "1774483200",
+    "r_duration": "2764800",
+    "value": "174000",
+    "qual": null
+   }
+  },
+  {
+   "title": "Meter data",
+   "id": "urn:uuid:a0000011-0000-4000-8000-000000000011",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a000000b-0000-4000-8000-00000000000b/IntervalBlock/a0000011-0000-4000-8000-000000000011"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/IntervalBlock",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a000000b-0000-4000-8000-00000000000b/IntervalBlock"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/MeterReading",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/MeterReading/a000000b-0000-4000-8000-00000000000b"
+    }
+   ],
+   "kind": "IntervalBlock",
+   "block": {
+    "start": "1777248000",
+    "duration": "  86400",
+    "r_start": "1777248000",
+    "r_duration": "  86400",
+    "value": "2000",
+    "qual": null
+   }
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000012-0000-4000-8000-000000000012",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000012-0000-4000-8000-000000000012"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000013-0000-4000-8000-000000000013",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000013-0000-4000-8000-000000000013"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000014-0000-4000-8000-000000000014",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000014-0000-4000-8000-000000000014"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000015-0000-4000-8000-000000000015",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000015-0000-4000-8000-000000000015"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000016-0000-4000-8000-000000000016",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000016-0000-4000-8000-000000000016"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000017-0000-4000-8000-000000000017",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000017-0000-4000-8000-000000000017"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000018-0000-4000-8000-000000000018",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000018-0000-4000-8000-000000000018"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a0000019-0000-4000-8000-000000000019",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a0000019-0000-4000-8000-000000000019"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a000001a-0000-4000-8000-00000000001a",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a000001a-0000-4000-8000-00000000001a"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  },
+  {
+   "title": "Usage Summary",
+   "id": "urn:uuid:a000001b-0000-4000-8000-00000000001b",
+   "updated": "2026-11-07T02:02:07Z",
+   "links": [
+    {
+     "rel": "self",
+     "type": "espi-entry/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary/a000001b-0000-4000-8000-00000000001b"
+    },
+    {
+     "rel": "up",
+     "type": "espi-feed/UsageSummary",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002/UsageSummary"
+    },
+    {
+     "rel": "related",
+     "type": "espi-entry/UsagePoint",
+     "href": "https://api.enbridgegas.com/espi/1_1/resource/Subscription/SYNTHETIC-SUB/UsagePoint/a0000002-0000-4000-8000-000000000002"
+    }
+   ],
+   "kind": "UsageSummary"
+  }
+ ]
+}

@@ -1,15 +1,22 @@
 /**
- * Wave V — the HINDSIGHT panel, as painted.
+ * Wave V (corrected) — the HINDSIGHT panel, as painted.
  *
  * The numbers come from the engine's own fixtures (real `processRawData`
  * categories, a bill the model reproduces to the cent), so the assertions here
- * are about what the household SEES: two lever chips per period, the three
- * headline numbers and their sum, a move list behind a disclosure, an honest
- * empty state, and a period the engine refuses to price carrying its reason
- * instead of a number.
+ * are about what the household SEES: one plan verdict per closed period, a
+ * single headline number, an honest empty state, and a period the engine
+ * refuses to price carrying its reason instead of a number.
+ *
+ * The panel is also pinned on what it must NOT show: no behaviour chip, no
+ * move list, no hypothetical-usage wording of any kind.
+ *
+ * And on the headline's own subtitle agreeing with the headline's sign
+ * (t_97f4c904): a net SAVING states the saving at the figure's own magnitude
+ * instead of interpolating a clamped `$0.00 more` under a "would have cost
+ * more" headline.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import {
@@ -20,6 +27,7 @@ import {
   type RateSet,
   type UsageSummary,
 } from '@/lib/energy';
+import { setLocale } from '@/i18n';
 import HindsightPanel from './HindsightPanel';
 
 const RATES: RateSet = {
@@ -80,7 +88,7 @@ function touSummary(day: string, days: number, commodity: number, season = 'Wint
     billToDate: null,
     costAdditionalLastPeriod: null,
     currency: 124,
-    consumption: null,
+    consumption: null, volume: null,
     items: [
       line(`Off Peak-${season}`, off),
       line(`On Peak-${season}`, on),
@@ -104,63 +112,98 @@ function house(day: string, days: number, blockKwh = 3.0) {
   return { rows, summary: touSummary(day, days, planCostFor(rows, 'TOU')) };
 }
 
+/** Readings that only ever run 00:00–06:00 — billed on Tiered, TOU/ULO win. */
+function nightHouse(day: string, days: number, kwh = 3.0) {
+  const rows = hourly(day, days, (dt) => (dt.getHours() < 6 ? kwh : 0));
+  const commodity = planCostFor(rows, 'Tiered');
+  const summary: UsageSummary = {
+    ...touSummary(day, days, 0),
+    items: [
+      line('BLOCK 1 - Winter', commodity),
+      line('Delivery', 75.5, 4),
+      line('Regulatory', 8.6, 4),
+      line('H.S.T. # 123456789', Math.round((commodity + 84.1) * 0.13 * 100) / 100, 5),
+      line('Total Electricity Charges', Math.round((commodity + 84.1) * 100) / 100),
+    ],
+  };
+  return { rows, summary };
+}
+
+/** Readings that only ever run at 08:00 — on-peak under TOU and ULO — on a bill
+ *  that was itself priced on Tiered, i.e. the plan you were on WAS the cheapest
+ *  of the three. The hindsight net is a SAVING: `planMiss < 0`. */
+function peakHouse(day: string, days: number, kwh = 3.0) {
+  const rows = hourly(day, days, (dt) => (dt.getHours() === 8 ? kwh : 0));
+  const commodity = planCostFor(rows, 'Tiered');
+  const summary: UsageSummary = {
+    ...touSummary(day, days, 0),
+    items: [
+      line('BLOCK 1 - Winter', commodity),
+      line('Delivery', 75.5, 4),
+      line('Regulatory', 8.6, 4),
+      line('H.S.T. # 123456789', Math.round((commodity + 84.1) * 0.13 * 100) / 100, 5),
+      line('Total Electricity Charges', Math.round((commodity + 84.1) * 100) / 100),
+    ],
+  };
+  return { rows, summary };
+}
+
 describe('HindsightPanel', () => {
-  it('paints both levers and an additive headline, signs included', () => {
-    const { rows, summary } = house('2026-11-02', 28);
-    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+  afterEach(() => setLocale('en'));
+  it('paints ONE plan headline — the plan you were on, against the other two', () => {
+    const { rows, summary } = nightHouse('2026-11-02', 28);
+    const { container } = render(<HindsightPanel summaries={[summary]} allData={rows} />);
 
     expect(screen.getByTestId('hindsight-panel')).toBeInTheDocument();
-    // Signed on purpose: a plan the alternatives would have beaten carries a
-    // minus, because the three numbers have to READ as a sum on screen.
-    const money = (s: string | null) => {
-      const text = (s ?? '').replace(/\s/g, '');
-      const value = Number(text.replace(/[^0-9.]/g, ''));
-      return /^−/.test(text) ? -value : value;
-    };
-    const plan = money(screen.getByTestId('hindsight-plan-total').textContent);
-    const behaviour = money(screen.getByTestId('hindsight-behaviour-total').textContent);
-    const total = money(screen.getByTestId('hindsight-total').textContent);
-
-    expect(behaviour).toBeGreaterThan(0);
-    expect(total).toBeCloseTo(plan + behaviour, 2);
-    expect(screen.getByTestId('hindsight-lever')).toBeInTheDocument();
+    expect(screen.getByTestId('hindsight-plan-total').textContent).toBeTruthy();
+    // There is no second lever and no sum of levers on this surface.
+    expect(screen.queryByTestId('hindsight-behaviour-total')).toBeNull();
+    expect(screen.queryByTestId('hindsight-total')).toBeNull();
+    expect(container.querySelector('[data-testid^="hindsight-moves-"]')).toBeNull();
+    expect(container.querySelector('[data-testid="hindsight-behaviour-chip"]')).toBeNull();
   });
 
-  it('gives every period a plan chip AND a behaviour chip', () => {
+  it('never mentions behaviour, a move or a hypothetical shift', () => {
+    const { rows, summary } = nightHouse('2026-11-02', 28);
+    const { container } = render(<HindsightPanel summaries={[summary]} allData={rows} />);
+    const text = container.textContent ?? '';
+
+    expect(text).not.toMatch(/behaviour/i);
+    expect(text).not.toMatch(/\bmove[ds]?\b/i);
+    expect(text).not.toMatch(/had run in|would have done|if you had|shift/i);
+    // …and it does say what it IS doing.
+    expect(text).toMatch(/same readings/i);
+    expect(text).toMatch(/Time-of-Use|tiered|ultra-low/i);
+  });
+
+  it('gives every period its plan chip, detected badge and season', () => {
     const { rows, summary } = house('2026-11-02', 28);
     render(<HindsightPanel summaries={[summary]} allData={rows} />);
 
     const row = screen.getByTestId(`hindsight-period-${summary.startDate}`);
     expect(within(row).getByTestId('hindsight-plan-chip').textContent).toBeTruthy();
-    expect(within(row).getByTestId('hindsight-behaviour-chip').textContent).toMatch(/BEHAVIOUR/);
     expect(within(row).getByTestId('hindsight-plan-badge').textContent).toMatch(/TIME-OF-USE/i);
     expect(row.getAttribute('data-plan')).toBe('TOU');
     expect(row.getAttribute('data-origin')).toBe('detected');
     // The season is stated, because the rates that applied depend on it.
     expect(row.textContent).toMatch(/Winter/i);
+    // The period states the kWh that were actually metered.
+    expect(row.textContent).toMatch(/kWh/);
   });
 
-  it('hides the move list until the household opens it', () => {
-    const { rows, summary } = house('2026-11-02', 28);
-    const { container } = render(<HindsightPanel summaries={[summary]} allData={rows} />);
+  it('names the better plan when the billed one was not it', () => {
+    const { rows, summary } = nightHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
 
-    const details = screen.getByTestId(`hindsight-moves-${summary.startDate}`);
-    expect(details.tagName.toLowerCase()).toBe('details');
-    expect((details as HTMLDetailsElement).open).toBe(false);
-    // The moved block is named, hour by hour, with both rates.
-    const mon = within(details).getByTestId('hindsight-move-mon-7-10');
-    expect(mon.textContent).toContain('07:00–10:00');
-    expect(mon.textContent).toContain('Off-peak');
-    expect(mon.textContent).toContain('¢/kWh');
-    // The formatter carries the unit: the key must not add a second one.
-    expect(mon.textContent).toMatch(/kWh/);
-    expect(mon.textContent).not.toMatch(/kWh\s*kWh/);
-    expect(container.querySelectorAll('details[data-testid^="hindsight-moves-"]')).toHaveLength(1);
+    const chip = screen.getByTestId('hindsight-plan-chip').textContent ?? '';
+    expect(chip).toMatch(/WOULD HAVE SAVED/);
+    expect(chip).toMatch(/Ultra-Low|Time-of-Use/i);
+    expect(screen.getByTestId(`hindsight-worst-${summary.startDate}`)).toBeInTheDocument();
   });
 
   it('orders the periods worst-first', () => {
-    const big = house('2026-11-02', 28, 3.0);
-    const small = house('2026-12-01', 28, 1.0);
+    const big = nightHouse('2026-11-02', 28, 3.0);
+    const small = nightHouse('2026-12-01', 28, 1.0);
     render(<HindsightPanel summaries={[small.summary, big.summary]} allData={[...small.rows, ...big.rows]} />);
 
     const rows = screen.getAllByTestId(/^hindsight-period-/);
@@ -174,37 +217,77 @@ describe('HindsightPanel', () => {
   });
 
   it('shows an honest empty state instead of a number it cannot stand behind', () => {
-    // Readings that do not cover the period: both levers are refused.
+    // Readings that do not cover the period: nothing is priced.
     const { rows, summary } = house('2026-11-02', 28);
     const partial = rows.slice(0, 24 * 8);
     render(<HindsightPanel summaries={[summary]} allData={partial} />);
 
     expect(screen.getByTestId('hindsight-empty')).toBeInTheDocument();
-    expect(screen.queryByTestId('hindsight-total')).toBeNull();
+    expect(screen.queryByTestId('hindsight-plan-total')).toBeNull();
     const row = screen.getByTestId(`hindsight-period-${summary.startDate}`);
     expect(within(row).getByTestId('hindsight-skip').textContent).toMatch(/readings cover/i);
-    expect(within(row).queryByTestId('hindsight-behaviour-chip')).toBeNull();
+    expect(within(row).queryByTestId('hindsight-plan-chip')).toBeNull();
   });
 
-  it('on a flat rate says the hour does not change the price — not "$0.00 saved"', () => {
-    const { rows } = house('2026-11-02', 28);
-    const commodity = planCostFor(rows, 'Tiered');
-    const summary: UsageSummary = {
-      ...touSummary('2026-11-02', 28, 0),
+  it('claims nothing when the plan cannot be known', () => {
+    const { rows, summary } = house('2026-11-02', 28);
+    const silent: UsageSummary = {
+      ...summary,
       items: [
-        line('BLOCK 1 - Winter', commodity),
-        line('Delivery', 75.5, 4),
-        line('Regulatory', 8.6, 4),
-        line('H.S.T. # 123456789', Math.round((commodity + 84.1) * 0.13 * 100) / 100, 5),
-        line('Total Electricity Charges', Math.round((commodity + 84.1) * 100) / 100),
+        line('Monthly Basic Charge', 18.4),
+        line('Standard Service Charge', 5.0, 4),
+        line('Total Electricity Charges', 23.4),
       ],
     };
+    render(<HindsightPanel summaries={[silent]} allData={rows} />);
+
+    const row = screen.getByTestId(`hindsight-period-${silent.startDate}`);
+    expect(within(row).getByTestId('hindsight-plan-chip').textContent).toMatch(/UNKNOWN/);
+    expect(screen.getByTestId('hindsight-empty')).toBeInTheDocument();
+  });
+
+  /* ---- the headline's subtitle may not contradict it (t_97f4c904) --------- */
+
+  it('states the SAVING — never "$0.00 more" — under a negative headline', () => {
+    // The plan the bill was on WAS the cheapest of the three, so the net is a
+    // NEGATIVE figure. The old `Math.max(0, planMiss)` clamp printed
+    // "cost you $0.00 more" under "The alternatives would have cost more".
+    const { rows, summary } = peakHouse('2026-11-02', 28);
     render(<HindsightPanel summaries={[summary]} allData={rows} />);
 
-    const chip = screen.getByTestId('hindsight-behaviour-chip');
-    expect(chip.textContent).toMatch(/FLAT RATE/);
-    expect(screen.getByTestId('hindsight-behaviour-total').textContent).toMatch(/0\.00/);
-    // …and the plan lever is still priced beside it.
-    expect(screen.getByTestId('hindsight-plan-total').textContent).toBeTruthy();
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    expect(total).toMatch(/^−\$/); // the headline is the negative net, as painted
+
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).not.toMatch(/\$0[.,]00/);
+    expect(note).not.toMatch(/Staying on the plan you were on/);
+    // …and the saving is stated at the HEADLINE's own magnitude, unclamped.
+    expect(note).toBe(
+      `The alternatives would have cost you ${total.replace('−', '')} more on the very same readings.`,
+    );
+  });
+
+  it('keeps the loss wording when the net really is a loss', () => {
+    const { rows, summary } = nightHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    expect(total).toMatch(/^\$/);
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).toBe(
+      `Staying on the plan you were on cost you ${total} more than the cheapest of the other two, on the very same readings.`,
+    );
+  });
+
+  it('composes the saving sentence from the French catalog on the fr page', () => {
+    setLocale('fr');
+    const { rows, summary } = peakHouse('2026-11-02', 28);
+    render(<HindsightPanel summaries={[summary]} allData={rows} />);
+
+    const total = screen.getByTestId('hindsight-plan-total').textContent ?? '';
+    const note = screen.getByTestId('hindsight-headline-note').textContent ?? '';
+    expect(note).toBe(
+      `Les autres tarifs vous auraient coûté ${total.replace('−', '')} de plus, sur exactement les mêmes relevés.`,
+    );
   });
 });

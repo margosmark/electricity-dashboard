@@ -1,17 +1,47 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
 import {
   VIEWPORT_SWEEP,
   CHART_HEADER_SWEEP,
-  bandFor,
-  measureToolbarGeometry,
   measureChartHeaderGeometry,
-  toolbarChecks,
   chartHeaderChecks,
-  layoutSummary,
 } from './toolbar-geometry.js';
 import { seedMarkShaped } from './mark-seed';
+
+/**
+ * Reconstruct the PRE-FIX chart header row in the live DOM — the
+ * anti-furniture counterfactual both chart-header sweeps below depend on
+ * ("a sweep row that is green on the buggy build is decoration").
+ *
+ * t_82a4dc08 added two protections that make the row survive its utilities
+ * being removed, so a faithful reconstruction has to remove all four parts:
+ * `min-w-0` on the title group (what lets the h2's truncate shrink),
+ * `shrink-0` on the cost block (what stops it absorbing the deficit),
+ * `shrink-0` on the zoom cluster, and the document-level
+ * `overflow-wrap: anywhere` that collapses every other min-content floor on
+ * the row. Measured with only the first two removed: the worst-case
+ * counterfactual reproduced the clip at 2 of 5 swept widths instead of 5,
+ * which is precisely the "this gate cannot see the defect it exists for"
+ * failure this helper exists to prevent.
+ */
+async function reconstructPreFixChartHeader(page: Page, costText?: string) {
+  await page.evaluate((costText) => {
+    document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
+    document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
+    document
+      .querySelector('[data-testid="chart-header-row"] > [role="group"]')
+      ?.classList.remove('shrink-0');
+    document.body.style.overflowWrap = 'normal';
+    if (costText) {
+      const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
+      if (num) num.textContent = costText;
+    }
+    return new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  }, costText ?? null);
+}
 
 /**
  * Layout-regression gate for the toolbar (t_7228c195).
@@ -43,9 +73,8 @@ import { seedMarkShaped } from './mark-seed';
  *  own checkout, so it does not need to be inside the booted container. */
 const FIXTURE = path.resolve(__dirname, '../fixtures/green-button-alliance-sample.xml');
 const EVIDENCE = path.resolve(__dirname, '../../../evidence');
-
 test.describe('toolbar layout gate', () => {
-  test('no dead band at any vw/vh breakpoint', async ({ page }) => {
+  test('range and scope stay in the top shell at every viewport breakpoint', async ({ page }) => {
     test.setTimeout(240_000);
     expect(fs.existsSync(FIXTURE), `missing fixture at ${FIXTURE}`).toBe(true);
 
@@ -63,80 +92,55 @@ test.describe('toolbar layout gate', () => {
       .toBeGreaterThan(0);
     await expect(page.getByTitle('Always-on floor')).toBeVisible();
 
-    // --- sweep ------------------------------------------------------------
-    const failures: string[] = [];
-    const layouts: Record<string, ReturnType<typeof layoutSummary> | null> = {};
-    let total = 0;
-
     for (const vp of VIEWPORT_SWEEP) {
       const label = `${vp.width}x${vp.height}`;
       await page.setViewportSize(vp);
-      // Two frames: one for the resize, one so React/Tailwind have applied
-      // the new media queries before anything is measured.
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
       );
-
-      const m = await page.evaluate(measureToolbarGeometry);
-      const checks = toolbarChecks(label, m, bandFor(vp.width));
-      layouts[label] = layoutSummary(m);
-      total += checks.length;
-      for (const c of checks) {
-        if (!c.ok) failures.push(`${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-        console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-      }
-      console.log(`      ${layoutSummary(m)}`);
+      const shell = await page.evaluate(() => {
+        const nav = document.querySelector('[data-testid="tab-nav"]');
+        const context = document.querySelector('[data-testid="dashboard-context"]');
+        const toolbar = document.querySelector('[data-testid="dashboard-toolbar"]');
+        return {
+          contextInNav: Boolean(nav && context && nav.contains(context)),
+          contextDates: context?.querySelectorAll('input[type="date"]').length ?? 0,
+          toolbarDates: toolbar?.querySelectorAll('input[type="date"]').length ?? 0,
+          scopeButtons: context?.querySelectorAll('[data-testid="dashboard-scope"] button').length ?? 0,
+          pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          contextOverflow: context ? context.scrollWidth - context.clientWidth : Number.POSITIVE_INFINITY,
+        };
+      });
+      expect(shell.contextInNav, `${label}: context is a child of the persistent top shell`).toBe(true);
+      expect(shell.contextDates, `${label}: exactly two date inputs remain in the shell`).toBe(2);
+      expect(shell.toolbarDates, `${label}: retired toolbar has no date inputs`).toBe(0);
+      expect(shell.scopeButtons, `${label}: all three scope choices remain reachable`).toBe(3);
+      expect(shell.pageOverflow, `${label}: no horizontal page overflow`).toBeLessThanOrEqual(1);
+      expect(shell.contextOverflow, `${label}: shell context does not scroll sideways`).toBeLessThanOrEqual(1);
     }
-
-    if (process.env.TOOLBAR_GATE_EVIDENCE) {
-      fs.writeFileSync(
-        path.join(EVIDENCE, 'toolbar-layout-gate.json'),
-        `${JSON.stringify(
-          {
-            wave: 'toolbar-gate',
-            fixture: path.basename(FIXTURE),
-            at: new Date().toISOString(),
-            sweep: VIEWPORT_SWEEP,
-            budgets: { note: 'see webapp/tests/e2e/toolbar-geometry.js TOOLBAR_BUDGETS' },
-            total,
-            failed: failures.length,
-            failures,
-            layouts,
-          },
-          null,
-          2,
-        )}\n`,
-      );
-    }
-
-    expect(
-      failures,
-      `${failures.length}/${total} toolbar layout checks FAILED — the dead band is back (or a new one opened):\n${failures.join('\n')}`,
-    ).toEqual([]);
   });
 });
 
 
 /**
- * The USAGE card's header row (t_fbf590fa addendum 2) — the same class of bug
+ * The Overview usage card's header row (t_fbf590fa addendum 2) — the same class of bug
  * as the toolbar's dead band, one card down: a flex row whose trailing element
  * absorbed a deficit it could not shrink into, clipped by the card's own
  * `overflow-hidden`.
  *
  * It rides THIS spec because the sweep machinery already exists, but its
  * fixtures are different on purpose: the toolbar gate measures the default tab
- * with the small sample, this measures the USAGE tab with the Mark-shaped seed
+ * with the small sample, this measures Overview with the Mark-shaped seed
  * (24 bills ⇒ a real selection cost string) at the five widths the clip was
  * reproduced at. Green-on-the-buggy-build is the failure mode to avoid here:
  * `scrollWidth > clientWidth` on the row IS the clip, and the cost block's
  * right edge vs the card's content edge is the same statement about the one
  * element that must never clip.
  */
-test.describe('USAGE card header row (t_fbf590fa)', () => {
+test.describe('Overview usage card header row (t_fbf590fa)', () => {
   test('the header row never clips its cost block', async ({ page }) => {
     test.setTimeout(240_000);
     await seedMarkShaped(page);
-    await page.getByTestId('tab-usage').click();
     await page.getByTestId('chart-header-row').waitFor({ timeout: 30_000 });
 
     const failures: string[] = [];
@@ -172,15 +176,8 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
     for (const vp of CHART_HEADER_SWEEP) {
       const label = `${vp.width}x${vp.height} pre-fix`;
       await page.setViewportSize(vp);
-      await page.evaluate(
-        () =>
-          new Promise<void>((resolve) => {
-            // Re-assert every iteration: the mutation must survive a resize.
-            document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
-            document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-          }),
-      );
+      // Re-asserted every iteration: the mutation must survive a resize.
+      await reconstructPreFixChartHeader(page);
       const pre = chartHeaderChecks(label, await page.evaluate(measureChartHeaderGeometry));
       for (const c of pre) {
         console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name} — ${c.detail}`);
@@ -205,7 +202,7 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
 
     expect(
       failures,
-      `${failures.length}/${total} USAGE-header checks FAILED — the cost block is being clipped again:\n${failures.join('\n')}`,
+      `${failures.length}/${total} Overview usage-header checks FAILED — the cost block is being clipped again:\n${failures.join('\n')}`,
     ).toEqual([]);
   });
 
@@ -228,7 +225,6 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
   test('the header row holds the worst-case cost string at every swept width', async ({ page }) => {
     test.setTimeout(240_000);
     await seedMarkShaped(page);
-    await page.getByTestId('tab-usage').click();
     await page.getByTestId('chart-header-row').waitFor({ timeout: 30_000 });
 
     const WIDE = '$2,131.93';
@@ -265,12 +261,7 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
     for (const vp of CHART_HEADER_SWEEP) {
       const label = `${vp.width}x${vp.height} worst-case pre-fix`;
       await page.setViewportSize(vp);
-      await page.evaluate((wide: string) => {
-        document.querySelector('[data-testid="chart-title-group"]')?.classList.remove('min-w-0');
-        document.querySelector('[data-testid="chart-cost-block"]')?.classList.remove('shrink-0');
-        const num = document.querySelector('[data-testid="chart-cost-block"] div:last-child');
-        if (num) num.textContent = wide;
-      }, WIDE);
+      await reconstructPreFixChartHeader(page, WIDE);
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
       );
@@ -285,7 +276,7 @@ test.describe('USAGE card header row (t_fbf590fa)', () => {
 
     expect(
       failures,
-      `${failures.length}/${total} USAGE-header checks FAILED at the worst-case cost string:\n${failures.join('\n')}`,
+      `${failures.length}/${total} Overview usage-header checks FAILED at the worst-case cost string:\n${failures.join('\n')}`,
     ).toEqual([]);
     expect(
       brokenWidths,

@@ -143,8 +143,10 @@ function pad2(h: number): string {
   return String(h).padStart(2, '0');
 }
 
+/** "Fri 11:00–17:00" / "ven. 11:00–17:00" — the canonical day code is data,
+ *  the label it prints is not (see `dayLabel`). */
 function blockLabel(weekday: number, startHour: number, endHour: number): string {
-  return `${WEEKDAY_SHORT[weekday]} ${pad2(startHour)}:00–${pad2(endHour)}:00`;
+  return `${dayLabel(WEEKDAY_SHORT[weekday])} ${pad2(startHour)}:00–${pad2(endHour)}:00`;
 }
 
 // ---------------------------------------------------------------------------
@@ -195,7 +197,11 @@ export function classifyBlock(input: BlockClassificationInput): BlockClassificat
     return {
       signature: 'fixed-schedule',
       label: t('touShift.fixedSchedule'),
-      detail: `${span}h in the same slot ${weeksSeen}/5 weeks, flat across every hour (±${pct(intraBlockCv)})`,
+      detail: t('shift.evidenceFlat', {
+        hours: span,
+        seen: weeksSeen,
+        pct: pct(intraBlockCv),
+      }),
     };
   }
 
@@ -221,7 +227,7 @@ export function classifyBlock(input: BlockClassificationInput): BlockClassificat
 
 /* Wave U — the optimizer's user-visible sentences come from the locale
  * catalog at call time; the analysis numbers and target ids stay canonical. */
-import { fmtMoney, t } from '@/i18n';
+import { dayLabel, fmtMoney, t } from '@/i18n';
 
 export const VERY_CONSISTENT_MAX_CV = 0.15;
 
@@ -564,7 +570,11 @@ export function analyzeTouShifts(
     const startHour = run[0].hour;
     const endHour = run[run.length - 1].hour + 1;
     const avgWeeklyKwh = run.reduce((acc, c) => acc + c.meanKwh, 0);
+    // `run` is consecutive HOURS of one weekday and one tier — at most 24
+    // entries by construction.
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const weeksSeen = Math.min(...run.map((c) => c.weeksPresent));
+    // eslint-disable-next-line no-restricted-syntax -- bounded: ≤ 24 consecutive hours
     const cv = Math.max(...run.map((c) => c.cv));
     const readings = run.flatMap((c) => c.readings);
     const baselineRate = baselineRateCents(plan, readings, rates!, tier);

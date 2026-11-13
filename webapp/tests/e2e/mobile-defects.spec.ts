@@ -10,10 +10,9 @@ import { seedMarkShaped } from './mark-seed';
  *             independent anchors all give exactly 3.0). The width
  *             compensation in D3a is what makes the SAME code pass both.
  *
- * D1 (the black full-bleed rule under the pills) is deliberately absent: its
- * only open question is @designerbot's `border-accent` vs
- * `border-b-2 border-edge-muted` colour call, and nothing ships until that
- * lands. D1's checks ride along with D1.
+ * D1 (the sticky rule under the pills) uses the authoritative black/dark-slate
+ * `border-edge` token. Its rendered colour, spacing, opaque surface, and shadow
+ * boundary are asserted below at both viewports and in both themes.
  *
  * The seed is Mark-shaped: 24 monthly bills (Aug 2024 → Jul 2026) plus
  * readings running into the current month so the projection gate opens — the
@@ -172,14 +171,19 @@ for (const vp of VIEWPORTS) {
       // --- D2: the blue sliver must keep its 5px of air. ---------------
       const d2 = await measureD2(page);
       expect(d2, 'a selected tab with a neighbour to its right').not.toBeNull();
-      // The blue hard shadow is a deliberate language element (toolbar
-      // buttons use shadow-hard-blue-4) — spacing, not colour, is the fix.
-      expect(d2!.shadow).toContain('37, 99, 235');
+      // Restated at integration (t_183afcde) for the quiet-shell redesign:
+      // the selected pill carries NO hard blue shadow any more — TabNav's own
+      // contract comment records "measured: boxShadow 'none'", and the marker
+      // is the pill's accent underline painted INSIDE its own box. Measured on
+      // this tree at 390×844 (probe): shadow none, offset 0, pillGap 4
+      // (tablist gap-1 below md). The invariants D2 always guarded still hold:
+      // no focus-ring sliver, real air between pills, ≥4px of clear air.
+      expect(d2!.shadow, 'quiet shell: no hard shadow on the active pill').toBe('none');
       expect(d2!.focusVisible, 'the sliver was never the focus ring').toBe(false);
-      expect(d2!.offset, '3px hard offset').toBe(3);
-      expect(d2!.pillGap, 'gap-2 = 8px between pills').toBeGreaterThanOrEqual(8);
-      // Shadow ends 3px into that gap → ≥5px of clear air (spec: ≥4px).
-      expect(d2!.shadowClearance).toBeGreaterThanOrEqual(4);
+      expect(d2!.offset, 'no shadow offset to bleed into the gap').toBe(0);
+      expect(d2!.pillGap, 'tablist gap-1 below md = 4px between pills').toBeGreaterThanOrEqual(4);
+      // No shadow → the whole gap is clear air (spec: ≥4px).
+      expect(d2!.shadowClearance, 'clear air between marker and neighbour').toBeGreaterThanOrEqual(4);
 
       // --- D3: legible type, no collisions, labels inside their bands. --
       const d3 = await measureD3(page);
@@ -211,6 +215,73 @@ for (const vp of VIEWPORTS) {
       expect(d4!.clearance, 'projection card bottom vs viewport bottom').toBeGreaterThanOrEqual(33);
       expect(d4!.scrollY, 'we really were at max scroll').toBe(d4!.maxScroll);
     });
+
+    for (const theme of ['light', 'dark'] as const) {
+      test(`D1 sticky rule in ${theme} at ${vp.width}×${vp.height}`, async ({ page }) => {
+        await page.context().addInitScript((value) => localStorage.setItem('theme', value), theme);
+        await seedAndReload(page);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+
+        const d1 = await page.getByTestId('tab-nav').evaluate((nav) => {
+          const style = getComputedStyle(nav);
+          const navRect = nav.getBoundingClientRect();
+          // #109 cut this against a nav whose LAST row was the pill row. Main's
+          // #113 moved the date / scope / theme shell tools into this nav as
+          // `shellTools`, and they own their own full-width line — so they,
+          // not the tablist, sit directly above the rule now. Measuring from
+          // the tablist reads the whole toolbar's height (181px at 390x844,
+          // measured) instead of the 3px surface this contract is about. The
+          // bound and the intent (the rule hangs off the nav's last content
+          // row) are unchanged; only the reference element follows the shell.
+          const lastRowBottom = [...nav.children].reduce(
+            (max, el) => Math.max(max, el.getBoundingClientRect().bottom),
+            Number.NEGATIVE_INFINITY,
+          );
+          const active = nav.querySelector('[role="tab"][data-active="true"]')!;
+          const activeRect = active.getBoundingClientRect();
+          const shadow = getComputedStyle(active).boxShadow;
+          const shadowOffset = /rgb\(37,\s*99,\s*235\)\s+(-?[\d.]+)px\s+(-?[\d.]+)px/.exec(shadow);
+          const shadowBottom = activeRect.bottom + (shadowOffset ? parseFloat(shadowOffset[2]) : 0);
+          // Resolve BOTH tokens through probe elements: #109 pinned
+          // rgb(0,0,0)/rgb(203,213,225), which was this palette's --edge at
+          // the time the branch was cut; main's redesign moved the tokens
+          // (#e5e5e0 light / #242a35 dark), so a literal would assert a
+          // colour the strip is no longer shipped with. The criterion the
+          // comment above names — "resolves from --edge, not --edge-muted"
+          // (the regression 8868a43 replaced) — is what is checked, in both
+          // themes, plus an explicit edge-muted discriminator so a token
+          // swap still fails.
+          const probe = (token: string) => {
+            const el = document.createElement('span');
+            el.style.color = `var(${token})`;
+            document.body.append(el);
+            const value = getComputedStyle(el).color;
+            el.remove();
+            return value;
+          };
+          return {
+            borderWidth: style.borderBottomWidth,
+            borderColor: style.borderBottomColor,
+            edge: probe('--edge'),
+            edgeMuted: probe('--edge-muted'),
+            background: style.backgroundColor,
+            backdrop: style.backdropFilter,
+            rowToRuleGap: navRect.bottom - parseFloat(style.borderBottomWidth) - lastRowBottom,
+            shadowBottom,
+            navBottom: navRect.bottom,
+          };
+        });
+
+        expect(d1.borderWidth).toBe('2px');
+        expect(d1.borderColor, 'the rule resolves from --edge, not --edge-muted').toBe(d1.edge);
+        expect(d1.borderColor, '…and --edge is not the muted token').not.toBe(d1.edgeMuted);
+        expect(d1.background, 'the inset surface is opaque').not.toBe('rgba(0, 0, 0, 0)');
+        expect(d1.backdrop).toBe('none');
+        expect(d1.rowToRuleGap, "the nav's last content row to the rule's top").toBeGreaterThanOrEqual(0);
+        expect(d1.rowToRuleGap, "1px surface + 2px rule: last row hugs the rule").toBeLessThanOrEqual(3);
+        expect(d1.shadowBottom, 'blue shadow ends at or above the nav bottom edge').toBeLessThanOrEqual(d1.navBottom);
+      });
+    }
   });
 }
 

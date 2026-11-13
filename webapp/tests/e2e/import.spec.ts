@@ -9,10 +9,28 @@ import fs from 'node:fs';
  * imports immediately, and an existing one is NEVER overwritten without the
  * merge review. Both paths finish by writing `energy_data` and hard-navigating
  * to `/`, exactly as the upload modal's commit does.
+ *
+ * The second describe block is the bill half of that contract (t_05195060):
+ * a Green Button feed is TWO halves — readings under `energy_data_v2`, and
+ * UsageSummary bills + clock rules under `usage_summaries` /
+ * `local_time_parameters`. This page used to write only the first, so an
+ * Enbridge gas export imported "successfully" with `isGasFeed` false and not
+ * one gas surface rendered. The commodity split (t_8a9038d6) then moved the
+ * GAS halves to their own key space — `energy_gas_v2` /
+ * `gas_usage_summaries` — so a gas import addresses ONLY those and leaves
+ * the electric keys untouched; each half below is read from its own key.
+ *
+ * FIXTURE POLICY (same as enbridge-gas-journey.spec.ts): SYNTHETIC only. The
+ * owner's real EGD export carries his name, home address, account number and
+ * meter serial and must never enter this repo, a fixture, or a PR.
  */
 
 const FIXTURE = path.resolve(__dirname, '../fixtures/synthetic.xml');
 const FIXTURE_READINGS = 68;
+/** Commodity 7: 10 UsageSummary periods, 5 IntervalBlocks, no electric rows. */
+const GAS_FIXTURE = path.resolve(__dirname, '../fixtures/enbridge-gas-synthetic.xml');
+/** Electric feed that ALSO carries a UsageSummary and a LocalTimeParameters. */
+const ALLIANCE_FIXTURE = path.resolve(__dirname, '../fixtures/green-button-alliance-sample.xml');
 
 async function storedReadings(page: Page): Promise<Array<{ timestamp: number; usage_kwh: number }>> {
   return page.evaluate(() => JSON.parse(localStorage.getItem('energy_data_v2') || 'null')?.points || []);
@@ -51,6 +69,78 @@ const SEED = [
   { timestamp: Date.UTC(2020, 0, 1, 5) / 1000, usage_kwh: 4.25 },
   { timestamp: Date.UTC(2020, 0, 1, 6) / 1000, usage_kwh: 3.5 },
 ];
+
+type StoredBill = { start: number; _gasInterval?: unknown };
+
+const storedBills = (page: Page): Promise<StoredBill[]> =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('usage_summaries') || '[]'));
+
+/**
+ * The GAS half of the split key space (t_8a9038d6, AC1): a gas import writes
+ * `gas_usage_summaries` only and never addresses `usage_summaries`, which
+ * stays reserved for the electric bill half.
+ */
+const storedGasBills = (page: Page): Promise<StoredBill[]> =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('gas_usage_summaries') || '[]'));
+
+const storedClock = (page: Page): Promise<{ tzOffset?: number } | null> =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('local_time_parameters') || 'null'));
+
+/**
+ * Seed UsageSummary bills directly — the shape `readStoredBillFeed` accepts
+ * and the shape the app's own `mark-seed.ts` writes (run in the page, so it
+ * closes over nothing from Node). Starts sit in 2024, clear of the gas
+ * fixture's own 2025-12 → 2026-09 periods, so a union of the two has to
+ * keep all of them rather than de-duplicating any away.
+ */
+const BILL_STARTS = [
+  Date.UTC(2024, 0, 1) / 1000,
+  Date.UTC(2024, 0, 29) / 1000,
+  Date.UTC(2024, 1, 26) / 1000,
+];
+
+async function seedBills(page: Page, starts: number[]) {
+  await page.evaluate((list) => {
+    const ymd = (ts: number) => new Date(ts * 1000).toISOString().slice(0, 10);
+    localStorage.setItem(
+      'usage_summaries',
+      JSON.stringify(
+        list.map((start) => ({
+          source: 'UsageSummary',
+          start,
+          duration: 28 * 86400,
+          startDate: ymd(start),
+          endDate: ymd(start + 28 * 86400),
+          days: 28,
+          billLastPeriod: 28 * 86400,
+          billToDate: 0,
+          costAdditionalLastPeriod: 0,
+          currency: 124,
+          consumption: { scaled: 500, value: 500, powerOfTenMultiplier: 0, uom: 72 },
+          volume: null,
+          items: [
+            {
+              note: 'Total Electricity Charges',
+              amount: 100,
+              rawAmount: 1000000,
+              itemKind: null,
+              unitCost: null,
+              measurement: null,
+            },
+          ],
+        })),
+      ),
+    );
+  }, starts);
+}
+
+/** Drop a fixture on /import and wait for the commit that navigates to `/`. */
+async function importFile(page: Page, fixture: string): Promise<void> {
+  await page.goto('/import');
+  await expect(page.getByText('Drop XML Here')).toBeVisible();
+  await page.locator('[data-testid="import-file"]').setInputFiles(fixture);
+  await page.waitForURL(/\/$/, { timeout: 15_000 });
+}
 
 test.describe('/import', () => {
   test('empty profile: drops in the XML, imports immediately, opens the dashboard', async ({ page }) => {
@@ -230,5 +320,241 @@ test.describe('/import', () => {
 
     expect(new URL(page.url()).pathname).toBe('/import');
     expect(await storedReadings(page), 'a failed import leaves the migrated profile intact').toEqual(SEED);
+  });
+});
+
+/**
+ * The BILL half of `/import` (t_05195060).
+ *
+ * The page used to parse with `parseGreenButtonUsagePoints` (groups only) and
+ * commit readings alone, so `usage_summaries` was never written: the import
+ * "worked", `isGasFeed()` stayed false, and every gas surface — bill period
+ * card, money table, the plan-switcher hiding — stayed off. These tests walk
+ * the same file through this page instead of the upload modal.
+ */
+test.describe('/import — the bill feed', () => {
+  test('a gas export writes gas_usage_summaries and every gas surface renders', async ({ page }) => {
+    test.setTimeout(180_000);
+    await importFile(page, GAS_FIXTURE);
+
+    // AC1: the bill half landed — under the commodity split (t_8a9038d6) the
+    // gas UI reads ONLY the gas key space (`gas_usage_summaries` for bills,
+    // `energy_gas_v2` for intervals). The electric keys are never addressed
+    // by a gas import and are therefore ABSENT (null) on this fresh profile —
+    // deliberately `null`, not `[]` / `{"points":[]}`: an electric key
+    // holding an empty payload would mean THIS import wrote it. (Measured
+    // post-import key set: exactly `energy_gas_v2`, `gas_usage_summaries`,
+    // `oeo_commodity`.)
+    const bills = await storedGasBills(page);
+    expect(bills).toHaveLength(10);
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('energy_gas_v2'))).not.toBeNull();
+    // Parse-time enrichment rode along with them: which IntervalBlock belongs
+    // to which billing period is decided once, with the whole feed in hand,
+    // and stored ON the summaries so the panel can say it after a reload.
+    expect(bills.filter((b) => b._gasInterval)).toHaveLength(5);
+
+    // The dashboard booted on summary-only storage: data, not an empty
+    // profile (the R1 gate), and no crash on the way.
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // AC2: the surfaces render from what was just written.
+    await page.getByTestId('tab-plans').click();
+    await expect(page.getByTestId('tab-plans')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="gas-period"]')).toHaveCount(10, { timeout: 30_000 });
+    await expect(page.getByTestId('gas-amount-due').first()).toHaveText('$175.76');
+    const states = await page.getByTestId('gas-interval-state').evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-state')),
+    );
+    expect(states).toEqual([
+      'present',
+      'present',
+      'present',
+      'present',
+      'stub',
+      'absent',
+      'absent',
+      'absent',
+      'absent',
+      'absent',
+    ]);
+
+    // AC5: the designed behaviour is the switcher HIDDEN — it prices
+    // electricity, and nothing on a gas feed uses it (Dashboard.tsx).
+    await expect(page.locator('[data-testid="plan-switcher"]')).toHaveCount(0);
+
+    await page.getByTestId('tab-money').click();
+    await expect(page.getByTestId('gas-money-table')).toBeVisible();
+    await expect(page.getByTestId('gas-money-row')).toHaveCount(10);
+
+    // AC6: a reload brings it all back from the keys the boot path reads —
+    // the GAS key space carries the dataset back, and the electric keys are
+    // still untouched by a gas import (absent here, as before the reload).
+    await page.reload();
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('tab-plans').click();
+    await expect(page.locator('[data-testid="gas-period"]')).toHaveCount(10, { timeout: 30_000 });
+    expect(await storedGasBills(page)).toHaveLength(10);
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toBeNull();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('a feed that declares a clock lands local_time_parameters beside the bills', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await importFile(page, ALLIANCE_FIXTURE);
+
+    expect(await storedBills(page)).toHaveLength(1);
+    // AC1, second key: the file's own clock rules travel with its bills.
+    const clock = await storedClock(page);
+    expect(clock?.tzOffset).toBe(-18000);
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('an electric-only file behaves exactly as before: billing-day fallback, no bill key', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await importFile(page, FIXTURE);
+
+    // AC3: no summaries in the file ⇒ nothing is written under the bill keys
+    // (and, under merge, nothing that IS there could be touched).
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    expect(await storedReadings(page)).toHaveLength(FIXTURE_READINGS);
+
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+    // The axis falls back to the billing-day setting — the pre-bill
+    // behaviour — and the chrome stays electric.
+    await expect(
+      page.locator('input[aria-label="Billing day of month"]'),
+    ).toHaveAttribute('title', 'Which day of the month your utility bills you on');
+    await expect(page.locator('[data-testid="plan-switcher"]')).toBeVisible();
+    await expect(page.locator('[data-testid="gas-period"]')).toHaveCount(0);
+  });
+
+  test('merge keeps BOTH halves: the existing readings and the existing bills', async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedStorage(page, SEED);
+    await seedBills(page, BILL_STARTS);
+    await page.goto('/import');
+    await page.locator('[data-testid="import-file"]').setInputFiles(FIXTURE);
+
+    const review = page.getByTestId('import-review');
+    await expect(review).toBeVisible();
+    // The review is a real gate: neither half has been written yet.
+    expect(await storedReadings(page)).toHaveLength(2);
+    expect(await storedBills(page)).toHaveLength(3);
+
+    await page.getByTestId('import-merge').click();
+    await page.waitForURL(/\/$/, { timeout: 15_000 });
+
+    // AC4 (merge): readings unioned…
+    expect(await storedReadings(page)).toHaveLength(70);
+    // …and AC3: a file with NO summaries must not erase the bills already
+    // stored. This is the contract guard — it holds before AND after the
+    // fix (the defect was never writing the bill half at all, not clobbering
+    // it); the sibling test below pins the half the fix DID change.
+    expect(await storedBills(page)).toHaveLength(3);
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('merge folds the file’s own bills into the ones already stored', async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedStorage(page, SEED);
+    await seedBills(page, BILL_STARTS);
+    await page.goto('/import');
+    await page.locator('[data-testid="import-file"]').setInputFiles(ALLIANCE_FIXTURE);
+    await expect(page.getByTestId('import-review')).toBeVisible();
+    await page.getByTestId('import-merge').click();
+    await page.waitForURL(/\/$/, { timeout: 15_000 });
+
+    // AC4 (merge): both feeds survive — the 3 already stored plus the file's
+    // own period (1388552400 = 2014-01-01), de-duplicated by start and
+    // sorted, never replaced. Before the fix this page wrote no bill key at
+    // all, so the stored 3 were all that ever came back.
+    expect((await storedBills(page)).map((b) => b.start)).toEqual([1388552400, ...BILL_STARTS]);
+    // …and the file's own clock lands beside them (AC1's second key).
+    expect((await storedClock(page))?.tzOffset).toBe(-18000);
+    expect(await storedReadings(page)).toHaveLength(SEED.length + 216);
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('replace is the path that swaps the bills — and only after the review screen', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await seedStorage(page, SEED);
+    await seedBills(page, BILL_STARTS);
+    await page.goto('/import');
+    await page.locator('[data-testid="import-file"]').setInputFiles(FIXTURE);
+    await expect(page.getByTestId('import-review')).toBeVisible();
+    // Nothing swapped while the review is still on screen.
+    expect(await storedBills(page)).toHaveLength(3);
+
+    await page.getByTestId('import-replace').click();
+    await page.waitForURL(/\/$/, { timeout: 15_000 });
+
+    expect(await storedReadings(page)).toHaveLength(FIXTURE_READINGS);
+    // AC4 (replace): the file parsed no bills, so the stored feed goes with
+    // the readings it replaced — the panel becomes exactly what was reviewed.
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBeNull();
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('merging a gas export into an existing profile keeps readings AND bills', async ({ page }) => {
+    // The path the owner actually walks: he already has an electric
+    // dashboard (2 readings + 3 bills stored), then drops in a gas export.
+    // That document has NO electric half, so under the commodity split there
+    // is nothing on it to review — it commits straight through as a MERGE
+    // and both stored halves must come back untouched.
+    test.setTimeout(180_000);
+    await seedStorage(page, SEED);
+    await seedBills(page, BILL_STARTS);
+    await page.goto('/import');
+    // Byte-for-byte evidence for the electric half: captured after the
+    // seeds, re-read after the commit.
+    const electricReadings = await page.evaluate(() => localStorage.getItem('energy_data_v2'));
+    const electricBills = await page.evaluate(() => localStorage.getItem('usage_summaries'));
+    await page.locator('[data-testid="import-file"]').setInputFiles(GAS_FIXTURE);
+
+    // Straight through, NO review screen (unit-pinned in import/page.test.tsx
+    // — "a gas document meeting stored electric data" asserts no review and
+    // a straight commit; `reviewOrImport()`: nothing to lose → straight
+    // through, MERGE never replace — gated by QA t_7acaefd9 incl. E→G order
+    // and security t_ba4a0dbc AC1 both orders byte-identical). Waiting for
+    // `import-review` here was the stale pre-split flow: that gate only
+    // exists for documents WITH an electric half, so the navigation to `/`
+    // IS this test's no-review assertion.
+    await page.waitForURL(/\/$/, { timeout: 15_000 });
+    expect(new URL(page.url()).pathname).toBe('/');
+
+    // BOTH halves survive — the test's real point.
+    // Electric half: byte-identical to the seeded payload — 2 readings and
+    // 3 bills, untouched by the gas write (AC1: a gas import never
+    // addresses `energy_data_v2` / `usage_summaries`).
+    expect(await page.evaluate(() => localStorage.getItem('energy_data_v2'))).toBe(electricReadings);
+    expect(await page.evaluate(() => localStorage.getItem('usage_summaries'))).toBe(electricBills);
+    expect(await storedReadings(page)).toHaveLength(2);
+    expect(await storedBills(page)).toHaveLength(BILL_STARTS.length);
+    // Gas half: 10 periods landed beside them in the gas key space, 5
+    // carrying their interval block (parse-time enrichment rode along).
+    const gasBills = await storedGasBills(page);
+    expect(gasBills).toHaveLength(10);
+    expect(gasBills.filter((b) => b._gasInterval)).toHaveLength(5);
+
+    // No review gate and no first-run modal over the merged profile.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('tab-nav')).toBeVisible({ timeout: 30_000 });
+    // The gas half renders: the profile carries gas periods, so the app is
+    // honest about it — the electricity plan switcher is gone (it renders
+    // only when the Gas section is not selected, Dashboard.tsx) and the
+    // plans tab shows the ten gas periods.
+    await page.getByTestId('tab-plans').click();
+    await expect(page.locator('[data-testid="gas-period"]')).toHaveCount(10, { timeout: 30_000 });
+    await expect(page.locator('[data-testid="plan-switcher"]')).toHaveCount(0);
   });
 });

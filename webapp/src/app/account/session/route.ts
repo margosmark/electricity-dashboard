@@ -15,6 +15,7 @@
  */
 
 import { getBlob, getPushPrefs, openDb } from "@/lib/account/db";
+import { hasCurrentPolicyAcceptance, PRIVACY_POLICY_VERSION, ACCOUNT_TERMS_VERSION } from "@/lib/account/policy";
 import {
   accountJson,
   applySessionCookie,
@@ -43,6 +44,8 @@ export async function GET(request: Request): Promise<Response> {
       pushConfigured: Boolean(cfg.vapid),
       vapidPublicKey: cfg.vapid?.publicKey ?? null,
       maxAccounts: cfg.maxAccounts,
+      privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+      accountTermsVersion: ACCOUNT_TERMS_VERSION,
     });
   }
 
@@ -65,6 +68,14 @@ export async function GET(request: Request): Promise<Response> {
     vapidPublicKey: cfg.vapid?.publicKey ?? null,
     prefs: getPushPrefs(db, account.id),
     maxAccounts: cfg.maxAccounts,
+    privacyPolicyVersion: account.privacy_version,
+    accountTermsVersion: account.terms_version,
+    policyAcceptedAt: account.accepted_at ? new Date(account.accepted_at).toISOString() : null,
+    policyAcceptanceNeeded: !hasCurrentPolicyAcceptance({
+      privacyVersion: account.privacy_version,
+      termsVersion: account.terms_version,
+      acceptedAt: account.accepted_at,
+    }),
   });
 
   if (rotatedToken || extended) {

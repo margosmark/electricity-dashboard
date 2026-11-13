@@ -43,6 +43,8 @@
  * convenience for us, not a hole for them. Documented in SECURITY.md §5.
  */
 
+import { isIP } from "node:net";
+
 /** One bucket's budget: `capacity` attempts, refilled over `windowMs`. */
 export type Limit = { capacity: number; windowMs: number };
 
@@ -223,43 +225,24 @@ export function refundIdentity(attempts: readonly Attempt[]): void {
 }
 
 /**
- * Hand back every bucket. Registration is the one place that does this: a
- * completed registration is the thing `ACCT_MAX_ACCOUNTS` already bounds, so
- * a user who legitimately created an account must not be left sharing an
- * hourly budget with their own earlier attempts (and the e2e gate, which
- * registers for real, would otherwise start failing on its third run).
+ * Hand back every bucket. Kept as a small bucket primitive for tests and
+ * future verification flow; the current closed registration never refunds
+ * its rate budget because no account is created here.
  */
 export function refundAttempts(attempts: readonly Attempt[]): void {
   for (const attempt of attempts) refund(attempt.key);
 }
 
 /**
- * Best-effort source address, or null when there is none worth keying on.
+ * Best-effort ingress peer address, or null when no valid address is present.
  *
- * Order: the FIRST `X-Forwarded-For` entry (what the outer proxy said the
- * client was), then `X-Real-IP` (what nginx saw — which is the proxy itself
- * when a tunnel is in front, i.e. shared by every client).
- *
- * HONEST LIMITS, stated because the review demanded it rather than assumed:
- *
- *  - **It is a throttle key, not an identity.** Anyone who can set the header
- *    can rotate it, so this key alone never protects anything that matters —
- *    which is why every credential endpoint ALSO has the identity bucket
- *    (body-derived, unspoofable) and a process-wide floor.
- *  - **It may be shared.** If the proxy in front does not forward a client
- *    address, every request carries the same key and the per-IP budget
- *    behaves as a second global budget. That is why the per-IP numbers are
- *    generous: a shared key must never be able to lock a legitimate user out
- *    of their own account.
- *  - null (no header at all) means the per-IP bucket is simply not used —
- *    direct access and the local e2e gate take the identity/global path only.
+ * This topology has an outer Pangolin/tunnel edge in front of nginx; no
+ * explicitly trusted proxy CIDR is configured here. nginx overwrites
+ * X-Real-IP with the socket peer it actually sees. That may be a shared
+ * tunnel/NAT address, which safely makes this a shared throttle bucket.
+ * Never consume the client-controlled X-Forwarded-For chain as identity.
  */
 export function clientIp(request: Request): string | null {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first.slice(0, 64);
-  }
-  const real = request.headers.get("x-real-ip")?.trim();
-  return real ? real.slice(0, 64) : null;
+  const value = request.headers.get("x-real-ip")?.trim();
+  return value && isIP(value) ? value : null;
 }

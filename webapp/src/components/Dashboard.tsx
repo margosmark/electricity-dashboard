@@ -1,7 +1,7 @@
 /**
  * Ontario Energy Optimizer - Interaction Fix Edition
  *
- * Flow: Overview ➔ Usage ➔ Plans & Track Record ➔ Money & What-If.
+ * Flow: Overview ➔ Analytics ➔ Plans & Track Record ➔ Money & What-If.
  *
  * Wave R — this file is the SHELL: state and handlers live in
  * src/hooks/useDashboard.ts, the tab strip in TabNav, and the content of each
@@ -40,17 +40,24 @@ import { AccountControls } from '@/components/AccountControls';
 import { AccountTriggers } from '@/components/AccountTriggers';
 import MultiFileMerge from '@/components/MultiFileMerge';
 import { useRateStaleness } from '@/hooks/useRateStaleness';
+import RateStalenessBanner from '@/components/RateStalenessBanner';
 import { useHourlyTemps } from '@/hooks/useHourlyTemps';
 import RefreshNoticeBanner from '@/components/RefreshNoticeBanner';
+import SeriesNotesNotice from '@/components/SeriesNotesNotice';
 import { NotificationToggle } from '@/components/NotificationToggle';
 import LocaleToggle from '@/components/LocaleToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useThemeBootstrap } from '@/lib/theme';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
+import CommodityTabs from '@/components/CommodityTabs';
+import { GasOverviewPanel, GasAnalyticsNote, GasEmptyState } from '@/components/GasSection';
+import { ActualBillPanel } from '@/components/ActualBillPanel';
+import ClassicTabNav, { type ClassicTabId } from '@/components/ClassicTabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
 import OverviewPanel from '@/components/OverviewPanel';
 import UsagePanel from '@/components/UsagePanel';
+
 import PlansPanel from '@/components/PlansPanel';
 import MoneyPanel from '@/components/MoneyPanel';
 import { useTabs } from '@/hooks/useTabs';
@@ -58,7 +65,7 @@ import { useSelectedPlan } from '@/hooks/useSelectedPlan';
 // Wave U — locale, translation and locale-aware formatters. Every text-
 // producing memo below lists `t` in its deps so a language switch recomputes.
 import {
-  planLabel, FR_PLAN_SHORT, fmtMoney, fmtMoney0, useTranslation,
+  planLabel, FR_PLAN_SHORT, fmtMoney, fmtMoney0, fmtNumber, useTranslation,
 } from '@/i18n';
 import { analyzeTouShifts } from '@/lib/touShift';
 import { analyzeShiftVerification } from '@/lib/shiftVerification';
@@ -79,7 +86,7 @@ const STORAGE_MESSAGE_KEYS: Record<StorageNotice['kind'], string> = {
 function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDismiss: () => void }) {
   const { t } = useTranslation();
   return (
-    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-red-600 text-white p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase">
+    <div role="alert" data-testid="storage-notice" className="flex flex-wrap items-start gap-3 md:gap-4 bg-bad-slab-strong text-on-dark p-4 md:p-6 rounded-xl md:rounded-2xl border-4 border-edge shadow-hard-6 font-black uppercase">
       <AlertTriangle size={20} strokeWidth={4} className="shrink-0 mt-1" />
       <div className="flex-1 min-w-[200px]">
         <div className="text-xs md:text-base">{t(STORAGE_MESSAGE_KEYS[notice.kind])}</div>
@@ -92,7 +99,12 @@ function StorageNoticeRow({ notice, onDismiss }: { notice: StorageNotice; onDism
   );
 }
 
-export default function Dashboard() {
+export type DashboardProps = {
+  /** The public route keeps the Quiet Meter shell; /classic restores the historical composition. */
+  variant?: 'quiet' | 'classic';
+};
+
+export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
   const {
     rawData, rateHistory, loading, parsing,
     showUploadModal, setShowUploadModal,
@@ -104,6 +116,8 @@ export default function Dashboard() {
     exportBackup, importBackupFile,
     // Storage surfacing + the two-step, scoped reset (t_a8a54e33)
     storageNotice, dismissStorageNotice, raiseStorageNotice,
+    // What the last import refused to price (t_880370e6)
+    refusalNotes, dismissRefusalNotes,
     resetConfirmOpen, resetKeys, openResetConfirm, cancelResetConfirm, confirmReset,
     parseIssue, setParseIssue,
     exampleData, loadExampleData, discardExampleData,
@@ -112,11 +126,24 @@ export default function Dashboard() {
     gbRefreshTick, backgroundSync,
     // Wave L: UsageSummary bills + the feed's own clock rules
     billFeed,
+    // Commodity isolation (t_8a9038d6): the gas datasets + which section shows
+    gasData, gasBillFeed, commodity, setCommodity,
+    // What the last import was detected as (reported, never guessed)
+    commodityNotice, dismissCommodityNotice,
     // The billing axis: the file's own periods as the view's timeline.
     axis,
     // A restored backup must reach every hook that seeds itself from
     // localStorage (bill add-ons in particular), so reload once written.
   } = useEnergyData({ onBackupApplied: () => window.location.reload() });
+
+  /* ---------------------------------------------------------------------
+   * Commodity isolation (t_8a9038d6). `commodity` is the SECTION on screen;
+   * `activeFeed` is the only feed the panels below may read, so an electric
+   * number can never be printed under Gas or a m³ figure under Electricity.
+   * --------------------------------------------------------------------- */
+  const gasSelected = commodity === 'gas';
+  const activeFeed = gasSelected ? gasBillFeed : billFeed;
+  const gasEmpty = gasData.length === 0 && gasBillFeed.summaries.length === 0;
 
   // Wave U — the shell's locale subscription. `t` is the memo key for every
   // text-producing computation below.
@@ -133,6 +160,14 @@ export default function Dashboard() {
   const [userPlan, setUserPlan] = useSelectedPlan();
   // Wave R: four tabs, remembered in localStorage and addressable at #tab=.
   const { tab, select: setActiveTab } = useTabs();
+  // Classic view deliberately keeps its four historical destinations without
+  // changing the Quiet Meter tab store or its URL contract.
+  const [classicTab, setClassicTab] = React.useState<ClassicTabId>('overview');
+  const activeTab = variant === 'classic' ? classicTab : tab;
+  const selectTab = (next: ClassicTabId) => {
+    if (variant === 'classic') setClassicTab(next);
+    else if (next !== 'usage') setActiveTab(next);
+  };
   // Wave H item 7: $/yr vs $/day reframing of the totals strip.
   const [costMode, setCostMode] = React.useState<'yr' | 'day'>('yr');
 
@@ -275,13 +310,16 @@ export default function Dashboard() {
   // a period that has no data, and never through this app's server.
   const temps = useHourlyTemps(processedData);
 
-  const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const activeChartData = useMemo(() => buildActiveChartData(filteredData, zoomLevel, zoomTarget), [filteredData, zoomLevel, zoomTarget, t]);
 
   const comparison = useMemo(() => calculateComparison(activeChartData), [activeChartData]);
 
   const anomalies = useMemo(
     () => detectAnomalies(processedData, filteredData, temps.temps),
-    [processedData, filteredData, temps.temps],
+    // Wave U rule: the callee builds its sentences in the active language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, filteredData, temps.temps, t],
   );
 
   // Wave N: anomalies are computed HERE (the data never leaves the browser),
@@ -293,32 +331,49 @@ export default function Dashboard() {
 
   // Always-on floor (the old "vampire load"), phrased against the ~10% of
   // bill community benchmark and priced at THIS household's blended rate.
-  const floor = useMemo(() => calculateAlwaysOnFloor(filteredData, userPlan), [filteredData, userPlan]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const floor = useMemo(() => calculateAlwaysOnFloor(filteredData, userPlan), [filteredData, userPlan, t]);
 
   // Work-from-home window: what share of the visible energy lands on a
   // weekday between 07:00 and 19:00 — explains why a plan wins or loses.
-  const wfh = useMemo(() => calculateWfhShare(filteredData), [filteredData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const wfh = useMemo(() => calculateWfhShare(filteredData), [filteredData, t]);
 
   // "This month's bill" projection: month-to-date + the recent daily average
   // carried to month end, gated on day 5 (see lib/billProjection).
   // Wave U: `t` in deps — projectMonthBill builds its gate note/caption in
   // the active language, so a toggle must re-run it.
   const projection = useMemo(
-    () => projectMonthBill(processedData, userPlan, new Date()),
+    () => {
+      // The bundled fixture is deliberately dated and must exercise the
+      // large early-month surface deterministically. Real imports still use
+      // the wall clock, so a Sep-30 file remains honestly gated rather than
+      // being silently reinterpreted as a current bill.
+      const today = exampleData && processedData.length > 0
+        ? new Date(processedData.reduce((latest, row) => row.dateObj > latest ? row.dateObj : latest, processedData[0].dateObj))
+        : new Date();
+      return projectMonthBill(processedData, userPlan, today);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [processedData, userPlan, t],
+    [processedData, userPlan, exampleData, t],
   );
 
   // Weekly before/after: last 7 full days vs the 7 before, on the full
   // dataset (a before/after must not move when the chart is zoomed).
   const verification = useMemo(
     () => analyzeShiftVerification(processedData, userPlan),
-    [processedData, userPlan],
+    // The headline, the caveat and the money inside them are built at call
+    // time in the active language — without `t` a toggle keeps the old one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, userPlan, t],
   );
 
   // Whole-dataset totals for the strip — deliberately NOT filtered by the
   // visible window: this row answers "what would all my data have cost?".
-  const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData]);
+  // `fmtDay` inside formats the first/last day labels, so the totals strip is
+  // locale-dependent too.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const totals = useMemo(() => calculateFullDataTotals(processedData), [processedData, t]);
 
   // Wave S — the window the user is actually LOOKING at: the date
   // selection, narrowed further by whatever the chart is zoomed into (a
@@ -342,7 +397,8 @@ export default function Dashboard() {
         rates: rateHistory,
         view: viewRange,
       }),
-    [billFeed.summaries, rateHistory, viewRange],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [billFeed.summaries, rateHistory, viewRange, t],
   );
 
   // Rate schedule in force for the plan cards — read live, never hardcoded.
@@ -372,7 +428,10 @@ export default function Dashboard() {
   // independent of which slice the chart currently shows.
   const shiftAnalysis = useMemo(
     () => analyzeTouShifts(processedData, userPlan, activeRateSet),
-    [processedData, userPlan, activeRateSet],
+    // Every block's verdict, evidence line and day-window label is produced
+    // inside the callee in the active language.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [processedData, userPlan, activeRateSet, t],
   );
 
   const selectionCost = useMemo(() => {
@@ -423,6 +482,26 @@ export default function Dashboard() {
   // The open (unbilled) tail of Wave Q's axis — what the accrual curve draws.
   const openPeriod = axis.open ? { start: axis.open.start, end: axis.open.end } : null;
 
+  /* The active date window belongs in the persistent route shell. It is
+     context for every tab, not a second, legacy toolbar below the content.
+     The classic route uses this same wired control group in its historical
+     shell so both routes change the same analytics state. */
+  const dashboardContext = (
+    <div data-testid="dashboard-context" className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
+      <div data-testid="dashboard-date-range" className="flex w-full flex-none items-center gap-1 rounded-lg border border-edge-muted bg-card p-1 md:w-auto">
+        <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
+        <span data-testid="window-separator" className="shrink-0 px-1 text-[10px] font-semibold text-ink-2">{t('toolbar.to')}</span>
+        <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-[7rem] flex-1 bg-transparent px-2 py-2 text-base font-medium text-ink outline-none md:w-[9.5rem] md:min-w-0 md:flex-none md:text-sm" />
+      </div>
+      <div data-testid="dashboard-scope" className="flex shrink-0 items-center gap-1 rounded-lg border border-edge-muted bg-hover p-1">
+        <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'BillingPeriod' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.billingPeriod')}</button>
+        <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'Month' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.month')}</button>
+        <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 text-[10px] font-medium uppercase transition-colors ${viewScope === 'YTD' ? 'bg-card text-ink' : 'text-ink-2 hover:bg-card'}`}>{t('scope.ytd')}</button>
+      </div>
+      {variant === 'quiet' && <ThemeToggle />}
+    </div>
+  );
+
   /**
    * Wave I item 5 — the load shell.
    *
@@ -450,7 +529,7 @@ export default function Dashboard() {
         role="status"
         aria-busy="true"
         aria-live="polite"
-        className="space-y-10 text-ink relative font-black uppercase"
+        className="space-y-6 text-ink relative"
       >
         <div className="bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap items-center gap-4 md:gap-6">
           <div className="skeleton-bar h-11 w-11 rounded-xl border-2 border-edge/10" />
@@ -474,18 +553,26 @@ export default function Dashboard() {
     );
 
   return (
-    <div key="ready" className="space-y-6 md:space-y-10 text-ink relative font-black uppercase">
+    <div key="ready" className="flex flex-col space-y-5 md:space-y-7 text-ink relative">
       {/* Wave N — renders nothing on its own: it is what lets an anomaly
           computed here reach a closed tab (server caps, never on its own). */}
       {accountTriggers}
       {/* Wave R — the four sections, sticky under the header. Decision-first:
           Overview is the default, so the answer is the first thing rendered. */}
-      <TabNav active={tab} onChange={setActiveTab} />
+      {variant === 'classic' ? (
+        <ClassicTabNav active={classicTab} onChange={setClassicTab} shellTools={dashboardContext} />
+      ) : (
+        <TabNav active={tab} onChange={setActiveTab} shellTools={dashboardContext} />
+      )}
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
-          browser that has not authorised live sync. */}
-      <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+          browser that has not authorised live sync — and BOTH notices are
+          ELECTRIC figures, so under the Gas section the banner does not exist
+          at all (t_a775c2a3 — AC2: no electric figures on a gas surface). */}
+      {!gasSelected && (
+        <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+      )}
 
       {/* Wave H item 1 — while the loaded readings are the synthetic set, the
           page says so on every view, and offers the way out. */}
@@ -520,22 +607,22 @@ export default function Dashboard() {
           aria-modal="true"
           aria-label={t('upload.modal.aria')}
           data-testid="upload-modal"
-          className="fixed inset-0 bg-inv/80 backdrop-blur-md z-[300] flex justify-center overflow-y-auto overlay-safe"
+          className="fixed inset-0 bg-inv/70 z-[300] flex justify-center overflow-y-auto overlay-safe p-4"
         >
-          <div className="my-auto bg-card p-6 md:p-12 rounded-[2rem] md:rounded-[3rem] border-4 md:border-8 border-edge shadow-hard-10 md:shadow-hard-20 max-w-2xl w-full text-ink">
-             <h2 className="text-2xl md:text-5xl uppercase tracking-tighter mb-4 md:mb-6 flex items-center gap-2 md:gap-4 text-ink font-black"><Upload size={24} className="md:w-12 md:h-12" strokeWidth={4} /> {t('upload.modal.title')}</h2>
-             <p className="font-bold text-ink-2 text-sm md:text-lg mb-6 md:mb-10 text-ink">{t('upload.modal.privacy')} <span className="underline decoration-blue-500">{t('upload.modal.privacyHighlight')}</span></p>
+          <div className="my-auto bg-card p-6 md:p-8 rounded-lg border border-edge max-w-2xl w-full text-ink shadow-none">
+             <h2 className="text-2xl md:text-3xl tracking-tight mb-3 md:mb-4 flex items-center gap-2 text-ink font-semibold"><Upload size={22} strokeWidth={2} /> {t('upload.modal.title')}</h2>
+             <p className="font-medium text-ink-2 text-sm md:text-base mb-6 md:mb-8">{t('upload.modal.privacy')} <span className="font-semibold text-ink">{t('upload.modal.privacyHighlight')}</span></p>
              {storageNotice && <div className="mb-4 md:mb-6"><StorageNoticeRow notice={storageNotice} onDismiss={dismissStorageNotice} /></div>}
-             <p className="text-[10px] md:text-xs font-black uppercase text-ink-3 mb-3">{t('upload.modal.mergeHint')}</p>
+             <p className="text-[10px] md:text-xs font-medium uppercase tracking-[0.08em] text-ink-3 mb-3">{t('upload.modal.mergeHint')}</p>
              <div className="relative">
                <input type="file" accept=".xml" multiple onChange={handleFileUpload} disabled={parsing} aria-label={t('upload.xml.aria')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className={`p-8 md:p-16 border-4 md:border-8 border-dashed ${parsing ? 'border-yellow-400 bg-accent-soft' : 'border-edge bg-inset'} rounded-xl md:rounded-[2rem] text-center`}><div className="text-lg md:text-2xl font-black uppercase text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
+                <div className={`p-8 md:p-12 border border-dashed ${parsing ? 'border-accent bg-accent-soft' : 'border-edge-muted bg-inset'} rounded-lg text-center`}><div className="text-lg md:text-xl font-medium text-ink">{parsing ? t('upload.analyzing') : t('upload.dropzone')}</div></div>
              </div>
              {/* The other way in with no utility file at all: a JSON this app
                  exported before (full profile or readings only). */}
              <label className="mt-4 block cursor-pointer">
                <input type="file" accept="application/json,.json" onChange={handleImportJson} aria-label={t('upload.importJson.aria')} className="sr-only" />
-               <span className="block min-h-11 w-full py-3 bg-good-soft border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs text-ink text-center">{t('upload.importJson.label')}</span>
+               <span className="block min-h-11 w-full py-3 bg-hover border border-edge-muted rounded-lg font-medium text-[10px] md:text-xs text-ink text-center">{t('upload.importJson.label')}</span>
              </label>
              {/* Wave K — the other way to get data in: authorise once and
                  let the shim pipe ESPI straight through to localStorage. */}
@@ -552,11 +639,11 @@ export default function Dashboard() {
              {/* Why the last upload loaded nothing: names what was missing,
                  instead of a bare "invalid XML" (Wave G item 4). */}
              {parseIssue && !parseIssue.ok && (
-               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border-4 border-edge bg-red-50 rounded-xl md:rounded-2xl p-4 md:p-6 text-left">
-                 <div className="text-sm md:text-lg font-black uppercase text-bad mb-2">{parseIssue.headline}</div>
-                 <p className="text-[11px] md:text-sm font-bold text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
+               <div data-testid="parse-diagnostic" role="alert" className="mt-4 md:mt-6 border border-edge-muted bg-bad-soft rounded-lg p-4 md:p-5 text-left">
+                 <div className="text-sm md:text-base font-semibold uppercase tracking-[0.08em] text-bad mb-2">{parseIssue.headline}</div>
+                 <p className="text-[11px] md:text-sm font-medium text-ink-2 normal-case mb-3">{parseIssue.detail}</p>
                  {parseIssue.hints.length > 0 && (
-                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-bold text-ink-2 normal-case">
+                   <ul className="list-disc ml-5 space-y-1 text-[10px] md:text-xs font-medium text-ink-2 normal-case">
                      {parseIssue.hints.map((h) => <li key={h}>{h}</li>)}
                    </ul>
                  )}
@@ -571,7 +658,7 @@ export default function Dashboard() {
                  data-testid="try-example-data"
                  onClick={() => { setParseIssue(null); void loadExampleData(); }}
                  disabled={parsing}
-                 className="flex-1 min-h-11 py-3 md:py-4 bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-[11px] md:text-xs shadow-hard-4 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-wait"
+                 className="flex-1 min-h-11 py-3 bg-accent text-accent-ink border border-accent rounded-lg font-semibold text-[11px] md:text-xs transition-colors hover:brightness-95 disabled:opacity-50 disabled:cursor-wait"
                >
                  {parsing ? t('upload.tryExample.loading') : t('upload.tryExample.idle')}
                </button>
@@ -583,14 +670,14 @@ export default function Dashboard() {
                  <button
                    type="button"
                    onClick={() => { setParseIssue(null); setShowUploadModal(false); }}
-                   className="min-h-11 py-3 md:py-4 px-6 bg-hover border-2 border-edge rounded-xl font-black uppercase text-[10px] md:text-xs"
+                   className="quiet-action min-h-11 py-3 px-6 font-medium text-[10px] md:text-xs"
                  >
                    {t('common.cancel')}
                    </button>
                )}
              </div>
-             <p className="mt-3 text-[9px] md:text-[11px] font-bold text-ink-3 normal-case">
-               <span className="font-black uppercase">{t('example.modal.title')}</span>{' '}
+             <p className="mt-3 text-[9px] md:text-[11px] font-medium text-ink-3 normal-case">
+               <span className="font-semibold uppercase tracking-[0.08em]">{t('example.modal.title')}</span>{' '}
                {t('example.modal.body')}
              </p>
           </div>
@@ -605,7 +692,7 @@ export default function Dashboard() {
             <p className="font-bold text-ink-2 text-xs md:text-sm mb-2">{t('reset.body', { count: resetKeys.length })} <em>{t('reset.browserOnly')}</em></p>
             <p className="font-black uppercase text-[10px] md:text-xs text-ink-3 mb-4 md:mb-6 break-all">{resetKeys.length > 0 ? resetKeys.join(', ') : t('reset.nothingStored')} — {t('reset.otherUntouched')}</p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button type="button" onClick={confirmReset} title={t('reset.confirmTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-red-600 text-white border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-red-700 active:translate-y-0.5 transition-colors">{t('reset.confirm')}</button>
+              <button type="button" onClick={confirmReset} title={t('reset.confirmTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-bad-slab-strong text-on-dark border-4 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-bad-slab-deep active:translate-y-0.5 transition-colors">{t('reset.confirm')}</button>
               <button type="button" onClick={cancelResetConfirm} title={t('reset.cancelTitle')} className="min-h-11 flex-1 py-3 md:py-4 bg-hover border-2 border-edge rounded-xl md:rounded-2xl font-black uppercase text-xs md:text-sm hover:bg-track active:translate-y-0.5 transition-colors">{t('common.cancel')}</button>
             </div>
           </div>
@@ -645,11 +732,14 @@ export default function Dashboard() {
           void in the bottom-left of the card. The card is now a column: each
           row is full width, and the flexible members (the scope switch, the
           floor button) absorb the slack instead of white space doing it. */}
-      <div className="no-print relative z-[200] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-hard-8 border-4 border-edge flex flex-col gap-4 md:gap-6 text-ink">
+      <div data-testid="dashboard-toolbar" className="order-1 no-print relative z-[200] border-b border-edge-muted py-3 flex flex-col gap-3 md:gap-4 text-ink">
         <div className="w-full flex flex-wrap items-center gap-2 md:gap-4">
-           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="min-h-11 min-w-11 p-3 md:p-4 bg-inv text-inv-ink border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Upload size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-bad border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-red-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all"><Trash2 size={18} strokeWidth={4} /></button>
-           <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="min-h-11 min-w-11 p-3 md:p-4 bg-card text-info border-4 border-edge rounded-xl md:rounded-2xl shadow-hard-blue-4 hover:translate-y-1 active:translate-y-0 active:shadow-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={4} /></button>
+           {/* Explicit Electricity / Gas sections: a VIEW choice only — what a
+               file writes is decided by the parser, not by this control. */}
+           <CommodityTabs value={commodity} onChange={setCommodity} />
+           <button type="button" onClick={() => { setParseIssue(null); setShowUploadModal(true); }} title={t('toolbar.upload')} aria-label={t('toolbar.upload')} className="quiet-action min-h-11 min-w-11 p-3 transition-colors hover:bg-hover"><Upload size={18} strokeWidth={2} /></button>
+           <button type="button" onClick={openResetConfirm} title={t('toolbar.resetTitle')} aria-label={t('toolbar.reset')} className="quiet-action min-h-11 min-w-11 p-3 text-bad transition-colors hover:bg-hover"><Trash2 size={18} strokeWidth={2} /></button>
+           <button type="button" onClick={handleExportData} title={t('toolbar.export')} aria-label={t('toolbar.export')} disabled={rawData.length === 0} className="quiet-action min-h-11 min-w-11 p-3 text-info transition-colors hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed"><Download size={18} strokeWidth={2} /></button>
            <BackupControls onExport={exportBackup} onImport={importBackupFile} disabled={parsing} />
           {/* Wave M — the only thing in the app allowed to ask the browser
               for notification permission, and only from its own click. */}
@@ -657,38 +747,20 @@ export default function Dashboard() {
           {/* Wave N — the account control sits with the other global chrome:
               sign-in state is as global as the notification toggle. */}
           <AccountControls onDataApplied={() => window.location.reload()} />
-          {/* Wave R — the answer, on every tab. Click jumps to the banner. */}
-          <BestChoiceChip
-            comparison={comparison}
-            userPlan={userPlan}
-            days={windowDays}
-            active={tab === 'overview'}
-            onJump={() => setActiveTab('overview')}
-          />
+          {/* Wave R — the answer, on every tab. Click jumps to the banner.
+              It is an ELECTRIC verdict (plan gap in $/mo over electric kWh),
+              so it never exists on the Gas section (t_a775c2a3 — AC2). */}
+          {!gasSelected && (
+            <BestChoiceChip
+              comparison={comparison}
+              userPlan={userPlan}
+              days={windowDays}
+              active={activeTab === 'overview'}
+              onJump={() => selectTab('overview')}
+            />
+          )}
 
-          <div className="flex flex-wrap items-center gap-1 md:gap-2 w-full sm:w-auto">
-            <input type="date" aria-label={t('toolbar.windowStart')} value={startDate} onChange={e => { setStartDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-base md:text-sm text-ink bg-card" />
-            {/* The quiet separator between the two window dates. Explicit hex
-                instead of `text-ink opacity-40`: 40% black on white is
-                #999999 = 2.84:1 at 10px (axe color-contrast — small text
-                needs 4.5:1). #475569 (slate-600) is 7.02:1 on white and still
-                reads as secondary; the hex is literal so the regression test
-                can measure the ratio instead of trusting a palette name. */}
-            <span data-testid="window-separator" className="text-ink-2 font-black text-[10px]">{t('toolbar.to')}</span>
-            <input type="date" aria-label={t('toolbar.windowEnd')} value={endDate} onChange={e => { setEndDate(e.target.value); setViewScope('Custom'); }} className="min-h-11 min-w-0 flex-1 sm:flex-none p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-base md:text-sm text-ink bg-card" />
-          </div>
 
-          {/* The scope switch is row 1's flexible member: it eats the
-              slack so the row always reaches the card's right edge instead of
-              ending in white space (it is alone on its line below ~940px, where
-              it stretches across the whole row). */}
-          <div className="flex flex-auto gap-1">
-            <button type="button" aria-pressed={viewScope === 'BillingPeriod'} onClick={() => { applyViewScope('BillingPeriod'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'BillingPeriod' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.billingPeriod')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'Month'} onClick={() => { applyViewScope('Month'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'Month' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.month')}</button>
-
-            <button type="button" aria-pressed={viewScope === 'YTD'} onClick={() => { applyViewScope('YTD'); setZoomLevelAndClear('monthly'); }} className={`inline-flex flex-1 min-h-11 min-w-11 items-center justify-center p-2 md:p-3 border-2 md:border-4 border-edge rounded-lg md:rounded-xl font-black text-[10px] md:text-[10px] shadow-hard-2 md:shadow-hard-4 active:shadow-none transition-all uppercase ${viewScope === 'YTD' ? 'bg-yellow-400 text-accent-ink' : 'bg-card text-ink hover:bg-inset'}`}>{t('scope.ytd')}</button>
-          </div>
         </div>
 
         {/* Row 2, full width. `lg:ml-auto` used to right-align this row and
@@ -696,11 +768,14 @@ export default function Dashboard() {
             gap opens to 24px at lg because the button is now wide enough that
             its `hover:scale-105` would otherwise reach into the switcher. */}
         <div className="w-full flex flex-wrap items-center gap-3 md:gap-4 lg:gap-6">
-          <div className="bg-hover p-2 md:p-3 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex items-center gap-2 md:gap-3">
+          <div className="bg-hover px-2 py-1 rounded-lg border border-edge-muted flex items-center gap-2">
              <Settings2 size={16} className="text-ink-3" />
              <input type="number" min="1" max="31" aria-label={t('toolbar.billingDay')} title={billFeed.summaries.length > 0 ? t('toolbar.billingDay.fileOwns') : t('toolbar.billingDay.fallback')} inputMode="numeric" value={billingDay} onChange={e => updateBillingDay(parseInt(e.target.value), startDate)} className="w-11 md:w-12 min-h-11 bg-transparent text-base md:text-sm outline-none text-ink font-black" />
           </div>
-          <div data-testid="plan-switcher" className="bg-hover p-1 md:p-2 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge flex gap-1">
+          {/* Commodity 7: a plan switcher prices electricity — on a gas feed
+              nothing here is used, so it never shows (epic DoD 4). */}
+          {!gasSelected && (
+          <div data-testid="plan-switcher" className="bg-hover p-1 rounded-lg border border-edge-muted flex gap-1">
               {/* No aria-label on these: the visible Tiered/TOU/ULO IS the
                   accessible name. A label like "Select Time-of-Use plan" hides
                   "TOU" from the name (axe label-content-name-mismatch — the
@@ -711,18 +786,15 @@ export default function Dashboard() {
                   Tiered/TOU/ULO, which stay the accessible name (the visible
                   text IS the name — see the note above). `data-plan` always
                   carries the canonical id. */}
-              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-[10px] font-black transition-all ${userPlan === p ? 'bg-inv text-inv-ink shadow-lg' : 'text-ink hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
+              {(['Tiered', 'TOU', 'ULO'] as const).map((p) => <button key={p} type="button" data-plan={p} aria-pressed={userPlan === p} onClick={() => setUserPlan(p)} className={`inline-flex min-h-11 items-center px-3 md:px-6 py-1 rounded-md text-[10px] font-medium transition-colors ${userPlan === p ? 'bg-card text-ink border border-edge' : 'text-ink-2 hover:bg-card'}`}>{locale === 'fr' ? FR_PLAN_SHORT[p] : p}</button>)}
           </div>
+          )}
           {/* Wave U — the EN/FR switch, deliberately NEXT TO the plan chip:
               the language of the answer belongs beside the answer. A real
               <button> in the tab order with aria-pressed and a localized
               name (Wave H's a11y bar). */}
           <LocaleToggle />
-          {/* Dark mode — next to the language switch because both are
-              preferences about how the answer is SHOWN, not what it says.
-              A radiogroup, not a cycling button: three states behind one
-              control is an ARIA anti-pattern (see ThemeToggle.tsx). */}
-          <ThemeToggle />
+
           {/* `lg:min-w-max` on the floor button: below lg it stacks its three
               lines, so it cannot overflow sideways; from lg up it becomes a
               row, and a wide theme/language cluster could squeeze it under its
@@ -737,15 +809,59 @@ export default function Dashboard() {
               budget: it added 32px to that max-content and was what pushed
               1280 (the very next breakpoint) back into a wrap, opening a
               45,936px² dead band 936px² over the gate. */}
-          {floor && (
-          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="bg-blue-600 text-white min-h-11 flex-1 min-w-[120px] lg:min-w-max p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-hard-4 md:shadow-hard-8 border-2 md:border-4 border-edge text-center font-black relative hover:scale-105 active:scale-105 active:shadow-hard-2 transition-all group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
+          {/* t_a775c2a3 — AC2: the always-on floor is an ELECTRIC figure
+              (idle watts -> kWh/day -> $/yr), so it never renders while the
+              Gas section is on screen. */}
+          {!gasSelected && floor && (
+          <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="quiet-data-stat min-h-11 flex-1 min-w-[120px] lg:min-w-max px-3 py-2 text-center font-medium relative transition-colors hover:bg-hover group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
-            <div className="text-xl md:text-4xl italic lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
-            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: floor.kwhPerDay.toFixed(1) })}</div>
+            <div className="text-xl md:text-2xl lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
+            <div className="text-[8px] md:text-[10px] uppercase opacity-75">{t('floor.perDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</div>
           </button>
           )}
         </div>
       </div>
+
+      {/* What the import left out of priced consumption (t_880370e6). Here,
+          under the toolbar and above the panels, because it explains the
+          numbers below it: a single-UsagePoint file never renders the picker,
+          so this is the only place its refusals can be said out loud. */}
+      {refusalNotes.length > 0 && !showUploadModal && (
+        <SeriesNotesNotice notes={refusalNotes} onDismiss={dismissRefusalNotes} />
+      )}
+
+      {/* What the last import was DETECTED as (t_8a9038d6): the truthful
+          answer to "did my file import, and as what?" — including the
+          ambiguous file that carried both commodities. */}
+      {commodityNotice && !showUploadModal && (
+        <div
+          role="status"
+          data-testid="commodity-import-notice"
+          className="bg-info-soft border-4 border-edge rounded-xl md:rounded-2xl px-4 md:px-6 py-3 flex flex-wrap items-start gap-3 md:gap-4 text-ink"
+        >
+          <p
+            data-testid="commodity-import-notice-text"
+            className="flex-1 min-w-[16rem] text-[10px] md:text-xs font-bold normal-case"
+          >
+            {t(
+              commodityNotice === 'both'
+                ? 'commodity.detectedBoth'
+                : commodityNotice === 'gas'
+                  ? 'commodity.detectedGas'
+                  : 'commodity.detectedElectricity',
+            )}
+          </p>
+          <button
+            type="button"
+            data-testid="commodity-import-notice-dismiss"
+            onClick={dismissCommodityNotice}
+            aria-label={t('commodity.dismiss')}
+            className="ml-auto min-h-11 inline-flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-card text-ink border-4 border-edge rounded-lg md:rounded-xl font-black uppercase text-[10px] md:text-xs hover:bg-hover transition-colors"
+          >
+            {t('commodity.dismiss')}
+          </button>
+        </div>
+      )}
 
       {/* Storage failure row (visible whenever a read/write did not land) */}
       {storageNotice && !showUploadModal && (
@@ -754,9 +870,21 @@ export default function Dashboard() {
 
       {/* The four sections. Only the active one renders — a hidden tab's
           charts are not drawn, measured or announced to a screen reader. */}
-      {tab === 'overview' && (
+      {activeTab === 'overview' && gasSelected && (
+        gasEmpty ? (
+          <GasEmptyState onImport={() => { setParseIssue(null); setShowUploadModal(true); }} />
+        ) : (
+          <GasOverviewPanel
+            intervalCount={gasData.length}
+            billPanel={<ActualBillPanel summaries={activeFeed.summaries} allData={[]} plan={userPlan} />}
+          />
+        )
+      )}
+
+      {activeTab === 'overview' && !gasSelected && (
         <OverviewPanel
           comparison={comparison}
+          gas={false}
           userPlan={userPlan}
           days={windowDays}
           totals={totals}
@@ -765,7 +893,24 @@ export default function Dashboard() {
           reframe={reframe}
           projection={projection}
           efficiency={efficiency}
-          onOpenMoney={() => setActiveTab('money')}
+          onOpenMoney={() => selectTab('money')}
+          onOpenPlans={() => selectTab('plans')}
+          onOpenAnalytics={() => setActiveTab('analytics')}
+          rateMismatch={Boolean(staleness.stale)}
+          staleness={staleness}
+          latestPeriod={axis.open ?? axis.periods.at(-1) ?? null}
+          floor={floor}
+          usage={{
+            staleness, anomalies, heatmapData, processedData, temps,
+            zoomLevel, zoomTarget, goBack, navigatePeriod,
+            setZoomLevelAndClear, activeChartData, handleBarClick,
+            selectionCost, userPlan, startDate, filteredData,
+            hasData: processedData.length > 0,
+            onImport: () => { setParseIssue(null); setShowUploadModal(true); },
+            gas: false,
+          }}
+          importReview={refusalNotes.length > 0 || Boolean(parseIssue)}
+          showUsage={variant !== 'classic'}
           fileStatus={
             <div className="no-print" data-testid="overview-file-status">
               <GreenButtonSync
@@ -783,7 +928,21 @@ export default function Dashboard() {
         />
       )}
 
-      {tab === 'usage' && (
+
+      {/* Quiet Meter progressive disclosure: the dense usage analytics are
+          their own destination, framed by the question each group answers.
+          Overview keeps the embedded copy for the decision path; this is
+          the deliberate way in (and, with no data loaded, the specific
+          "add data" explanation the calm Overview cannot carry). */}
+      {activeTab === 'analytics' && gasSelected && !gasEmpty && (
+        <GasAnalyticsNote intervalCount={gasData.length} />
+      )}
+
+      {activeTab === 'analytics' && gasSelected && gasEmpty && (
+        <GasEmptyState onImport={() => { setParseIssue(null); setShowUploadModal(true); }} />
+      )}
+
+      {activeTab === 'analytics' && !gasSelected && (
         <UsagePanel
           staleness={staleness}
           anomalies={anomalies}
@@ -801,31 +960,74 @@ export default function Dashboard() {
           userPlan={userPlan}
           startDate={startDate}
           filteredData={filteredData}
+          hasData={processedData.length > 0}
+          onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
+          gas={gasSelected}
         />
       )}
 
-      {tab === 'plans' && (
+      {variant === 'classic' && activeTab === 'usage' && gasSelected && !gasEmpty && (
+        <GasAnalyticsNote intervalCount={gasData.length} />
+      )}
+
+      {variant === 'classic' && activeTab === 'usage' && gasSelected && gasEmpty && (
+        <GasEmptyState onImport={() => { setParseIssue(null); setShowUploadModal(true); }} />
+      )}
+
+      {variant === 'classic' && activeTab === 'usage' && !gasSelected && (
+        <UsagePanel
+          staleness={staleness}
+          anomalies={anomalies}
+          heatmapData={heatmapData}
+          processedData={processedData}
+          temps={temps}
+          zoomLevel={zoomLevel}
+          zoomTarget={zoomTarget}
+          goBack={goBack}
+          navigatePeriod={navigatePeriod}
+          setZoomLevelAndClear={setZoomLevelAndClear}
+          activeChartData={activeChartData}
+          handleBarClick={handleBarClick}
+          selectionCost={selectionCost}
+          userPlan={userPlan}
+          startDate={startDate}
+          filteredData={filteredData}
+          hasData={processedData.length > 0}
+          onImport={() => { setParseIssue(null); setShowUploadModal(true); }}
+          panel="usage"
+          gas={gasSelected}
+        />
+      )}
+
+      {activeTab === 'plans' && (
         <PlansPanel
           comparison={comparison}
           userPlan={userPlan}
           setUserPlan={setUserPlan}
-          days={windowDays}
+          days={viewRange ? daysBetweenDayKeys(viewRange.start, viewRange.end) : 0}
           activeRateSet={activeRateSet}
-          startDate={startDate}
-          endDate={endDate}
+          startDate={viewRange?.start ?? startDate}
+          endDate={viewRange?.end ?? endDate}
           wfh={wfh}
           shiftAnalysis={shiftAnalysis}
           verification={verification}
-          summaries={billFeed.summaries}
-          allData={processedData}
+          summaries={activeFeed.summaries}
+          /* t_a775c2a3: under Gas this panel shows the gas bill only — no
+             electric row may reach it (same allData=[] contract the gas
+             Overview's ActualBillPanel already runs with). */
+          allData={gasSelected ? [] : processedData}
+          gasView={gasSelected}
         />
       )}
 
-      {tab === 'money' && (
+      {activeTab === 'money' && (
         <MoneyPanel
-          summaries={billFeed.summaries}
-          allData={processedData}
-          filteredData={filteredData}
+          summaries={activeFeed.summaries}
+          /* Commodity-scoped inputs (t_a775c2a3 — AC2): the Gas money surface
+             is driven by the GAS summaries alone; electric rows never reach
+             MoneySection's axis/charges/ledger maths on it. */
+          allData={gasSelected ? [] : processedData}
+          filteredData={gasSelected ? [] : filteredData}
           plan={userPlan}
           rates={activeRateSet}
           startDate={startDate}
@@ -833,6 +1035,8 @@ export default function Dashboard() {
           projection={projection}
           openPeriod={openPeriod}
           billingDay={billingDay}
+          gasView={gasSelected}
+          rateNotice={staleness.stale ? <RateStalenessBanner result={staleness} /> : undefined}
         />
       )}
 
@@ -849,8 +1053,8 @@ export default function Dashboard() {
                   <h4 className="font-black uppercase text-[10px] md:text-sm mb-2">{t('floor.measureTitle')}</h4>
                   <ul className="list-disc ml-4 md:ml-5 space-y-1 md:space-y-2 text-[10px] md:text-sm">
                     <li>{t('floor.measureStep1a')}<strong>{t('floor.measureStep1b')}</strong>{t('floor.measureStep1c')}</li>
-                    <li>{t('floor.measureStep2a')}<span className="font-black text-info">{t('unit.watts', { watts: floor.watts.toFixed(0) })}</span>{t('floor.measureStep2b')}<span className="font-black text-info">{t('unit.kwhPerDay', { kwh: floor.kwhPerDay.toFixed(1) })}</span>.</li>
-                    <li>{t('floor.measureStep3a')}<span className="font-black text-info">{t('unit.centsPerKwh', { cents: floor.blendedRateCents.toFixed(1) })}</span>{t('floor.measureStep3b')}<span className="font-black text-info">{t('floor.yearlyCost', { cost: fmtMoney0(floor.annualCost) })}</span>{t('floor.measureStep3c')}</li>
+                    <li>{t('floor.measureStep2a')}<span className="font-black text-info">{t('unit.watts', { watts: fmtNumber(floor.watts) })}</span>{t('floor.measureStep2b')}<span className="font-black text-info">{t('unit.kwhPerDay', { kwh: fmtNumber(floor.kwhPerDay, 1) })}</span>.</li>
+                    <li>{t('floor.measureStep3a')}<span className="font-black text-info">{t('unit.centsPerKwh', { cents: fmtNumber(floor.blendedRateCents, 1) })}</span>{t('floor.measureStep3b')}<span className="font-black text-info">{t('floor.yearlyCost', { cost: fmtMoney0(floor.annualCost) })}</span>{t('floor.measureStep3c')}</li>
                     <li>{floor.detail}</li>
                   </ul>
                 </div>
@@ -858,7 +1062,7 @@ export default function Dashboard() {
                 <p className="text-xs md:text-sm">{t('floor.noWindow')}</p>
               )}
               <p className="text-[10px] md:text-sm">{t('legal.commodityOnly')}</p>
-              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-blue-600 active:bg-blue-700 transition-colors mt-2 md:mt-4">{t('common.gotIt')}</button>
+              <button type="button" onClick={() => setShowFloorHelp(false)} className="w-full min-h-11 py-3 md:py-4 bg-inv text-inv-ink rounded-xl md:rounded-2xl font-black uppercase hover:bg-info-slab active:bg-info-slab-deep transition-colors mt-2 md:mt-4">{t('common.gotIt')}</button>
             </div>
           </div>
         </div>

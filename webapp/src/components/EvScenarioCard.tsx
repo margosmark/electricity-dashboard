@@ -23,7 +23,7 @@
 "use client";
 
 /* Wave U — user-visible copy translates; lib code reads the module locale. */
-import { fmtMoney, fmtSignedMoney, planLabel, t, useTranslation } from "@/i18n";
+import { fmtCents, fmtMoney, fmtNumber, fmtNumberAuto, fmtSignedMoney, planLabel, t, useTranslation } from "@/i18n";
 import { useMemo, useState } from 'react';
 import { Car, TriangleAlert, Moon, Info, Clock } from 'lucide-react';
 import { type ProcessedPoint, type RateSet } from '@/lib/energy';
@@ -109,7 +109,10 @@ export default function EvScenarioCard({
   plan?: EvPlan;
 }) {
   const { t } = useTranslation();
-  const candidate = useMemo(() => detectEvCandidate(rows), [rows]);
+  // `detectEvCandidate` writes the "we found this window" sentence in the
+  // active language, so the memo has to re-derive on a toggle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const candidate = useMemo(() => detectEvCandidate(rows), [rows, t]);
 
   // `kwhText` stays null until the household types — before that we show the
   // block we found, so the field tracks the data without an effect.
@@ -139,7 +142,8 @@ export default function EvScenarioCard({
         chargeHourSource,
         currentPlan: plan,
       }),
-    [rows, rates, dailyKwh, candidate, shownHour, chargeHourSource, plan],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [rows, rates, dailyKwh, candidate, shownHour, chargeHourSource, plan, t],
   );
 
   const pc = scenario.planComparison;
@@ -159,7 +163,7 @@ export default function EvScenarioCard({
         {scenario.source === 'detected' && (
           <span
             data-testid="ev-detect-note"
-            className="bg-emerald-400 text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]"
+            className="bg-good-slab text-accent-ink border-2 border-edge rounded-full px-3 py-1 text-[9px] md:text-[11px]"
           >
             {t('ev.prefilled')}
           </span>
@@ -183,7 +187,7 @@ export default function EvScenarioCard({
             inputMode="decimal"
             value={shownKwh}
             onChange={(e) => setKwhText(e.target.value)}
-            placeholder={candidate ? candidate.kwhPerNight.toFixed(1) : t('ev.kwhPlaceholder')}
+            placeholder={candidate ? fmtNumberAuto(candidate.kwhPerNight, 1) : t('ev.kwhPlaceholder')}
             className="w-32 md:w-40 p-3 md:p-4 border-4 border-edge rounded-xl md:rounded-2xl bg-accent-soft text-lg md:text-2xl font-black text-ink"
           />
         </label>
@@ -239,12 +243,12 @@ export default function EvScenarioCard({
                 key={plan}
                 data-testid={`ev-plan-${plan}`}
                 className={`border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-5 ${
-                  plan === 'ULO' ? 'bg-emerald-400 text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'
+                  plan === 'ULO' ? 'bg-good-slab text-accent-ink' : plan === 'TOU' ? 'bg-hover' : 'bg-card'
                 }`}
               >
                 <div className="text-[10px] md:text-xs font-black uppercase">{planLabel(plan)}</div>
                 <div className={`text-[8px] md:text-[10px] font-bold ${plan === 'ULO' ? 'text-accent-ink' : 'text-ink-2'}`}>
-                  {scenario.prices[plan].rateCents.toFixed(1)}{t('ev.rateOvernight')}
+                  {fmtNumber(scenario.prices[plan].rateCents, 1)}{t('ev.rateOvernight')}
                 </div>
                 <div
                   className="text-lg md:text-xl font-black mt-2 flex justify-between items-baseline"
@@ -270,7 +274,7 @@ export default function EvScenarioCard({
 
           <div
             data-testid="ev-headline"
-            className="bg-yellow-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
+            className="bg-accent text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6 text-base md:text-xl leading-snug"
           >
             {t('ev.headlineLead')}{' '}
             <span className="italic">{fmtMoney(scenario.prices.ULO.perCharge)}</span> {t('ev.vs')}{' '}
@@ -285,7 +289,7 @@ export default function EvScenarioCard({
           {cm ? (
             <div
               data-testid="ev-charge-move"
-              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-100"
+              className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden bg-sky-slab-pale"
             >
               <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
                 <span className="flex items-center gap-2">
@@ -298,7 +302,7 @@ export default function EvScenarioCard({
               {cm.alreadyOvernight && (
                 <div
                   data-testid="ev-already-overnight"
-                  className="bg-emerald-300 text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase"
+                  className="bg-good-slab-soft text-accent-ink border-b-4 border-edge px-4 py-2 text-[10px] md:text-xs font-black uppercase"
                 >
                   {t('ev.alreadyOptimal')}
                 </div>
@@ -313,7 +317,7 @@ export default function EvScenarioCard({
                     {t('ev.stayPut')} {planLabel(plan)}
                   </div>
                   <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
-                    {cm.stayLabel} · {cm.stayRateCents.toFixed(1)}{t('ev.perKwh')}
+                    {cm.stayLabel} · {fmtNumber(cm.stayRateCents, 1)}{t('ev.perKwh')}
                     {cm.stayBasis === 'worst-case' ? ` ${t('ev.upperBound')}` : ''}
                   </div>
                   <div
@@ -334,7 +338,7 @@ export default function EvScenarioCard({
                     {t('ev.moveUlo')}
                   </div>
                   <div className="text-[8px] md:text-[10px] font-bold text-ink-3">
-                    23:00–07:00 · {cm.moveRateCents.toFixed(1)}{t('ev.perKwh')}
+                    23:00–07:00 · {fmtNumber(cm.moveRateCents, 1)}{t('ev.perKwh')}
                   </div>
                   <div
                     className="text-lg md:text-xl italic font-black mt-1 flex justify-between items-baseline"
@@ -372,7 +376,7 @@ export default function EvScenarioCard({
           ) : (
             <div
               data-testid="ev-charge-move-empty"
-              className="border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-100 text-[10px] md:text-xs font-bold normal-case text-accent-ink-2"
+              className="border-4 border-edge rounded-xl md:rounded-2xl p-4 bg-sky-slab-pale text-[10px] md:text-xs font-bold normal-case text-accent-ink-2"
             >
               {t('ev.answerLead')} <span className="font-black">{t('ev.hourQuestion')}</span> {t('ev.priceAtHour')} {planLabel(plan)} {t('ev.againstMoving')}
             </div>
@@ -385,7 +389,7 @@ export default function EvScenarioCard({
               className="border-4 border-edge rounded-xl md:rounded-2xl overflow-hidden"
             >
               <div className="bg-inv text-inv-ink px-4 py-2 text-[10px] md:text-xs font-black uppercase flex flex-wrap justify-between gap-2">
-                <span>{t('ev.wholeDataset')} {pc.evKwh.toFixed(0)} {t('ev.kwhMoved')}</span>
+                <span>{t('ev.wholeDataset')} {fmtNumber(pc.evKwh)} {t('ev.kwhMoved')}</span>
                 <span className="text-accent-yellow">{pc.days} {t('ev.daysOfData', { count: pc.days })}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3">
@@ -432,17 +436,17 @@ export default function EvScenarioCard({
           {exposure && (
             <div
               data-testid="ev-peak-exposure"
-              className="bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+              className="bg-bad-slab text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
             >
               <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
                 <TriangleAlert size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
               </div>
               <div className="flex flex-wrap items-baseline gap-3 md:gap-6 mt-2">
                 <div className="text-2xl md:text-4xl italic font-black">
-                  {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonth')}
+                  {fmtNumber(exposure.kwhPerMonth, 1)} {t('ev.kwhPerMonth')}
                 </div>
                 <div className="text-lg md:text-2xl font-black">
-                  {fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')} {exposure.rateCents.toFixed(1)}¢
+                  {fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')} {fmtCents(exposure.rateCents, 1)}
                 </div>
                 <div className="text-xs md:text-sm font-black">
                   {fmtMoney(exposure.atStakePerMonth)}{t('ev.perMonthMore')}
@@ -473,14 +477,14 @@ export default function EvScenarioCard({
       {!scenario.ready && exposure && (
         <div
           data-testid="ev-peak-exposure"
-          className="mt-4 bg-red-400 text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
+          className="mt-4 bg-bad-slab text-accent-ink border-4 border-edge rounded-xl md:rounded-2xl p-4 md:p-6"
         >
           <div className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase">
             <Moon size={14} strokeWidth={4} /> {t('ev.peakExposureTitle')} {exposure.windowLabel}
           </div>
           <div className="text-xl md:text-2xl italic font-black mt-1">
-            {exposure.kwhPerMonth.toFixed(1)} {t('ev.kwhPerMonthArrow')}{fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')}{' '}
-            {exposure.rateCents.toFixed(1)}¢
+            {fmtNumber(exposure.kwhPerMonth, 1)} {t('ev.kwhPerMonthArrow')}{fmtMoney(exposure.costPerMonth)}{t('ev.perMonthAt')}{' '}
+            {fmtCents(exposure.rateCents, 1)}
           </div>
           <ExposureBasis exposure={exposure} />
         </div>

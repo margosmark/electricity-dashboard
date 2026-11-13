@@ -22,7 +22,7 @@
  */
 
 /* Wave U — the EV assumptions are shown to the user, so they translate. */
-import { fmtCents, periodLabel, t } from '@/i18n';
+import { fmtCents, fmtNumber, periodLabel, t } from '@/i18n';
 import {
   aggregateChartData,
   calculateComparison,
@@ -167,7 +167,13 @@ export function detectEvCandidate(rows: ProcessedPoint[]): EvCandidate | null {
     nights,
     days,
     label,
-    detail: `${kwhPerNight.toFixed(1)} kWh a night across ${best.length} h (${meanKwRun.toFixed(1)} kW average), seen on ${nights} of ${days} days`,
+    detail: t('ev.detectedDetail', {
+      kwh: fmtNumber(kwhPerNight, 1),
+      hours: best.length,
+      kw: fmtNumber(meanKwRun, 1),
+      nights,
+      days,
+    }),
   };
 }
 
@@ -660,7 +666,7 @@ export function buildEvScenario(input: {
         costPerMonth,
         overnightCostPerMonth,
         atStakePerMonth: costPerMonth - overnightCostPerMonth,
-        windowLabel: 'Weekdays 16:00–21:00',
+        windowLabel: t('ev.uloWindowLabel'),
         days: daySet.size,
       };
     }
@@ -769,8 +775,8 @@ export function buildEvScenario(input: {
       source === 'detected'
         ? t('ev.assumeDetected', { label: candidate.label, detail: candidate.detail })
         : t('ev.assumeTagged', {
-            tagged: dailyKwh.toFixed(1),
-            actual: candidate.kwhPerNight.toFixed(1),
+            tagged: fmtNumber(dailyKwh, 1),
+            actual: fmtNumber(candidate.kwhPerNight, 1),
             label: candidate.label,
             basis:
               stayBasis === 'block'

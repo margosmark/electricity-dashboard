@@ -27,13 +27,15 @@ import TabNav from './TabNav';
 import Dashboard from './Dashboard';
 import DualHeatmap from './DualHeatmap';
 import BillAccrualCurve from './BillAccrualCurve';
-import PlanSwitchTimeline from './PlanSwitchTimeline';
+import PlanSwitchTimeline, { savingDescription } from './PlanSwitchTimeline';
 import { saveEnergyData } from '@/lib/storage';
 import BestChoiceChip from './BestChoiceChip';
 import VerdictLine from './VerdictLine';
 import { TAB_STORAGE_KEY } from '@/lib/tabs';
 import { buildHeatmapData, parseUsageSummaries, processRawData, type RateSet } from '@/lib/energy';
+import { buildSwitchReport } from '@/lib/planTimeline';
 import { projectMonthBill } from '@/lib/billProjection';
+import { setLocale, t } from '@/i18n';
 
 const OEB_FIXTURE = fs.readFileSync(
   path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/oebRates.fixture.html'),
@@ -91,13 +93,15 @@ describe('Wave R 1 — the tab strip', () => {
     expect(list).toHaveAttribute('aria-orientation', 'horizontal');
 
     const tabs = within(list).getAllByRole('tab');
-    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-usage', 'tab-plans', 'tab-money']);
+    expect(tabs.map((t) => t.id)).toEqual(['tab-overview', 'tab-analytics', 'tab-plans', 'tab-money']);
     // Only the SELECTED tab carries aria-controls: the other three panels are
     // not in the DOM, and an aria-controls naming an id nothing renders is the
     // dangling reference axe dings as aria-valid-attr-value (t_d5cc9a2d —
     // Lighthouse a11y 0.87). Every reference that IS present must resolve.
     const selectedTabs = tabs.filter((t) => t.getAttribute('aria-selected') === 'true');
     expect(selectedTabs).toHaveLength(1);
+    expect(within(list).getAllByRole('tab', { current: 'page' })).toEqual(selectedTabs);
+    expect(document.querySelectorAll('[aria-current]')).toHaveLength(1);
     for (const tab of tabs) {
       const controls = tab.getAttribute('aria-controls');
       if (tab === selectedTabs[0]) {
@@ -109,6 +113,7 @@ describe('Wave R 1 — the tab strip', () => {
         expect(controls).toBeNull();
       }
       expect(tab).toHaveAttribute('type', 'button');
+      expect(tab).toHaveAttribute('data-go');
       // Every tab is a real, reachable control with a 44 px touch target.
       expect(tab.className).toContain('min-h-11');
     }
@@ -135,11 +140,11 @@ describe('Wave R 1 — the tab strip', () => {
   it('uses roving tabindex: one stop for the whole strip', () => {
     render(<TabNav active="plans" onChange={() => {}} />);
     expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('tabindex', '0');
-    for (const name of ['Overview', 'Usage', 'Money']) {
+    for (const name of ['Overview', 'Money']) {
       expect(screen.getByRole('tab', { name })).toHaveAttribute('tabindex', '-1');
     }
     expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Usage' })).toHaveAttribute('aria-selected', 'false');
+
   });
 
   it('moves focus AND selection with the arrow keys, wrapping at both ends', async () => {
@@ -149,8 +154,8 @@ describe('Wave R 1 — the tab strip', () => {
 
     screen.getByRole('tab', { name: 'Overview' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(onChange).toHaveBeenLastCalledWith('usage');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Usage' }));
+    expect(onChange).toHaveBeenLastCalledWith('analytics');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Analytics' }));
 
     await user.keyboard('{ArrowLeft}');
     expect(onChange).toHaveBeenLastCalledWith('overview');
@@ -222,16 +227,16 @@ describe('Wave R 1 — the tab strip', () => {
     saveEnergyData(mockRawData);
     await renderLoaded();
 
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
+    await user.click(screen.getByRole('tab', { name: 'Plans' }));
     await user.click(screen.getByRole('tab', { name: 'Money' }));
     expect(screen.getByTestId('tab-panel-money')).toBeInTheDocument();
 
     // What the browser fires on back/forward between hash-only entries.
-    window.location.hash = '#tab=usage';
+    window.location.hash = '#tab=plans';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('tab-panel-usage')).toBeInTheDocument();
+      expect(screen.getByTestId('tab-panel-plans')).toBeInTheDocument();
       expect(screen.queryByTestId('tab-panel-money')).not.toBeInTheDocument();
     });
   });
@@ -258,12 +263,14 @@ describe('Wave R 1 — the tab strip', () => {
  * ========================================================================== */
 
 describe('Wave R 2 — the answer is never buried', () => {
-  it('puts the banner first on Overview and the chip in the toolbar', async () => {
+  it('leads Overview with its period and source-derived key figures while keeping the answer and chip', async () => {
     saveEnergyData(mockRawData);
     await renderLoaded();
 
     const overview = screen.getByTestId('tab-panel-overview');
-    expect(overview.firstElementChild).toBe(screen.getByTestId('best-choice-banner'));
+    expect(overview.firstElementChild).toBe(screen.getByTestId('overview-period-heading'));
+    expect(screen.getByTestId('overview-key-figures').querySelectorAll(':scope > div')).toHaveLength(4);
+    expect(screen.getByTestId('best-choice-banner')).toBeInTheDocument();
     expect(screen.getByTestId('best-choice-chip')).toBeInTheDocument();
   });
 
@@ -276,7 +283,7 @@ describe('Wave R 2 — the answer is never buried', () => {
     const chip = screen.getByTestId('best-choice-chip');
     expect(chip).toHaveAttribute('data-best-plan', banner.getAttribute('data-best-plan'));
 
-    for (const name of ['Usage', 'Plans', 'Money'] as const) {
+    for (const name of ['Plans', 'Money'] as const) {
       await user.click(screen.getByRole('tab', { name }));
       expect(screen.getByTestId('best-choice-chip')).toBeInTheDocument();
       expect(screen.queryByTestId('best-choice-banner')).not.toBeInTheDocument();
@@ -316,13 +323,23 @@ describe('Wave R 2 — the answer is never buried', () => {
     render(<VerdictLine comparison={{ TOU: 90, Tiered: 40, ULO: 70 }} userPlan="Tiered" days={30} />);
     const line = screen.getByTestId('verdict-line');
     expect(line).toHaveAttribute('data-already-best', 'true');
-    expect(line).toHaveTextContent(/Tiered is the cheapest of the three/);
+    expect(line).toHaveTextContent('Current plan $40 vs $40 (Tiered, cheapest) $0 more');
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('$0');
     expect(line).not.toHaveTextContent(/\$0\.00 less/);
+  });
+
+  it('names both source costs before reporting a derived saving', () => {
+    render(<VerdictLine comparison={{ TOU: 120, Tiered: 100, ULO: 140 }} userPlan="TOU" days={30} />);
+    const line = screen.getByTestId('verdict-line');
+    expect(line).toHaveTextContent('Current plan $120 vs $100 (Tiered, cheapest) ▲$20 more');
+    expect(screen.getByTestId('verdict-delta')).toHaveTextContent('▲$20');
   });
 
   it('quotes a per-month figure and the window it was scaled from', () => {
     render(<BestChoiceChip comparison={{ TOU: 120, Tiered: 100, ULO: 140 }} userPlan="TOU" days={30} onJump={() => {}} active={false} />);
     const chip = screen.getByTestId('best-choice-chip');
+    expect(chip.tagName.toLowerCase()).toBe('button');
+    expect(chip).toHaveAttribute('data-go', 'overview');
     expect(chip).toHaveAttribute('data-best-plan', 'Tiered');
     expect(chip.textContent).toContain('Best: Tiered');
     expect(chip.textContent).toMatch(/-\$\d+\/mo/);
@@ -345,8 +362,7 @@ describe('Wave R 2 — the answer is never buried', () => {
  * ========================================================================== */
 
 describe('Wave R 3 — global chrome carries only global things', () => {
-  it('moves rate staleness onto Usage and file status onto Overview', async () => {
-    const user = userEvent.setup();
+  it('keeps usage insights and file status in Overview, outside global chrome', async () => {
     sessionStorage.clear();
     // Serve the real OEB page so the staleness check finds a newer set and
     // the banner actually renders — otherwise this would only prove that an
@@ -373,14 +389,9 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     expect(
       within(screen.getByTestId('tab-panel-overview')).getByTestId('overview-file-status'),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('rate-staleness-banner')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', { name: 'Usage' }));
-    const banner = await screen.findByTestId('rate-staleness-banner');
-    expect(
-      within(screen.getByTestId('tab-panel-usage')).getByTestId('rate-staleness-banner'),
-    ).toBe(banner);
-    expect(screen.queryByTestId('overview-file-status')).not.toBeInTheDocument();
+    const usage = within(screen.getByTestId('tab-panel-overview')).getByTestId('overview-usage');
+    expect(within(usage).getByTestId('dual-heatmap')).toBeInTheDocument();
+    expect(within(screen.getByTestId('tab-panel-overview')).getByText('Usage and insights are in Overview.')).toBeInTheDocument();
   });
 
   it('keeps one toolbar — with the plan switcher and upload — across every tab', async () => {
@@ -396,7 +407,7 @@ describe('Wave R 3 — global chrome carries only global things', () => {
     // SLOT survives rather than a bell this browser does not have yet.
     expect(screen.queryByTestId('notification-toggle')).not.toBeInTheDocument();
 
-    for (const name of ['Usage', 'Plans', 'Money', 'Overview'] as const) {
+    for (const name of ['Plans', 'Money', 'Overview'] as const) {
       await user.click(screen.getByRole('tab', { name }));
       // Same nodes, not a remount: global chrome does not follow the tab.
       expect(screen.getByTestId('plan-switcher')).toBe(switcher);
@@ -508,6 +519,20 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.queryByTestId('accrual-chart')).not.toBeInTheDocument();
   });
 
+  it('localizes the empty billing-period note after switching to French', () => {
+    setLocale('en');
+    setLocale('fr');
+    const view = render(
+      <BillAccrualCurve rows={[]} plan="Tiered" period={null} projection={projectMonthBill([], 'Tiered', oct(10))} today={oct(10)} />,
+    );
+    expect(screen.getByTestId('accrual-empty')).toHaveTextContent(
+      'Aucune période de facturation ouverte à accumuler pour l’instant.',
+    );
+    expect(screen.getByTestId('accrual-empty')).not.toHaveTextContent('No open billing period');
+    view.unmount();
+    setLocale('en');
+  });
+
   it('accrues the open period and prints every number the chart draws', () => {
     const rows = hourly(oct(1), 10);
     render(
@@ -537,6 +562,24 @@ describe('Wave R 4b — the bill accrual curve', () => {
     expect(screen.getByTestId('accrual-chart')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByTestId('accrual-pace-line')).toBeInTheDocument();
     expect(screen.getByTestId('accrual-actual-line')).toBeInTheDocument();
+  });
+
+  it('places the rate alert directly before the Pace to date metric', () => {
+    const rows = hourly(oct(1), 10);
+    render(
+      <BillAccrualCurve
+        rows={rows}
+        plan="Tiered"
+        period={OCTOBER}
+        projection={projectMonthBill(rows, 'Tiered', oct(10))}
+        today={oct(10)}
+        rateNotice={<div role="alert" data-testid="money-rate-alert">Fix rate schedule</div>}
+      />,
+    );
+    const notice = screen.getByTestId('money-rate-alert-slot');
+    const paceCard = screen.getByTestId('accrual-pace-card');
+    expect(notice.nextElementSibling).toBe(paceCard);
+    expect(paceCard).toHaveTextContent('Pace to date');
   });
 
   it('draws real geometry — finite coordinates, a rising line, a pace that ends high', () => {
@@ -620,7 +663,7 @@ describe('Wave R 4d — the card answers its own question', () => {
       billToDate: null,
       costAdditionalLastPeriod: null,
       currency: 124,
-      consumption: null,
+      consumption: null, volume: null,
       items: [
         { note: 'Off Peak-Summer', amount, rawAmount: null, itemKind: null, unitCost: null, measurement: null },
       ],
@@ -703,7 +746,7 @@ describe('Wave R 4d — the card answers its own question', () => {
     const chip = screen.getByTestId('accrual-pace-chip');
     expect(chip).toHaveAttribute('data-direction', 'above');
     expect(chip).toHaveTextContent(/pacing \$32\.34 ABOVE/);
-    expect(chip.className).toContain('bg-red-400');
+    expect(chip.className).toContain('bg-bad-slab');
     // The dotted line is drawn at that same average.
     expect(screen.getByTestId('accrual-benchmark-line')).toBeInTheDocument();
     expect(screen.getByTestId('bill-accrual')).toHaveAttribute('data-avg-prior-bills', '42.00');
@@ -724,7 +767,7 @@ describe('Wave R 4d — the card answers its own question', () => {
     );
     const chip = screen.getByTestId('accrual-pace-chip');
     expect(chip).toHaveAttribute('data-direction', 'below');
-    expect(chip.className).toContain('bg-emerald-300');
+    expect(chip.className).toContain('bg-good-slab-soft');
     expect(chip).toHaveTextContent(/pacing BELOW by/);
   });
 
@@ -872,19 +915,131 @@ describe('Wave R 4d — the card answers its own question', () => {
  * ========================================================================== */
 
 describe('Wave R 4c — the plan-switch decision timeline', () => {
+  it('gives positive and negative signed callouts distinct, directionally correct meanings', () => {
+    const translate = (key: string, params?: Record<string, string | number>) => `${key}:${params?.amount}`;
+    expect(savingDescription(5.55, translate)).toBe('switchTimeline.potentialSaving:$5.55');
+    expect(savingDescription(-5.55, translate)).toBe('switchTimeline.actualCheaper:$5.55');
+    expect(savingDescription(0, translate)).toBe('switchTimeline.potentialSaving:$0.00');
+  });
+
+  it('localizes positive and negative meanings in English and French', () => {
+    setLocale('en');
+    expect(savingDescription(5.55, t)).toContain('Potential amount saved by switching');
+    expect(savingDescription(-5.55, t)).toContain('actual plan was cheaper');
+    setLocale('fr');
+    expect(savingDescription(5.55, t)).toContain('potentiellement économisé');
+    expect(savingDescription(-5.55, t)).toContain('était moins chère');
+    setLocale('en');
+  });
+
   const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../tests/fixtures');
   const summaries = parseUsageSummaries(
     fs.readFileSync(path.join(FIXTURES, 'usage-summary-synthetic.xml'), 'utf8'),
   );
 
+  it('renders signed callouts from a populated report, including an untrusted model', () => {
+    const withTotal = (summary: (typeof summaries)[number], amount: number, plan?: 'TOU' | 'Tiered') => ({
+      ...summary,
+      items: summary.items.map((item) => {
+        if (item.note === 'Total Electricity Charges') return { ...item, amount };
+        if (plan === 'Tiered' && /peak/i.test(item.note)) return { ...item, note: 'Tiered' };
+        return item;
+      }),
+    });
+    const fixtureSummaries = [
+      withTotal(summaries[0], 10_000),
+      withTotal(summaries[1], 0, 'Tiered'),
+      withTotal(summaries[2], 10_000),
+    ];
+    const readings = fixtureSummaries.flatMap((summary, index) => {
+      const periodRaw: { timestamp: number; usage_kwh: number }[] = [];
+      for (let day = 0; day < summary.days; day++) {
+        const date = new Date(`${summary.startDate}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + day);
+        for (let hour = 0; hour < 24; hour++) {
+          date.setUTCHours(hour);
+          periodRaw.push({ timestamp: Math.floor(date.getTime() / 1000), usage_kwh: 1.5 });
+        }
+      }
+      const tieredWins: RateSet = index === 1
+        ? {
+            ...RATES,
+            tou: { offPeak: 100, midPeak: 100, onPeak: 100 },
+            tiered: { ...RATES.tiered, tier1: 0.1, tier2: 0.1 },
+            ulo: { overnight: 100, weekendOffPeak: 100, midPeak: 100, onPeak: 100 },
+          }
+        : RATES;
+      return processRawData(periodRaw, [tieredWins]);
+    });
+    const report = buildSwitchReport(fixtureSummaries, readings, []);
+    expect(report.rows[1].plan).toBe('Tiered');
+    expect(report.rows[1].saving).toBeLessThan(0);
+    expect(report.rows[2].saving).toBeGreaterThan(0);
+    expect(report.rows[2].counted).toBe(false);
+
+    render(<PlanSwitchTimeline summaries={fixtureSummaries} allData={readings} />);
+    const negative = screen.getByTestId(`switch-bubble-${fixtureSummaries[1].startDate}`);
+    const untrustedPositive = screen.getByTestId(`switch-bubble-${fixtureSummaries[2].startDate}`);
+    expect(negative).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[1].saving!).toFixed(2)}`));
+    expect(negative).toHaveAttribute('aria-label', expect.stringContaining('actual plan was cheaper'));
+    expect(untrustedPositive).toHaveTextContent(new RegExp(`\\$${Math.abs(report.rows[2].saving!).toFixed(2)}`));
+    expect(untrustedPositive).toHaveAttribute('data-counted', 'false');
+    expect(untrustedPositive).toHaveTextContent(/untrusted/i);
+    expect(untrustedPositive).toHaveAttribute('aria-label', expect.stringContaining('Potential amount saved'));
+
+    // Focus must reveal the full label when it extends past either edge of
+    // the scrollport, regardless of which signed callout receives focus.
+    const viewport = screen.getByTestId('switch-timeline-bar');
+    Object.defineProperty(viewport, 'clientWidth', { configurable: true, value: 349 });
+    Object.defineProperty(viewport, 'clientLeft', { configurable: true, value: 0 });
+    vi.spyOn(viewport, 'getBoundingClientRect').mockReturnValue({
+      left: 100, right: 449, top: 0, bottom: 100, width: 349, height: 100, x: 100, y: 0,
+      toJSON: () => ({}),
+    });
+    for (const bubble of [negative, untrustedPositive]) {
+      const rect = vi.spyOn(bubble, 'getBoundingClientRect');
+      viewport.scrollLeft = 100;
+      rect.mockReturnValue({
+        left: 90, right: 180, top: 0, bottom: 20, width: 90, height: 20, x: 90, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(90);
+      expect(document.activeElement).toBe(bubble);
+      expect(bubble.className).toContain('focus-visible:outline');
+
+      bubble.blur();
+      viewport.scrollLeft = 0;
+      rect.mockReturnValue({
+        left: 400, right: 460, top: 0, bottom: 20, width: 60, height: 20, x: 400, y: 0,
+        toJSON: () => ({}),
+      });
+      bubble.focus();
+      expect(viewport.scrollLeft).toBe(11);
+      expect(document.activeElement).toBe(bubble);
+      rect.mockRestore();
+    }
+  });
+
   it('says what is missing when there are no bills yet', () => {
     render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
-    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/No billing periods yet/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/Usage-only analysis already works/);
+    expect(screen.getByTestId('switch-timeline-empty')).toHaveTextContent(/export that contains bills/);
     expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
   });
 
-  it('draws one segment per billing period, coloured by its detected plan', () => {
+  it('explains the usage-only and bill-export distinction in French', () => {
+    setLocale('fr');
+    render(<PlanSwitchTimeline summaries={[]} allData={[]} />);
+    const empty = screen.getByTestId('switch-timeline-empty');
+    expect(empty).toHaveTextContent(/L’analyse de la consommation fonctionne déjà/);
+    expect(empty).toHaveTextContent(/export contenant des factures/);
+    expect(screen.queryByTestId('switch-timeline-bar')).not.toBeInTheDocument();
+  });
+
+  it('draws one segment per billing period, coloured by its detected plan', async () => {
     expect(summaries.length).toBeGreaterThan(1);
+    setLocale('en');
     render(<PlanSwitchTimeline summaries={summaries} allData={[]} />);
 
     const card = screen.getByTestId('plan-switch-timeline');
@@ -894,9 +1049,23 @@ describe('Wave R 4c — the plan-switch decision timeline', () => {
       const segment = screen.getByTestId(`switch-segment-${summary.startDate}`);
       expect(segment).toHaveAttribute('data-plan', 'TOU'); // the fixture is TOU
       expect(segment).toHaveAttribute('data-counted', 'false'); // no readings supplied
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.startDate));
+      expect(segment).toHaveAttribute('aria-label', expect.stringContaining(summary.endDate));
+      expect(segment).toHaveAttribute('tabindex', '0');
     }
 
-    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/table below/i);
+    const anchors = screen.getAllByTestId('switch-month-anchor');
+    expect(anchors.length).toBeGreaterThan(1);
+    expect(anchors.every((anchor) => /\d{4}/.test(anchor.textContent ?? ''))).toBe(true);
+    expect(screen.getAllByTestId('switch-period-detail')).toHaveLength(summaries.length);
+    const details = screen.getByText('View full billing-period dates').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    await userEvent.setup().click(screen.getByText('View full billing-period dates'));
+    expect(details).toHaveAttribute('open');
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/positive amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/negative amount/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/green means/i);
+    expect(screen.getByTestId('switch-timeline-note')).toHaveTextContent(/gray means/i);
     expect(screen.getByRole('heading', { name: 'Plan-switch decision timeline' })).toBeInTheDocument();
   });
 

@@ -27,8 +27,10 @@ export const WEEKEND_ROWS = [6, 0] as const;
 
 export type HeatmapGroup = {
   id: 'weekday' | 'weekend';
-  /** Panel heading. */
+  /** Panel heading — canonical English; translate with `labelKey`. */
   label: string;
+  /** The catalog key the display layer renders instead of `label`. */
+  labelKey: string;
   /** Row labels in display order — `DAY_LABELS[day]` for each source row. */
   dayLabels: string[];
   /** The source grid's rows, reordered. `rows[r][hour]`. */
@@ -47,6 +49,7 @@ export type HeatmapSplit = {
 function group(
   id: HeatmapGroup['id'],
   label: string,
+  labelKey: string,
   sourceOrder: readonly number[],
   data: HeatmapData,
 ): HeatmapGroup {
@@ -61,6 +64,7 @@ function group(
   return {
     id,
     label,
+    labelKey,
     dayLabels: sourceOrder.map((dayIndex) => DAY_LABELS[dayIndex]),
     rows,
     days,
@@ -76,8 +80,8 @@ function group(
  */
 export function splitHeatmap(data: HeatmapData): HeatmapSplit {
   return {
-    weekday: group('weekday', 'Weekdays', WEEKDAY_ROWS, data),
-    weekend: group('weekend', 'Weekend', WEEKEND_ROWS, data),
+    weekday: group('weekday', 'Weekdays', 'heatmap.weekdays', WEEKDAY_ROWS, data),
+    weekend: group('weekend', 'Weekend', 'heatmap.weekend', WEEKEND_ROWS, data),
     maxAvg: data.maxAvg,
   };
 }

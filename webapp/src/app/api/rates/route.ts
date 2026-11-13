@@ -41,7 +41,10 @@ export const historicalRates = [
 // against the live OEB page. Bump it whenever you re-verify or append a set.
 // The weekly staleness cron (see OPERATIONS.md) catches drift between this
 // date and what OEB actually publishes.
-const RATES_LAST_CHECKED = '2026-10-02';
+// Exported because /oeb-rates-page's honest unavailable-page copy names the
+// same date — one source, so a bump can never leave the error page silently
+// lying (PM fold, t_9991d1f2; pinned by route.test.ts).
+export const RATES_LAST_CHECKED = '2026-10-02';
 
 export async function GET() {
   return NextResponse.json({

@@ -15,6 +15,10 @@
  *      naive "did it render" check, so assert on something only React sets.
  *   4. The app is interactive (the upload button is clickable), which is what
  *      a hydration failure would silently cost.
+ *   5. The OEB proxy path answers SANDBOXED (F2): an inline script injected
+ *      into the /oeb-rates-page document must not execute there, with the
+ *      identical probe as a positive control on `/`, and the app's own
+ *      same-origin staleness fetch must still read a parseable body.
  */
 import { test, expect } from '@playwright/test';
 
@@ -106,5 +110,91 @@ test.describe('Content-Security-Policy', () => {
     expect(responses, 'a response came back for a script the policy should have blocked').toEqual(
       [],
     );
+  });
+
+  test('serves /oeb-rates-page sandboxed — third-party inline script cannot run there', async ({
+    page,
+  }) => {
+    // F2 (security assessment t_0d85b1f8): /oeb-rates-page answers oeb.ca's
+    // HTML as a navigable document on this origin, and the app-wide policy
+    // allows 'unsafe-inline' — so before the fix, OEB's 4 inline <script>
+    // blocks executed here with this origin's localStorage in reach
+    // (window.a2a_config / dataLayer / $buoop all became objects; proven in
+    // a browser on 2026-11-09). The fix is a route-level
+    // `Content-Security-Policy: sandbox; default-src 'none'` asserted by
+    // src/app/oeb-rates-page/route.ts.
+    //
+    // The instrument has a POSITIVE CONTROL first: the identical probe run
+    // on our own pages must execute, or "it did not run" below would say
+    // nothing about the policy — a dead probe reads as a pass.
+    const probe = async (): Promise<unknown> =>
+      page.evaluate(() => {
+        const s = document.createElement('script');
+        s.textContent = 'window.__cspInlineProbe = 1';
+        document.body.appendChild(s);
+        return (window as unknown as Record<string, unknown>).__cspInlineProbe;
+      });
+
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+    expect(
+      await probe(),
+      'control: an inline script must still execute on / (the app depends on it)',
+    ).toBe(1);
+
+    // The staleness check's own path, from the page that actually makes it
+    // (useRateStaleness runs on the app page, not on the OEB document): a
+    // same-origin fetch still reads a body it can parse — live tables, or
+    // the honest empty state when the upstream is unreachable. Done HERE,
+    // not after the sandbox navigation: that document has an opaque origin,
+    // so a fetch from it is a cross-origin request and would be refused by
+    // CORS — which would test the wrong thing.
+    const body = await page.evaluate(async () => {
+      const res = await fetch('/oeb-rates-page');
+      const text = await res.text();
+      return {
+        ok: res.ok,
+        len: text.length,
+        hasTable: text.includes('<table'),
+        hasEmpty: text.includes('Rate schedule temporarily unavailable'),
+      };
+    });
+    expect(body.ok, 'the staleness fetch no longer succeeds').toBe(true);
+    expect(body.len, 'the staleness fetch returned an empty body').toBeGreaterThan(0);
+    expect(body.hasTable || body.hasEmpty, `unparseable body shape: ${JSON.stringify(body)}`).toBe(
+      true,
+    );
+
+    // The route fetches www.oeb.ca server-side on every hit, so give the
+    // navigation more than the 30 s suite budget; the assertions below hold
+    // whether upstream answers or the route degrades to its empty state.
+    const response = await page.goto(`${BASE}/oeb-rates-page`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    expect(response, 'navigation to /oeb-rates-page produced no response').not.toBeNull();
+
+    const csp = response!.headers()['content-security-policy'];
+    expect(csp, 'no Content-Security-Policy on the OEB proxy response').toBeTruthy();
+    expect(csp, `expected the hardening policy, got: ${csp}`).toContain('sandbox');
+    expect(csp, `expected the hardening policy, got: ${csp}`).toContain("default-src 'none'");
+
+    // THE PROPERTY: the same inline script that ran on / must NOT run here.
+    expect(
+      await probe(),
+      'an inline script executed in the /oeb-rates-page document — the sandbox is not being enforced',
+    ).toBeUndefined();
+
+    // And the specific globals the assessment saw set. Vacuously true when
+    // upstream is down (no OEB script exists to block) — the probe above is
+    // the deterministic half; this names the finding's own evidence.
+    const globals = await page.evaluate(() => {
+      const w = window as unknown as Record<string, unknown>;
+      return [typeof w.a2a_config, typeof w.dataLayer, typeof w.$buoop];
+    });
+    expect(globals, "oeb.ca's inline scripts created globals on our origin").toEqual([
+      'undefined',
+      'undefined',
+      'undefined',
+    ]);
   });
 });

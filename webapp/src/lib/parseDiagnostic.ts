@@ -12,6 +12,7 @@
  */
 
 import { XMLValidator } from 'fast-xml-parser';
+import { inspectDocument } from './greenbutton/limits';
 /* Wave U — the diagnostics are shown in the upload modal, so they translate.
  * Lib code reads the module locale at call time (see I18N.md). */
 import { t } from '@/i18n';
@@ -88,15 +89,39 @@ export function diagnoseGreenButtonDocument(xmlText: string, parsedReadings?: nu
     };
   }
 
+  // The document budget comes before validation, because a document this app
+  // will not parse deserves its real reason: XMLValidator happily validates a
+  // 200 000-level depth bomb, and the old path then reported "No Green Button
+  // data found in this file" for it. Checking the budget first also means a
+  // 50 MB upload is never walked twice. The copy comes from greenbutton/limits
+  // so the same refusal reads identically here and at the parse site.
+  const { refusal } = inspectDocument(text);
+  if (refusal) {
+    return {
+      ok: false,
+      headline: refusal.headline,
+      detail: refusal.detail,
+      hints: refusal.hints,
+    };
+  }
+
   const validity = XMLValidator.validate(text);
   if (validity !== true) {
     const err = (validity as { err: { code?: string; msg?: string; line?: number } }).err;
+    // BOTH sentences take the line, and the detail template needs it too:
+    // `malformedDetailMsg` reads "{msg} at line {line}.", so a call that passed
+    // only `msg` printed the placeholder at the user literally — "… found. at
+    // line {line}." (t_1fca89fa). A validator error with no line at all keeps
+    // its own message instead of claiming a line it does not have.
+    const line = typeof err.line === 'number' ? err.line : null;
     return {
       ok: false,
-      headline: err.line
-        ? t('diag.malformedHeadlineLine', { line: err.line })
-        : t('diag.malformedHeadline'),
-      detail: err.msg ? t('diag.malformedDetailMsg', { msg: err.msg }) : t('diag.malformedDetail'),
+      headline:
+        line !== null ? t('diag.malformedHeadlineLine', { line }) : t('diag.malformedHeadline'),
+      detail:
+        err.msg && line !== null
+          ? t('diag.malformedDetailMsg', { msg: err.msg, line })
+          : err.msg || t('diag.malformedDetail'),
       hints: [t('diag.malformedHint1'), t('diag.malformedHint2')],
     };
   }

@@ -1,19 +1,20 @@
 {
   "base": "http://10.10.11.110:3939/",
-  "deployedCommit": "9dcd1cd",
+  "deployedCommit": "fe7a5ff91bcb1b97660d6687df8495dd86c73d56",
   "long": {
-    "path": "long.xml",
+    "path": "LONG.xml",
     "sha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
     "bytes": 6424909
   },
   "short": {
-    "path": "short.xml",
+    "path": "SHORT.xml",
     "sha256": "6a3f0e14040d825ee4123f6d3e7b134e7eb99831e26196a582fea676de4d6e28",
     "bytes": 807118
   },
-  "ranAt": "2026-10-12T14:15:28.980Z",
-  "total": 132,
-  "passed": 132,
+  "ranAt": "2026-10-12T22:12:06.825Z",
+  "scope": "plan comparison only — the same metered readings repriced; no behaviour counterfactual",
+  "total": 120,
+  "passed": 120,
   "failed": 0,
   "checks": [
     {
@@ -37,44 +38,59 @@
       "detail": "24 vs 24"
     },
     {
-      "name": "desktop-long: the plan and behaviour headline numbers are painted",
+      "name": "desktop-long: exactly one headline figure is painted, and it is the plan",
       "ok": true,
-      "detail": "plan=−$251.89 behaviour=$452.50"
+      "detail": "plan=−$251.89"
     },
     {
-      "name": "desktop-long: the total is plan + behaviour",
+      "name": "desktop-long: no behaviour headline, no summed total and no lever line exist",
       "ok": true,
-      "detail": "-251.89 + 452.5 = 200.61"
+      "detail": "behaviour=null total=null lever=null"
     },
     {
-      "name": "desktop-long: the behaviour total is never negative",
+      "name": "desktop-long: a negative figure is labelled as the alternatives costing more",
       "ok": true,
-      "detail": "452.5"
+      "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
     },
     {
-      "name": "desktop-long: a negative plan lever is labelled as the alternatives costing more",
+      "name": "desktop-long: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
       "ok": true,
-      "detail": "What should have happened · every closed periodHindsightPer closed bill: the plan you were on against the cheapest one, "
+      "detail": "plan=−$251.89 headline=\"The alternatives would have cost more−$251.89The alternatives would have cost you $251.89 more on the very same readings.One lever only: the plan. Nothing on th\""
     },
     {
-      "name": "desktop-long: the headline names which lever mattered",
+      "name": "desktop-long: the sub-line states the headline's own magnitude in its own direction",
       "ok": true,
-      "detail": "Behaviour was the bigger lever — $452.50 was left on the table by not moving load, against $0.00 from the plan you were on."
+      "detail": "plan=−$251.89 clause=\"would have cost you $251.89 more\""
     },
     {
-      "name": "desktop-long: the HINDSIGHT plan figure agrees with the switch track record above it",
+      "name": "desktop-long: the HINDSIGHT figure agrees with the switch track record above it",
       "ok": true,
       "detail": "track record=$251.89 hindsight=−$251.89"
     },
     {
-      "name": "desktop-long: every priced row carries BOTH a plan chip and a behaviour chip",
+      "name": "desktop-long: no behaviour chip and no move list anywhere on the panel",
+      "ok": true,
+      "detail": "0 chips, 0 rows with a disclosure"
+    },
+    {
+      "name": "desktop-long: no hypothetical-usage or load-shift wording anywhere on the panel",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "name": "desktop-long: the panel states it compares the same readings",
+      "ok": true,
+      "detail": "legend copy"
+    },
+    {
+      "name": "desktop-long: every priced row carries a plan chip",
       "ok": true,
       "detail": "22 priced, 0 missing a chip"
     },
     {
       "name": "desktop-long: every priced row is stamped with the plan it was billed under",
       "ok": true,
-      "detail": "ON TIME-OF-USE | ON TIME-OF-USE | ON TIME-OF-USE"
+      "detail": "ON TIERED | ON TIME-OF-USE | ON TIME-OF-USE"
     },
     {
       "name": "desktop-long: an unaudited bill carries its reason instead of a number",
@@ -82,29 +98,24 @@
       "detail": "Not audited: readings cover 20 of 30 days (67%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "desktop-long: each period's behaviour figure equals the sum of its own moves",
+      "name": "desktop-long: an unaudited bill carries no plan chip",
       "ok": true,
-      "detail": "11 verified, 0 mismatched"
+      "detail": "no chip on skipped rows"
     },
     {
-      "name": "desktop-long: every printed move is genuinely cheaper after the shift",
+      "name": "desktop-long: every priced row states the kWh actually metered",
       "ok": true,
-      "detail": "167 moves, 0 not cheaper"
+      "detail": "Sep 25, 2025 – Oct 27ON TIEREDPLAN DETECTEDSummer1,471.9 kWhPlan · what you were on, against the other twoPLAN · WOULD H"
     },
     {
-      "name": "desktop-long: every printed move shows a positive saving",
+      "name": "desktop-long: a period only ever claims a saving against a DIFFERENT plan than it was billed under",
       "ok": true,
-      "detail": "10.26, 9.95, 9.83, 9.79"
+      "detail": "3 chips checked"
     },
     {
-      "name": "desktop-long: the move copy is counterfactual ('IF … had run in … instead')",
+      "name": "desktop-long: no period prints a negative \"would have saved\" amount",
       "ok": true,
-      "detail": "IF Mon 11:00–17:00 had run in Off-peak 19:00–07:00 instead:97.7 kWhpaid 20.3¢/kWh9.8¢/kWh there−$10.26seen 5 of 6 weeks "
-    },
-    {
-      "name": "desktop-long: the legend states that behaviour is a counterfactual",
-      "ok": true,
-      "detail": "legend copy"
+      "detail": "none"
     },
     {
       "name": "desktop-long: no raw key, undefined, NaN or {placeholder} leaks into the panel",
@@ -112,24 +123,9 @@
       "detail": ""
     },
     {
-      "name": "desktop-long: at least one Tiered period says the hour cannot change the price",
+      "name": "desktop-long: a priced file shows the headline instead of the empty state",
       "ok": true,
-      "detail": "11 flat-rate periods"
-    },
-    {
-      "name": "desktop-long: a flat-rate period claims no money on the behaviour lever",
-      "ok": true,
-      "detail": "no amount, no moves"
-    },
-    {
-      "name": "desktop-long: the flat-rate reason names the flat price",
-      "ok": true,
-      "detail": "Sep 25, 2025 – Oct 27ON TIEREDPLAN DETECTEDSummer1,471.9 kWhPlan · what you were onPLAN · WOULD HAVE SAVED $7.60 ON Time-of-UseYou paid $234.11 on TieredBehavio"
-    },
-    {
-      "name": "desktop-long: at least one period has a moveable routine",
-      "ok": true,
-      "detail": "11 periods"
+      "detail": "no empty note"
     },
     {
       "name": "desktop-long: summer bills are judged on summer rates",
@@ -152,44 +148,29 @@
       "detail": "13 TOU / 11 Tiered"
     },
     {
+      "name": "desktop-long: a flat-rate (Tiered) bill is still judged on the plan lever",
+      "ok": true,
+      "detail": "11 Tiered rows with a chip"
+    },
+    {
       "name": "desktop-long: the biggest-loss callout names the first row (worst-first)",
       "ok": true,
-      "detail": "2026-05-25 vs 2026-05-25"
+      "detail": "2025-09-25 vs 2025-09-25"
     },
     {
-      "name": "desktop-long: the callout's split adds up to its total",
+      "name": "desktop-long: the callout's amount is the figure the first row's chip names",
       "ok": true,
-      "detail": "Biggest hindsight loss · May 25, 2026 – Jun 23$52.47−$24.28 from the plan · $76.76 from load that never moved"
+      "detail": "Biggest hindsight loss · Sep 25, 2025 – Oct 27$7.60You paid $234.11 on Tiered for these readings"
     },
     {
-      "name": "desktop-long: the move list is closed until asked for",
-      "ok": true,
-      "detail": "hindsight-period-2026-05-25"
-    },
-    {
-      "name": "desktop-long: opening it reveals the per-block moves",
-      "ok": true,
-      "detail": "true"
-    },
-    {
-      "name": "desktop-long: hindsight-plan-total clears AA on its own painted background",
+      "name": "desktop-long: the headline figure clears AA on its own painted background",
       "ok": true,
       "detail": "13.71:1 (rgb(250,204,21) on rgb(0,0,0))"
     },
     {
-      "name": "desktop-long: hindsight-behaviour-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "10.92:1 (rgb(52,211,153) on rgb(0,0,0))"
-    },
-    {
-      "name": "desktop-long: hindsight-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "21:1 (rgb(255,255,255) on rgb(0,0,0))"
-    },
-    {
       "name": "desktop-long: the plan chip clears AA on its own chip colour",
       "ok": true,
-      "detail": "5.21:1"
+      "detail": "5.91:1"
     },
     {
       "name": "desktop-long: no horizontal overflow",
@@ -217,37 +198,52 @@
       "detail": "3 vs 3"
     },
     {
-      "name": "desktop-short: the plan and behaviour headline numbers are painted",
+      "name": "desktop-short: exactly one headline figure is painted, and it is the plan",
       "ok": true,
-      "detail": "plan=−$33.19 behaviour=$61.35"
+      "detail": "plan=−$33.19"
     },
     {
-      "name": "desktop-short: the total is plan + behaviour",
+      "name": "desktop-short: no behaviour headline, no summed total and no lever line exist",
       "ok": true,
-      "detail": "-33.19 + 61.35 = 28.16"
+      "detail": "behaviour=null total=null lever=null"
     },
     {
-      "name": "desktop-short: the behaviour total is never negative",
+      "name": "desktop-short: a negative figure is labelled as the alternatives costing more",
       "ok": true,
-      "detail": "61.35"
+      "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
     },
     {
-      "name": "desktop-short: a negative plan lever is labelled as the alternatives costing more",
+      "name": "desktop-short: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
       "ok": true,
-      "detail": "What should have happened · every closed periodHindsightPer closed bill: the plan you were on against the cheapest one, "
+      "detail": "plan=−$33.19 headline=\"The alternatives would have cost more−$33.19The alternatives would have cost you $33.19 more on the very same readings.One lever only: the plan. Nothing on this\""
     },
     {
-      "name": "desktop-short: the headline names which lever mattered",
+      "name": "desktop-short: the sub-line states the headline's own magnitude in its own direction",
       "ok": true,
-      "detail": "Behaviour was the bigger lever — $61.35 was left on the table by not moving load, against $0.00 from the plan you were on."
+      "detail": "plan=−$33.19 clause=\"would have cost you $33.19 more\""
     },
     {
-      "name": "desktop-short: the HINDSIGHT plan figure agrees with the switch track record above it",
+      "name": "desktop-short: the HINDSIGHT figure agrees with the switch track record above it",
       "ok": true,
       "detail": "track record=$33.19 hindsight=−$33.19"
     },
     {
-      "name": "desktop-short: every priced row carries BOTH a plan chip and a behaviour chip",
+      "name": "desktop-short: no behaviour chip and no move list anywhere on the panel",
+      "ok": true,
+      "detail": "0 chips, 0 rows with a disclosure"
+    },
+    {
+      "name": "desktop-short: no hypothetical-usage or load-shift wording anywhere on the panel",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "name": "desktop-short: the panel states it compares the same readings",
+      "ok": true,
+      "detail": "legend copy"
+    },
+    {
+      "name": "desktop-short: every priced row carries a plan chip",
       "ok": true,
       "detail": "1 priced, 0 missing a chip"
     },
@@ -262,29 +258,24 @@
       "detail": "Not audited: readings cover 21 of 29 days (72%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "desktop-short: each period's behaviour figure equals the sum of its own moves",
+      "name": "desktop-short: an unaudited bill carries no plan chip",
       "ok": true,
-      "detail": "1 verified, 0 mismatched"
+      "detail": "no chip on skipped rows"
     },
     {
-      "name": "desktop-short: every printed move is genuinely cheaper after the shift",
+      "name": "desktop-short: every priced row states the kWh actually metered",
       "ok": true,
-      "detail": "16 moves, 0 not cheaper"
+      "detail": "Jul 22, 2026 – Aug 20ON TIME-OF-USEPLAN DETECTEDSummer2,641.5 kWhPlan · what you were on, against the other twoPLAN · AL"
     },
     {
-      "name": "desktop-short: every printed move shows a positive saving",
+      "name": "desktop-short: a period only ever claims a saving against a DIFFERENT plan than it was billed under",
       "ok": true,
-      "detail": "8.15, 7.19, 6.92, 6.31"
+      "detail": "0 chips checked"
     },
     {
-      "name": "desktop-short: the move copy is counterfactual ('IF … had run in … instead')",
+      "name": "desktop-short: no period prints a negative \"would have saved\" amount",
       "ok": true,
-      "detail": "IF Fri 11:00–17:00 had run in Off-peak 19:00–07:00 instead:77.7 kWhpaid 20.3¢/kWh9.8¢/kWh there−$8.15seen 4 of 5 weeks ·"
-    },
-    {
-      "name": "desktop-short: the legend states that behaviour is a counterfactual",
-      "ok": true,
-      "detail": "legend copy"
+      "detail": "none"
     },
     {
       "name": "desktop-short: no raw key, undefined, NaN or {placeholder} leaks into the panel",
@@ -292,44 +283,24 @@
       "detail": ""
     },
     {
+      "name": "desktop-short: a priced file shows the headline instead of the empty state",
+      "ok": true,
+      "detail": "no empty note"
+    },
+    {
       "name": "desktop-short: the one countable period is priced, the uncovered ones are not",
       "ok": true,
       "detail": "1 priced / 2 skipped"
     },
     {
-      "name": "desktop-short: the biggest-loss callout names the first row (worst-first)",
+      "name": "desktop-short: the uncovered bills name the coverage shortfall",
       "ok": true,
-      "detail": "2026-07-22 vs 2026-07-22"
+      "detail": "Not audited: readings cover 21 of 29 days (72%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "desktop-short: the callout's split adds up to its total",
-      "ok": true,
-      "detail": "Biggest hindsight loss · Jul 22, 2026 – Aug 20$28.16−$33.19 from the plan · $61.35 from load that never moved"
-    },
-    {
-      "name": "desktop-short: the move list is closed until asked for",
-      "ok": true,
-      "detail": "hindsight-period-2026-07-22"
-    },
-    {
-      "name": "desktop-short: opening it reveals the per-block moves",
-      "ok": true,
-      "detail": "true"
-    },
-    {
-      "name": "desktop-short: hindsight-plan-total clears AA on its own painted background",
+      "name": "desktop-short: the headline figure clears AA on its own painted background",
       "ok": true,
       "detail": "13.71:1 (rgb(250,204,21) on rgb(0,0,0))"
-    },
-    {
-      "name": "desktop-short: hindsight-behaviour-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "10.92:1 (rgb(52,211,153) on rgb(0,0,0))"
-    },
-    {
-      "name": "desktop-short: hindsight-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "21:1 (rgb(255,255,255) on rgb(0,0,0))"
     },
     {
       "name": "desktop-short: the plan chip clears AA on its own chip colour",
@@ -362,44 +333,59 @@
       "detail": "24 vs 24"
     },
     {
-      "name": "mobile-long: the plan and behaviour headline numbers are painted",
+      "name": "mobile-long: exactly one headline figure is painted, and it is the plan",
       "ok": true,
-      "detail": "plan=−$251.89 behaviour=$452.50"
+      "detail": "plan=−$251.89"
     },
     {
-      "name": "mobile-long: the total is plan + behaviour",
+      "name": "mobile-long: no behaviour headline, no summed total and no lever line exist",
       "ok": true,
-      "detail": "-251.89 + 452.5 = 200.61"
+      "detail": "behaviour=null total=null lever=null"
     },
     {
-      "name": "mobile-long: the behaviour total is never negative",
+      "name": "mobile-long: a negative figure is labelled as the alternatives costing more",
       "ok": true,
-      "detail": "452.5"
+      "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
     },
     {
-      "name": "mobile-long: a negative plan lever is labelled as the alternatives costing more",
+      "name": "mobile-long: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
       "ok": true,
-      "detail": "What should have happened · every closed periodHindsightPer closed bill: the plan you were on against the cheapest one, "
+      "detail": "plan=−$251.89 headline=\"The alternatives would have cost more−$251.89The alternatives would have cost you $251.89 more on the very same readings.One lever only: the plan. Nothing on th\""
     },
     {
-      "name": "mobile-long: the headline names which lever mattered",
+      "name": "mobile-long: the sub-line states the headline's own magnitude in its own direction",
       "ok": true,
-      "detail": "Behaviour was the bigger lever — $452.50 was left on the table by not moving load, against $0.00 from the plan you were on."
+      "detail": "plan=−$251.89 clause=\"would have cost you $251.89 more\""
     },
     {
-      "name": "mobile-long: the HINDSIGHT plan figure agrees with the switch track record above it",
+      "name": "mobile-long: the HINDSIGHT figure agrees with the switch track record above it",
       "ok": true,
       "detail": "track record=$251.89 hindsight=−$251.89"
     },
     {
-      "name": "mobile-long: every priced row carries BOTH a plan chip and a behaviour chip",
+      "name": "mobile-long: no behaviour chip and no move list anywhere on the panel",
+      "ok": true,
+      "detail": "0 chips, 0 rows with a disclosure"
+    },
+    {
+      "name": "mobile-long: no hypothetical-usage or load-shift wording anywhere on the panel",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "name": "mobile-long: the panel states it compares the same readings",
+      "ok": true,
+      "detail": "legend copy"
+    },
+    {
+      "name": "mobile-long: every priced row carries a plan chip",
       "ok": true,
       "detail": "22 priced, 0 missing a chip"
     },
     {
       "name": "mobile-long: every priced row is stamped with the plan it was billed under",
       "ok": true,
-      "detail": "ON TIME-OF-USE | ON TIME-OF-USE | ON TIME-OF-USE"
+      "detail": "ON TIERED | ON TIME-OF-USE | ON TIME-OF-USE"
     },
     {
       "name": "mobile-long: an unaudited bill carries its reason instead of a number",
@@ -407,29 +393,24 @@
       "detail": "Not audited: readings cover 20 of 30 days (67%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "mobile-long: each period's behaviour figure equals the sum of its own moves",
+      "name": "mobile-long: an unaudited bill carries no plan chip",
       "ok": true,
-      "detail": "11 verified, 0 mismatched"
+      "detail": "no chip on skipped rows"
     },
     {
-      "name": "mobile-long: every printed move is genuinely cheaper after the shift",
+      "name": "mobile-long: every priced row states the kWh actually metered",
       "ok": true,
-      "detail": "167 moves, 0 not cheaper"
+      "detail": "Sep 25, 2025 – Oct 27ON TIEREDPLAN DETECTEDSummer1,471.9 kWhPlan · what you were on, against the other twoPLAN · WOULD H"
     },
     {
-      "name": "mobile-long: every printed move shows a positive saving",
+      "name": "mobile-long: a period only ever claims a saving against a DIFFERENT plan than it was billed under",
       "ok": true,
-      "detail": "10.26, 9.95, 9.83, 9.79"
+      "detail": "3 chips checked"
     },
     {
-      "name": "mobile-long: the move copy is counterfactual ('IF … had run in … instead')",
+      "name": "mobile-long: no period prints a negative \"would have saved\" amount",
       "ok": true,
-      "detail": "IF Mon 11:00–17:00 had run in Off-peak 19:00–07:00 instead:97.7 kWhpaid 20.3¢/kWh9.8¢/kWh there−$10.26seen 5 of 6 weeks "
-    },
-    {
-      "name": "mobile-long: the legend states that behaviour is a counterfactual",
-      "ok": true,
-      "detail": "legend copy"
+      "detail": "none"
     },
     {
       "name": "mobile-long: no raw key, undefined, NaN or {placeholder} leaks into the panel",
@@ -437,24 +418,9 @@
       "detail": ""
     },
     {
-      "name": "mobile-long: at least one Tiered period says the hour cannot change the price",
+      "name": "mobile-long: a priced file shows the headline instead of the empty state",
       "ok": true,
-      "detail": "11 flat-rate periods"
-    },
-    {
-      "name": "mobile-long: a flat-rate period claims no money on the behaviour lever",
-      "ok": true,
-      "detail": "no amount, no moves"
-    },
-    {
-      "name": "mobile-long: the flat-rate reason names the flat price",
-      "ok": true,
-      "detail": "Sep 25, 2025 – Oct 27ON TIEREDPLAN DETECTEDSummer1,471.9 kWhPlan · what you were onPLAN · WOULD HAVE SAVED $7.60 ON Time-of-UseYou paid $234.11 on TieredBehavio"
-    },
-    {
-      "name": "mobile-long: at least one period has a moveable routine",
-      "ok": true,
-      "detail": "11 periods"
+      "detail": "no empty note"
     },
     {
       "name": "mobile-long: summer bills are judged on summer rates",
@@ -477,44 +443,29 @@
       "detail": "13 TOU / 11 Tiered"
     },
     {
+      "name": "mobile-long: a flat-rate (Tiered) bill is still judged on the plan lever",
+      "ok": true,
+      "detail": "11 Tiered rows with a chip"
+    },
+    {
       "name": "mobile-long: the biggest-loss callout names the first row (worst-first)",
       "ok": true,
-      "detail": "2026-05-25 vs 2026-05-25"
+      "detail": "2025-09-25 vs 2025-09-25"
     },
     {
-      "name": "mobile-long: the callout's split adds up to its total",
+      "name": "mobile-long: the callout's amount is the figure the first row's chip names",
       "ok": true,
-      "detail": "Biggest hindsight loss · May 25, 2026 – Jun 23$52.47−$24.28 from the plan · $76.76 from load that never moved"
+      "detail": "Biggest hindsight loss · Sep 25, 2025 – Oct 27$7.60You paid $234.11 on Tiered for these readings"
     },
     {
-      "name": "mobile-long: the move list is closed until asked for",
-      "ok": true,
-      "detail": "hindsight-period-2026-05-25"
-    },
-    {
-      "name": "mobile-long: opening it reveals the per-block moves",
-      "ok": true,
-      "detail": "true"
-    },
-    {
-      "name": "mobile-long: hindsight-plan-total clears AA on its own painted background",
+      "name": "mobile-long: the headline figure clears AA on its own painted background",
       "ok": true,
       "detail": "13.71:1 (rgb(250,204,21) on rgb(0,0,0))"
     },
     {
-      "name": "mobile-long: hindsight-behaviour-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "10.92:1 (rgb(52,211,153) on rgb(0,0,0))"
-    },
-    {
-      "name": "mobile-long: hindsight-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "21:1 (rgb(255,255,255) on rgb(0,0,0))"
-    },
-    {
       "name": "mobile-long: the plan chip clears AA on its own chip colour",
       "ok": true,
-      "detail": "5.21:1"
+      "detail": "5.91:1"
     },
     {
       "name": "mobile-long: no horizontal overflow",
@@ -542,37 +493,52 @@
       "detail": "3 vs 3"
     },
     {
-      "name": "mobile-short: the plan and behaviour headline numbers are painted",
+      "name": "mobile-short: exactly one headline figure is painted, and it is the plan",
       "ok": true,
-      "detail": "plan=−$33.19 behaviour=$61.35"
+      "detail": "plan=−$33.19"
     },
     {
-      "name": "mobile-short: the total is plan + behaviour",
+      "name": "mobile-short: no behaviour headline, no summed total and no lever line exist",
       "ok": true,
-      "detail": "-33.19 + 61.35 = 28.16"
+      "detail": "behaviour=null total=null lever=null"
     },
     {
-      "name": "mobile-short: the behaviour total is never negative",
+      "name": "mobile-short: a negative figure is labelled as the alternatives costing more",
       "ok": true,
-      "detail": "61.35"
+      "detail": "Same readings, repriced · every closed periodHindsightPer closed bill: your own metered readings at the same hours and t"
     },
     {
-      "name": "mobile-short: a negative plan lever is labelled as the alternatives costing more",
+      "name": "mobile-short: the headline's sub-line never claims \"$0.00 more\" beside a negative figure",
       "ok": true,
-      "detail": "What should have happened · every closed periodHindsightPer closed bill: the plan you were on against the cheapest one, "
+      "detail": "plan=−$33.19 headline=\"The alternatives would have cost more−$33.19The alternatives would have cost you $33.19 more on the very same readings.One lever only: the plan. Nothing on this\""
     },
     {
-      "name": "mobile-short: the headline names which lever mattered",
+      "name": "mobile-short: the sub-line states the headline's own magnitude in its own direction",
       "ok": true,
-      "detail": "Behaviour was the bigger lever — $61.35 was left on the table by not moving load, against $0.00 from the plan you were on."
+      "detail": "plan=−$33.19 clause=\"would have cost you $33.19 more\""
     },
     {
-      "name": "mobile-short: the HINDSIGHT plan figure agrees with the switch track record above it",
+      "name": "mobile-short: the HINDSIGHT figure agrees with the switch track record above it",
       "ok": true,
       "detail": "track record=$33.19 hindsight=−$33.19"
     },
     {
-      "name": "mobile-short: every priced row carries BOTH a plan chip and a behaviour chip",
+      "name": "mobile-short: no behaviour chip and no move list anywhere on the panel",
+      "ok": true,
+      "detail": "0 chips, 0 rows with a disclosure"
+    },
+    {
+      "name": "mobile-short: no hypothetical-usage or load-shift wording anywhere on the panel",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "name": "mobile-short: the panel states it compares the same readings",
+      "ok": true,
+      "detail": "legend copy"
+    },
+    {
+      "name": "mobile-short: every priced row carries a plan chip",
       "ok": true,
       "detail": "1 priced, 0 missing a chip"
     },
@@ -587,29 +553,24 @@
       "detail": "Not audited: readings cover 21 of 29 days (72%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "mobile-short: each period's behaviour figure equals the sum of its own moves",
+      "name": "mobile-short: an unaudited bill carries no plan chip",
       "ok": true,
-      "detail": "1 verified, 0 mismatched"
+      "detail": "no chip on skipped rows"
     },
     {
-      "name": "mobile-short: every printed move is genuinely cheaper after the shift",
+      "name": "mobile-short: every priced row states the kWh actually metered",
       "ok": true,
-      "detail": "16 moves, 0 not cheaper"
+      "detail": "Jul 22, 2026 – Aug 20ON TIME-OF-USEPLAN DETECTEDSummer2,641.5 kWhPlan · what you were on, against the other twoPLAN · AL"
     },
     {
-      "name": "mobile-short: every printed move shows a positive saving",
+      "name": "mobile-short: a period only ever claims a saving against a DIFFERENT plan than it was billed under",
       "ok": true,
-      "detail": "8.15, 7.19, 6.92, 6.31"
+      "detail": "0 chips checked"
     },
     {
-      "name": "mobile-short: the move copy is counterfactual ('IF … had run in … instead')",
+      "name": "mobile-short: no period prints a negative \"would have saved\" amount",
       "ok": true,
-      "detail": "IF Fri 11:00–17:00 had run in Off-peak 19:00–07:00 instead:77.7 kWhpaid 20.3¢/kWh9.8¢/kWh there−$8.15seen 4 of 5 weeks ·"
-    },
-    {
-      "name": "mobile-short: the legend states that behaviour is a counterfactual",
-      "ok": true,
-      "detail": "legend copy"
+      "detail": "none"
     },
     {
       "name": "mobile-short: no raw key, undefined, NaN or {placeholder} leaks into the panel",
@@ -617,44 +578,24 @@
       "detail": ""
     },
     {
+      "name": "mobile-short: a priced file shows the headline instead of the empty state",
+      "ok": true,
+      "detail": "no empty note"
+    },
+    {
       "name": "mobile-short: the one countable period is priced, the uncovered ones are not",
       "ok": true,
       "detail": "1 priced / 2 skipped"
     },
     {
-      "name": "mobile-short: the biggest-loss callout names the first row (worst-first)",
+      "name": "mobile-short: the uncovered bills name the coverage shortfall",
       "ok": true,
-      "detail": "2026-07-22 vs 2026-07-22"
+      "detail": "Not audited: readings cover 21 of 29 days (72%, 90% needed) / Not audited: no readings in this browser fall inside this period"
     },
     {
-      "name": "mobile-short: the callout's split adds up to its total",
-      "ok": true,
-      "detail": "Biggest hindsight loss · Jul 22, 2026 – Aug 20$28.16−$33.19 from the plan · $61.35 from load that never moved"
-    },
-    {
-      "name": "mobile-short: the move list is closed until asked for",
-      "ok": true,
-      "detail": "hindsight-period-2026-07-22"
-    },
-    {
-      "name": "mobile-short: opening it reveals the per-block moves",
-      "ok": true,
-      "detail": "true"
-    },
-    {
-      "name": "mobile-short: hindsight-plan-total clears AA on its own painted background",
+      "name": "mobile-short: the headline figure clears AA on its own painted background",
       "ok": true,
       "detail": "13.71:1 (rgb(250,204,21) on rgb(0,0,0))"
-    },
-    {
-      "name": "mobile-short: hindsight-behaviour-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "10.92:1 (rgb(52,211,153) on rgb(0,0,0))"
-    },
-    {
-      "name": "mobile-short: hindsight-total clears AA on its own painted background",
-      "ok": true,
-      "detail": "21:1 (rgb(255,255,255) on rgb(0,0,0))"
     },
     {
       "name": "mobile-short: the plan chip clears AA on its own chip colour",
@@ -667,9 +608,9 @@
       "detail": "scrollWidth=390 viewport=390"
     },
     {
-      "name": "both viewports print the same three numbers for the 2-year file",
+      "name": "both viewports print the same headline figure for the 2-year file",
       "ok": true,
-      "detail": "plan: −$251.89 / −$251.89 · behaviour: $452.50 / $452.50 · total: $200.61 / $200.61"
+      "detail": "−$251.89 / −$251.89"
     },
     {
       "name": "both viewports agree on row count",

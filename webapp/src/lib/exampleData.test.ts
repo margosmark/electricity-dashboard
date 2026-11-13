@@ -23,6 +23,7 @@ import {
   type RateSet,
 } from './energy';
 import { analyzeTouShifts } from './touShift';
+import { projectMonthBill } from './billProjection';
 import { loadExampleReadings, EXAMPLE_DATA_URL, EXAMPLE_DATA_LABEL } from './exampleData';
 
 const SAMPLE = path.resolve(
@@ -107,9 +108,9 @@ describe('example fixture — provenance and identity', () => {
 });
 
 describe('example fixture — parser path', () => {
-  it('parses as a single-meter feed with exactly one year of hourly readings', () => {
+  it('parses as a single-meter feed with a full year plus a deterministic early October window', () => {
     expect(groups).toHaveLength(1);
-    expect(rows).toHaveLength(8760);
+    expect(rows).toHaveLength(8904);
     // Sorted, finite, non-zero, sane per-hour magnitude for a house.
     for (let i = 0; i < rows.length; i++) {
       expect(Number.isFinite(rows[i].usage_kwh)).toBe(true);
@@ -134,11 +135,11 @@ describe('example fixture — parser path', () => {
     expect(fall.filter((r) => local(r.timestamp).hour === 1)).toHaveLength(2);
   });
 
-  it('covers Oct 1 2025 through Sep 30 2026 local time', () => {
+  it('covers Oct 1 2025 through Oct 6 2026 local time', () => {
     const first = local(rows[0].timestamp);
     const last = local(rows[rows.length - 1].timestamp);
     expect([first.year, first.month, first.day]).toEqual([2025, 10, 1]);
-    expect([last.year, last.month, last.day]).toEqual([2026, 9, 30]);
+    expect([last.year, last.month, last.day]).toEqual([2026, 10, 6]);
     expect(first.hour).toBe(0);
     expect(last.hour).toBe(23);
   });
@@ -206,6 +207,9 @@ describe('example fixture — the patterns the button promises', () => {
       const key = `${l.year}-${String(l.month).padStart(2, '0')}`;
       monthly.set(key, (monthly.get(key) ?? 0) + rows[i].usage_kwh);
     }
+    // The final six October days deliberately exist only to exercise the
+    // early-month projection; they are not a comparable monthly total.
+    monthly.delete('2026-10');
     expect(monthly.size).toBe(12);
     const totals = [...monthly.values()];
     const mean = totals.reduce((s, v) => s + v, 0) / totals.length;
@@ -230,10 +234,17 @@ describe('example fixture — what the app does with it', () => {
   const processed = processRawData(rows, RATES);
 
   it('prices all three plans and finds anomalies (July heat wave, holidays)', () => {
-    expect(processed).toHaveLength(8760);
+    expect(processed).toHaveLength(8904);
     expect(processed.every((d) => d.costTOU >= 0 && d.costULO >= 0)).toBe(true);
     const anomalies = detectAnomalies(processed, processed);
     expect(anomalies.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('opens a source-backed provisional bill at the deterministic early-month cutoff', () => {
+    const projection = projectMonthBill(processed, 'TOU', new Date(2026, 9, 6));
+    expect(projection.ready).toBe(true);
+    expect(projection.monthLabel).toBe('October 2026');
+    expect(projection.monthDaysCovered).toBe(6);
   });
 
   it('produces recurring On-Peak blocks — the Shift Optimizer has a story to tell', () => {
@@ -256,7 +267,7 @@ describe('loadExampleReadings — the fetch path the button uses', () => {
     const result = await loadExampleReadings(fetcher);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.readings).toHaveLength(8760);
+      expect(result.readings).toHaveLength(8904);
       expect(EXAMPLE_DATA_URL).toBe('/samples/example-usage.xml');
     }
   });

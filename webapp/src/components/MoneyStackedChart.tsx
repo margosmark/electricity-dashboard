@@ -41,7 +41,7 @@ import PlanBands from '@/components/PlanBands';
 import type { PeriodPlanAnnotation } from '@/lib/planTimeline';
 // Wave U — every label, badge, aria-label and footnote below speaks the
 // active locale; `t` is a hook, so each component calls useTranslation().
-import { fmtMoney, fmtPercent, planLabel, useTranslation } from '@/i18n';
+import { fmtCents, fmtKwh, fmtMoney, fmtMoney0, fmtNumber, fmtPercent, planLabel, useTranslation } from '@/i18n';
 import {
   calculateTrueBill,
   hasExtraCharges,
@@ -61,8 +61,8 @@ const OVERLAY_LINE_STYLE: { plan: PlanId; dash: string }[] = [
 
 // Signed money through the locale formatter (see BillWaterfall for why).
 const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
-const kwhFmt = (n: number) =>
-  `${n.toLocaleString('en-CA', { maximumFractionDigits: 1 })} kWh`;
+/** kWh with the ACTIVE locale's separators — never a pinned en-CA one. */
+const kwhFmt = (n: number) => fmtKwh(n, 1);
 
 /**
  * A tier this period was never billed on — a TOU period (it has no tiers at
@@ -109,7 +109,7 @@ type ChartRow = {
  */
 const KIND_BADGE: Record<PeriodStackKind, { text: string; cls: string; key: string } | null> = {
   billed: null,
-  open: { text: 'Estimate', cls: 'bg-yellow-400 text-accent-ink border-edge', key: 'money.badge.estimate' },
+  open: { text: 'Estimate', cls: 'bg-accent text-accent-ink border-edge', key: 'money.badge.estimate' },
   gap: { text: 'No bill', cls: 'bg-track border-edge', key: 'money.badge.noBill' },
   derived: { text: 'Billing day', cls: 'bg-track border-edge', key: 'money.badge.billingDay' },
 };
@@ -144,7 +144,7 @@ function CompositionTooltip({
     const meta = COST_SLICE_META[key as keyof typeof COST_SLICE_META];
     const label = meta ? meta.short : key;
     if (mode === 'usage') return `${label}: ${kwhFmt(value)}`;
-    if (mode === 'share') return `${label}: ${value.toFixed(1)}%`;
+    if (mode === 'share') return `${label}: ${fmtPercent(value, 1)}`;
     return `${label}: ${money(value)}`;
   };
 
@@ -252,7 +252,8 @@ export default function MoneyStackedChart({
       charges,
     });
     return estimate?.total ?? null;
-  }, [charges, stacks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  }, [charges, stacks, t]);
 
   const share = useMemo(() => shareBreakdown(stacks), [stacks]);
 
@@ -380,8 +381,8 @@ export default function MoneyStackedChart({
       data-testid={testid}
       aria-pressed={mode === id}
       onClick={() => setMode(id)}
-      className={`min-h-[44px] px-3 md:px-4 border-2 border-edge text-[10px] md:text-xs font-black uppercase ${
-        mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-yellow-400 hover:text-accent-ink'
+      className={`seg min-h-[44px] px-3 md:px-4 border-2 border-edge text-[10px] md:text-xs font-black uppercase ${
+        mode === id ? 'bg-inv text-inv-ink' : 'bg-card text-ink hover:bg-accent hover:text-accent-ink'
       }`}
     >
       {label}
@@ -428,7 +429,9 @@ export default function MoneyStackedChart({
                 className="inline-block w-4 h-4 border-2 border-edge"
                 style={{ background: meta.color }}
               />
-              {mode === 'usage' ? `${meta.short}${t('money.kwhUnit')}` : meta.label}
+              {mode === 'usage'
+                ? `${t(meta.shortKey)}${t('money.kwhUnit')}`
+                : t(meta.labelKey)}
             </span>
           );
         })}
@@ -439,7 +442,7 @@ export default function MoneyStackedChart({
               className="inline-block w-4 h-4 border-2 border-edge"
               style={{ background: COST_SLICE_META.credit.color }}
             />
-            {COST_SLICE_META.credit.label} {t('money.belowLine')}
+            {t(COST_SLICE_META.credit.labelKey)} {t('money.belowLine')}
           </span>
         )}
       </div>
@@ -481,31 +484,31 @@ export default function MoneyStackedChart({
           data-testid="money-share-stats"
           className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 text-[10px] md:text-xs"
         >
-          <div className="bg-yellow-400 text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
+          <div className="bg-accent text-accent-ink border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.shareDeliveryReg')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="non-commodity-pct">
-              {share.nonCommodityPct.toFixed(1)}%
+              {fmtPercent(share.nonCommodityPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.electricityItself')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="commodity-pct">
-              {share.commodityPct.toFixed(1)}%
+              {fmtPercent(share.commodityPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.commoditySplit')}</div>
           </div>
           <div className="bg-inset border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('slice.tax')}</div>
             <div className="text-lg md:text-2xl italic" data-testid="tax-pct">
-              {share.taxPct.toFixed(1)}%
+              {fmtPercent(share.taxPct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">{t('money.ofChargesBeforeRebate')}</div>
           </div>
           <div className="bg-good-soft border-2 border-edge rounded-lg p-2 md:p-3">
             <div className="text-[8px] uppercase">{t('money.rebateGivesBack')}</div>
             <div className="text-lg md:text-2xl italic text-good" data-testid="rebate-pct">
-              {share.rebatePct.toFixed(1)}%
+              {fmtPercent(share.rebatePct, 1)}
             </div>
             <div className="text-[8px] font-bold normal-case">
               {t('money.youNet')} {money(share.payable)} {t('money.acrossPeriods')}
@@ -581,7 +584,7 @@ export default function MoneyStackedChart({
                 unit={!isShare && mode === 'usage' ? ' kWh' : undefined}
                 tickFormatter={
                   !isShare && mode === 'dollars'
-                    ? (v: number | string) => `$${Math.round(Number(v))}`
+                    ? (v: number | string) => fmtMoney0(Number(v))
                     : undefined
                 }
               />
@@ -609,7 +612,7 @@ export default function MoneyStackedChart({
                     isShare ? 'share' : mode === 'usage' ? 'usage' : k === 'credit' ? 'credit' : 'cost'
                   }
                   fill={COST_SLICE_META[k as keyof typeof COST_SLICE_META].color}
-                  stroke="#000"
+                  stroke="var(--edge)"
                   strokeWidth={1}
                 >
                   {/* Cell per bar: billed periods keep the solid colour; any
@@ -622,7 +625,7 @@ export default function MoneyStackedChart({
                           ? COST_SLICE_META[k as keyof typeof COST_SLICE_META].color
                           : `url(#est-hatch-${k})`
                       }
-                      stroke="#000"
+                      stroke="var(--edge)"
                       strokeWidth={r.kind === 'billed' ? 1 : 2}
                       strokeDasharray={r.kind === 'billed' ? undefined : '6 4'}
                     />
@@ -656,7 +659,7 @@ export default function MoneyStackedChart({
                   })}
                   <ReferenceLine
                     y={overlay.actualPerPeriod}
-                    stroke="#059669"
+                    stroke="var(--chart-money-credit)"
                     strokeWidth={3}
                     ifOverflow="extendDomain"
                   />
@@ -709,7 +712,7 @@ export default function MoneyStackedChart({
               return (
                 <span key={plan} className="flex items-center gap-2">
                   <svg width="34" height="10" aria-hidden focusable="false">
-                    <line x1="0" y1="5" x2="34" y2="5" stroke="#000" strokeWidth="3" strokeDasharray={dash} />
+                    <line x1="0" y1="5" x2="34" y2="5" stroke="var(--edge)" strokeWidth="3" strokeDasharray={dash} />
                   </svg>
                   {line.label} {money(line.perPeriod)}
                   {overlay.covered > 1 ? t('money.perPeriodUnit') : ''}
@@ -723,7 +726,7 @@ export default function MoneyStackedChart({
             })}
             <span className="flex items-center gap-2">
               <svg width="34" height="10" aria-hidden focusable="false">
-                <line x1="0" y1="5" x2="34" y2="5" stroke="#059669" strokeWidth="4" />
+                <line x1="0" y1="5" x2="34" y2="5" stroke="var(--chart-money-credit)" strokeWidth="4" />
               </svg>
               {allBilledSilent ? (
                 /* `overlay.actual` is billTotals summed over periods that
@@ -785,12 +788,12 @@ export default function MoneyStackedChart({
           {t('money.shareExplainerA')} <em>{t('money.shareExplainerB')}</em>{' '}
           {t('money.shareExplainerC')}{' '}
           <strong>
-            {share.commodityPct.toFixed(1)}¢ {t('money.shareElectricity')} ·{' '}
-            {share.deliveryPct.toFixed(1)}¢ {t('money.shareDelivery')} ·{' '}
-            {share.regulatoryPct.toFixed(1)}¢ {t('money.shareRegulatory')} ·{' '}
-            {share.taxPct.toFixed(1)}¢ {t('money.shareTax')}
+            {fmtCents(share.commodityPct, 1)} {t('money.shareElectricity')} ·{' '}
+            {fmtCents(share.deliveryPct, 1)} {t('money.shareDelivery')} ·{' '}
+            {fmtCents(share.regulatoryPct, 1)} {t('money.shareRegulatory')} ·{' '}
+            {fmtCents(share.taxPct, 1)} {t('money.shareTax')}
           </strong>
-          {t('money.shareExplainerD', { rebate: share.rebatePct.toFixed(1) })}
+          {t('money.shareExplainerD', { rebate: fmtNumber(share.rebatePct, 1) })}
         </div>
       )}
 
@@ -828,7 +831,7 @@ export default function MoneyStackedChart({
                 <th className="py-1 px-2 uppercase text-right" data-testid="money-est-total-head">
                   <span className="inline-flex items-center gap-1 justify-end">
                     {t('money.estTotal')}
-                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-yellow-400 text-accent-ink border-edge">
+                    <span className="text-[8px] px-1 py-0.5 border-2 rounded bg-accent text-accent-ink border-edge">
                       {t('money.badge.estimate')}
                     </span>
                   </span>
@@ -870,7 +873,7 @@ export default function MoneyStackedChart({
                   return (
                     <td key={k} className="py-1 px-2 text-right tabular-nums">
                       {mode === 'usage'
-                        ? v.toLocaleString('en-CA', { maximumFractionDigits: 1 })
+                        ? fmtNumber(v, 1)
                         : isAbsentTier(k, v)
                           ? '—'
                           : r.kind === 'gap'
@@ -885,7 +888,7 @@ export default function MoneyStackedChart({
                                  do not exist yet. */
                               ? '—'
                               : isShare
-                                ? `${v.toFixed(1)}%`
+                                ? fmtPercent(v, 1)
                                 : money(v)}
                     </td>
                   );

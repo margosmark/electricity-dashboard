@@ -22,7 +22,7 @@
 
 import { type HeatmapData } from '@/lib/energy';
 import { heatColor, splitHeatmap, type HeatmapGroup } from '@/lib/heatmapSplit';
-import { fmtKwh, useTranslation } from '@/i18n';
+import { dayLabel, fmtKwh, useTranslation } from '@/i18n';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -31,7 +31,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-2 mb-2 md:mb-3">
-        <h4 className="text-sm md:text-lg font-black uppercase text-ink">{group.label}</h4>
+        <h4 className="text-sm md:text-lg font-black uppercase text-ink">{t(group.labelKey)}</h4>
         <span className="text-[8px] md:text-[10px] font-black uppercase text-ink-3">
           {t('heatmap.gridMeta', { total: group.dayLabels.length, inView: group.days })}
         </span>
@@ -39,7 +39,7 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
       <div className="overflow-x-auto pb-1">
         <div
           role="grid"
-          aria-label={t('heatmap.gridAria', { group: group.label.toLowerCase() })}
+          aria-label={t('heatmap.gridAria', { group: t(group.labelKey).toLowerCase() })}
           data-testid={`heatmap-grid-${group.id}`}
           className="min-w-[520px] text-ink"
         >
@@ -48,11 +48,16 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
             className="grid grid-cols-[auto_repeat(24,minmax(0,1fr))] gap-1 mb-1 text-ink font-black uppercase"
           >
             <div role="presentation" className="w-10 md:w-12" />
+            {/* "12h" is one token: it must not break inside a 16px track
+                (t_82a4dc08 — breaking it doubled the header row, 15px -> 30px,
+                once body-level word breaking reached these cells). The track
+                itself is minmax(0, 1fr), so the label has always painted at
+                its own width. */}
             {HOURS.map((hour) => (
               <div
                 key={hour}
                 role="columnheader"
-                className="text-center text-[8px] md:text-[10px] text-ink font-black"
+                className="text-center text-[8px] md:text-[10px] text-ink font-black whitespace-nowrap"
               >
                 {hour}{t('heatmap.hourSuffix')}
               </div>
@@ -68,11 +73,11 @@ function HeatGrid({ group, maxAvg }: { group: HeatmapGroup; maxAvg: number }) {
                 role="rowheader"
                 className="w-10 md:w-12 text-[10px] md:text-xs flex items-center font-black uppercase"
               >
-                {group.dayLabels[rowIndex]}
+                {dayLabel(group.dayLabels[rowIndex])}
               </div>
               {row.map((cell, hour) => {
                 const label = t('heatmap.cellLabel', {
-                  day: group.dayLabels[rowIndex],
+                  day: dayLabel(group.dayLabels[rowIndex]),
                   hour: `${String(hour).padStart(2, '0')}:00`,
                   // Two decimals: the a11y name IS the number a sighted user
                   // reads from the hover chip (Wave R's no-hover-only rule).

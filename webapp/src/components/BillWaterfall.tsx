@@ -21,30 +21,30 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 
 import { billWaterfall, type WaterfallKind, type WaterfallStep } from '@/lib/moneyViz';
 import type { UsageSummary } from '@/lib/energy';
-import { fmtMoney, useTranslation } from '@/i18n';
+import { fmtMoney, fmtMoney0, useTranslation } from '@/i18n';
 
 // Signed money through the locale formatter: en-CA prints `$12.34` / `−$12.34`
 // exactly as the hand-rolled version did, fr-CA prints `12,34 $` / `−12,34 $`.
 const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
 const KIND_COLOR: Record<WaterfallKind, string> = {
-  start: '#2563EB',
-  add: '#8B5CF6',
-  credit: '#059669',
-  subtotal: '#FACC15',
+  start: 'var(--chart-money-commodity)',
+  add: 'var(--chart-money-delivery)',
+  credit: 'var(--chart-money-credit)',
+  subtotal: 'var(--chart-money-midpeak)',
   total: 'var(--data-total)',
 };
 
 const KEY_COLOR: Record<string, string> = {
-  commodity: '#2563EB',
-  delivery: '#8B5CF6',
-  regulatory: '#A78BFA',
-  tax: '#F59E0B',
-  credit: '#059669',
-  other: '#FB923C',
-  gap: '#FB923C',
-  drift: '#FB923C',
-  subtotal: '#FACC15',
+  commodity: 'var(--chart-money-commodity)',
+  delivery: 'var(--chart-money-delivery)',
+  regulatory: 'var(--chart-money-regulatory)',
+  tax: 'var(--chart-money-tax)',
+  credit: 'var(--chart-money-credit)',
+  other: 'var(--chart-money-other)',
+  gap: 'var(--chart-money-other)',
+  drift: 'var(--chart-money-other)',
+  subtotal: 'var(--chart-money-midpeak)',
   payable: 'var(--data-total)',
 };
 
@@ -124,7 +124,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
               data-testid={`money-waterfall-pick-${s.startDate}`}
               onClick={() => setSelected(s.startDate)}
               className={`min-h-[44px] px-3 border-2 border-edge rounded-lg text-[10px] uppercase font-black ${
-                s.startDate === (summary?.startDate ?? '') ? 'bg-yellow-400 text-accent-ink' : 'bg-inset'
+                s.startDate === (summary?.startDate ?? '') ? 'bg-accent text-accent-ink' : 'bg-inset'
               }`}
             >
               {s.startDate}
@@ -176,7 +176,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                     stroke="var(--axis)"
                     strokeWidth={2}
                     width={56}
-                    tickFormatter={(v: number | string) => `$${Math.round(Number(v))}`}
+                    tickFormatter={(v: number | string) => fmtMoney0(Number(v))}
                   />
                   <Tooltip
                     cursor={{ fill: 'var(--ink)', opacity: 0.05 }}
@@ -209,7 +209,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                   {/* The seam between stacked steps. `var(--card)` keeps the
                       gap reading as a gap in both themes; the border token would
                       turn it into a light rule across the data on dark. */}
-                  <Bar dataKey="value" stackId="w" stroke="#000" strokeWidth={2}>
+                  <Bar dataKey="value" stackId="w" stroke="var(--edge)" strokeWidth={2}>
                     {rows.map((r) => (
                       <Cell
                         key={r.key}

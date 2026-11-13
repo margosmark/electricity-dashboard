@@ -59,10 +59,10 @@ async function renderLoaded() {
   await waitFor(() => {
     expect(screen.queryByText(/preparing optimizer/i)).not.toBeInTheDocument();
   });
-  // Wave R: the prev/next period controls live on the Usage tab now. The
+  // Wave R: the prev/next period controls live with Usage inside Overview. The
   // window itself (the date inputs and the scope buttons) stays global, so
   // every assertion below holds whichever tab is open.
-  await userEvent.click(screen.getByRole('tab', { name: 'Usage' }));
+  await userEvent.click(screen.getByRole('tab', { name: 'Overview' }));
   await waitFor(() => expect(windows()[0]).not.toBe(''));
 }
 
