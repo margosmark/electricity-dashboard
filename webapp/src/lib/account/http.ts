@@ -369,8 +369,14 @@ export async function readJsonCapped(request: Request, maxBytes = MAX_SYNC_BYTES
   } catch (e) {
     // This string is rendered by the browser — it becomes AccountApiError
     // detail and then say()/notify() copy — so JSON.parse's own message
-    // stays on the server log (security gate F3).
-    console.warn("[account] request body is not valid JSON", e);
+    // must never be echoed. The LOG gets only shape, not text: on node the
+    // unexpected-token message embeds an excerpt of the input, so logging
+    // `e` would print a fragment of a password-bearing body (gate t_a0a48336
+    // item 1; pinned by serverRawException.test.ts).
+    console.warn("[account] request body is not valid JSON", {
+      bytes: text.length,
+      name: e instanceof Error ? e.name : typeof e,
+    });
     return {
       ok: false,
       error: "Request body is not valid JSON.",
