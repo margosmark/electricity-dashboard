@@ -1,5 +1,5 @@
 {
-  "audited_code_commit": "988ea57a7cc283f7edac7da350fc3931635662c1",
+  "audited_code_commit": "8dcec0f41f6269d882518b7e5eeae7f3be39eaed",
   "schemas": 7,
   "global_rows": 171,
   "complex_type_rows": 216,
@@ -8,19 +8,37 @@
   "java_active": 46,
   "java_deprecated": 14,
   "supported_features": 12,
-  "mapped_test_titles": 22,
+  "mapped_test_titles": 24,
   "fixture_references": 14,
   "proposed_acceptance_tests": 13,
   "result": "PASS: inventory reconciliation; NOT standards certification",
-  "checked": "2026-10-12",
+  "checked": "2026-11-13",
+  "refresh": {
+    "checked": "2026-11-13",
+    "origin_main": "8dcec0f41f6269d882518b7e5eeae7f3be39eaed",
+    "reason": "QA gate t_d5078f4f D1: present-tense code claims contradicted by post-Enbridge-wave code (series.ts, commodity.ts)",
+    "previous_audit": {
+      "checked": "2026-10-12",
+      "audited_code_commit": "988ea57a7cc283f7edac7da350fc3931635662c1",
+      "mapped_test_titles": 22,
+      "existing_vitest_tests_passed": 141,
+      "internal_links_checked": 174
+    },
+    "reverified": [
+      "python3 docs/greenbutton/verify.py PASS (171/216/1055 rows, 62 FBs, 24 mapped titles, 13 proposed acceptance tests)",
+      "python3 docs/greenbutton/verify.py --self-test: Ran 14 tests, OK",
+      "6-file vitest: 6 files / 152 tests passed",
+      "internal links: 173 internal targets checked after URL-decoding, 0 missing (this run's counting; 2026-10-12 recorded 174)"
+    ]
+  },
   "existing_vitest": {
     "command": "npm run test -- src/lib/utilitySamples.test.ts src/lib/usageSummary.test.ts src/lib/localTimeParameters.test.ts src/lib/parseDiagnostic.test.ts src/lib/greenbutton/shim.test.ts src/lib/greenbutton/oauthFlow.test.ts",
     "files_passed": 6,
-    "tests_passed": 141,
+    "tests_passed": 152,
     "log": "existing-tests.log"
   },
   "reconciliation_self_tests_passed": 14,
-  "internal_links_checked": 174,
+  "internal_links_checked": 173,
   "review_revision": {
     "checked": "2026-10-12",
     "origin_main_read": "c531ecc842e90b9eef97b08600928e94de6f10a0",

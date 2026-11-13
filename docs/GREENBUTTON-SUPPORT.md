@@ -1,6 +1,6 @@
 # Green Button support: bounded evidence and implementation roadmap
 
-Checked 2026-10-12. Code audited at `origin/main` **988ea57a7cc283f7edac7da350fc3931635662c1** (read-only baseline). This is a third-party electricity consumer interoperability programme, **not certification or a claim of supporting every normative requirement**. No production parser, runtime dependency, existing test or portal registration was changed.
+Checked 2026-10-12; present-tense code claims refreshed 2026-11-13 against `origin/main` **8dcec0f41f6269d882518b7e5eeae7f3be39eaed** (original read-only baseline **988ea57a7cc283f7edac7da350fc3931635662c1**). Claims below reflect the pinned refresh commit; later waves may supersede them without updating this document, so re-verify against the pin before relying on an “Impact today” line. This is a third-party electricity consumer interoperability programme, **not certification or a claim of supporting every normative requirement**. No production parser, runtime dependency, existing test or portal registration was changed.
 
 ## TL;DR
 
@@ -8,7 +8,7 @@ Checked 2026-10-12. Code audited at `origin/main` **988ea57a7cc283f7edac7da350fc
 
 - The reproducible baseline here is GBA’s public **v4.0.20231213 usage/customer mirror**, with v3.3 compatibility and a separately flagged v4.1 customer draft. The v4.1 mirror says **“Published Pending”** and root `version="4.0"`; it is NOT verified as the May 2026 final edition. No v4.1 usage schema exists at that pinned mirror path.
 
-- The current browser accepts readings by local element name and labels them kWh. It implements a useful Wh/multiplier subset, bill subset, one feed clock and a narrow OAuth shim. It does **not** inspect commodity/uom/kind/accumulation/flow, preserve duration or fully resolve the Atom graph. Consumer electricity correctness and explicit non-electricity diagnostics come first.
+- The current browser accepts readings by local element name and inspects their ReadingType metadata: `webapp/src/lib/greenbutton/series.ts` `classifySeries` (wired into the main parser in `webapp/src/lib/energy.ts`) reads commodity/uom/kind/accumulation/flow and refuses what must not be converted — non-electricity commodities, register and spot accumulations, non-energy quantities, reverse/combined flow, unconvertible power — with explicit reasons surfaced as series notes (`SeriesNotesNotice` + `i18n/seriesNote.ts`); `webapp/src/lib/commodity.ts` keeps gas volume in m³ and never kWh. Readings with no ReadingType at all take an announced legacy Wh assumption (a `legacy-assumption` note), never a silent label. It implements a useful unit subset (Wh/multiplier, uom 72, joules, W×interval duration), bill subset, one feed clock and a narrow OAuth shim. It does **not** put interval duration on data points or fully resolve the Atom graph. Consumer electricity correctness and explicit non-electricity diagnostics come first.
 
 - **Do not request PII, gas/water or other services for “full coverage”.** Keep `FB=1_3_4_5` as the current configured default; capability/profile review may refine needed usage/security terms, but never add unrelated consent scopes. Gas/water/temperature must remain distinct typed resources or explicit unsupported diagnostics, never kWh/Ontario tariffs. No new non-electric dashboard inferred.
 
@@ -46,7 +46,7 @@ Official mutable-page retrieval receipts are in [source-receipts.json](greenbutt
 | F09 — fully parsed+used | Refresh rotation/rejection: Persist rotated refresh; invalid_grant or fresh-token rejection clears locally; no remote revoke claimed | `webapp/src/lib/greenbutton/oauthFlow.test.ts` — persists the rotated refresh token before returning<br>`webapp/src/lib/greenbutton/oauthFlow.test.ts` — survives rotation plus a one-shot resource 401 (retry uses the rotated refresh token)<br>`webapp/src/lib/greenbutton/oauthFlow.test.ts` — clears the stored tokens and reports grant_revoked when the utility says no | [G10](#g10) |
 | F10 — fully parsed+used | Authorization resource pointer: resourceURI extraction and URI-base resolution ONLY; other Authorization XML fields ignored | `webapp/src/lib/greenbutton/oauthFlow.test.ts` — resolves the relative resourceURI the Authorization resource advertises and pipes the feed | [G08](#g08) |
 | F11 — fully parsed+used | CMD bounded notification / 202: Notification change-marker only; 202 reports data_pending; no BatchList item semantics/polling claimed | `webapp/src/lib/greenbutton/oauthFlow.test.ts` — accepts a BatchList at the registered token path and only records a timestamp<br>`webapp/src/lib/greenbutton/oauthFlow.test.ts` — surfaces an async 202 batch as data_pending instead of hanging | [G09](#g09) |
-| F12 — fully parsed+used | XML diagnostics: Malformed/empty/HTML/entity/missing-readings diagnostic only; no unsupported resource/commodity diagnostic | `webapp/src/lib/parseDiagnostic.test.ts` — names external entities instead of repeating the parser error<br>`webapp/src/lib/parseDiagnostic.test.ts` — explains a feed with entries but no readings | [G07](#g07) |
+| F12 — fully parsed+used | XML diagnostics: Malformed/empty/HTML/entity/missing-readings diagnostics (`parseDiagnostic`); refused series — unsupported commodity, register/spot, quantity, flow — reach the user as series notes (`SeriesNotesNotice` + `i18n/seriesNote.ts`) | `webapp/src/lib/parseDiagnostic.test.ts` — names external entities instead of repeating the parser error<br>`webapp/src/lib/parseDiagnostic.test.ts` — explains a feed with entries but no readings<br>`webapp/src/lib/greenbutton/series.test.ts` — refuses natural gas (commodity 7) and potable water (commodity 9)<br>`webapp/src/components/SeriesNotesNotice.test.tsx` — prints every refusal, in order, when the feed carried several | [G07](#g07) |
 
 Local command (executed, not hypothetical):
 
@@ -56,9 +56,9 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run test -- src/lib/utilitySamples.test.ts src/lib/usageSummary.test.ts src/lib/localTimeParameters.test.ts src/lib/parseDiagnostic.test.ts src/lib/greenbutton/shim.test.ts src/lib/greenbutton/oauthFlow.test.ts
 ```
 
-**Result: 6 files / 141 tests passed** on the audited commit. Twenty-two exact test titles are mapped to twelve supported feature slices. These tests prove those assertions only. The Alectra fragment test currently asserts raw `value/1000` without ReadingType; it is **not** a verified kWh interpretation. Existing bill-test titles say “real Oakville” but their committed inputs are reconstructed synthetics; not new real XML evidence. No real utility end-to-end CMD run was performed.
+**Result: 6 files / 152 tests passed** on the refreshed baseline (141 at the 2026-10-12 audit). Twenty-four exact test titles are mapped to twelve supported feature slices. These tests prove those assertions only. The Alectra fragment test currently asserts raw `value/1000` without ReadingType; it is **not** a verified kWh interpretation. Existing bill-test titles say “real Oakville” but their committed inputs are reconstructed synthetics; not new real XML evidence. No real utility end-to-end CMD run was performed.
 
-Code evidence: [energy.ts](../webapp/src/lib/energy.ts) 338–647 (grouping/scaling), 1765–1995 (bill subset/first clock); [parseDiagnostic.ts](../webapp/src/lib/parseDiagnostic.ts); [config.ts](../webapp/src/lib/greenbutton/config.ts) 60–71 (scope); [oauth.ts](../webapp/src/lib/greenbutton/oauth.ts); [sync.ts](../webapp/src/lib/greenbutton/sync.ts); [espi.ts](../webapp/src/lib/greenbutton/espi.ts); [notification](../webapp/src/app/greenbutton/notify/%5Btoken%5D/route.ts). [Legacy Python parser](../parser.py) 125–205 assumes W × duration and Toronto; it is not the browser parser and is NOT ESPI-wide. `tests/test_parser.py` tests that legacy model, not arbitrary ESPI quantities.
+Code evidence: [energy.ts](../webapp/src/lib/energy.ts) `parseGreenButtonFeed` / `parseGreenButtonUsagePoints` (grouping) and `parseUsageSummaryNodes` / `parseLocalTimeNode` (bill subset/first clock); [series.ts](../webapp/src/lib/greenbutton/series.ts) `classifySeries` (per-reading unit conversion and refusal classification); [parseDiagnostic.ts](../webapp/src/lib/parseDiagnostic.ts); [config.ts](../webapp/src/lib/greenbutton/config.ts) 60–71 (scope); [oauth.ts](../webapp/src/lib/greenbutton/oauth.ts); [sync.ts](../webapp/src/lib/greenbutton/sync.ts); [espi.ts](../webapp/src/lib/greenbutton/espi.ts); [notification](../webapp/src/app/greenbutton/notify/%5Btoken%5D/route.ts). [Legacy Python parser](../parser.py) 125–205 assumes W × duration and Toronto; it is not the browser parser and is NOT ESPI-wide. `tests/test_parser.py` tests that legacy model, not arbitrary ESPI quantities.
 
 ## Complete resource inventory (bounded v4.0 baseline)
 
@@ -240,7 +240,7 @@ Evidence: NAESB retail index; public ESPI landing; mirror headers — [source 1]
 <a id="g01"></a>
 ### G01 / P1 — Typed quantity and unit gate
 
-Impact today: Browser labels every nonnegative IntervalReading as kWh; ignores uom, commodity, kind, accumulationBehaviour and flowDirection. Python instead assumes W and integrates guessed/default duration. Arbitrary power/reactive/register/gas/water may silently be billed as electricity.
+Impact today: The browser no longer labels every IntervalReading as kWh — `series.ts` `classifySeries` (wired into the main parser in `energy.ts`) reads commodity, uom, kind, accumulationBehaviour and flowDirection and refuses non-electricity commodities, register and spot accumulations, non-energy quantities, reverse/combined flow and unconvertible power with explicit reasons surfaced as series notes, while `commodity.ts` routes gas to `energy_gas_v2` as m³ (gas priced as electricity is unrepresentable in the data model). The Python parser still assumes W and integrates a guessed/default duration, and the full enum-combination matrix remains unimplemented.
 
 Acceptance test to implement (NOT present yet): `typed-quantities`. Fixture recipe: `quantity-matrix` in [fixture-manifest.json](greenbutton/fixture-manifest.json).
 
@@ -262,7 +262,7 @@ Evidence: RFC4287/RFC3986; espi.xsd IdentifiedObject/MeterReading/UsagePoint —
 <a id="g03"></a>
 ### G03 / P1 — Durations and per-meter clocks
 
-Impact today: DataPoint drops duration; inferred cadence is not interval occupancy. Browser ignores ReadingType.intervalLength and IntervalBlock.interval. Single LocalTimeParameters selected document-wide.
+Impact today: DataPoint still carries only timestamp and usage — no per-point duration — and cadence is not interval occupancy. The browser now reads the reading's own duration, the IntervalBlock's interval and ReadingType.intervalLength in `series.ts` (own duration wins, single-reading block interval next, intervalLength as the ReadingType fallback), but a single feed-wide LocalTimeParameters is still the only clock and gap/occupancy windows remain unimplemented.
 
 Acceptance test to implement (NOT present yet): `interval-duration-dst`. Fixture recipe: `duration-dst` in [fixture-manifest.json](greenbutton/fixture-manifest.json).
 
@@ -273,7 +273,7 @@ Evidence: espi.xsd DateTimeInterval/TimeConfiguration — [source 1](https://git
 <a id="g04"></a>
 ### G04 / P1 — Quality, accumulation and channel qualifiers
 
-Impact today: ReadingQuality/defaultQuality, consumptionTier, tou, cpp, phase, dataQualifier and timeAttribute discarded; estimated or cumulative values look measured and independent.
+Impact today: ReadingQuality/defaultQuality, consumptionTier, tou, cpp, phase and timeAttribute discarded (dataQualifier is now retained in series metadata); estimated or cumulative values look measured and independent.
 
 Acceptance test to implement (NOT present yet): `reading-quality-channel`. Fixture recipe: `quality-channel` in [fixture-manifest.json](greenbutton/fixture-manifest.json).
 
@@ -306,7 +306,7 @@ Evidence: espi.xsd global elements and complex types — [source 1](https://gith
 <a id="g07"></a>
 ### G07 / P1 — Unknown extensions and safe reporting
 
-Impact today: Output retains only groups/summaries/one clock. Unsupported resources/extensions vanish; diagnostics describe lack of readings, not ignored data.
+Impact today: Output is groups/summaries/one clock plus `feed.notes`. Unsupported resources and unknown extensions still vanish without QName-aware counts, but refusals are no longer silent: `classifySeries` refusals reach the dashboard as series notes.
 
 Acceptance test to implement (NOT present yet): `unknown-extension-report`. Fixture recipe: `extensions-safe` in [fixture-manifest.json](greenbutton/fixture-manifest.json).
 

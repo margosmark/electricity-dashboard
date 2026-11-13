@@ -182,7 +182,7 @@
     "id": "F12",
     "title": "XML diagnostics",
     "status": "fully parsed+used",
-    "supported_scope": "Malformed/empty/HTML/entity/missing-readings diagnostic only; no unsupported resource/commodity diagnostic",
+    "supported_scope": "Malformed/empty/HTML/entity/missing-readings diagnostics (parseDiagnostic); refused series — unsupported commodity, register/spot, quantity, flow — reach the user as series notes (SeriesNotesNotice + i18n/seriesNote.ts)",
     "existing_tests": [
       {
         "path": "webapp/src/lib/parseDiagnostic.test.ts",
@@ -191,6 +191,14 @@
       {
         "path": "webapp/src/lib/parseDiagnostic.test.ts",
         "title": "explains a feed with entries but no readings"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/series.test.ts",
+        "title": "refuses natural gas (commodity 7) and potable water (commodity 9)"
+      },
+      {
+        "path": "webapp/src/components/SeriesNotesNotice.test.tsx",
+        "title": "prints every refusal, in order, when the feed carried several"
       }
     ],
     "gap": "G07"
