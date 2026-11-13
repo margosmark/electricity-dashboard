@@ -74,16 +74,19 @@ const FIXTURE_BILL_NOTE_KEYS: Readonly<Record<string, string>> = {
  * directory's README).
  *
  * WHY A GAS BILL IS IN AN ELECTRICITY APP'S CATALOG
- * `ActualBillPanel` prints whatever itemized `UsageSummary` the imported file
- * carries — `classifyBillLine()` deliberately keys off the raw note and sends
- * an unknown wording to `other` rather than dropping it — so an Ontario
- * household that imports its Enbridge feed reaches the same two surfaces an
- * Oakville bill does (the bill panel and the plan-timeline evidence line), and
- * on the French page every one of those 30 names printed English. Seven of the
- * feed's names already sat in the table above, word for word (`Amount Due`,
- * `Due Date`, the two read dates, both meter reads, the days-in-bill-period
- * line), which is the evidence that the vocabulary is shared across
- * commodities rather than gas-specific.
+ * `ActualBillPanel` renders whatever itemized `UsageSummary` the imported file
+ * carries: a gas summary routes to `GasBillPeriodCard` (shipped with the gas
+ * tabs, f65e778 — a curated card: charges, collapsed zero-lines, rates,
+ * volume, facts) and an electric one to the line list, and both print the
+ * line names through `billNoteText` — `classifyBillLine()` deliberately keys
+ * off the raw note and sends an unknown wording to `other` rather than
+ * dropping it. So an Ontario household that imports its Enbridge feed reaches
+ * the same surfaces an Oakville bill does (the bill card and the plan-timeline
+ * evidence line), and on the French page every one of those 30 names printed
+ * English. Seven of the feed's names already sat in the table above, word for
+ * word (`Amount Due`, `Due Date`, the two read dates, both meter reads, the
+ * days-in-bill-period line), which is the evidence that the vocabulary is
+ * shared across commodities rather than gas-specific.
  *
  * Same rule as the block above: the EN value is the file's own wording byte
  * for byte, and `billNote.test.tsx`'s "invents no vocabulary" ratchet compares
