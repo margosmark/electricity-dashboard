@@ -99,13 +99,20 @@ describe('gas surfaces — EN (spec §5 hooks + DoD contracts)', () => {
     expect(skips[0].textContent).toContain('OEB electricity rates do not price gas');
   });
 
-  it('volume group: billed, unadjusted, meter reads — three labeled numbers', () => {
+  it('volume group: billed, unadjusted, previous usage, meter reads — four labeled numbers', () => {
     renderPanel();
     const first = screen.getAllByTestId('gas-period')[0];
     expect(within(first).getByTestId('gas-volume-billed').getAttribute('data-m3')).toBe('429.0');
     expect(within(first).getByTestId('gas-volume-reads').textContent).toContain('1,175.000');
     expect(within(first).getByTestId('gas-volume-reads').textContent).toContain('427');
     expect(within(first).getByTestId('gas-volume-unadjusted').textContent).toContain('426.569');
+    // The feed states Previous Usage consumption (0 in every period): printed
+    // as reported, labelled with the file's own wording — the line used to
+    // paint nowhere at all.
+    const previous = within(first).getByTestId('gas-volume-previous');
+    expect(previous.textContent).toContain('Previous Usage consumption');
+    expect(previous.textContent).toContain('as reported by the feed');
+    expect(previous.textContent).toContain('0 m³');
   });
 
   it('interval states: 4 present, 1 stub, 5 absent — absence says so, never 0', () => {

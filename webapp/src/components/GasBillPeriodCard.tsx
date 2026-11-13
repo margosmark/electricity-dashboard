@@ -9,7 +9,8 @@
  *   → money group (the two feed figures + their difference, always three rows)
  *   → charges list (listed, never summed, zero-line disclosure)
  *   → rates group (¢/m³, never dollars, never summed)
- *   → volume group (billed / unadjusted / meter reads / interval state A-B-C)
+ *   → volume group (billed / unadjusted / previous usage / meter reads /
+ *     interval state A-B-C)
  *   → bill facts (dates, the feed's own days line, factors as reported)
  *
  * Every figure is read from `gasBillUi` — the feed's own lines, never a
@@ -348,7 +349,15 @@ export default function GasBillPeriodCard({
                     className={`flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-1.5 md:py-2 rounded-md border-l-8 ${CLASS_STYLE[cls]} text-[10px] md:text-[11px] text-ink-3 font-medium`}
                   >
                     <span className="min-w-0">
-                      <span className="uppercase break-words" data-bill-note={item.note}>
+                      {/* Same contract as the visible list above: the label is
+                          localized, the file's own wording rides the node and
+                          the tooltip — a collapsed line must stay as checkable
+                          as a listed one. */}
+                      <span
+                        className="uppercase break-words"
+                        data-bill-note={item.note}
+                        title={lineName === item.note ? undefined : item.note}
+                      >
                         {lineName}
                       </span>
                     </span>
@@ -419,6 +428,32 @@ export default function GasBillPeriodCard({
             value={
               <>
                 {fmtNumberAuto(volume.unadjusted, 3)} {tt('gasBill.m3Unit')}
+              </>
+            }
+          />
+        )}
+        {/* The feed's own prior-period figure, as reported: this document
+            states it (as 0) in every period and no other group printed it, so
+            a reader could not check the line at all. The caption is what keeps
+            the stated 0 from reading as our claim that nobody used gas — the
+            number is the file's, never derived and never used as this
+            period's volume. Absent line → no row (see `gasVolume`). */}
+        {volume.previousUsage !== null && (
+          <LineRow
+            style={style}
+            testId="gas-volume-previous"
+            className="font-medium"
+            label={
+              <>
+                {billNoteText('Previous Usage consumption', translate)}
+                <span className={`ml-2 text-[9px] normal-case font-medium ${style.muted}`}>
+                  {tt('gasBill.asReported')}
+                </span>
+              </>
+            }
+            value={
+              <>
+                {fmtNumberAuto(volume.previousUsage, 3)} {tt('gasBill.m3Unit')}
               </>
             }
           />

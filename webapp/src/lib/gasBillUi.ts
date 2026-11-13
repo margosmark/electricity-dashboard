@@ -336,6 +336,13 @@ export type GasVolume = {
   /** Previous → Current meter read and their difference (427 for P1). A
    *  third number, labeled as such — never swapped for billed or interval. */
   reads: { previous: number; current: number; delta: number } | null;
+  /** `Previous Usage consumption` — the feed's OWN prior-period figure,
+   *  stated as 0 in every committed Enbridge document (the published sample
+   *  and all ten synthetic periods). Shown as reported, with the feed's own
+   *  label, because a line the document carries and no group printed was a
+   *  line a reader could not check at all; it is never used as this period's
+   *  volume, and null when the line is absent (no row, never a made-up 0). */
+  previousUsage: number | null;
 };
 
 export function gasVolume(summary: UsageSummary): GasVolume {
@@ -343,5 +350,7 @@ export function gasVolume(summary: UsageSummary): GasVolume {
     billed: summary.volume?.scaled ?? null,
     unadjusted: usageUnadjusted(summary),
     reads: meterReadVolume(summary),
+    previousUsage:
+      lineByName(summary, 'Previous Usage consumption')?.measurement?.scaled ?? null,
   };
 }
