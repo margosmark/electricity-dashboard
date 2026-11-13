@@ -48,6 +48,13 @@ export type MoneyPanelProps = {
   openPeriod: { start: number; end: number } | null;
   /** The user's billing-day setting — the no-bills fallback for the bill date. */
   billingDay: number;
+  /**
+   * The GAS section is on screen (t_a775c2a3 — AC2): the electric cards in
+   * this panel (accrual curve, true-bill estimate + add-on fields, EV card)
+   * stay unmounted, so a gas surface never prices or persists electric math.
+   * MoneySection itself branches on isGasFeed(summaries) → the gas table.
+   */
+  gasView?: boolean;
 };
 
 export default function MoneyPanel({
@@ -61,6 +68,7 @@ export default function MoneyPanel({
   projection,
   openPeriod,
   billingDay,
+  gasView = false,
 }: MoneyPanelProps) {
   /**
    * When this open period will be billed through — the accrual's pace line
@@ -81,32 +89,41 @@ export default function MoneyPanel({
 
   return (
     <div id="panel-money" role="tabpanel" aria-labelledby="tab-money" className="space-y-6 md:space-y-10" data-testid="tab-panel-money">
-      {/* Accrue-as-you-go: where the open period is heading, right now. */}
-      <BillAccrualCurve
-        rows={allData}
-        plan={plan}
-        period={openPeriod}
-        projection={projection}
-        summaries={summaries}
-        billDate={billDate}
-      />
+      {/* Accrue-as-you-go: where the open period is heading, right now — an
+          electric accrual, so never while the Gas section is on screen. */}
+      {!gasView && (
+        <BillAccrualCurve
+          rows={allData}
+          plan={plan}
+          period={openPeriod}
+          projection={projection}
+          summaries={summaries}
+          billDate={billDate}
+        />
+      )}
 
-      {/* Wave O — the bill, itemized and compared. */}
+      {/* Wave O — the bill, itemized and compared. Under gas this resolves to
+          the gas-honest table (MoneySection branches on isGasFeed), fed NO
+          electric rows — see allData at the call site (t_a775c2a3). */}
       <MoneySection summaries={summaries} allData={allData} plan={plan} />
 
-      {/* What your window would actually come to once the ride-alongs are on. */}
-      <TrueBillEstimate
-        plan={plan}
-        startDate={startDate}
-        endDate={endDate}
-        windowData={filteredData}
-        summaries={summaries}
-        allData={allData}
-      />
+      {/* What your window would actually come to once the ride-alongs are on.
+          Electric rows priced per kWh, and its prefill WRITES extra_charges
+          from summaries+allData — never mounted on a gas surface. */}
+      {!gasView && (
+        <TrueBillEstimate
+          plan={plan}
+          startDate={startDate}
+          endDate={endDate}
+          windowData={filteredData}
+          summaries={summaries}
+          allData={allData}
+        />
+      )}
 
       {/* EV charging scenario — the household's own kWh, priced three ways.
-          Never on a gas dataset (epic DoD 4). */}
-      {!isGasFeed(summaries) && <EvScenarioCard rows={allData} rates={rates} plan={plan} />}
+          Never on a gas dataset (epic DoD 4), gas SECTION included. */}
+      {!gasView && !isGasFeed(summaries) && <EvScenarioCard rows={allData} rates={rates} plan={plan} />}
     </div>
   );
 }

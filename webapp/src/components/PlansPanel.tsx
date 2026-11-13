@@ -54,6 +54,14 @@ export type PlansPanelProps = {
   summaries: UsageSummary[];
   /** Every priced reading — a billing period is wider than the window. */
   allData: ProcessedPoint[];
+  /**
+   * The GAS section is on screen (t_a775c2a3 — AC2). `isGasFeed(summaries)`
+   * alone misses the gas section with NO stored bills (an interval-only gas
+   * file), where this panel would otherwise paint the full electric plan
+   * surface from the electric `allData`. The gas branch below — the actual
+   * bill only — is the one and only surface under gas.
+   */
+  gasView?: boolean;
 };
 
 export default function PlansPanel({
@@ -69,12 +77,13 @@ export default function PlansPanel({
   verification,
   summaries,
   allData,
+  gasView = false,
 }: PlansPanelProps) {
   const { t } = useTranslation();
   // Commodity 7 has no plan to compare against — no ¢/kWh basis, no TOU
   // windows, no hindsight repricing (epic DoD 4: no plan-comparison
   // surfaces on gas data). The tab therefore shows ONLY the actual bill.
-  if (isGasFeed(summaries)) {
+  if (gasView || isGasFeed(summaries)) {
     return (
       <div
         id="panel-plans"

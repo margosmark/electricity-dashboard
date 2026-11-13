@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { parseGreenButtonFeed, type UsagePointGroup, type UsageSummary } from '@/lib/energy';
 import { isGasFeed } from '@/lib/gasBillUi';
-import { countUsableRows, readStoredBillFeed, USAGE_SUMMARIES_KEY } from './useDashboard';
+import { countUsableRows, readStoredBillFeed, readStoredGasBillFeed, USAGE_SUMMARIES_KEY } from './useDashboard';
 
 const read = (name: string): string =>
   readFileSync(join(__dirname, '../../tests/fixtures', name), 'utf8');
@@ -86,12 +86,22 @@ describe('readStoredBillFeed — legacy summaries with no `volume` key', () => {
   });
 
   it('a stored gas feed (parser-written, volume present) is unchanged', () => {
+    // A browser written BEFORE the commodity split holds gas periods in the
+    // legacy `usage_summaries` key. The read-side partition must surface them
+    // on the gas side untouched — nothing dropped, nothing re-typed.
     const gas = parseGreenButtonFeed(read('enbridge-gas-synthetic.xml')).summaries;
     localStorage.setItem(USAGE_SUMMARIES_KEY, JSON.stringify(gas));
 
-    const feed = readStoredBillFeed();
-    expect(feed.summaries).toHaveLength(gas.length);
-    expect(feed.summaries.every((s) => s.volume !== null)).toBe(true);
-    expect(isGasFeed(feed.summaries)).toBe(true);
+    const gasFeed = readStoredGasBillFeed();
+    expect(gasFeed.summaries).toHaveLength(gas.length);
+    expect(gasFeed.summaries.every((s) => s.volume !== null)).toBe(true);
+    expect(isGasFeed(gasFeed.summaries)).toBe(true);
+
+    // The electric view reads the same bytes as EMPTY, not as a gas feed:
+    // `volume != null` is not the discriminator, and no m³ may surface where
+    // kWh is priced.
+    const electric = readStoredBillFeed();
+    expect(electric.summaries).toHaveLength(0);
+    expect(isGasFeed(electric.summaries)).toBe(false);
   });
 });

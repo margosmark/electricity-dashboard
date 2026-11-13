@@ -757,17 +757,22 @@ describe('summary-only reload (defect R1)', () => {
       new File([USAGE_XML], 'enbridge-gas-synthetic.xml', { type: 'text/xml' }),
     );
 
-    // The import landed: modal gone, ten summaries stored.
+    // The import landed: modal gone, ten GAS summaries stored — under the
+    // gas key (t_8a9038d6). The electric key is not addressed by a gas
+    // upload at all, which is what keeps both imports alive in one browser.
     await waitFor(() => {
-      const raw = localStorage.getItem('usage_summaries');
+      const raw = localStorage.getItem('gas_usage_summaries');
       expect(raw).not.toBeNull();
       expect(JSON.parse(raw as string)).toHaveLength(10);
     });
     expect(screen.queryByTestId('upload-modal')).toBeNull();
-    // The exact precondition QA accepted: bills in storage, NO electric points.
+    // The exact precondition QA accepted, in the split key space: gas bills
+    // + gas intervals stored, NO electric points written.
+    const gas = localStorage.getItem('energy_gas_v2');
+    expect(gas).not.toBeNull();
+    expect(JSON.parse(gas as string).points).toHaveLength(5);
     const energy = localStorage.getItem('energy_data_v2');
-    expect(energy).not.toBeNull();
-    expect(JSON.parse(energy as string).points).toHaveLength(0);
+    expect(energy).toBeNull(); // a gas upload never writes the electric key
 
     view.unmount();
   };

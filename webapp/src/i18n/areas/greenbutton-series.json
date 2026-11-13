@@ -5,7 +5,6 @@
     "gbseries.reasons": "Why some of this point was left out:",
     "gbseries.notice.heading": "Some readings weren’t included in priced consumption",
     "gbseries.notice.dismiss": "Dismiss",
-
     "gbseries.pointUnidentified": "(unidentified)",
     "gbseries.point.label": "UsagePoint {id}",
     "gbseries.point.unidentified": "Meter",
@@ -23,7 +22,6 @@
     "gbseries.note.combinedConsumptionSeries": "UsagePoint {point} carries {count} separate consumption series ({labels}). Their readings are combined in this group; every series is listed separately on the point so a picker or diagnostics panel can tell them apart.",
     "gbseries.note.combinedDuplicateResolution": "UsagePoint {point} carries {count} consumption series that describe overlapping periods ({labels}). They repeat the same consumption at different sizes, so summing them would price the same energy more than once; only the finest series ({keeper}) was priced, and the {refused} reading(s) of the others that fall inside its coverage were refused.",
     "gbseries.note.combinedDuplicateResolutionPartial": "UsagePoint {point} carries {count} consumption series that describe overlapping periods ({labels}). They repeat the same consumption at different sizes, so summing them would price the same energy more than once; only the finest series ({keeper}) was priced, and the {refused} reading(s) of the others that fall inside its coverage were refused. The {kept} reading(s) of theirs that lie outside that coverage were still priced.",
-
     "gbseries.refusal.register": "is a register reading (its ESPI accumulationBehaviour is a cumulative, bulk or summation quantity), not an interval increment: registers must be differenced against a known reset, and no such contract is available here.",
     "gbseries.refusal.spot": "is a spot measurement (indicating, instantaneous or time-delayed), so it has no interval it could be an amount of energy for.",
     "gbseries.refusal.otherCommodity": "measures a non-electricity commodity (gas, water, steam, refuse …), so it must never be priced with electricity rates.",
@@ -31,7 +29,9 @@
     "gbseries.refusal.reverseFlow": "is exported (received) energy — adding it to consumption would overstate usage.",
     "gbseries.refusal.combinedFlow": "combines directions (net, total or a quadrant), so it belongs to neither the import nor the export stream.",
     "gbseries.refusal.unconvertible": "cannot be converted to energy with the metadata the feed provides.",
-    "gbseries.refusal.unresolvedReadingType": "has no ReadingType that could be tied to it, although the document declares ReadingTypes for other series: its unit, scale and interval are unknown, so its values were kept but not converted."
+    "gbseries.refusal.unresolvedReadingType": "has no ReadingType that could be tied to it, although the document declares ReadingTypes for other series: its unit, scale and interval are unknown, so its values were kept but not converted.",
+    "gbseries.notice.repeatCount": "×{count}",
+    "gbseries.notice.showAll": "Show every note ({count})"
   },
   "fr": {
     "gbseries.count": "{count} séries de relevés",
@@ -39,7 +39,6 @@
     "gbseries.reasons": "Pourquoi une partie de ce point a été écartée :",
     "gbseries.notice.heading": "Certains relevés n'ont pas été inclus dans la consommation évaluée",
     "gbseries.notice.dismiss": "Masquer",
-
     "gbseries.pointUnidentified": "(non identifié)",
     "gbseries.point.label": "Point de consommation {id}",
     "gbseries.point.unidentified": "Compteur",
@@ -57,7 +56,6 @@
     "gbseries.note.combinedConsumptionSeries": "Le point {point} porte {count} séries de consommation distinctes ({labels}). Leurs relevés sont combinés dans ce groupe ; chaque série est listée séparément sur le point pour qu'un sélecteur ou un panneau de diagnostic puisse les distinguer.",
     "gbseries.note.combinedDuplicateResolution": "Le point {point} porte {count} séries de consommation qui décrivent des périodes chevauchantes ({labels}). Elles répètent la même consommation à des tailles différentes ; les additionner évaluerait plusieurs fois la même énergie. Seule la série la plus fine ({keeper}) a été évaluée, et les {refused} relevé(s) des autres qui tombent dans sa couverture ont été refusés.",
     "gbseries.note.combinedDuplicateResolutionPartial": "Le point {point} porte {count} séries de consommation qui décrivent des périodes chevauchantes ({labels}). Elles répètent la même consommation à des tailles différentes ; les additionner évaluerait plusieurs fois la même énergie. Seule la série la plus fine ({keeper}) a été évaluée, et les {refused} relevé(s) des autres qui tombent dans sa couverture ont été refusés. Les {kept} relevé(s) de ces séries qui se trouvent hors de cette couverture ont tout de même été évalués.",
-
     "gbseries.refusal.register": "elle est un relevé de registre (son accumulationBehaviour ESPI est une quantité cumulative, globale ou de sommation), et non un incrément par intervalle : un registre doit être différencié par rapport à une remise à zéro connue, et aucun contrat de ce type n'est disponible ici.",
     "gbseries.refusal.spot": "elle est une mesure ponctuelle (indicative, instantanée ou différée), donc elle n'a aucun intervalle dont elle pourrait être une quantité d'énergie.",
     "gbseries.refusal.otherCommodity": "elle mesure une source autre que l'électricité (gaz, eau, vapeur, déchets …), donc elle ne doit jamais être évaluée avec des tarifs d'électricité.",
@@ -65,6 +63,8 @@
     "gbseries.refusal.reverseFlow": "elle est de l'énergie exportée (reçue) — l'ajouter à la consommation gonflerait l'utilisation.",
     "gbseries.refusal.combinedFlow": "elle combine des sens (net, total ou un quadrant), donc elle n'appartient ni au flux d'importation ni au flux d'exportation.",
     "gbseries.refusal.unconvertible": "elle ne peut pas être convertie en énergie avec les métadonnées que fournit le flux.",
-    "gbseries.refusal.unresolvedReadingType": "elle n'a aucun ReadingType pouvant y être rattaché, même si le document en déclare pour d'autres séries : son unité, son échelle et son intervalle sont inconnus, donc ses valeurs ont été conservées mais non converties."
+    "gbseries.refusal.unresolvedReadingType": "elle n'a aucun ReadingType pouvant y être rattaché, même si le document en déclare pour d'autres séries : son unité, son échelle et son intervalle sont inconnus, donc ses valeurs ont été conservées mais non converties.",
+    "gbseries.notice.repeatCount": "×{count}",
+    "gbseries.notice.showAll": "Afficher toutes les notes ({count})"
   }
 }

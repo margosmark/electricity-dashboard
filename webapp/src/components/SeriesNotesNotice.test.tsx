@@ -78,4 +78,42 @@ describe('SeriesNotesNotice', () => {
     await userEvent.setup().click(button);
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  /* Aggregation (t_8a9038d6): Mark's gas upload printed the same volume
+     sentence once per series — a wall of 23 lines that buried everything
+     else. Repeats collapse to ONE line with a count; nothing is hidden. */
+  it('prints an identical sentence once with ×N, and lists every note behind a disclosure', () => {
+    const VOLUME = 'This series is natural gas volume (m³) and was not priced as electricity.';
+    const repeated: SeriesNote = { code: 'volume-series', detail: VOLUME };
+    render(
+      <SeriesNotesNotice
+        notes={[repeated, { ...repeated }, { ...repeated }, VARH]}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    // Two distinct sentences → two lines, the repeated one counted.
+    const lines = screen.getAllByTestId('series-note-detail');
+    expect(lines).toHaveLength(2);
+    expect(lines[0].textContent).toContain(VOLUME);
+    expect(lines[0].textContent).toContain('×3');
+    expect(screen.getByTestId('series-note-count').textContent).toBe('×3');
+    // The distinct refusal still prints verbatim on its own line.
+    expect(lines[1].textContent).toBe(VARH_DETAIL);
+
+    // The raw record is one click away — every note, in feed order.
+    const raw = screen.getAllByTestId('series-note-raw');
+    expect(raw).toHaveLength(4);
+    expect(raw.map((n) => n.textContent)).toEqual([
+      VOLUME, VOLUME, VOLUME, VARH_DETAIL,
+    ]);
+    expect(screen.getByTestId('series-notes-details')).toBeInTheDocument();
+  });
+
+  it('shows no disclosure when nothing repeated (one line per distinct note)', () => {
+    render(<SeriesNotesNotice notes={[VARH, GAS, AMBIGUOUS]} onDismiss={vi.fn()} />);
+    expect(screen.queryByTestId('series-notes-details')).toBeNull();
+    expect(screen.queryByTestId('series-note-count')).toBeNull();
+    expect(screen.getAllByTestId('series-note-detail')).toHaveLength(3);
+  });
 });
