@@ -29,8 +29,8 @@ updates:
           - "minor"
           - "patch"
 
-  # Base images: node:20-alpine in webapp/Dockerfile (the runner this app
-  # actually ships on).
+  # Base images: node:26.13.1-alpine in webapp/Dockerfile (the runner this
+  # app actually ships on; exact patch pin — see that file's comment block).
   - package-ecosystem: "docker"
     directory: "/webapp"
     schedule:
