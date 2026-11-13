@@ -567,8 +567,12 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
 
       {/* Wave M — what the last background refresh changed: a different best
           plan, or a newer OEB rate set. Empty (and never rendered) for a
-          browser that has not authorised live sync. */}
-      <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+          browser that has not authorised live sync — and BOTH notices are
+          ELECTRIC figures, so under the Gas section the banner does not exist
+          at all (t_a775c2a3 — AC2: no electric figures on a gas surface). */}
+      {!gasSelected && (
+        <RefreshNoticeBanner notices={refreshNotices} onDismiss={dismissRefreshNotice} />
+      )}
 
       {/* Wave H item 1 — while the loaded readings are the synthetic set, the
           page says so on every view, and offers the way out. */}
@@ -743,14 +747,18 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           {/* Wave N — the account control sits with the other global chrome:
               sign-in state is as global as the notification toggle. */}
           <AccountControls onDataApplied={() => window.location.reload()} />
-          {/* Wave R — the answer, on every tab. Click jumps to the banner. */}
-          <BestChoiceChip
-            comparison={comparison}
-            userPlan={userPlan}
-            days={windowDays}
-            active={activeTab === 'overview'}
-            onJump={() => selectTab('overview')}
-          />
+          {/* Wave R — the answer, on every tab. Click jumps to the banner.
+              It is an ELECTRIC verdict (plan gap in $/mo over electric kWh),
+              so it never exists on the Gas section (t_a775c2a3 — AC2). */}
+          {!gasSelected && (
+            <BestChoiceChip
+              comparison={comparison}
+              userPlan={userPlan}
+              days={windowDays}
+              active={activeTab === 'overview'}
+              onJump={() => selectTab('overview')}
+            />
+          )}
 
 
         </div>
@@ -801,7 +809,10 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
               budget: it added 32px to that max-content and was what pushed
               1280 (the very next breakpoint) back into a wrap, opening a
               45,936px² dead band 936px² over the gate. */}
-          {floor && (
+          {/* t_a775c2a3 — AC2: the always-on floor is an ELECTRIC figure
+              (idle watts -> kWh/day -> $/yr), so it never renders while the
+              Gas section is on screen. */}
+          {!gasSelected && floor && (
           <button type="button" onClick={() => setShowFloorHelp(true)} title={t('floor.button')} aria-label={t('floor.buttonAria')} aria-haspopup="dialog" className="quiet-data-stat min-h-11 flex-1 min-w-[120px] lg:min-w-max px-3 py-2 text-center font-medium relative transition-colors hover:bg-hover group flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-4">
             <div className="text-[8px] md:text-[10px] uppercase flex items-center justify-center gap-1">{t('floor.button')} <HelpCircle size={8} className="opacity-50 md:size-4 group-hover:opacity-100" /></div>
             <div className="text-xl md:text-2xl lg:flex-1">{t('floor.annual', { cost: fmtMoney0(floor.annualCost) })}</div>
@@ -1001,15 +1012,22 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           shiftAnalysis={shiftAnalysis}
           verification={verification}
           summaries={activeFeed.summaries}
-          allData={processedData}
+          /* t_a775c2a3: under Gas this panel shows the gas bill only — no
+             electric row may reach it (same allData=[] contract the gas
+             Overview's ActualBillPanel already runs with). */
+          allData={gasSelected ? [] : processedData}
+          gasView={gasSelected}
         />
       )}
 
       {activeTab === 'money' && (
         <MoneyPanel
           summaries={activeFeed.summaries}
-          allData={processedData}
-          filteredData={filteredData}
+          /* Commodity-scoped inputs (t_a775c2a3 — AC2): the Gas money surface
+             is driven by the GAS summaries alone; electric rows never reach
+             MoneySection's axis/charges/ledger maths on it. */
+          allData={gasSelected ? [] : processedData}
+          filteredData={gasSelected ? [] : filteredData}
           plan={userPlan}
           rates={activeRateSet}
           startDate={startDate}
@@ -1017,6 +1035,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           projection={projection}
           openPeriod={openPeriod}
           billingDay={billingDay}
+          gasView={gasSelected}
           rateNotice={staleness.stale ? <RateStalenessBanner result={staleness} /> : undefined}
         />
       )}
