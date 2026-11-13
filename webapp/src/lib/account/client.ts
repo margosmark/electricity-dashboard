@@ -81,7 +81,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   } catch (e) {
     // Network failure is not an API error: the account server being down
     // must leave the dashboard working, so callers get a distinguishable code.
-    throw new AccountApiError(0, "network", e instanceof Error ? e.message : String(e));
+    // Deliberately no `detail`: the fetch exception's own text used to ride
+    // here into every say()/notify() surface. It stays on the console, and
+    // describeAuthError("network") is the sentence the reader gets (gate F3).
+    console.warn("[account] fetch failed", e);
+    throw new AccountApiError(0, "network");
   }
 
   let body: unknown = null;

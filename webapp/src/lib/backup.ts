@@ -247,10 +247,11 @@ export function parseBackup(text: string): ParseResult<BackupDocument> {
   try {
     raw = JSON.parse(text);
   } catch (e) {
-    return {
-      ok: false,
-      error: t('backup.errBadJson', { reason: e instanceof Error ? e.message : String(e) }),
-    };
+    // JSON.parse's own message is for the console: `error` renders in two
+    // places (the dashboard issue box and the backup drawer), so it stays
+    // the bare catalog sentence, with no `{reason}` to fill (gate F3).
+    console.warn("[backup] JSON.parse failed", e);
+    return { ok: false, error: t('backup.errBadJson') };
   }
 
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {

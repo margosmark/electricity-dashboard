@@ -22,6 +22,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "re
 import { Bell, BellOff, CloudUpload, KeyRound, LogOut, User, X } from "lucide-react";
 import Link from "next/link";
 import { useAccount, type AccountStatus } from "@/hooks/useAccount";
+import { describeAccountError } from "@/lib/account/errors";
 import { useTranslation } from "@/i18n";
 
 const TOGGLE_CLASS =
@@ -116,8 +117,12 @@ export function AccountControls({ onDataApplied, defaultOpen = false }: Props) {
       await requestRecovery(recoveryEmail);
       account.notify("ok", t('account.recoveryRequest'));
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      account.notify("error", `Could not request recovery: ${detail}`);
+      // The exception's own message is for the console; the reader gets the
+      // same sentence sign-in/sign-up render (security gate F3).
+      // The exception's own message is for the console; the reader gets the
+      // same sentence sign-in/sign-up render (security gate F3).
+      console.warn("[account] recovery request failed", err);
+      account.notify("error", describeAccountError(err));
     }
   };
 

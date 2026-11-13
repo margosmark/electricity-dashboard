@@ -45,24 +45,19 @@ export async function loadExampleReadings(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     text = await res.text();
   } catch (e) {
-    return {
-      ok: false,
-      detail: t('example.downloadFail', {
-        reason: String((e as Error)?.message ?? e),
-      }),
-    };
+    // The fetch exception's own text is for the console: `detail` renders
+    // in the dashboard issue box, so it stays the bare catalog sentence,
+    // with no `{reason}` to fill (gate F3).
+    console.warn("[example] download failed", e);
+    return { ok: false, detail: t('example.downloadFail') };
   }
 
   let readings: DataPoint[];
   try {
     readings = combineUsagePointGroups(parseGreenButtonUsagePoints(text));
   } catch (e) {
-    return {
-      ok: false,
-      detail: t('example.parseFail', {
-        reason: String((e as Error)?.message ?? e),
-      }),
-    };
+    console.warn("[example] parse failed", e);
+    return { ok: false, detail: t('example.parseFail') };
   }
 
   if (readings.length === 0) {

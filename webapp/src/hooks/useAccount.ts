@@ -38,6 +38,7 @@ import {
   importSessionKey,
 } from "@/lib/account/crypto";
 import * as sync from "@/lib/account/sync";
+import { describeAccountError, describeAuthError } from "@/lib/account/errors";
 import { requestBrowserPermission } from "@/lib/notifications";
 import { parseBackup, serializeBackup } from "@/lib/backup";
 
@@ -147,7 +148,10 @@ export function useAccount(options: Options = {}) {
       sync.saveSessionKey(await exportSessionKey(key));
       return true;
     } catch (e) {
-      say("error", e instanceof Error ? e.message : "Could not derive the encryption key.");
+      // The WebCrypto error's own message is for the console — the reader
+      // gets the sentence the non-Error branch always had (gate F3).
+      console.warn("[account] key derivation failed", e);
+      say("error", "Could not derive the encryption key.");
       return false;
     }
   }, [say]);
@@ -347,7 +351,10 @@ export function useAccount(options: Options = {}) {
       try {
         payload = await encryptBlob(key, serializeBackup(doc));
       } catch (e) {
-        if (explicit) say("error", e instanceof Error ? e.message : "Could not encrypt the data.");
+        // Same rule as key derivation: console.warn keeps the diagnosis,
+        // the reader gets copy (gate F3).
+        console.warn("[account] encrypt failed", e);
+        if (explicit) say("error", "Could not encrypt the data.");
         return "failed";
       }
 
@@ -372,13 +379,16 @@ export function useAccount(options: Options = {}) {
           return "conflict";
         }
         // Server unreachable: swallow it on the automatic path (the dashboard
-        // must not care), surface it when the user pressed a button.
+        // must not care), surface it when the user pressed a button. The
+        // exception's own words go to the console; the reader gets the
+        // network sentence or describeAccountError's copy (gate F3).
+        console.warn("[account] push failed", e);
         if (explicit) {
           say(
             "error",
             e instanceof AccountApiError && e.status === 0
               ? "The account server is not reachable — nothing was uploaded, and this browser still has your data."
-              : `Could not upload: ${e instanceof Error ? e.message : String(e)}`,
+              : describeAccountError(e),
           );
         }
         return "failed";
@@ -636,7 +646,16 @@ export function useAccount(options: Options = {}) {
       say("ok", "Notifications enabled.");
       return true;
     } catch (e) {
-      say("error", `Could not enable notifications: ${e instanceof Error ? e.message : String(e)}`);
+      // Browser-side failures (service worker, pushManager) and server
+      // rejections both land here: copy for the reader, the exception's
+      // own words on the console (gate F3).
+      console.warn("[account] enable notifications failed", e);
+      say(
+        "error",
+        e instanceof AccountApiError
+          ? describeAccountError(e)
+          : "Could not enable notifications — nothing was changed. Try again.",
+      );
       return false;
     }
   }, [say, status.pushConfigured, status.vapidPublicKey]);
@@ -707,28 +726,6 @@ export function useAccount(options: Options = {}) {
 }
 
 /* -------------------------------------------------------------------------- */
-
-/** Human-readable auth failures, one per server code — no raw codes in UI. */
-function describeAuthError(code: string): string {
-  switch (code) {
-    case "invalid_credentials":
-      return "That e-mail address and password do not match.";
-    case "email_taken":
-      return "An account already exists for that e-mail address.";
-    case "invalid_email":
-      return "That does not look like an e-mail address.";
-    case "invalid_password":
-      return "Use at least 8 characters for the password.";
-    case "account_limit":
-      return "This server is full — ask the operator to raise the account limit.";
-    case "network":
-      return "The account server is not reachable. Nothing was changed.";
-    case "session_required":
-      return "Your session expired — sign in again.";
-    default:
-      return code;
-  }
-}
 
 /** VAPID keys are unpadded base64url; WebCrypto wants raw bytes. */
 function urlBase64ToUint8(base64: string): Uint8Array<ArrayBuffer> {
