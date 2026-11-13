@@ -13,6 +13,7 @@ import {
   listOurStoredKeys,
   clearEnergyData,
   loadGasBillSections,
+  loadElectricBillSections,
   isReadableGasSummary,
   isReadableLocalTime,
   type StoredPayload,
@@ -363,5 +364,56 @@ describe('isReadableGasSummary / isReadableLocalTime', () => {
     expect(isReadableLocalTime({ tzOffset: -18000 })).toBe(true);
     expect(isReadableLocalTime({ tzOffset: 'EST' })).toBe(false);
     expect(isReadableLocalTime(null)).toBe(false);
+  });
+});
+
+
+/* --- the byte-faithful ELECTRIC bill read (t_92755069) ------------------ */
+
+describe('loadElectricBillSections', () => {
+  it('returns the stored rows and clock exactly as written — no volume defaulting, no sorting', () => {
+    // Deliberately out of start order, and the FIRST row has no `volume` key
+    // at all: the normalized render view (`readStoredBillFeed`) would sort
+    // these and stamp `volume: null` onto row 1, which is exactly the
+    // byte-rewriting this reader exists not to do.
+    const rows = [
+      { start: 1704326400, duration: 2592000, items: [] },
+      { source: 'UsageSummary', start: 1704067200, duration: 2592000, items: [{ amount: 42 }], volume: null },
+    ];
+    const clock = { tzOffset: -18000, dstOffset: 3600, dstStartRule: '360E2000', dstEndRule: null };
+    localStorage.setItem('usage_summaries', JSON.stringify(rows));
+    localStorage.setItem('local_time_parameters', JSON.stringify(clock));
+
+    const sections = loadElectricBillSections();
+    expect(JSON.stringify(sections.summaries)).toBe(JSON.stringify(rows));
+    expect(JSON.stringify(sections.localTime)).toBe(JSON.stringify(clock));
+    expect(sections.summaries[0]).not.toHaveProperty('volume');
+  });
+
+  it('drops rows it cannot read and treats a corrupt clock as absent', () => {
+    localStorage.setItem(
+      'usage_summaries',
+      JSON.stringify([
+        { start: 1, duration: 2, items: [] },
+        'not-a-period',
+        { start: 'x', duration: 2, items: [] },
+        { start: 3, duration: 4, items: [1] }, // primitive line items never come from a feed
+      ]),
+    );
+    localStorage.setItem('local_time_parameters', '{not json');
+    const sections = loadElectricBillSections();
+    expect(sections.summaries).toHaveLength(1);
+    expect(sections.localTime).toBeNull();
+  });
+
+  it('reads absent or corrupt keys as an honest empty state, and never reaches into the gas keys', () => {
+    expect(loadElectricBillSections()).toEqual({ summaries: [], localTime: null });
+    localStorage.setItem('usage_summaries', 'not json');
+    localStorage.setItem('local_time_parameters', '[]');
+    // Gas content parked under the GAS keys is not this reader's business.
+    localStorage.setItem('gas_usage_summaries', JSON.stringify([{ start: 1, duration: 2, items: [] }]));
+    localStorage.setItem('gas_local_time_parameters', JSON.stringify({ tzOffset: -18000 }));
+    expect(loadElectricBillSections()).toEqual({ summaries: [], localTime: null });
+    expect(loadGasBillSections().summaries).toHaveLength(1);
   });
 });

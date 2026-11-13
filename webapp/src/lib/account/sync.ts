@@ -29,6 +29,9 @@ import {
   GAS_LOCAL_TIME_KEY,
   GAS_USAGE_SUMMARIES_KEY,
   LEGACY_ENERGY_KEY,
+  LOCAL_TIME_KEY,
+  USAGE_SUMMARIES_KEY,
+  loadElectricBillSections,
   loadEnergyData,
   loadGasBillSections,
   loadGasData,
@@ -45,7 +48,10 @@ import {
  *
  * The three gas keys ride along (t_578268b7): a logout that wiped only the
  * electric half would strand the gas dataset in the browser after the user
- * signed out of the account that was carrying it.
+ * signed out of the account that was carrying it. The two ELECTRIC bill
+ * keys join them (t_92755069) for the same reason — they are persisted
+ * dataset too, so leaving them behind on logout strands the bill periods
+ * and the feed's clock while everything else the sync moves is gone.
  */
 export const SYNC_DATASET_KEYS = [
   ENERGY_KEY_V2,
@@ -55,6 +61,8 @@ export const SYNC_DATASET_KEYS = [
   PLAN_STORAGE_KEY,
   EXAMPLE_DATA_KEY,
   "plan_timeline",
+  USAGE_SUMMARIES_KEY,
+  LOCAL_TIME_KEY,
   ENERGY_GAS_KEY,
   GAS_USAGE_SUMMARIES_KEY,
   GAS_LOCAL_TIME_KEY,
@@ -165,16 +173,22 @@ export function readLocalDocument(now: Date = new Date()): BackupDocument | null
   const gasPayload = gas.ok && gas.value !== null && gas.value.points.length > 0 ? gas.value : null;
   const gasBill = loadGasBillSections();
   const gasSummaries = gasBill.summaries.length > 0 ? gasBill.summaries : undefined;
+  // Electric bills + clock (t_92755069): the same disk-sourced, byte-faithful
+  // snapshot the gas pair uses — `loadElectricBillSections` reads the stored
+  // bytes raw, so a pull on another device reproduces `usage_summaries` /
+  // `local_time_parameters` verbatim instead of a normalized, re-ordered view.
+  const electricBill = loadElectricBillSections();
+  const electricSummaries = electricBill.summaries.length > 0 ? electricBill.summaries : undefined;
 
   // Nothing worth syncing ⇒ null, exactly as before — and a gas-only browser
   // now counts as "something". Gas BILLS without gas intervals count too (the
-  // F2 bills-only documents are real), mirroring how they count for an
-  // export. A corrupt ELECTRIC half no longer blocks a valid gas sync: the
-  // document below carries `energy_data: []` for it, so what leaves this
-  // device is gas and nothing unreadable — never garbage under the banner of
-  // a sync.
+  // F2 bills-only documents are real), as do ELECTRIC bills without electric
+  // intervals (t_92755069), mirroring how they count for an export. A corrupt
+  // ELECTRIC half no longer blocks a valid gas sync: the document below
+  // carries `energy_data: []` for it, so what leaves this device is gas and
+  // nothing unreadable — never garbage under the banner of a sync.
   const hasElectric = electric !== null && electric.points.length > 0;
-  if (!hasElectric && !gasPayload && !gasSummaries) return null;
+  if (!hasElectric && !gasPayload && !gasSummaries && !electricSummaries) return null;
 
   const candidate = {
     schema: BACKUP_SCHEMA,
@@ -190,6 +204,8 @@ export function readLocalDocument(now: Date = new Date()): BackupDocument | null
       ...(gasPayload !== null ? { gas_data: gasPayload } : {}),
       ...(gasSummaries !== undefined ? { gas_usage_summaries: gasSummaries } : {}),
       ...(gasBill.localTime !== null ? { gas_local_time_parameters: gasBill.localTime } : {}),
+      ...(electricSummaries !== undefined ? { usage_summaries: electricSummaries } : {}),
+      ...(electricBill.localTime !== null ? { local_time_parameters: electricBill.localTime } : {}),
     },
   };
 
@@ -254,6 +270,18 @@ export function applyDocument(doc: BackupDocument): { written: string[] } {
       : {}),
     ...(doc.payload.gas_local_time_parameters !== undefined
       ? { [GAS_LOCAL_TIME_KEY]: JSON.stringify(doc.payload.gas_local_time_parameters) }
+      : {}),
+    // v4 electric bill keys (t_92755069) — written ONLY when the document
+    // carries the section, byte-identical in spirit to the gas rule above:
+    // a v1/v2/v3 (or gas-only) document has no opinion about this device's
+    // bill periods, so pulling one must leave them exactly as they are. A
+    // document that DOES carry them writes the bytes verbatim, so a pull
+    // reproduces the sender's stored feed instead of a normalized view.
+    ...(doc.payload.usage_summaries !== undefined && doc.payload.usage_summaries.length > 0
+      ? { [USAGE_SUMMARIES_KEY]: JSON.stringify(doc.payload.usage_summaries) }
+      : {}),
+    ...(doc.payload.local_time_parameters !== undefined
+      ? { [LOCAL_TIME_KEY]: JSON.stringify(doc.payload.local_time_parameters) }
       : {}),
   };
   for (const [key, value] of Object.entries(values)) {
@@ -329,5 +357,9 @@ export function hasLocalData(): boolean {
   // disagree between the two.
   const gas = loadGasData();
   if (gas.ok && gas.value !== null && gas.value.points.length > 0) return true;
-  return loadGasBillSections().summaries.length > 0;
+  if (loadGasBillSections().summaries.length > 0) return true;
+  // An electric-bills-only browser (t_92755069) holds a dataset too — same
+  // gate `readLocalDocument` uses, so "is there something to sync?" can never
+  // disagree between the two.
+  return loadElectricBillSections().summaries.length > 0;
 }

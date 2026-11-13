@@ -52,9 +52,10 @@ import {
   loadEnergyData, saveEnergyData, clearEnergyData,
   loadGasData, saveGasData,
   GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY,
+  USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY,
   GAS_SCHEMA_VERSION,
   ENERGY_GAS_KEY,
-  loadGasBillSections,
+  loadGasBillSections, loadElectricBillSections,
   type GasPoint,
   loadBillingDay, saveBillingDay,
   parseImport, resetStoredData, listOurStoredKeys, writeStoredKey,
@@ -114,8 +115,16 @@ export { EXAMPLE_DATA_KEY };
  * re-uploading or asking the server anything.
  * ------------------------------------------------------------------------- */
 
-export const USAGE_SUMMARIES_KEY = "usage_summaries";
-export const LOCAL_TIME_KEY = "local_time_parameters";
+/**
+ * The ELECTRICITY bill feed (Wave L) — constants now in `lib/storage.ts`
+ * (t_92755069): a backup restore has to write them, `lib/backup.ts` has to
+ * name them, and `lib/account/sync.ts` wipes them on logout — importing this
+ * hook from any of those would be a cycle. Same reasoning as the gas pair
+ * below and `EXAMPLE_DATA_KEY` above; re-exported here so every existing
+ * `import { USAGE_SUMMARIES_KEY } from "@/hooks/useDashboard"` keeps
+ * working.
+ */
+export { USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY };
 
 /**
  * The gas half of the bill feed (t_8a9038d6).
@@ -1992,17 +2001,18 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
 
   /**
    * Serialize everything this browser holds — readings, billing day, bill
-   * add-ons, plan timeline, AND the gas dataset (t_578268b7) — into a
-   * versioned JSON document. Returns null when there is nothing to back up:
-   * the drawer reports that instead of writing an empty file that would wipe
-   * data if restored. "Nothing" means no rows in EITHER commodity — a
-   * gas-only browser has plenty to export.
+   * add-ons, plan timeline, the gas dataset (t_578268b7) AND the electric
+   * bill feed (t_92755069) — into a versioned JSON document. Returns null
+   * when there is nothing to back up: the drawer reports that instead of
+   * writing an empty file that would wipe data if restored. "Nothing" means
+   * no rows in EITHER commodity and no bill periods in either feed — a
+   * bills-only browser has plenty to export.
    *
-   * Gas sections are snapshotted from DISK (with the live points overlaid on
-   * the stored envelope), not from the normalized read view: the stored bytes
-   * are what a restore must reproduce byte-for-byte. The one overlay — rows
-   * and points the last commit failed to persist (quota) — exists because
-   * the whole point of an export is to rescue data that did NOT land.
+   * Bill sections are snapshotted from DISK (with the live rows overlaid),
+   * not from the normalized read view: the stored bytes are what a restore
+   * must reproduce byte-for-byte. The one overlay — rows the last commit
+   * failed to persist (quota) — exists because the whole point of an export
+   * is to rescue data that did NOT land.
    */
   const exportBackup = (): BackupExport | null => {
     const now = new Date();
@@ -2024,6 +2034,16 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       // ride behind the stored bytes so a normal export stays byte-identical.
       ...gasBillFeed.summaries.filter((s) => !diskStarts.has(s.start)),
     ];
+    // The electric bill feed (t_92755069): the SAME disk-first snapshot the
+    // gas pair uses — `loadElectricBillSections` reads the stored bytes raw
+    // (no sort, no `volume` defaulting, no commodity partition), so a restore
+    // reproduces `usage_summaries` / `local_time_parameters` byte-for-byte.
+    const storedElectricBill = loadElectricBillSections();
+    const electricDiskStarts = new Set(storedElectricBill.summaries.map((s) => s.start));
+    const electricSummaries = [
+      ...storedElectricBill.summaries,
+      ...billFeed.summaries.filter((s) => !electricDiskStarts.has(s.start)),
+    ];
     const doc = buildBackupDocument({
       energyData: rawData,
       billingDay,
@@ -2036,14 +2056,32 @@ export function useEnergyData(options: { onBackupApplied?: () => void } = {}) {
       isExample: exampleData,
       gasData: gasDataPayload,
       gasSummaries,
-      gasLocalTime: storedGasBill.localTime ?? gasBillFeed.localTime,
+      // The in-memory clock is a rescue for a GAS feed that exists, and
+      // nothing more. `readStoredGasBillFeed` deliberately FALLS BACK to the
+      // electric key's clock when the gas key has none, so taking
+      // `gasBillFeed.localTime` unconditionally would stamp an electric-only
+      // or bills-only export with a gas clock this browser never stored —
+      // and a restore would then INVENT `gas_local_time_parameters` (the
+      // bills-only fresh-restore test catches exactly this, t_92755069).
+      gasLocalTime:
+        storedGasBill.localTime ??
+        (gasBillFeed.summaries.length > 0 ? gasBillFeed.localTime : null),
+      electricSummaries,
+      electricLocalTime: storedElectricBill.localTime ?? billFeed.localTime,
       exportedAt: now,
     });
-    // Gate on the DOCUMENT, not on `rawData`: the gas section can be the only
-    // dataset present, and a document with no rows at all in either commodity
-    // is still the empty file that must never be written.
+    // Gate on the DOCUMENT, not on `rawData`: the gas section or the electric
+    // bill section can be the only dataset present (a bills-only browser is a
+    // real state), and a document with no rows and no periods at all is still
+    // the empty file that must never be written. The clock alone does not
+    // count — same rule the gas half applies.
     const p = doc.payload;
-    if (p.energy_data.length === 0 && p.gas_data === undefined && p.gas_usage_summaries === undefined) {
+    if (
+      p.energy_data.length === 0 &&
+      p.gas_data === undefined &&
+      p.gas_usage_summaries === undefined &&
+      p.usage_summaries === undefined
+    ) {
       return null;
     }
     return { filename: backupFilename(now), text: serializeBackup(doc) };

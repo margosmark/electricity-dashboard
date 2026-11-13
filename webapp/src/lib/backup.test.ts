@@ -438,7 +438,7 @@ describe('backup schema v2 (Wave N multi-device sync)', () => {
     // The guard that matters: bumping BACKUP_VERSION without adding the
     // version we just stopped writing would silently reject our own files,
     // so the reader's promise and the writer's stamp are asserted together.
-    expect([...SUPPORTED_BACKUP_VERSIONS].sort()).toEqual([1, 2, 3]);
+    expect([...SUPPORTED_BACKUP_VERSIONS].sort()).toEqual([1, 2, 3, 4]);
     expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION)).toBe(true);
     expect(SUPPORTED_BACKUP_VERSIONS.has(BACKUP_VERSION + 1)).toBe(false);
   });
@@ -667,5 +667,179 @@ describe('v3 gas section — build → parse → localStorage writes (t_578268b7
       'uploadedAt',
       'version',
     ]);
+  });
+});
+
+
+/* ==========================================================================
+ * v4 — the ELECTRIC bill feed rides the backup too (t_92755069)
+ * ========================================================================== */
+
+const electricSummary = (start: number): UsageSummary => ({
+  source: 'UsageSummary',
+  start,
+  duration: 2592000,
+  startDate: '2026-01-01',
+  endDate: '2026-01-31',
+  days: 31,
+  billLastPeriod: 42.17,
+  billToDate: 84.34,
+  costAdditionalLastPeriod: null,
+  currency: 124,
+  consumption: { scaled: 612, value: 612, powerOfTenMultiplier: 0, uom: 53 },
+  volume: null,
+  items: [
+    {
+      note: 'Regulatory Fixed Charge',
+      amount: 42.17,
+      rawAmount: 4217,
+      itemKind: 4,
+      unitCost: null,
+      measurement: null,
+    },
+  ],
+});
+
+const ELECTRIC_ROWS: UsageSummary[] = [electricSummary(1704067200), electricSummary(1704326400)];
+
+const ELECTRIC_CLOCK: LocalTimeParams = {
+  tzOffset: -18000,
+  dstOffset: 3600,
+  dstStartRule: '360E2000',
+  dstEndRule: '360E2000',
+};
+
+describe('v4 electric bill section — build → parse → localStorage writes (t_92755069)', () => {
+  it('carries the electric bill periods + clock byte for byte in a bills-only document', () => {
+    const doc = buildBackupDocument({
+      energyData: [],
+      billingDay: 7,
+      electricSummaries: ELECTRIC_ROWS,
+      electricLocalTime: ELECTRIC_CLOCK,
+      exportedAt: new Date('2026-11-12T00:00:00Z'),
+    });
+    // A bills-only document is legal — no readings at all, but for a reason
+    // the reader can verify (the bill section) rather than a trap it guesses at.
+    expect(doc.payload.energy_data).toEqual([]);
+    expect(doc.payload.usage_summaries).toEqual(ELECTRIC_ROWS);
+
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    expect(round.value.payload.usage_summaries).toEqual(ELECTRIC_ROWS);
+    expect(round.value.payload.local_time_parameters).toEqual(ELECTRIC_CLOCK);
+
+    const values = storageValuesFromBackup(round.value);
+    // The two electric bill keys, byte-identical to what the export read…
+    expect(values.usage_summaries).toBe(JSON.stringify(ELECTRIC_ROWS));
+    expect(values.local_time_parameters).toBe(JSON.stringify(ELECTRIC_CLOCK));
+    // …and NOTHING else: a bills-only document has no opinion about the
+    // electric profile (readings, billing anchor, add-ons, plan, timeline,
+    // example flag) any more than a gas-only one does.
+    expect(Object.keys(values).sort()).toEqual(['local_time_parameters', 'usage_summaries']);
+  });
+
+  it('accepts empty energy_data ONLY because a bill section proves the document holds data', () => {
+    const withBills = parseBackup(
+      valid({ payload: { energy_data: [], billing_day: 7, usage_summaries: ELECTRIC_ROWS } }),
+    );
+    expect(withBills.ok).toBe(true);
+    if (withBills.ok) expect(withBills.value.payload.energy_data).toEqual([]);
+
+    const without = parseBackup(valid({ payload: { energy_data: [], billing_day: 1 } }));
+    expect(without.ok).toBe(false);
+    if (!without.ok) expect(without.error).toMatch(/no readings/i);
+  });
+
+  it('reads an explicit empty usage_summaries as ABSENCE, never as "clear the bills"', () => {
+    const res = parseBackup(
+      valid({ payload: { energy_data: rows, billing_day: 1, usage_summaries: [] } }),
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.payload.usage_summaries).toBeUndefined();
+    expect(storageValuesFromBackup(res.value).usage_summaries).toBeUndefined();
+  });
+
+  it('writes no electric bill keys for an OLD (v1–v3) document — restoring one leaves bills alone', () => {
+    for (const version of [1, 2, 3]) {
+      const res = parseBackup(valid({ version, payload: { energy_data: rows, billing_day: 7 } }));
+      expect(res.ok, `v${version} must still parse`).toBe(true);
+      if (!res.ok) continue;
+      const values = storageValuesFromBackup(res.value);
+      expect(Object.keys(values), `v${version} must carry no bill opinion`).not.toContain(
+        'usage_summaries',
+      );
+      expect(Object.keys(values)).not.toContain('local_time_parameters');
+    }
+  });
+
+  it('refuses a bill row or clock it cannot read, naming the ELECTRIC field', () => {
+    const badRow = parseBackup(
+      valid({
+        payload: {
+          energy_data: [],
+          billing_day: 1,
+          usage_summaries: [electricSummary(1), 'not-a-period'],
+        },
+      }),
+    );
+    expect(badRow.ok).toBe(false);
+    if (!badRow.ok) {
+      expect(badRow.error).toMatch(/entry 2/);
+      expect(badRow.error).toMatch(/usage_summaries/);
+    }
+
+    const notArray = parseBackup(
+      valid({ payload: { energy_data: rows, billing_day: 1, usage_summaries: { a: 1 } } }),
+    );
+    expect(notArray.ok).toBe(false);
+    if (!notArray.ok) {
+      expect(notArray.error).toMatch(/not an array/i);
+      expect(notArray.error).toMatch(/usage_summaries/);
+    }
+
+    const badClock = parseBackup(
+      valid({
+        payload: { energy_data: rows, billing_day: 1, local_time_parameters: { tzOffset: 'EST' } },
+      }),
+    );
+    expect(badClock.ok).toBe(false);
+    if (!badClock.ok) expect(badClock.error).toMatch(/local_time_parameters/);
+  });
+
+  it('drops unreadable rows at export — what leaves is exactly what reads back', () => {
+    const doc = buildBackupDocument({
+      energyData: rows,
+      billingDay: 7,
+      electricSummaries: [electricSummary(1704067200), 'bad-row' as unknown as UsageSummary],
+    });
+    expect(doc.payload.usage_summaries).toEqual([electricSummary(1704067200)]);
+    expect(parseBackup(serializeBackup(doc)).ok).toBe(true);
+  });
+
+  it('carries BOTH commodity sections in one document, untouched', () => {
+    const doc = buildBackupDocument({
+      energyData: rows,
+      billingDay: 7,
+      gasData: GAS_PAYLOAD,
+      gasSummaries: [gasSummary(1704067200)],
+      gasLocalTime: GAS_CLOCK,
+      electricSummaries: ELECTRIC_ROWS,
+      electricLocalTime: ELECTRIC_CLOCK,
+      exportedAt: new Date('2026-11-12T00:00:00Z'),
+    });
+    const round = parseBackup(serializeBackup(doc));
+    expect(round.ok).toBe(true);
+    if (!round.ok) return;
+    const values = storageValuesFromBackup(round.value);
+    expect(values.usage_summaries).toBe(JSON.stringify(ELECTRIC_ROWS));
+    expect(values.local_time_parameters).toBe(JSON.stringify(ELECTRIC_CLOCK));
+    expect(values.gas_usage_summaries).toBe(JSON.stringify([gasSummary(1704067200)]));
+    expect(values.gas_local_time_parameters).toBe(JSON.stringify(GAS_CLOCK));
+    expect(values.energy_gas_v2).toBe(JSON.stringify(GAS_PAYLOAD));
+    // The electric profile rides too: this document carries electric rows.
+    expect(JSON.parse(values.energy_data)).toEqual(rows);
+    expect(values.billing_day).toBe('7');
   });
 });

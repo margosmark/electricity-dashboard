@@ -60,6 +60,23 @@ export const GAS_SCHEMA_VERSION = 1;
 export const GAS_USAGE_SUMMARIES_KEY = 'gas_usage_summaries';
 export const GAS_LOCAL_TIME_KEY = 'gas_local_time_parameters';
 
+/**
+ * The ELECTRICITY half of the bill feed — the same reasoning as the gas
+ * pair above, for the same consumers: `lib/backup.ts` has to NAME these (a
+ * restore writes them) and importing `hooks/useDashboard.ts` from there —
+ * or from `lib/account/sync.ts` — would be a cycle. Declared in the hook
+ * until t_92755069 moved them here beside their gas twins; the hook
+ * re-exports them so every existing `import { USAGE_SUMMARIES_KEY } from
+ * "@/hooks/useDashboard"` keeps working.
+ *
+ * `usage_summaries` / `local_time_parameters` predate the commodity split
+ * (Wave L): they have ALWAYS been the electric bill periods + clock, and
+ * they stay that way — the split moved the gas rows OUT into the gas keys,
+ * it never renamed these.
+ */
+export const USAGE_SUMMARIES_KEY = 'usage_summaries';
+export const LOCAL_TIME_KEY = 'local_time_parameters';
+
 /** Every localStorage key this app owns. Reset touches these and nothing else. */
 export const OUR_STORAGE_KEYS: readonly string[] = [
   ENERGY_KEY_V2,
@@ -424,16 +441,18 @@ export function saveGasData(points: GasPoint[], options: SaveOptions = {}): Stor
 }
 
 /**
- * A gas billing period a backup will carry (t_578268b7): what this build's
+ * A billing period a backup will carry (t_578268b7): what this build's
  * own reader (`readStoredRows`) accepts — numeric start/duration and an
  * items array — plus the one rule the reader is looser about: every item
  * must be an OBJECT. Real feeds only ever produce object line items, so
  * refusing primitives here costs real data nothing and stops a hostile
  * backup file parking them in localStorage through a restore.
  *
- * ONE predicate, shared by the exporter below and `lib/backup.ts`'s
- * importer: whatever a build of ours writes is exactly what the reader
- * accepts, so export → import can never drift apart.
+ * ONE predicate, shared by the exporters below AND `lib/backup.ts`'s
+ * importer, for BOTH commodities: `UsageSummary` is one shape, so whatever
+ * a build of ours writes is exactly what the reader accepts, and export →
+ * import can never drift apart. (The name is gas-flavoured because the gas
+ * wave introduced it; it has never been gas-specific.)
  */
 export function isReadableGasSummary(value: unknown): value is UsageSummary {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -453,27 +472,31 @@ export function isReadableLocalTime(value: unknown): value is LocalTimeParams {
 }
 
 /**
- * The gas bill half EXACTLY as stored — the byte-faithful read a backup
- * export needs (t_578268b7).
+ * ONE key pair, read EXACTLY as stored — the byte-faithful read a backup
+ * export needs.
  *
- * `readStoredGasBillFeed` in `hooks/useDashboard.ts` is the NORMALIZED read
- * view for rendering: it unions rows still parked in the legacy electric
- * key, sorts by `start` and defaults a missing `volume`. Every one of those
- * steps can rewrite bytes, so a document built from it could not promise
- * that a restore reproduces the stored dataset byte-for-byte.
+ * `readStoredBillFeed` / `readStoredGasBillFeed` in `hooks/useDashboard.ts`
+ * are the NORMALIZED read views for rendering: they union rows still parked
+ * in the legacy key, sort by `start`, partition on commodity and default a
+ * missing `volume`. Every one of those steps can rewrite bytes, so a
+ * document built from them could not promise that a restore reproduces the
+ * stored dataset byte-for-byte.
  *
  * This is deliberately the other contract: the original row objects, in
  * stored order, with only the readability filter `readStoredRows` applies —
  * a row this build's own reader would drop is dropped here too, so whatever
- * a backup carries is something the app can read back. Rows still parked in
- * the pre-split legacy `usage_summaries` key are NOT unioned here: the boot
- * migration (`ensureBillPartition`) moves them before an export can run,
- * and this module must not import the hook to reach them.
+ * a backup carries is something the app can read back. Gas rows still parked
+ * in the pre-split legacy `usage_summaries` key are NOT unioned into the gas
+ * read: the boot migration (`ensureBillPartition`) moves them before an
+ * export can run, and this module must not import the hook to reach them.
  *
- * Absent or corrupt keys read as empty — the honest "no gas bills yet",
- * never a throw: a backup of the readable half beats no backup at all.
+ * Absent or corrupt keys read as empty — the honest "no bills yet", never a
+ * throw: a backup of the readable half beats no backup at all.
  */
-export function loadGasBillSections(): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
+function readBillSection(
+  summaryKey: string,
+  clockKey: string,
+): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
   const readJson = (key: string): unknown => {
     try {
       const raw = localStorage.getItem(key);
@@ -482,10 +505,30 @@ export function loadGasBillSections(): { summaries: UsageSummary[]; localTime: L
       return null;
     }
   };
-  const rows = readJson(GAS_USAGE_SUMMARIES_KEY);
+  const rows = readJson(summaryKey);
   const summaries = Array.isArray(rows) ? rows.filter(isReadableGasSummary) : [];
-  const clock = readJson(GAS_LOCAL_TIME_KEY);
+  const clock = readJson(clockKey);
   return { summaries, localTime: isReadableLocalTime(clock) ? clock : null };
+}
+
+/** The gas bill half exactly as stored (t_578268b7) — see `readBillSection`. */
+export function loadGasBillSections(): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
+  return readBillSection(GAS_USAGE_SUMMARIES_KEY, GAS_LOCAL_TIME_KEY);
+}
+
+/**
+ * The ELECTRICITY bill half exactly as stored (t_92755069) — the same
+ * byte-faithful contract as the gas read above, for the pair that predates
+ * it. `usage_summaries` / `local_time_parameters` never rode a backup or a
+ * sync before this card, so this is the read the export and the account
+ * snapshot are built from.
+ *
+ * Deliberately NOT `readStoredBillFeed()`: that view partitions out gas
+ * rows and defaults `volume`, both of which change the bytes a restore
+ * would write back.
+ */
+export function loadElectricBillSections(): { summaries: UsageSummary[]; localTime: LocalTimeParams | null } {
+  return readBillSection(USAGE_SUMMARIES_KEY, LOCAL_TIME_KEY);
 }
 
 export function loadBillingDay(): StorageResult<number | null> {

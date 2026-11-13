@@ -366,3 +366,195 @@ describe('useEnergyData — gas backup (t_578268b7)', () => {
     });
   });
 });
+
+
+/* ==========================================================================
+ * v4 — the ELECTRIC bill feed rides the backup too (t_92755069):
+ * bills-only export, dual-commodity export, and an old (bill-less) backup
+ * restoring without touching what the electric bill keys hold.
+ * ========================================================================== */
+
+const ELECTRIC_SUMMARIES_STRING = JSON.stringify([
+  {
+    source: 'UsageSummary',
+    start: 1704067200,
+    duration: 2592000,
+    startDate: '2026-01-01',
+    endDate: '2026-01-31',
+    days: 31,
+    billLastPeriod: 42.17,
+    billToDate: 84.34,
+    costAdditionalLastPeriod: null,
+    currency: 124,
+    consumption: { scaled: 612, value: 612, powerOfTenMultiplier: 0, uom: 53 },
+    volume: null,
+    items: [
+      { note: 'Regulatory Fixed Charge', amount: 42.17, rawAmount: 4217, itemKind: 4, unitCost: null, measurement: null },
+    ],
+  },
+  {
+    source: 'UsageSummary',
+    start: 1704326400,
+    duration: 2592000,
+    startDate: '2026-02-01',
+    endDate: '2026-02-28',
+    days: 28,
+    billLastPeriod: 39.8,
+    billToDate: 124.14,
+    costAdditionalLastPeriod: null,
+    currency: 124,
+    consumption: { scaled: 548, value: 548, powerOfTenMultiplier: 0, uom: 53 },
+    volume: null,
+    items: [],
+  },
+]);
+const ELECTRIC_CLOCK_STRING = JSON.stringify({
+  tzOffset: -18000,
+  dstOffset: 3600,
+  dstStartRule: '360E2000',
+  dstEndRule: '360E2000',
+});
+
+function seedElectricBills() {
+  localStorage.setItem('usage_summaries', ELECTRIC_SUMMARIES_STRING);
+  localStorage.setItem('local_time_parameters', ELECTRIC_CLOCK_STRING);
+}
+
+describe('useEnergyData — electric bill backup (t_92755069)', () => {
+  it('exports a bills-only browser instead of reporting nothing to back up', async () => {
+    seedElectricBills();
+    const { result } = await renderEmpty();
+    expect(result.current.rawData).toHaveLength(0);
+
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+    expect(out!).not.toBeNull();
+
+    const parsed = parseBackup(out!.text);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.payload.energy_data).toEqual([]);
+    expect(parsed.value.payload.usage_summaries).toHaveLength(2);
+    expect(parsed.value.payload.local_time_parameters).toEqual(JSON.parse(ELECTRIC_CLOCK_STRING));
+    expect(out!.filename).toMatch(/^energy-backup_\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('a bills-only export → restore on a fresh browser reproduces both keys byte for byte', async () => {
+    seedElectricBills();
+    const { result, onBackupApplied } = await renderEmpty();
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+
+    // The cleared profile a fresh browser starts from.
+    localStorage.clear();
+
+    const file = new File([out!.text], out!.filename, { type: 'application/json' });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+
+    expect(res!).toEqual({ ok: true, filename: out!.filename });
+    expect(localStorage.getItem('usage_summaries')).toBe(ELECTRIC_SUMMARIES_STRING);
+    expect(localStorage.getItem('local_time_parameters')).toBe(ELECTRIC_CLOCK_STRING);
+    // No empty dataset of ANY kind is invented for a bills-only profile:
+    // readings, billing anchor, add-ons, plan, timeline, flag and the gas
+    // keys all stay absent.
+    expect(localStorage.getItem('energy_data_v2')).toBeNull();
+    expect(localStorage.getItem('energy_data')).toBeNull();
+    expect(localStorage.getItem('billing_day')).toBeNull();
+    expect(localStorage.getItem('extra_charges')).toBeNull();
+    expect(localStorage.getItem('plan_timeline')).toBeNull();
+    expect(localStorage.getItem('selected_plan')).toBeNull();
+    expect(localStorage.getItem('energy_data_is_example')).toBeNull();
+    expect(localStorage.getItem('energy_gas_v2')).toBeNull();
+    expect(localStorage.getItem('gas_usage_summaries')).toBeNull();
+    expect(localStorage.getItem('gas_local_time_parameters')).toBeNull();
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('a dual-commodity export → restore puts every half back (electric bills byte for byte)', async () => {
+    seedStorage();
+    seedGas();
+    seedElectricBills();
+    const { result, onBackupApplied } = await renderLoaded();
+
+    let out: ReturnType<NonNullable<typeof result.current.exportBackup>>;
+    act(() => {
+      out = result.current.exportBackup()!;
+    });
+    expect(out!).not.toBeNull();
+
+    localStorage.clear();
+    const file = new File([out!.text], out!.filename, { type: 'application/json' });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+    expect(res!.ok).toBe(true);
+
+    // Electric bill feed: byte-identical to what the exporting browser stored.
+    expect(localStorage.getItem('usage_summaries')).toBe(ELECTRIC_SUMMARIES_STRING);
+    expect(localStorage.getItem('local_time_parameters')).toBe(ELECTRIC_CLOCK_STRING);
+    // Gas: byte-identical too.
+    expect(localStorage.getItem('energy_gas_v2')).toBe(GAS_STRING);
+    expect(localStorage.getItem('gas_usage_summaries')).toBe(GAS_SUMMARIES_STRING);
+    expect(localStorage.getItem('gas_local_time_parameters')).toBe(GAS_CLOCK_STRING);
+    // Electric profile: restored exactly as it was before this feature existed.
+    const restored = loadEnergyData();
+    expect(restored.ok && restored.value?.points).toEqual(rows);
+    expect(localStorage.getItem('billing_day')).toBe('5');
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('restoring an OLD (v3, bill-less) backup leaves existing electric bills alone', async () => {
+    seedStorage();
+    seedElectricBills();
+    const { result, onBackupApplied } = await renderLoaded();
+    const billsBefore = [
+      localStorage.getItem('usage_summaries'),
+      localStorage.getItem('local_time_parameters'),
+    ];
+
+    // What a pre-v4 build exported: stamped version 3, no bill section in it.
+    const oldDoc = {
+      ...buildBackupDocument({
+        energyData: [{ timestamp: 1, usage_kwh: 9.9 }],
+        billingDay: 12,
+        exportedAt: new Date('2026-10-02T12:00:00.000Z'),
+      }),
+      version: 3,
+    };
+    const file = new File([serializeBackup(oldDoc)], 'energy-backup_old.json', {
+      type: 'application/json',
+    });
+    let res: Awaited<ReturnType<NonNullable<typeof result.current.importBackupFile>>>;
+    await act(async () => {
+      res = await result.current.importBackupFile(file);
+    });
+    expect(res!.ok).toBe(true);
+
+    // The bill periods and the clock are not deleted, not rewritten, not touched.
+    expect([
+      localStorage.getItem('usage_summaries'),
+      localStorage.getItem('local_time_parameters'),
+    ]).toEqual(billsBefore);
+    // …and the old file's own electric half still restores.
+    const oldEnergy = loadEnergyData();
+    expect(oldEnergy.ok && oldEnergy.value?.points).toEqual([{ timestamp: 1, usage_kwh: 9.9 }]);
+    expect(localStorage.getItem('billing_day')).toBe('12');
+    expect(onBackupApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it('a lone electric clock is not a dataset — export still reports nothing to back up', async () => {
+    localStorage.setItem('local_time_parameters', ELECTRIC_CLOCK_STRING);
+    const { result } = await renderEmpty();
+    act(() => {
+      expect(result.current.exportBackup()).toBeNull();
+    });
+  });
+});
