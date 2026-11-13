@@ -1,0 +1,34 @@
+test_baseline_matches (__main__.ReconciliationAdversarialTests.test_baseline_matches) ... ok
+test_draft_version_not_assumed_published (__main__.ReconciliationAdversarialTests.test_draft_version_not_assumed_published) ... ok
+test_duplicate_markdown_fb_rejected (__main__.ReconciliationAdversarialTests.test_duplicate_markdown_fb_rejected) ... ok
+test_duplicate_resource_rejected (__main__.ReconciliationAdversarialTests.test_duplicate_resource_rejected) ... ok
+test_fb_baseline_applicability_and_markdown_match (__main__.ReconciliationAdversarialTests.test_fb_baseline_applicability_and_markdown_match) ... ok
+test_foreign_namespace_not_collapsed (__main__.ReconciliationAdversarialTests.test_foreign_namespace_not_collapsed) ... ok
+test_markdown_fb_classification_drift_rejected (__main__.ReconciliationAdversarialTests.test_markdown_fb_classification_drift_rejected) ... ok
+test_markdown_fb_phase_gap_and_subset_drift_rejected (__main__.ReconciliationAdversarialTests.test_markdown_fb_phase_gap_and_subset_drift_rejected) ... ok
+test_missing_complex_type_rejected (__main__.ReconciliationAdversarialTests.test_missing_complex_type_rejected) ... ok
+test_missing_field_rejected (__main__.ReconciliationAdversarialTests.test_missing_field_rejected) ... ok
+test_missing_markdown_fb_rejected (__main__.ReconciliationAdversarialTests.test_missing_markdown_fb_rejected) ... ok
+test_missing_resource_rejected (__main__.ReconciliationAdversarialTests.test_missing_resource_rejected) ... ok
+test_unknown_fb_meaning_rejected_despite_invented_title (__main__.ReconciliationAdversarialTests.test_unknown_fb_meaning_rejected_despite_invented_title) ... ok
+test_unverified_fb_role_exclusions_rejected (__main__.ReconciliationAdversarialTests.test_unverified_fb_role_exclusions_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.274s
+
+OK
+{
+  "audited_code_commit": "988ea57a7cc283f7edac7da350fc3931635662c1",
+  "schemas": 7,
+  "global_rows": 171,
+  "complex_type_rows": 216,
+  "field_rows": 1055,
+  "function_blocks": 62,
+  "java_active": 46,
+  "java_deprecated": 14,
+  "supported_features": 12,
+  "mapped_test_titles": 22,
+  "fixture_references": 14,
+  "proposed_acceptance_tests": 13,
+  "result": "PASS: inventory reconciliation; NOT standards certification"
+}

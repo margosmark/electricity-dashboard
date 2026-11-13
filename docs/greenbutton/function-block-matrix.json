@@ -1,0 +1,1038 @@
+[
+  {
+    "id": 1,
+    "title": "Common (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_01] Usage Data CommonMANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F02",
+      "F06"
+    ],
+    "gap": "G02",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb01"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 2,
+    "title": "Download My Data (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_02] Usage Data Download My DataDMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F03"
+    ],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb02"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 3,
+    "title": "Connect My Data (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_03] Usage Data Connect My DataCMD-MANDATORY",
+    "legacy_title": "Core Green Button Connect My Data",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F08",
+      "F09",
+      "F10",
+      "F11"
+    ],
+    "gap": "G08",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb03",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 4,
+    "title": "Interval Metering",
+    "java_state": "active",
+    "gba_title": "FB_04] Interval MeteringMANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F01"
+    ],
+    "gap": "G02",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb04"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 5,
+    "title": "Interval Electricity Metering",
+    "java_state": "active",
+    "gba_title": "FB_05] Electricity Interval Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F01"
+    ],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb05"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 6,
+    "title": "Demand Electricity Metering",
+    "java_state": "active",
+    "gba_title": "FB_06] Demand Electricity Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb06"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 7,
+    "title": "Net Metering",
+    "java_state": "active",
+    "gba_title": "FB_07] Net Electricity Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb07"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 8,
+    "title": "Forward and Reverse Metering",
+    "java_state": "active",
+    "gba_title": "FB_08] Forward and Reverse Electricity Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb08"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 9,
+    "title": "Register Values",
+    "java_state": "active",
+    "gba_title": "FB_09] Register Values Electricity Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb09"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 10,
+    "title": "Gas Interval Metering",
+    "java_state": "active",
+    "gba_title": "FB_10] Natural Gas Interval Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb10"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 11,
+    "title": "Water Interval Metering",
+    "java_state": "active",
+    "gba_title": "FB_11] Water Interval Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb11"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 12,
+    "title": "Cost of Interval Data",
+    "java_state": "active",
+    "gba_title": "FB_12] Cost of Interval Data",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G05",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb12"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 13,
+    "title": "Security and Privacy Classes (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_13] Energy Usage Security and Privacy ClassCMD-MANDATORY",
+    "legacy_title": "Security and Privacy classes",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F08"
+    ],
+    "gap": "G08",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb13",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 14,
+    "title": "Authorization and Authentication (OAuth)",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "Authorization and Authentication (OAuth)",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F08"
+    ],
+    "gap": "G08",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 15,
+    "title": "Usage Summary",
+    "java_state": "active",
+    "gba_title": "FB_15] Usage Summary",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F04"
+    ],
+    "gap": "G05",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb15"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 16,
+    "title": "Usage Summary with Cost",
+    "java_state": "active",
+    "gba_title": "FB_16] Usage Summary with Cost",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F04",
+      "F05"
+    ],
+    "gap": "G05",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb16"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 17,
+    "title": "Power Quality Summary",
+    "java_state": "active",
+    "gba_title": "FB_17] Electricity Power Quality Summary",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G06",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb17"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 18,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 19,
+    "title": "Partial update data",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "Partial update data",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G09",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 27,
+    "title": "Usage Summary with Demands and Previous Day Attributes",
+    "java_state": "active",
+    "gba_title": "FB_27] Usage Summary with Demands and Previous Day Attributes",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G05",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb27"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 28,
+    "title": "Usage Summary Costs for Current Billing Period",
+    "java_state": "active",
+    "gba_title": "FB_28] Usage Summary Costs for Current Billing Period",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F04"
+    ],
+    "gap": "G05",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb28"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 29,
+    "title": "Temperature Interval Metering",
+    "java_state": "active",
+    "gba_title": "FB_29] Temperature Interval Metering",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G01",
+    "phase": "P1",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb29"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 30,
+    "title": "Common User Experience",
+    "java_state": "active",
+    "gba_title": "FB_30] Usage Data Common User ExperienceDMD-MANDATORY",
+    "legacy_title": null,
+    "status": "not applicable to our third-party role",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb30"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 31,
+    "title": "Authorization and Authentication w/o Pre-Negotiated Scope",
+    "java_state": "active",
+    "gba_title": "FB_31] Usage Data Authorization and Authentication w/o Pre-Negotiated ScopeCMD-MANDATORY",
+    "legacy_title": "Core Rest Services",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F08"
+    ],
+    "gap": "G08",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb31",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 32,
+    "title": "Resource Level REST",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "Resource Level REST",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 33,
+    "title": "Management REST Interfaces",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "Management REST Interfaces",
+    "status": "not applicable to our third-party role",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 34,
+    "title": "FB_34] SFTP for Usage Data Bulk",
+    "java_state": "deprecated",
+    "gba_title": "FB_34] SFTP for Usage Data Bulk",
+    "legacy_title": "SFTP for Bulk",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb34",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 35,
+    "title": "REST for Energy Usage Bulk",
+    "java_state": "active",
+    "gba_title": "FB_35] REST for Usage Data Bulk",
+    "legacy_title": "REST for Bulk",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F10"
+    ],
+    "gap": "G09",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb35",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 36,
+    "title": "Third Party (Client) Dynamic Registration",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "Third Party (Client) Dynamic Registration",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 37,
+    "title": "Query Parameters (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_37] Usage Data Query ParametersCMD-MANDATORY",
+    "legacy_title": "Query Parameters",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F11"
+    ],
+    "gap": "G09",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb37",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 38,
+    "title": "On Demand Requests",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": "On Demand Requests",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F10"
+    ],
+    "gap": "G09",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 39,
+    "title": "PUSH Model (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_39] Usage Data PUSH ModelCMD-MANDATORY",
+    "legacy_title": "PUSH model",
+    "status": "explicitly unsupported",
+    "implemented_features": [
+      "F11"
+    ],
+    "gap": "G09",
+    "phase": "P2",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb39",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 40,
+    "title": "Offline Authorization (Energy Usage)",
+    "java_state": "active",
+    "gba_title": "FB_40] Usage Data Offline Authorization",
+    "legacy_title": "Offline Authorization",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb40",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 41,
+    "title": "Manage ApplicationInformation Resource",
+    "java_state": "active",
+    "gba_title": "FB_41] Manage ApplicationInformation Resource",
+    "legacy_title": "Manage  Authorization Resource",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb41",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 42,
+    "title": "Third Party Core REST Services",
+    "java_state": "not enumerated",
+    "gba_title": null,
+    "legacy_title": "Third Party Core REST Services",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 43,
+    "title": "Third Party Management REST Services",
+    "java_state": "not enumerated",
+    "gba_title": null,
+    "legacy_title": "Third Party Management REST Services",
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "Historical title only; the pinned FB43 description is empty and Java does not enumerate it. Applicability is unverified pending P0; no evidence-backed third-party role exclusion is claimed. Explicitly unsupported at G12/P4, not an instruction to implement administration interfaces or widen scopes."
+  },
+  {
+    "id": 44,
+    "title": "Manage Authorization Resource",
+    "java_state": "active",
+    "gba_title": "FB_44] Manage Authorization Resource",
+    "legacy_title": "Manage ApplicationInformation Resource",
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb44",
+      "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 46,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
+  },
+  {
+    "id": 47,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
+  },
+  {
+    "id": 48,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
+  },
+  {
+    "id": 49,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
+  },
+  {
+    "id": 50,
+    "title": "Deprecated ID; title not independently verified",
+    "java_state": "deprecated",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "applicability": "unverified pending P0",
+    "implemented_features": [],
+    "gap": "G12",
+    "phase": "P4",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "Pinned Java DEPRECATED_IDS proves only deprecation membership, not this block's meaning or role. Applicability is unverified pending P0; explicitly unsupported at G12/P4, with no role exclusion, scope widening or optional administration implementation inferred."
+  },
+  {
+    "id": 51,
+    "title": "Common (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_51] Retail Customer CommonMANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb51"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 52,
+    "title": "Download My Data (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_52] Retail Customer Download My DataDMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb52"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 53,
+    "title": "Connect My Data (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_53] Retail Customer Connect My DataCMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb53"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 54,
+    "title": "Basic Retail Customer Information",
+    "java_state": "active",
+    "gba_title": "FB_54] Retail Customer Basic Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb54"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 55,
+    "title": "Retail Customer Address Information",
+    "java_state": "active",
+    "gba_title": "FB_55] Retail Customer Demographic Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb55"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 56,
+    "title": "Retail Customer Billing Information",
+    "java_state": "active",
+    "gba_title": "FB_56] Retail Customer Billing Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb56"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 57,
+    "title": "Retail Customer AccountAgreement Information",
+    "java_state": "active",
+    "gba_title": "FB_57] Retail Customer Account-Agreement Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb57"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 58,
+    "title": "Retail Customer ServiceLocation Information",
+    "java_state": "active",
+    "gba_title": "FB_58] Retail Customer Service-Location Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb58"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 59,
+    "title": "Retail Customer ServiceSupplier Information",
+    "java_state": "active",
+    "gba_title": "FB_59] Retail Customer Service-Supplier Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb59"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 60,
+    "title": "Retail Customer Meter Information",
+    "java_state": "active",
+    "gba_title": "FB_60] Retail Customer Meter Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb60"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 61,
+    "title": "Retail Customer EndDevice Information",
+    "java_state": "active",
+    "gba_title": "FB_61] Retail Customer End-Device Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb61"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 62,
+    "title": "Retail Customer ProgramDateIdMapping Information",
+    "java_state": "active",
+    "gba_title": "FB_62] Retail Customer Program-Date-ID-Mappings Information",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb62"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 63,
+    "title": "Common User Experience (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_63] Retail Customer Common User ExperienceDMD-MANDATORY",
+    "legacy_title": null,
+    "status": "not applicable to our third-party role",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb63"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 64,
+    "title": "Security and Privacy Classes (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_64] Retail Customer Security and Privacy ClassCMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb64"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 65,
+    "title": "Authorization and Authentication w/o Pre-Negotiated Scope (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_65] Retail Customer Authorization and Authentication w/o Pre-Negotiated ScopeCMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb65"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 66,
+    "title": "FB_66] SFTP for Retail Customer Bulk",
+    "java_state": "deprecated",
+    "gba_title": "FB_66] SFTP for Retail Customer Bulk",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb66"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 67,
+    "title": "REST for Retail Customer Bulk",
+    "java_state": "active",
+    "gba_title": "FB_67] REST for Retail Customer Bulk",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb67"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 68,
+    "title": "Query Parameters (Retail Customer)",
+    "java_state": "active",
+    "gba_title": null,
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 69,
+    "title": "PUSH Model (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_69] Retail Customer PUSH ModelCMD-MANDATORY",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb69"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  },
+  {
+    "id": 70,
+    "title": "Offline Authorization (Retail Customer)",
+    "java_state": "active",
+    "gba_title": "FB_70] Retail Customer Offline Authorization",
+    "legacy_title": null,
+    "status": "explicitly unsupported",
+    "implemented_features": [],
+    "gap": "G11",
+    "phase": "P3",
+    "source_urls": [
+      "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+      "https://www.greenbuttonalliance.org/fb70"
+    ],
+    "note": "No full-block compliance asserted. N/A covers producer/custodian/admin-only role, not receiver interoperability; optional or deprecated blocks remain explicit exclusions."
+  }
+]

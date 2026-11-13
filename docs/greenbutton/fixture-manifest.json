@@ -1,0 +1,398 @@
+{
+  "checked": "2026-10-12",
+  "fixtures": [
+    {
+      "id": "ApplicationInformation-Entry-Anonymized.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/ApplicationInformation-Entry-Anonymized.xml",
+      "sha256": "34f6a0b370f5300f1cbc32fc4478f999d2bddf27456d8f56db89fe8250adc685",
+      "bytes": 3806,
+      "content_resources": [
+        "{http://naesb.org/espi}ApplicationInformation"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "Authorization-Entry-Anonymized.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/Authorization-Entry-Anonymized.xml",
+      "sha256": "553e61d045fa624bb4b9b6373264ac523e0f7cc924e9cf064edb9ec8b3d7ed5f",
+      "bytes": 1673,
+      "content_resources": [
+        "{http://naesb.org/espi}Authorization"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "Customer-Subscription-Feed-Anonymized.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/Customer-Subscription-Feed-Anonymized.xml",
+      "sha256": "ed5efb9046ec98589163eaaeeeb22c4f94e65b49c001dc9c5d9a73032ee63576",
+      "bytes": 2156,
+      "content_resources": [
+        "{http://naesb.org/espi/customer}Customer",
+        "{http://naesb.org/espi/customer}Organisation"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "Multiple-Authorization-Feed-Anonymized.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/Multiple-Authorization-Feed-Anonymized.xml",
+      "sha256": "4398a690d03362e31f78be569b0b293314647406888af4fd57701ddc0412cfd8",
+      "bytes": 3156,
+      "content_resources": [
+        "{http://naesb.org/espi}Authorization"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "Usage-Subscription-Feed-Anonymized.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/Usage-Subscription-Feed-Anonymized.xml",
+      "sha256": "58ca69ff5c1878aaf32e196429dd04681fd7e9f65cba9a46dd13dc7726fce275",
+      "bytes": 4060,
+      "content_resources": [
+        "{http://naesb.org/espi}LocalTimeParameters",
+        "{http://naesb.org/espi}MeterReading",
+        "{http://naesb.org/espi}ReadingType",
+        "{http://naesb.org/espi}ServiceCategory",
+        "{http://naesb.org/espi}UsagePoint"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "testdata.xml",
+      "kind": "GBA-repository-anonymized-reference",
+      "url": "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/sample-xml/testdata.xml",
+      "sha256": "4343c5a073b3817278aac3a792cbf7594e170e64c80aa3c580f572a8c1e61cc6",
+      "bytes": 17761,
+      "content_resources": [
+        "{http://naesb.org/espi}IntervalBlock",
+        "{http://naesb.org/espi}IntervalReading",
+        "{http://naesb.org/espi}LocalTimeParameters",
+        "{http://naesb.org/espi}MeterReading",
+        "{http://naesb.org/espi}ReadingType",
+        "{http://naesb.org/espi}ServiceCategory",
+        "{http://naesb.org/espi}UsagePoint",
+        "{http://naesb.org/espi}UsageSummary"
+      ],
+      "local_path": null,
+      "provenance": "GBA public repository filename explicitly Anonymized (or testdata); not evidence of utility origin or normative schema validity",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "gba-hourly.xml",
+      "kind": "official-public-reference",
+      "url": "https://s3-us-west-2.amazonaws.com/technical.greenbuttonalliance.org/library/sample-data/TestGBDataHourlyNineDaysBinnedDaily.xml",
+      "sha256": "18e54b8b1ebdfa2f249a97ee602362ca95ba8dd0d030cba236c39e945259c7fb",
+      "bytes": 66254,
+      "content_resources": [
+        "{http://naesb.org/espi}ElectricPowerUsageSummary",
+        "{http://naesb.org/espi}IntervalBlock",
+        "{http://naesb.org/espi}IntervalReading",
+        "{http://naesb.org/espi}LocalTimeParameters",
+        "{http://naesb.org/espi}MeterReading",
+        "{http://naesb.org/espi}ReadingType",
+        "{http://naesb.org/espi}ServiceCategory",
+        "{http://naesb.org/espi}ServiceDeliveryPoint",
+        "{http://naesb.org/espi}UsagePoint"
+      ],
+      "local_path": "webapp/tests/fixtures/green-button-alliance-sample.xml",
+      "provenance": "GBA samples index; illustrative reference NOT a genuine utility customer export",
+      "redistribution": "Reference URL only; do not copy OAuth token/secret-shaped example fields into production or durable logs."
+    },
+    {
+      "id": "utility-hydro-one.xml",
+      "kind": "public-utility-customer-sample",
+      "url": "https://raw.githubusercontent.com/ryanmaule/greenbutton-to-homeassistant-sql/86fd37e99e8d81c32a72e1baf825ae9a7163b59b/import/hourly-weekday.xml",
+      "sha256": "4c0a83592e3b983094bca071fabab0c03be64c754edc2e4841ac75c95dc5a455",
+      "bytes": 18502,
+      "local_path": "webapp/tests/fixtures/utility-hydro-one.xml",
+      "provenance": "Live-retrieved public upstream file pinned to commit; inherited utility attribution in fixture README. Public customer upload is not utility-issued normative reference. No new XML or identifiers copied by this task.",
+      "redistribution": "Already committed public fixture; no additional identifying fields copied by this task.",
+      "upstream_commit": "86fd37e99e8d81c32a72e1baf825ae9a7163b59b",
+      "upstream_sha256": "4c0a83592e3b983094bca071fabab0c03be64c754edc2e4841ac75c95dc5a455",
+      "checked": "2026-10-12",
+      "upstream_matches_local": true,
+      "upstream_matches_lf_normalized": true
+    },
+    {
+      "id": "utility-toronto-hydro.xml",
+      "kind": "public-utility-customer-sample",
+      "url": "https://github.com/vqvu/home-assistant-green-button/issues/77",
+      "sha256": "a439c43af5552f920a8c95e263589a5af1e7634772011295250bed33c65f3105",
+      "bytes": 29707,
+      "local_path": "webapp/tests/fixtures/utility-toronto-hydro.xml",
+      "provenance": "Public customer issue XML fence; issue URL + update time + response hash pinned (mutable, unlike Git commit). Local bytes remain pinned. Utility attribution is customer-reported; Alectra is fragment only, no complete-unit truth claim.",
+      "redistribution": "Already committed public fixture; no additional identifying fields copied by this task.",
+      "checked": "2026-10-12",
+      "issue_updated_at": "2023-07-11T15:46:53Z",
+      "public_api_response_sha256": "2b62bc149e3203b21af8251adac2c520e10bfb53b8e2187b758357b0d5c2b3c5",
+      "xml_fences_found": 1,
+      "upstream_matches_lf_normalized": true
+    },
+    {
+      "id": "utility-alectra-fragment.xml",
+      "kind": "public-utility-fragment",
+      "url": "https://github.com/rocketraman/open-green-button-homeassistant/issues/4",
+      "sha256": "47d25bc5deb95034e46e3962930b6daa8e3d89f2bb5651b9748c5a8492523404",
+      "bytes": 251,
+      "local_path": "webapp/tests/fixtures/utility-alectra-fragment.xml",
+      "provenance": "Public customer issue XML fence; issue URL + update time + response hash pinned (mutable, unlike Git commit). Local bytes remain pinned. Utility attribution is customer-reported; Alectra is fragment only, no complete-unit truth claim.",
+      "redistribution": "Already committed public fixture; no additional identifying fields copied by this task.",
+      "checked": "2026-10-12",
+      "issue_updated_at": "2026-08-06T22:01:58Z",
+      "public_api_response_sha256": "60ac92e23b7bbf431074139b710f92aa620289a4352eb67d16c7abd20858ccd0",
+      "xml_fences_found": 4,
+      "upstream_matches_lf_normalized": true
+    },
+    {
+      "id": "utility-espi-prefixed-standin.xml",
+      "kind": "public-non-Ontario-standin",
+      "url": "https://raw.githubusercontent.com/jgkramer/hummingbird/c55ff29ee11d5b649fdd37c00031ff95170044a2/usage_data/lindahl.xml",
+      "sha256": "3e96647171038544d5d9d5fbffa8194f85a7d5a9bcc670bd5e3f6ad14a883626",
+      "bytes": 162624,
+      "local_path": "webapp/tests/fixtures/utility-espi-prefixed-standin.xml",
+      "provenance": "Live-retrieved public upstream file pinned to commit; inherited utility attribution in fixture README. Public customer upload is not utility-issued normative reference. No new XML or identifiers copied by this task.",
+      "redistribution": "Already committed public fixture; no additional identifying fields copied by this task.",
+      "upstream_commit": "c55ff29ee11d5b649fdd37c00031ff95170044a2",
+      "upstream_sha256": "3e96647171038544d5d9d5fbffa8194f85a7d5a9bcc670bd5e3f6ad14a883626",
+      "checked": "2026-10-12",
+      "upstream_matches_local": true,
+      "upstream_matches_lf_normalized": true
+    },
+    {
+      "id": "usage-summary-synthetic.xml",
+      "kind": "existing-synthetic",
+      "local_path": "webapp/tests/fixtures/usage-summary-synthetic.xml",
+      "sha256": "0eab336ebb4b3eedc78649ff94dd82f0fd4405b87716a7675b0d6cf5a159c7c3",
+      "bytes": 32317,
+      "provenance": "In-repo generated test fixture. Summary tests reconstruct audit amounts; not a genuine utility sample, no new private XML copied here. New adversarial fixtures must use independent arbitrary values."
+    },
+    {
+      "id": "usage-summary-open-tail.xml",
+      "kind": "existing-synthetic",
+      "local_path": "webapp/tests/fixtures/usage-summary-open-tail.xml",
+      "sha256": "324a0297c84daba813a12d80d8104188a0dc37ecfc22f0f98daa67c0dc70e49d",
+      "bytes": 349628,
+      "provenance": "In-repo generated test fixture. Summary tests reconstruct audit amounts; not a genuine utility sample, no new private XML copied here. New adversarial fixtures must use independent arbitrary values."
+    },
+    {
+      "id": "synthetic.xml",
+      "kind": "existing-synthetic",
+      "local_path": "webapp/tests/fixtures/synthetic.xml",
+      "sha256": "595fe364736590dd31196241407922d7d6dbe6936e7867e99a4aa0b1b0bf1d05",
+      "bytes": 11131,
+      "provenance": "In-repo generated test fixture. Summary tests reconstruct audit amounts; not a genuine utility sample, no new private XML copied here. New adversarial fixtures must use independent arbitrary values."
+    }
+  ],
+  "synthetic_recipes": [
+    {
+      "id": "standards-delta-review",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G00",
+      "acceptance_test": "edition-pin-reviewed",
+      "phase": "P0",
+      "source": "NAESB retail index; public ESPI landing; mirror headers",
+      "construction": "Review legally obtained full MBPs and exact dated XSDs; record SHA256, minor corrections and third-party PICS; no purchases/signing in this task.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://www.naesb.org/retail_standards.asp",
+        "https://www.naesb.org/espi_standards.asp"
+      ]
+    },
+    {
+      "id": "quantity-matrix",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G01",
+      "acceptance_test": "typed-quantities",
+      "phase": "P1",
+      "source": "espi.xsd ReadingType/IntervalReading/ServiceCategory enumerations",
+      "construction": "For each enum combination accept dimensional conversion only with documented semantics: Wh energy versus W average power times own duration; demand stays power; var/varh/VA/VAh stay distinct; gas/water/temperature never kWh or OEB rates. Registers need deltas/reset/rollover rules; reverse/export/net remain separate, not clamped consumption. Explicit diagnostics for all unhandled combinations, missing metadata, extreme multiplier, unsafe integers and lexical junk.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "graph-adversarial",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G02",
+      "acceptance_test": "atom-resource-graph",
+      "phase": "P1",
+      "source": "RFC4287/RFC3986; espi.xsd IdentifiedObject/MeterReading/UsagePoint",
+      "construction": "Index canonical self URIs and atom IDs; respect xml:base and link relation; join UsagePoint→MeterReading→ReadingType→IntervalBlock independent of order; diagnose missing/duplicate/conflicting refs and same suffix different authorities. Keep data provenance; never fetch arbitrary imported links; any CMD fetch must be consented, origin-allowlisted and SSRF-safe.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://www.rfc-editor.org/rfc/rfc4287",
+        "https://www.rfc-editor.org/rfc/rfc3986",
+        "https://green-button.github.io/developers/"
+      ]
+    },
+    {
+      "id": "duration-dst",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G03",
+      "acceptance_test": "interval-duration-dst",
+      "phase": "P1",
+      "source": "espi.xsd DateTimeInterval/TimeConfiguration",
+      "construction": "Own timePeriod duration wins; ReadingType intervalLength fallback with explicit provenance; block.interval describes block extent NOT a per-reading duration fallback. Retain UTC start/end, split billing/rate boundaries by interval overlap; missing/gap/duplicate/overlap/mixed-cadence incomplete windows stay incomplete. Resolve clocks per meter and test 23/25-hour days, fixed offset and southern-hemisphere rules; no guessing from browser zone.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "quality-channel",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G04",
+      "acceptance_test": "reading-quality-channel",
+      "phase": "P1",
+      "source": "espi.xsd ReadingQuality/ReadingType/IntervalReading",
+      "construction": "Preserve quality code including unknown values; distinguish measured/estimated/substituted with schema-backed policies; never remove quality silently. Preserve tariff/phase/channel qualifiers to prevent double counting parallel register/TOU streams; each accumulation kind either typed implementation with tests or diagnostic.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "summary-complete",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G05",
+      "acceptance_test": "summary-all-fields",
+      "phase": "P2",
+      "source": "espi.xsd UsageSummary/ElectricPowerUsageSummary/LineItem/SummaryMeasurement; GBA FB15",
+      "construction": "Preserve every field with units/currency/raw scale; fees/negative credits/unknown notes retained without speculative itemKind meaning. Never infer utility-language patterns from synthetics. No cross-meter/cross-currency merging; unknown currency label is unknown, no currency conversion. Deprecated ElectricPowerUsageSummary remains explicit compatibility path. Non-electric summaries cannot enter Ontario tariff model.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd",
+        "https://www.greenbuttonalliance.org/fb15"
+      ]
+    },
+    {
+      "id": "auxiliary-all-resources",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G06",
+      "acceptance_test": "auxiliary-resource-roundtrip",
+      "phase": "P3",
+      "source": "espi.xsd global elements and complex types",
+      "construction": "Parse+preserve distinct typed objects (no new dashboard inferred) or return explicit resource diagnostics for each pinned class/field. Power quality remains power-quality units, not kWh; retain measurement protocol/summaryInterval.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "extensions-safe",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G07",
+      "acceptance_test": "unknown-extension-report",
+      "phase": "P1",
+      "source": "RFC4287 foreign markup; espi.xsd Object; parseDiagnostic.ts",
+      "construction": "Return known/unknown/unsupported counts and QName-aware diagnostics. Preserve safe opaque foreign fields with size/depth limits client-side, never execute markup/PI/DTD or follow URLs. Redact secrets/PII from exports/logs; unsolicited customer data needs opt-in quarantine/drop diagnostic, NOT blanket preservation.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://www.rfc-editor.org/rfc/rfc4287",
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "cmd-capabilities",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G08",
+      "acceptance_test": "cmd-capabilities-scope",
+      "phase": "P2",
+      "source": "GBA function-blocks; pinned FunctionBlock.java; Authorization/ApplicationInformation schema; OAuth RFC6749",
+      "construction": "Negotiate only consumed, consented electricity usage capabilities, record granted/requested delta. No automatic PII/gas/water scopes for completeness. Parse authorised/published periods/status/expiry and allowlisted pointers; ApplicationInformation safe metadata only, never store client_secret in client dataset. Third-party scope UI distinct from custodian authorization server.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://www.greenbuttonalliance.org/function-blocks",
+        "https://www.rfc-editor.org/rfc/rfc6749",
+        "https://green-button.github.io/espi/authorization_scope/"
+      ]
+    },
+    {
+      "id": "cmd-transfer",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G09",
+      "acceptance_test": "cmd-pagination-batch-async",
+      "phase": "P2",
+      "source": "developer API batch docs; espi.xsd BatchListType/BatchItemInfo; espi.ts",
+      "construction": "Bounded same-origin next-page traversal with cycle/count/byte/time limits and exact dedupe; partial page failure stays partial. Validate authorised BatchItemInfo resources/status; robust idempotent notification→GET. Bounded 202 continuation/backoff supports documented completion mechanism; never trust arbitrary notification URL as authenticated fetch destination; no SFTP absent explicit integration decision.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://greenbuttonalliance.github.io/OpenESPI-GreenButton-API-Documentation/API/",
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/espi.xsd"
+      ]
+    },
+    {
+      "id": "cmd-lifecycle",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G10",
+      "acceptance_test": "cmd-revoke-concurrent",
+      "phase": "P2",
+      "source": "OAuth RFC6749/RFC7009; GBA certification TLS1.3 note; sync.ts",
+      "construction": "Serialize refresh per grant, atomically persist rotated tokens; one-time-token concurrent request/restart tests. Handle revocation notification/status/invalid_grant; remote revocation only with documented consented provider endpoint; local disconnect honest about scope. Verify TLS1.3 capability/policy and certificate checks locally, no claim from generic fetch.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://www.rfc-editor.org/rfc/rfc6749",
+        "https://www.rfc-editor.org/rfc/rfc7009",
+        "https://www.greenbuttonalliance.org/certification"
+      ]
+    },
+    {
+      "id": "customer-all-resources",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G11",
+      "acceptance_test": "customer-isolation-inventory",
+      "phase": "P3",
+      "source": "customer.xsd resources and namespace annotation; GBA FB51–70",
+      "construction": "Explicit namespace-aware unsupported diagnostics by default. If a later separately approved service needs PII, minimal opt-in scope, separate typed feed/storage boundary, TTL/delete/export/redaction tests. Test each customer global/complex class, Statement/StatementRef/bill-image reference without network download or PII in logs. Inventory NOT an instruction to collect data.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.0/customer.xsd",
+        "https://www.greenbuttonalliance.org/function-blocks"
+      ]
+    },
+    {
+      "id": "profile-role",
+      "kind": "proposed-synthetic-adversarial",
+      "state": "specified-not-yet-implemented",
+      "gap": "G12",
+      "acceptance_test": "profile-role-exclusions",
+      "phase": "P4",
+      "source": "GBA catalog; pinned legacy connect_function_blocks.md; FunctionBlock.java",
+      "construction": "Record third-party receive role versus custodian/authorization-server/admin producer role in PICS. Deprecated/reserved ids diagnostic only; do not request automatically. Out-of-role producer APIs remain N/A; optional receiver transports require explicit PM scope and provider evidence. FB43 and FB46–50 remain explicitly unsupported with applicability unverified pending P0; absence of definitions or deprecation alone cannot justify a role exclusion.",
+      "privacy": "Create from scratch with utility.example/test-* identifiers and unrelated arbitrary numbers; no user XML, names, account numbers, meter IDs, secrets or real bill-derived values. Customer fixture uses invented example.org addresses only; no remote fetch.",
+      "source_urls": [
+        "https://raw.githubusercontent.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/java/org/greenbuttonalliance/espi/common/scope/FunctionBlock.java",
+        "https://raw.githubusercontent.com/green-button/green-button.github.io/9e51bf67c91bf92dcb74e9fbbcb3c52ac9f477c4/espi/connect_function_blocks.md",
+        "https://www.greenbuttonalliance.org/function-blocks"
+      ]
+    }
+  ],
+  "forbidden": "Never commit Mark's actual XML or identifying details. Synthetic means synthetic, not alleged utility evidence. Reference availability != rights to republish private fields."
+}

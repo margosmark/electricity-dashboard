@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F01",
+    "title": "Wh integer scaling",
+    "status": "fully parsed+used",
+    "supported_scope": "Linked/inline/single-distinct ReadingType exponent, raw Wh divided by 1000; no other units claimed",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/utilitySamples.test.ts",
+        "title": "uses the multiplier linked from the IntervalBlock entry (−3 → /1000 again)"
+      },
+      {
+        "path": "webapp/src/lib/utilitySamples.test.ts",
+        "title": "ignores multipliers declared on summary measurements (Oakville-shaped feed)"
+      }
+    ],
+    "gap": "G01"
+  },
+  {
+    "id": "F02",
+    "title": "UsagePoint href grouping",
+    "status": "fully parsed+used",
+    "supported_scope": "self before up before related; path-shaped links only; no URI graph claimed",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/utilitySamples.test.ts",
+        "title": "groups readings under the same UsagePoint regardless of link/entry position"
+      }
+    ],
+    "gap": "G02"
+  },
+  {
+    "id": "F03",
+    "title": "Namespace-prefix/entry-order tolerance",
+    "status": "fully parsed+used",
+    "supported_scope": "Prefix removal and reordering accepted; namespace URI collision protection NOT claimed",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/utilitySamples.test.ts",
+        "title": "yields identical readings with and without espi: prefixes"
+      },
+      {
+        "path": "webapp/src/lib/utilitySamples.test.ts",
+        "title": "does not depend on the order entries appear in the feed"
+      }
+    ],
+    "gap": "G02"
+  },
+  {
+    "id": "F04",
+    "title": "Summary money and bill periods",
+    "status": "fully parsed+used",
+    "supported_scope": "billLastPeriod/billToDate/costAdditionalLastPeriod /100000; billingPeriod; both element variants",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/usageSummary.test.ts",
+        "title": "reads CAD and the money scale the schema defines (÷100,000)"
+      },
+      {
+        "path": "webapp/src/lib/usageSummary.test.ts",
+        "title": "reads ElectricPowerUsageSummary under its schema name too"
+      }
+    ],
+    "gap": "G05"
+  },
+  {
+    "id": "F05",
+    "title": "Line item/measurement subset",
+    "status": "parsed+preserved",
+    "supported_scope": "note, rawAmount, itemKind, unitCost, measurement value/multiplier/uom; not rounding/dateTime/itemPeriod",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/usageSummary.test.ts",
+        "title": "keeps every line item with its note verbatim and its raw itemKind"
+      }
+    ],
+    "gap": "G05"
+  },
+  {
+    "id": "F06",
+    "title": "LocalTimeParameters single clock",
+    "status": "fully parsed+used",
+    "supported_scope": "tzOffset/dstOffset/hex rules; one feed-wide clock, not per-UsagePoint linked clocks",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/localTimeParameters.test.ts",
+        "title": "flips the offset exactly at the transitions"
+      },
+      {
+        "path": "webapp/src/lib/localTimeParameters.test.ts",
+        "title": "gives the 23-hour and 25-hour days the calendar has"
+      },
+      {
+        "path": "webapp/src/lib/localTimeParameters.test.ts",
+        "title": "parses tzOffset alone and never invents a DST regime"
+      }
+    ],
+    "gap": "G03"
+  },
+  {
+    "id": "F07",
+    "title": "Incomplete billing comparison guard",
+    "status": "fully parsed+used",
+    "supported_scope": "Existing inferred cadence/coverage guard, NOT explicit ESPI duration coverage",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/usageSummary.test.ts",
+        "title": "refuses to compare a half-covered period (missing data is not a rate miss)"
+      }
+    ],
+    "gap": "G03"
+  },
+  {
+    "id": "F08",
+    "title": "Authorization-code OAuth",
+    "status": "fully parsed+used",
+    "supported_scope": "State/cookie binding, minimal configured scope, code exchange; PKCE optional",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "sends the narrow scope and the registered redirect_uri to the custodian"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "rejects a callback whose state does not match the cookie"
+      }
+    ],
+    "gap": "G08"
+  },
+  {
+    "id": "F09",
+    "title": "Refresh rotation/rejection",
+    "status": "fully parsed+used",
+    "supported_scope": "Persist rotated refresh; invalid_grant or fresh-token rejection clears locally; no remote revoke claimed",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "persists the rotated refresh token before returning"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "survives rotation plus a one-shot resource 401 (retry uses the rotated refresh token)"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "clears the stored tokens and reports grant_revoked when the utility says no"
+      }
+    ],
+    "gap": "G10"
+  },
+  {
+    "id": "F10",
+    "title": "Authorization resource pointer",
+    "status": "fully parsed+used",
+    "supported_scope": "resourceURI extraction and URI-base resolution ONLY; other Authorization XML fields ignored",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "resolves the relative resourceURI the Authorization resource advertises and pipes the feed"
+      }
+    ],
+    "gap": "G08"
+  },
+  {
+    "id": "F11",
+    "title": "CMD bounded notification / 202",
+    "status": "fully parsed+used",
+    "supported_scope": "Notification change-marker only; 202 reports data_pending; no BatchList item semantics/polling claimed",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "accepts a BatchList at the registered token path and only records a timestamp"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/oauthFlow.test.ts",
+        "title": "surfaces an async 202 batch as data_pending instead of hanging"
+      }
+    ],
+    "gap": "G09"
+  },
+  {
+    "id": "F12",
+    "title": "XML diagnostics",
+    "status": "fully parsed+used",
+    "supported_scope": "Malformed/empty/HTML/entity/missing-readings diagnostics (parseDiagnostic); refused series — unsupported commodity, register/spot, quantity, flow — reach the user as series notes (SeriesNotesNotice + i18n/seriesNote.ts)",
+    "existing_tests": [
+      {
+        "path": "webapp/src/lib/parseDiagnostic.test.ts",
+        "title": "names external entities instead of repeating the parser error"
+      },
+      {
+        "path": "webapp/src/lib/parseDiagnostic.test.ts",
+        "title": "explains a feed with entries but no readings"
+      },
+      {
+        "path": "webapp/src/lib/greenbutton/series.test.ts",
+        "title": "refuses natural gas (commodity 7) and potable water (commodity 9)"
+      },
+      {
+        "path": "webapp/src/components/SeriesNotesNotice.test.tsx",
+        "title": "prints every refusal, in order, when the feed carried several"
+      }
+    ],
+    "gap": "G07"
+  }
+]
