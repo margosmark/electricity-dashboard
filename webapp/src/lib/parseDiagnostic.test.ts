@@ -58,12 +58,14 @@ describe('diagnoseGreenButtonDocument — malformed XML', () => {
     expect(d.hints.join(' ')).toMatch(/truncated|re-download/i);
   });
 
-  it('interpolates the line in the DETAIL sentence too — never a literal {line}', () => {
+  it('keeps the validator’s own English prose off the screen — the CODE picks our sentence', () => {
     // The QA corpus' truncated export (F-07g) stops mid-element, and the
-    // validator answers `InvalidXml` at line 1. BOTH sentences take that line;
-    // the detail template reads "{msg} at line {line}." and used to be called
-    // with `msg` alone, so the user was shown the placeholder literally
-    // ("Invalid '…' found. at line {line}." — t_1fca89fa).
+    // validator answers `InvalidXml` at line 1 with its internal stack dump:
+    // `Invalid '[    "feed",    "entry",    "updated"]' found.` That string
+    // used to be printed verbatim inside `diag.malformedDetailMsg`, so the fr
+    // page showed English library text in a French sentence (t_9dfd150b,
+    // found by the hostile-XML corpus). The line stays — it is a number and
+    // translates with the headline around it.
     const d = failure(
       '<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<feed xmlns="http://www.w3.org/2005/Atom">\n' +
@@ -71,8 +73,31 @@ describe('diagnoseGreenButtonDocument — malformed XML', () => {
         '    <updated>2026-01-01',
     );
     expect(d.headline).toBe('The XML is not well-formed at line 1.');
-    expect(d.detail).toBe("Invalid '[    \"feed\",    \"entry\",    \"updated\"]' found. at line 1.");
-    expect(d.detail).not.toContain('{');
+    expect(d.detail).toBe('The file ended before its tags were balanced.');
+    expect(d.detail).not.toMatch(/Invalid '|found\./);
+    expect(d.hints.join(' ')).toMatch(/truncated|re-download/i);
+  });
+
+  it('translates each validator code into its own sentence, not the library’s', () => {
+    // The four codes fast-xml-parser returns, each with library prose behind
+    // it that must never reach the user in either language.
+    expect(failure('<feed><entry></feed></entry>').detail).toBe(
+      'A tag in it is opened and never closed, or closed by the wrong tag.',
+    );
+    expect(failure('<feed><entry a="1" a="2"/></feed>').detail).toBe(
+      'An attribute is repeated, written without quotes, or given no value.',
+    );
+    // NB: text that does not start with `<` never reaches the validator — the
+    // "not XML at all" branch answers first — so this one carries the invalid
+    // character INSIDE an otherwise well-formed document.
+    expect(failure('<feed><entry>&#xZZ;</entry></feed>').detail).toBe(
+      'A character sits where XML allows none — usually an unescaped &, a stray <, or a control character.',
+    );
+    // An unknown code (a library upgrade) falls back to the generic sentence,
+    // still ours.
+    expect(failure('<?xml version="1.0"?>').detail).toBe(
+      'The file ended before its tags were balanced.',
+    );
   });
 });
 
