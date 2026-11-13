@@ -11,7 +11,7 @@ import { format, isValid } from 'date-fns';
 import { Combine, Gauge, X } from 'lucide-react';
 import { type UsagePointGroup, type DataPoint, combineUsagePointGroups } from '@/lib/energy';
 import { fmtKwh, useTranslation } from '@/i18n';
-import { seriesNoteText } from '@/i18n/seriesNote';
+import { UsagePointSeriesNotes } from '@/components/UsagePointSeriesNotes';
 import { usagePointLabel } from '@/i18n/usagePointLabel';
 
 /**
@@ -94,33 +94,48 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
           {groups.map((group) => {
             const stats = usagePointStats(group);
             return (
-              <button
+              /*
+               * One visual unit, two interactive layers: the card carries the
+               * chrome (border, background, hover lift) so the row still reads
+               * as a single tile, the BUTTON chooses the point, and the series
+               * / notes block sits OUTSIDE the button — `<details>` cannot
+               * nest inside one, and its summary click must not choose the
+               * point (t_7aa2bd0c).
+               */
+              <div
                 key={group.id || 'unidentified'}
-                type="button"
-                data-testid={`usage-point-${group.id || 'unidentified'}`}
-                onClick={() => onChoose(group.readings)}
-                className="group w-full text-left bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-accent hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
+                data-testid={`usage-point-card-${group.id || 'unidentified'}`}
+                className="group w-full bg-inset p-4 md:p-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-edge shadow-hard-4 hover:bg-accent hover:text-accent-ink hover:translate-y-0.5 active:shadow-none transition-all"
               >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-base md:text-2xl">{usagePointLabel(group, t)}</span>
-                  <span className="text-xl md:text-3xl italic">
-                    {stats.count === 0 ? '—' : fmtKwh(stats.kwh)}
-                  </span>
-                </div>
-                <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-ink-3 group-hover:text-accent-ink flex flex-wrap gap-x-4 gap-y-1 normal-case">
-                  <span>{group.id || t('picker.noId')}</span>
-                  <span>{t('picker.readings', { count: stats.count })}</span>
-                  <span>
-                    {stats.from} → {stats.to}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  data-testid={`usage-point-${group.id || 'unidentified'}`}
+                  onClick={() => onChoose(group.readings)}
+                  className="w-full text-left"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-base md:text-2xl">{usagePointLabel(group, t)}</span>
+                    <span className="text-xl md:text-3xl italic">
+                      {stats.count === 0 ? '—' : fmtKwh(stats.kwh)}
+                    </span>
+                  </div>
+                  <div className="mt-1 md:mt-2 text-[8px] md:text-[10px] text-ink-3 group-hover:text-accent-ink flex flex-wrap gap-x-4 gap-y-1 normal-case">
+                    <span>{group.id || t('picker.noId')}</span>
+                    <span>{t('picker.readings', { count: stats.count })}</span>
+                    <span>
+                      {stats.from} → {stats.to}
+                    </span>
+                  </div>
+                </button>
                 {/*
                  * Series distinction. A UsagePoint can carry several
                  * ReadingTypes — consumption, exported energy, a register, a
                  * power or gas series — and only the consumption ones are in
                  * `readings`. Saying how many there are, and why the rest were
                  * left out, is the difference between a smaller number and a
-                 * smaller number the user can trust.
+                 * smaller number the user can trust. This block is a SIBLING
+                 * of the button inside the same card, so the notes' `<details>`
+                 * disclosure never nests inside the row button.
                  */}
                 <div
                   data-testid={`usage-point-series-${group.id || 'unidentified'}`}
@@ -130,16 +145,12 @@ export function UsagePointPicker({ fileName, groups, onChoose, onCancel }: Props
                     <p className="font-black uppercase">{t('gbseries.none')}</p>
                   ) : null}
                   <p>{t('gbseries.count', { count: group.series.length })}</p>
-                  {group.notes.length > 0 ? (
-                    <ul className="space-y-1">
-                      <li className="font-black uppercase">{t('gbseries.reasons')}</li>
-                      {group.notes.map((note, i) => (
-                        <li key={`${note.code}-${i}`}>{seriesNoteText(note, t)}</li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  <UsagePointSeriesNotes
+                    id={group.id || 'unidentified'}
+                    notes={group.notes}
+                  />
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
