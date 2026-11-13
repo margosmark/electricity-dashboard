@@ -31,7 +31,7 @@ const WEBAPP = join(HERE, '..', '..'); // src/lib → webapp
 const dockerfile = readFileSync(join(WEBAPP, 'Dockerfile'), 'utf8');
 
 /** The exact patch release both stages must carry. */
-const PINNED = 'node:26.12.1-alpine';
+const PINNED = 'node:26.13.1-alpine';
 
 /** Every `FROM` line in the file, in order. */
 const fromLines = dockerfile
@@ -39,10 +39,10 @@ const fromLines = dockerfile
   .map((line) => line.trim())
   .filter((line) => line.startsWith('FROM '));
 
-/** The image tag of a `FROM` line: `FROM node:26.12.1-alpine AS builder` → `node:26.12.1-alpine`. */
+/** The image tag of a `FROM` line: `FROM node:26.13.1-alpine AS builder` → `node:26.13.1-alpine`. */
 const tagOf = (from: string): string => from.split(' ')[1];
 
-/** The tag without its image name: `node:26.12.1-alpine` → `26.12.1-alpine`. */
+/** The tag without its image name: `node:26.13.1-alpine` → `26.13.1-alpine`. */
 const versionOf = (from: string): string => tagOf(from).split(':').pop() ?? '';
 
 describe('the Node base image is pinned to an exact patch release', () => {

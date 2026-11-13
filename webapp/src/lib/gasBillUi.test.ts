@@ -126,7 +126,7 @@ describe('rates — ¢/m³, display-only (DoD 4)', () => {
   });
 });
 
-describe('volume — three legitimate numbers, never cross-substituted (DoD 3)', () => {
+describe('volume — labeled numbers, never cross-substituted (DoD 3)', () => {
   it('billed = round(unadjusted × 1.0057); reads give their own delta', () => {
     summaries.forEach((s, i) => {
       const v = gasVolume(s);
@@ -136,6 +136,19 @@ describe('volume — three legitimate numbers, never cross-substituted (DoD 3)',
       // Three labeled numbers can disagree (period 4: 177 billed vs 176 reads).
       expect(v.billed).not.toBe(v.reads?.delta);
     });
+  });
+
+  it('reads the feed’s own Previous Usage consumption, and null when the line is absent', () => {
+    // Both committed Enbridge documents state this line in every period — as 0.
+    // The card prints it as reported (a line the file carries must be checkable
+    // on the page), never as this period's volume, and never invents a figure
+    // for a document that does not state one.
+    expect(summaries.map((s) => gasVolume(s).previousUsage)).toEqual(Array(10).fill(0));
+    const without = {
+      ...summaries[0],
+      items: summaries[0].items.filter((i) => i.note !== 'Previous Usage consumption'),
+    };
+    expect(gasVolume(without).previousUsage).toBeNull();
   });
 });
 
