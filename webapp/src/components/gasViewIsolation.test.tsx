@@ -21,10 +21,11 @@
  * one spelling that cannot silently stop matching a surface.
  *
  * VACUITY GUARD: every sweep is anchored — the tab must be showing its OWN
- * panel (`gas-overview-panel`, `gas-analytics-note`, `tab-panel-plans`,
- * `tab-panel-money`) and its gas content must really be there (10 gas period
- * cards, the gas money rows) — so a render that paints nothing cannot pass
- * the scan. The mirror test flips back to Electricity and requires the
+ * panel (`gas-overview-panel`, `gas-analytics-panel` + the `gas-chart` it
+ * contains, `tab-panel-plans`, `tab-panel-money`) and its gas content must
+ * really be there (10 gas period cards, the gas money rows, the chart's
+ * sr-only table with the stored m³ readings) — so a render that paints
+ * nothing cannot pass the scan. The mirror test flips back to Electricity and requires the
  * electric controls (totals strip, best-choice chip, floor, true-bill
  * estimate) to be THERE, which is what proves the seeds loaded and the
  * needles had something to catch.
@@ -132,14 +133,14 @@ type TabSpec = { label: string; panel: string; anchor?: string };
 
 const QUIET_GAS_TABS: readonly TabSpec[] = [
   { label: 'Overview', panel: 'gas-overview-panel' },
-  { label: 'Analytics', panel: 'gas-analytics-note' },
+  { label: 'Analytics', panel: 'gas-analytics-panel', anchor: 'gas-chart' },
   { label: 'Plans', panel: 'tab-panel-plans', anchor: 'gas-amount-due' },
   { label: 'Money', panel: 'tab-panel-money', anchor: 'gas-money-row' },
 ];
 
 const CLASSIC_GAS_TABS: readonly TabSpec[] = [
   { label: 'Overview', panel: 'gas-overview-panel' },
-  { label: 'Usage', panel: 'gas-analytics-note' },
+  { label: 'Usage', panel: 'gas-analytics-panel', anchor: 'gas-chart' },
   { label: 'Plans', panel: 'tab-panel-plans', anchor: 'gas-amount-due' },
   { label: 'Money', panel: 'tab-panel-money', anchor: 'gas-money-row' },
 ];
@@ -309,6 +310,18 @@ describe('Gas section carries no electric figure on any tab (AC2 / t_a775c2a3)',
     const gasText = (document.body.textContent ?? '').replace(/\s+/g, ' ');
     for (const [name, re] of GAS_MARKERS) {
       expect(gasText, `Gas Overview must keep its own ${name}`).toMatch(re);
+    }
+
+    // …and the Analytics tab really painted the CHART (t_78f788b3): its
+    // sr-only table must carry the stored readings — 427 is the fixture's
+    // first interval volume — so the sweep above cannot have passed over an
+    // empty chart frame.
+    const analytics = tabs.find((s) => s.panel === 'gas-analytics-panel');
+    if (analytics) {
+      await openTab(user, analytics);
+      const table = document.querySelector('[data-testid="gas-chart-data-table"]');
+      expect(table, 'gas Analytics must paint its sr-only chart table').not.toBeNull();
+      expect(table?.textContent ?? '').toMatch(/427/);
     }
 
     // The true-bill prefill is a WRITE to extra_charges (a gas bill fitted

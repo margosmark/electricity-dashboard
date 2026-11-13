@@ -50,7 +50,7 @@ import { useThemeBootstrap } from '@/lib/theme';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/classic/TabNav';
 import CommodityTabs from '@/components/CommodityTabs';
-import { GasOverviewPanel, GasAnalyticsNote, GasEmptyState } from '@/components/GasSection';
+import { GasOverviewPanel, GasAnalyticsPanel, GasEmptyState } from '@/components/GasSection';
 import { ActualBillPanel } from '@/components/classic/ActualBillPanel';
 import BestChoiceChip from '@/components/classic/BestChoiceChip';
 import OverviewPanel from '@/components/classic/OverviewPanel';
@@ -880,7 +880,7 @@ export default function Dashboard() {
       )}
 
       {tab === 'usage' && gasSelected && !gasEmpty && (
-        <GasAnalyticsNote intervalCount={gasData.length} />
+        <GasAnalyticsPanel points={gasData} />
       )}
 
       {tab === 'usage' && gasSelected && gasEmpty && (
