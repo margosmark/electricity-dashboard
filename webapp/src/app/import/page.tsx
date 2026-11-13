@@ -44,6 +44,9 @@ import { enrichGasSummaries, isGasFeed } from '@/lib/gasBillUi';
 // Commodity isolation (t_8a9038d6): one document, two buckets — the gas half
 // must reach `energy_gas_v2`, never the electric writer.
 import { splitFeed, primaryCommodity, unionGasPoints, type Commodity } from '@/lib/commodity';
+// t_cb0cf70f — Defect B: stage the detection verdict before router.push so
+// the dashboard's notice can disclose what THIS page just wrote.
+import { stageCommodityNotice } from '@/lib/importNotice';
 import {
   countUsableRows,
   EMPTY_BILL_FEED,
@@ -101,7 +104,19 @@ function ImportFlow() {
   const [error, setError] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [groups, setGroups] = useState<UsagePointGroup[] | null>(null);
-  const [plan, setPlan] = useState<{ plan: ImportPlan; incoming: DataPoint[]; existing: DataPoint[] } | null>(null);
+  const [plan, setPlan] = useState<{
+    plan: ImportPlan;
+    incoming: DataPoint[];
+    existing: DataPoint[];
+    /**
+     * What this document was detected as (t_cb0cf70f — Defect B): the gas
+     * review screen disclosed its commodity since t_8a9038d6, but an
+     * electric or mixed document's review showed no detection line at all.
+     * Computed when the review opens, from the halves the pending import
+     * actually carries.
+     */
+    detected: 'electricity' | 'both';
+  } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,10 +189,19 @@ function ImportFlow() {
           return;
         }
         const gasPoints = unionGasPoints(gasStored.value?.points ?? [], pending.gas);
-        const gasSaved = saveGasData(gasPoints, { source: 'import-page' });
-        if (!gasSaved.ok) {
-          window.alert(t('backup.errRefused', { detail: gasSaved.detail }));
-          return;
+        // Write the interval bucket only when it holds something (t_cb0cf70f):
+        // a bills-only gas half — an electric-led mixed document — has no gas
+        // intervals, and creating an EMPTY `energy_gas_v2` would announce a
+        // bucket the document never carried. The modal path never writes one
+        // either, so the two entry paths agree key-for-key. The bill half
+        // below still lands either way; when points exist the union write is
+        // unchanged (merge never clears stored intervals).
+        if (gasPoints.length > 0) {
+          const gasSaved = saveGasData(gasPoints, { source: 'import-page' });
+          if (!gasSaved.ok) {
+            window.alert(t('backup.errRefused', { detail: gasSaved.detail }));
+            return;
+          }
         }
         const gasWritten = writeStoredGasBillFeed(
           planBillFeed('merge', readStoredGasBillFeed(), pending.gasFeed),
@@ -212,6 +236,21 @@ function ImportFlow() {
       // Open the section this document actually filled (view choice only —
       // what was written above was decided by the document, not by this).
       commoditySelection.write(pending?.primary ?? 'electricity');
+      // Detection disclosure across the navigation (t_cb0cf70f — Defect B):
+      // the dashboard's notice is hook state that does not exist yet when
+      // this page commits, so the verdict — derived from the halves this
+      // commit actually WROTE — is staged for the hook to consume on mount.
+      // Without it an electric or mixed document imported here surfaced no
+      // detection disclosure anywhere.
+      const wroteElectricity = Boolean(
+        pending && (pending.electric.length > 0 || pending.electricFeed.summaries.length > 0),
+      );
+      const wroteGas = Boolean(
+        pending && (pending.gas.length > 0 || pending.gasFeed.summaries.length > 0),
+      );
+      stageCommodityNotice(
+        wroteElectricity && wroteGas ? 'both' : wroteGas ? 'gas' : wroteElectricity ? 'electricity' : null,
+      );
       try {
         window.localStorage.removeItem(EXAMPLE_DATA_KEY);
       } catch {
@@ -257,6 +296,10 @@ function ImportFlow() {
       }
       // The dashboard opens on the section this import filled.
       commoditySelection.write('gas');
+      // Same handoff as `commit` (t_cb0cf70f — Defect B): stage the verdict
+      // so the dashboard's notice — which does not exist yet across this
+      // navigation — says gas was imported instead of saying nothing.
+      stageCommodityNotice('gas');
       router.push('/');
     },
     [router, t],
@@ -310,7 +353,16 @@ function ImportFlow() {
       commit(incoming, 'merge');
       return;
     }
-    setPlan({ plan: planImport(existing, incoming), incoming, existing });
+    // The review's detection line (t_cb0cf70f — Defect B): this path only
+    // runs for a document WITH an electric half, so it is 'both' exactly
+    // when the pending import also carries gas rows or gas periods.
+    const carriesGas = pending.gas.length > 0 || pending.gasFeed.summaries.length > 0;
+    setPlan({
+      plan: planImport(existing, incoming),
+      incoming,
+      existing,
+      detected: carriesGas ? 'both' : 'electricity',
+    });
     // Wave U — `t` in deps so the diagnostics recompute on a language switch.
   }, [commit, commitGas, t]);
 
@@ -544,12 +596,18 @@ function ImportFlow() {
     }
 
     if (plan) {
-      const { plan: p, incoming, existing } = plan;
+      const { plan: p, incoming, existing, detected } = plan;
       return (
         <section data-testid="import-review" className={CARD}>
           <h1 className="text-xl md:text-3xl uppercase tracking-tighter font-black mb-2 flex items-center gap-2">
             <GitMerge strokeWidth={4} size={22} /> {t('import.reviewTitle')}
           </h1>
+          {/* Detection disclosure (t_cb0cf70f — Defect B): the gas review
+              has disclosed its commodity since t_8a9038d6; an electric or
+              mixed document's review said nothing about what it was. */}
+          <p className="text-xs md:text-sm font-bold text-ink-2 mb-3" data-testid="electric-detected">
+            {t(detected === 'both' ? 'import.detectedMixed' : 'import.detectedElectricity')}
+          </p>
           <p className="text-xs md:text-sm font-bold text-ink-2 mb-5">
             {t('import.thisBrowserHolds')} <strong>{p.existingRows}</strong> {t('import.readings', { count: p.existingRows })}
             {p.existingFirst ? ` (${p.existingFirst} → ${p.existingLast})` : ''}{t('import.newExportCarries')} <strong>{p.incomingRows}</strong>
