@@ -1,7 +1,7 @@
 /**
  * Wave T — lib/openMeteo.ts.
  *
- * The three things that can silently rot here, tested directly:
+ * The four things that can silently rot here, tested directly:
  *   1. ALIGNMENT — a temperature must land on the hour it describes, through
  *      both DST edges (a day with 23 hours, a day with 25) and across a
  *      chunked fetch. An off-by-one-hour bug does not crash anything; it
@@ -11,13 +11,21 @@
  *      of them must come back as `status: 'error'` with no series, because a
  *      failed fetch that reads as "0 °C everywhere" would invent a winter
  *      heating story out of a network problem.
+ *   4. THE BOUND (t_43c716ad) — the span is the FILE's word, so the number of
+ *      sequential CDN requests it may cost is bounded too, and a span past
+ *      the ceiling costs ZERO of them. Pinned by counting the calls a
+ *      stubbed `fetchImpl` actually receives.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
+  MAX_TEMP_CHUNKS,
   OPEN_METEO,
   OPEN_METEO_CACHE_KEY,
+  OPEN_METEO_CHUNK_DAYS,
   hourIndexOf,
   loadHourlyTemps,
   mergeHourlyTemps,
@@ -25,8 +33,11 @@ import {
   parseOpenMeteoHourly,
   spanOfRows,
   tempAtC,
+  tempChunkCount,
   utcDateOfHour,
 } from './openMeteo';
+import { gasTempSpanRows } from './gasTempBands';
+import { parseGreenButtonUsagePoints, parseUsageSummaries } from '@/lib/energy';
 
 /** A deterministic °C for a UTC instant — the tests' only "weather" source. */
 const tempFor = (hour: number) => 5 + ((hour % 48) / 4);
@@ -316,5 +327,177 @@ describe('loadHourlyTemps', () => {
     localStorage.setItem(OPEN_METEO_CACHE_KEY, 'not json');
     const again = await loadHourlyTemps(span, { fetchImpl: synthFetch(), storage: localStorage });
     expect(again.source).toBe('network');
+  });
+});
+
+/* ==========================================================================
+ * THE BOUND — how many sequential CDN requests one span may cost
+ * (t_43c716ad: the fetch-side secondary of F1, gate t_1bf524cc)
+ * ==========================================================================
+ * `spanOfRows` takes its bounds from the LOADED DATA, and the gas card asks
+ * about both edges of every usable bill and reading (`gasTempSpanRows`), so
+ * the SPAN — never the row count — is what the chunk loop prices: one
+ * awaited request per 183 days, then a per-hour walk of the whole span. Two
+ * rows an epoch apart measured up to ~740 000 sequential requests to
+ * archive-api.open-meteo.com (t_3bfd4c3e). The bound refuses any span past
+ * MAX_TEMP_CHUNKS BEFORE a single request is issued, with the same honest
+ * `status: 'error'` a network failure reports.
+ *
+ * Pinned here, in the order the acceptance criteria ask for it:
+ *   1. hostile shapes — two legal-duration rows seconds-to-eons apart, from
+ *      the rows API AND from a file that actually parses — cost ZERO fetch
+ *      calls, counted against a stubbed `fetchImpl`;
+ *   2. the failure is honest: `status: 'error'`, `temps: null`, never an
+ *      empty series that would read as 0 °C;
+ *   3. the widest span this repo's real data states — the 22.9-year
+ *      fixture's own billing period — still fetches: 46 requests, `ready`;
+ *   4. the check and the loop cannot drift: `tempChunkCount` IS the loop's
+ *      own iteration count, asserted equal to the calls actually made, on
+ *      both sides of the ceiling.
+ */
+
+describe('the fetch bound (t_43c716ad)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  /** A `fetch` that would answer, used only where the test expects ZERO calls. */
+  const neverFetch = () => vi.fn(async () => ({ json: async () => ({}) }));
+
+  const FEED = (body: string) =>
+    `<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom" xmlns:espi="http://naesb.org/espi">\n${body}\n</feed>`;
+
+  /** A gas bill that states its own m³ volume — usable by `gasTempSpanRows`. */
+  const GAS_BILL = (start: number | string, duration: number | string) =>
+    `<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>${start}</espi:start>` +
+    `<espi:duration>${duration}</espi:duration></espi:billingPeriod>` +
+    '<espi:currentBillingPeriodOverAllConsumption><espi:value>1000</espi:value>' +
+    '<espi:powerOfTenMultiplier>0</espi:powerOfTenMultiplier><espi:uom>42</espi:uom>' +
+    '</espi:currentBillingPeriodOverAllConsumption></espi:UsageSummary></content></entry>';
+
+  it('refuses rows seconds-to-eons apart with ZERO requests and an honest error', async () => {
+    // Both edges a hostile file's two bills produce: each has a LEGAL
+    // duration (1 year) — only the STARTS are absurd, which is exactly the
+    // shape `gasTempSpanRows` pushes for it.
+    const hostile = [
+      { timestamp: 0 },
+      { timestamp: 31_536_000 },
+      { timestamp: 1e15 },
+      { timestamp: 1e15 + 31_536_000 },
+    ];
+    const span = spanOfRows(hostile)!;
+    expect(tempChunkCount(span)).toBeGreaterThan(MAX_TEMP_CHUNKS);
+
+    const fetchImpl = neverFetch();
+    const result = await loadHourlyTemps(hostile, { fetchImpl, storage: null });
+
+    // The honest failure contract, byte for byte the one a dead CDN reports.
+    expect(result.status).toBe('error');
+    expect(result.temps).toBeNull();
+    expect(result.source).toBeNull();
+    expect(result.coveredHours).toBe(0);
+    // The span is still REPORTED — the caller knows what it asked about —
+    // but no request was ever made for it: the pinned bound is ZERO.
+    expect(result.spanHours).toBe(span.endHour - span.startHour + 1);
+    expect(fetchImpl).toHaveBeenCalledTimes(0);
+  });
+
+  it('refuses a hostile FILE that still parses — epoch-dated bill beside a sane one', async () => {
+    // Both bills are legal on every parse-side bound: starts of 1970-01-01
+    // and 2024-01-01 (neither is past 2100), durations of 365 d and 31 d
+    // (neither is past 100 y). Nothing refuses this file, so it IMPORTS —
+    // and only the fetch bound can stop the eon-wide span its two edges
+    // make: 1970 → 2024-02-01 is 108 sequential requests.
+    const xml = FEED(GAS_BILL(0, 31_536_000) + GAS_BILL(1_704_067_200, 2_678_400));
+    const summaries = parseUsageSummaries(xml);
+    expect(summaries).toHaveLength(2);
+    const spanRows = gasTempSpanRows([], summaries);
+    expect(spanRows).toHaveLength(4);
+
+    const span = spanOfRows(spanRows)!;
+    expect(tempChunkCount(span)).toBe(108);
+
+    const fetchImpl = neverFetch();
+    const result = await loadHourlyTemps(spanRows, { fetchImpl, storage: null });
+    expect(result.status).toBe('error');
+    expect(result.temps).toBeNull();
+    expect(result.coveredHours).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledTimes(0);
+  });
+
+  it('still fetches the widest span this repo’s real data states — the 22.9-year fixture', async () => {
+    const xml = readFileSync(
+      join(__dirname, '../../tests/fixtures/utility-espi-prefixed-standin.xml'),
+      'utf8',
+    );
+    const [bill] = parseUsageSummaries(xml);
+    // The figure the 100-year duration ceiling was measured against: 721 958 400 s.
+    expect(bill.duration).toBe(721_958_400);
+
+    // The two edges `gasTempSpanRows` pushes for this period — a gas file
+    // carrying the same cumulative "since 2000" period takes this exact path.
+    const spanRows = [{ timestamp: bill.start }, { timestamp: bill.start + bill.duration }];
+    const span = spanOfRows(spanRows)!;
+    // 8 356 days at 183 days a chunk: 46 requests, inside the 80-chunk
+    // ceiling with room to spare (the widest span ANY fixture can form is 55).
+    expect(tempChunkCount(span)).toBe(46);
+    expect(46).toBeLessThanOrEqual(MAX_TEMP_CHUNKS);
+
+    const fetchImpl = synthFetch();
+    const result = await loadHourlyTemps(spanRows, { fetchImpl, storage: null });
+    expect(result.status).toBe('ready');
+    expect(result.source).toBe('network');
+    expect(fetchImpl).toHaveBeenCalledTimes(46);
+    expect(result.coveredHours).toBe(result.spanHours);
+
+    // The same fixture's READINGS — the electricity path's own span — cost 9.
+    const groups = parseGreenButtonUsagePoints(xml);
+    const readingRows = groups.flatMap((g) => g.readings.map((r) => ({ timestamp: r.timestamp })));
+    expect(readingRows.length).toBe(514);
+    expect(tempChunkCount(spanOfRows(readingRows)!)).toBe(9);
+  }, 120_000);
+
+  it('fetches exactly tempChunkCount(span) requests up to the ceiling, and none past it', async () => {
+    // A span landing exactly ON the ceiling: day 0 → day (80 × 183) − 1.
+    const days = MAX_TEMP_CHUNKS * OPEN_METEO_CHUNK_DAYS;
+    const atCeiling = [{ timestamp: 0 }, { timestamp: (days - 1) * 86_400 }];
+    const ceilingSpan = spanOfRows(atCeiling)!;
+    expect(tempChunkCount(ceilingSpan)).toBe(MAX_TEMP_CHUNKS);
+
+    const fetchImpl = synthFetch();
+    const inside = await loadHourlyTemps(atCeiling, { fetchImpl, storage: null });
+    // The count the CHECK computed is the count the LOOP ran — the two
+    // share `chunkDayBounds`, so a drift between them fails right here.
+    expect(fetchImpl).toHaveBeenCalledTimes(tempChunkCount(ceilingSpan));
+    expect(fetchImpl).toHaveBeenCalledTimes(MAX_TEMP_CHUNKS);
+    expect(inside.status).toBe('ready');
+    expect(inside.coveredHours).toBe(inside.spanHours);
+
+    // One day wider: refused, and refused BEFORE the first request.
+    const pastCeiling = [{ timestamp: 0 }, { timestamp: days * 86_400 }];
+    expect(tempChunkCount(spanOfRows(pastCeiling)!)).toBe(MAX_TEMP_CHUNKS + 1);
+    const refused = neverFetch();
+    const outside = await loadHourlyTemps(pastCeiling, { fetchImpl: refused, storage: null });
+    expect(outside.status).toBe('error');
+    expect(outside.temps).toBeNull();
+    expect(refused).toHaveBeenCalledTimes(0);
+  }, 120_000);
+
+  it('agrees with the loop on every shape: single hour, a day over a chunk, a year', async () => {
+    const cases = [
+      rows(100, 1), // one hour → one request
+      rows(0, 24 * 183), // 183 whole days → exactly one chunk
+      rows(0, 24 * 184), // one day past a chunk → two requests
+      rows(0, 24 * 400), // 400 days → three requests
+    ];
+    for (const shape of cases) {
+      const span = spanOfRows(shape)!;
+      const fetchImpl = synthFetch();
+      const result = await loadHourlyTemps(shape, { fetchImpl, storage: null });
+      expect(result.status, `span ${span.startHour}..${span.endHour}`).toBe('ready');
+      expect(fetchImpl.mock.calls.length, `span ${span.startHour}..${span.endHour}`).toBe(
+        tempChunkCount(span),
+      );
+    }
   });
 });

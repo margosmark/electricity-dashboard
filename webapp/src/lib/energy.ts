@@ -12,6 +12,7 @@ import {
   assertBillLinesPerPeriod,
   assertBillMeasurement,
   assertBillPeriodSeconds,
+  assertBillPeriodStart,
   assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
@@ -2357,6 +2358,15 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     // before any of its money, volume or lines are read; refused whole, the
     // same way an over-budget line count is.
     assertBillPeriodSeconds(duration);
+    // The START half of the same bound (limits.ts), judged in the same place
+    // for the same reason: `billNum` accepted any finite figure, so
+    // `<start>1000000000000000</start>` (year 33 657 588) became a bill
+    // whose dates read "NaN-NaN-NaN", whose two edges set an eon-wide fetch
+    // span for the temperature cards, and whose window caption date-fns
+    // refuses to format (RangeError at render). Refused whole, before the
+    // block's money, volume or lines are read — a bill whose period is not a
+    // time is not a bill.
+    assertBillPeriodStart(start);
     const rawLines = asArray<Record<string, unknown>>(
       node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
     );

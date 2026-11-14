@@ -18,9 +18,12 @@
  * WHAT IS FETCHED, AND WHAT IS NOT. Only the dates the user's own data covers:
  * the span is derived from the loaded readings and the request is chunked
  * inside it. A period with no readings is never asked about — no data, no
- * fetch, no cache entry. Offline (or blocked, or rate-limited) every caller
- * gets `status: 'error'` and renders its honest "no data" state; the app
- * worked before this call existed and keeps working after it fails.
+ * fetch, no cache entry. The span is the FILE's word, so it is bounded too:
+ * past {@link MAX_TEMP_CHUNKS} sequential requests nothing is fetched at all
+ * and the caller gets the same honest `status: 'error'` as a network
+ * failure. Offline (or blocked, or rate-limited, or absurdly wide) every
+ * caller renders its "no data" state; the app worked before this call
+ * existed and keeps working after it fails.
  *
  * THE CLOCK, ONCE. Every temperature is stored against a UTC HOUR INDEX —
  * `Math.floor(unixSeconds / 3600)` — and the request asks Open-Meteo for
@@ -48,6 +51,35 @@ export const OPEN_METEO_ENDPOINT = 'https://archive-api.open-meteo.com/v1/archiv
 
 /** Days per request. Bounds payload size and keeps a long span retryable. */
 export const OPEN_METEO_CHUNK_DAYS = 183;
+
+/**
+ * The most sequential requests ONE span may cost — the fetch-side bound on a
+ * span the FILE chose (t_43c716ad, the secondary of F1 from gate t_1bf524cc).
+ *
+ * WHY THE SPAN IS THE RESOURCE, NOT THE ROW COUNT. `spanOfRows` takes its
+ * bounds from the loaded data, and the gas temperature card asks about both
+ * edges of every usable bill and reading (`gasTempSpanRows`), so two rows an
+ * epoch apart — `start: 0` and `start: 1e15`, both with a legal duration —
+ * produce a span neither the household nor the CDN can answer. The chunk
+ * loop in `loadHourlyTemps` runs ONE AWAITED request per 183 days of that
+ * span, and `coveredHours` then walks it hour by hour; both costs are set by
+ * the span alone. Measured on this repo (t_3bfd4c3e): the hostile shape was
+ * up to ~740 000 sequential requests to archive-api.open-meteo.com, and the
+ * hour walk alone is 2.8e11 iterations at 1e15 s.
+ *
+ * WHY 80 CHUNKS, i.e. 14 640 days ≈ 40 years. The widest span this repo's
+ * REAL data produces is the `utility-espi-prefixed-standin.xml` fixture's
+ * own: readings from 2000-01-01 to 2022-11-09 = 8 348 days = 46 chunks (its
+ * billing period states 8 356 days, the same 22.9 years), and the widest
+ * span ANY combination of this repo's fixtures can form is 9 885 days
+ * (2000-01-01 → 2027-01-24) = 55 chunks. 80 sits ~1.5× above that — real
+ * utility data never approaches it — while the measured hostile figure
+ * (740 000 requests) is four orders of magnitude above it. A span past the
+ * ceiling costs ZERO requests: it is refused before the cache is read and
+ * before the loop is entered, with the honest `status: 'error'` every other
+ * fetch failure already reports (never an empty series that reads as 0 °C).
+ */
+export const MAX_TEMP_CHUNKS = 80;
 
 /** localStorage key. Versioned: a changed encoding must not be read as old. */
 export const OPEN_METEO_CACHE_KEY = 'oeo_openmeteo_v1';
@@ -165,6 +197,33 @@ export function spanOfRows(rows: { timestamp: number }[]): TempSpan | null {
   return Number.isFinite(lo) && hi >= lo ? { startHour: lo, endHour: hi } : null;
 }
 
+/**
+ * The day-aligned bounds the chunk loop runs over, and how many requests that
+ * costs — computed BEFORE any of them is made.
+ *
+ * The count is the loop's own iteration count, derived exactly the way the
+ * loop derives its bounds (whole UTC days, `OPEN_METEO_CHUNK_DAYS` at a
+ * time), so the refusal in `loadHourlyTemps` and the loop that follows it
+ * share one source of truth: what the check bounds is what runs, with no
+ * off-by-one window between them.
+ */
+function chunkDayBounds(span: TempSpan): { firstDay: number; lastDay: number; chunks: number } {
+  const HOURS_PER_CHUNK = OPEN_METEO_CHUNK_DAYS * 24;
+  const firstDay = Math.floor(span.startHour / 24) * 24;
+  const lastDay = Math.floor(span.endHour / 24) * 24;
+  const chunks = lastDay < firstDay ? 0 : Math.floor((lastDay - firstDay) / HOURS_PER_CHUNK) + 1;
+  return { firstDay, lastDay, chunks };
+}
+
+/**
+ * The sequential CDN requests `span` costs, before a single one is made —
+ * the figure {@link MAX_TEMP_CHUNKS} is compared against, exported so a test
+ * can pin the bound against the loop's real iteration count.
+ */
+export function tempChunkCount(span: TempSpan): number {
+  return chunkDayBounds(span).chunks;
+}
+
 function covers(temps: HourlyTemps, span: TempSpan): boolean {
   return temps.startHour <= span.startHour && temps.startHour + temps.values.length - 1 >= span.endHour;
 }
@@ -254,9 +313,11 @@ type LoadDeps = {
 /**
  * Load temperatures for exactly the span `rows` covers.
  *
- * Sequential chunked requests (a polite number of them), the localStorage
- * cache consulted first, and a hard promise that a failure is reported as a
- * failure — never as an empty series that would read as "0 °C everywhere".
+ * Sequential chunked requests — at most {@link MAX_TEMP_CHUNKS} of them, the
+ * span judged BEFORE the cache is consulted or a single request is issued —
+ * the localStorage cache consulted next, and a hard promise that a failure is
+ * reported as a failure — never as an empty series that would read as
+ * "0 °C everywhere".
  */
 export async function loadHourlyTemps(
   rows: { timestamp: number }[],
@@ -265,8 +326,21 @@ export async function loadHourlyTemps(
   const span = spanOfRows(rows);
   if (!span) return { status: 'none', temps: null, source: null, coveredHours: 0, spanHours: 0 };
 
-  const storage = deps.storage === undefined ? safeLocalStorage() : deps.storage;
   const spanHours = span.endHour - span.startHour + 1;
+
+  // The span bound (MAX_TEMP_CHUNKS), judged BEFORE anything else. A span we
+  // will not fetch is refused before the cache is read (we never serve a span
+  // we refuse to ask about), before the chunk loop can issue one request, and
+  // before `coveredHours` could walk it hour by hour — so an eon-spanned file
+  // costs zero requests and zero walks and still reports the honest error
+  // every other fetch failure reports: `status: 'error'`, `temps: null`,
+  // never an empty series that would read as 0 °C everywhere.
+  const { firstDay, lastDay, chunks } = chunkDayBounds(span);
+  if (chunks > MAX_TEMP_CHUNKS) {
+    return { status: 'error', temps: null, source: null, coveredHours: 0, spanHours };
+  }
+
+  const storage = deps.storage === undefined ? safeLocalStorage() : deps.storage;
 
   const cached = readCache(span, storage, Date.now());
   if (cached) {
@@ -287,9 +361,10 @@ export async function loadHourlyTemps(
     const pieces: HourlyTemps[] = [];
     // Day-aligned chunk bounds: a request is always whole UTC days, so no
     // chunk ever splits a day and the API's own day grid is never straddled.
+    // Both bounds and the `chunks` count came from `chunkDayBounds(span)`
+    // above, which the MAX_TEMP_CHUNKS refusal has already bounded — the loop
+    // therefore runs at most that many awaited requests, by construction.
     const HOURS_PER_CHUNK = OPEN_METEO_CHUNK_DAYS * 24;
-    const firstDay = Math.floor(span.startHour / 24) * 24;
-    const lastDay = Math.floor(span.endHour / 24) * 24;
     for (let day = firstDay; day <= lastDay; day += HOURS_PER_CHUNK) {
       const from = utcDateOfHour(day);
       const to = utcDateOfHour(Math.min(day + HOURS_PER_CHUNK - 24, lastDay));

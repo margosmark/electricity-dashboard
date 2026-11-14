@@ -62,6 +62,12 @@
  *    gas temperature bands walk one step per HOUR of it, so a single
  *    `<espi:duration>` used to price the whole report (1e12 s → 1 327 ms,
  *    1e13 s → 17 299 ms, 1e15 s → ~29 min of main thread; t_3bfd4c3e F1).
+ *  - {@link MAX_BILL_PERIOD_START_S} 2100-01-01 … when a billing period may
+ *    START — the other half of the same element. Any finite figure passed
+ *    (`billNum`), so `<start>1e15</start>` became a bill whose dates read
+ *    "NaN-NaN-NaN", whose two edges set an eon-wide span for the temperature
+ *    fetch (t_43c716ad), and whose label date-fns refuses to format. The
+ *    same instant `series.ts` bounds every `IntervalReading` start to.
  *  - {@link MAX_CLOCK_OFFSET_S}   86 400 … no UTC offset is a day long; a
  *    LocalTimeParameters block outside it is not a clock (see energy.ts).
  * Negative figures are legal on purpose: a bill can be a credit (the fixture
@@ -135,7 +141,7 @@ export type DocumentStats = {
  * where that period is known, and are named the same way so every budget
  * refusal renders through one copy path.
  */
-export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod' | 'billPeriodSeconds';
+export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod' | 'billPeriodSeconds' | 'billPeriodStart';
 
 /** The three sentences a refusal is shown with. One source of copy. */
 export type RefusalCopy = {
@@ -355,6 +361,17 @@ function dimRefusal(dim: BudgetDim, measured: number, limit: number): BudgetRefu
       measured: fmtNumberAuto(Math.round(measured / 86_400)),
       limit: fmtNumberAuto(Math.round(limit / 86_400)),
     });
+  } else if (dim === 'billPeriodStart') {
+    // Seconds after 1970-01-01, deliberately NOT a date: a hostile start is
+    // past the Date range entirely (`new Date(1e15 * 1000)` is Invalid — the
+    // very shape date-fns refuses to format), so there is no date to print
+    // for the figures that matter. The raw offset is exact at the boundary
+    // (4 102 444 801 vs 4 102 444 800) and absurd where it needs to be
+    // (1 000 000 000 000 000), and the ISO date in the sentence anchors it.
+    detail = t('parse.refuseBillStart', {
+      measured: fmtNumberAuto(Math.round(measured)),
+      limit: fmtNumberAuto(Math.round(limit)),
+    });
   } else {
     detail = t('parse.refuseBillLines', { measured, limit });
   }
@@ -479,6 +496,44 @@ export function assertBillPeriodSeconds(seconds: number): void {
   });
 }
 
+/**
+ * The START half of the same per-bill budget: a billing period that starts
+ * past {@link MAX_BILL_PERIOD_START_S} is refused, whole, before it becomes
+ * a `UsageSummary`.
+ *
+ * WHY THE START NEEDS ITS OWN BOUND (t_43c716ad). `duration` had one since
+ * t_edef78d7, but `<start>` is what places the period in time, and `billNum`
+ * accepts any finite figure — so `<start>1000000000000000</start>` (year
+ * 33 657 588) parsed into a bill with `startDate`/`endDate` reading
+ * "NaN-NaN-NaN". Three costs ride on it, all measured on this branch:
+ * its two edges widen the gas temperature card's fetch span to eons (the
+ * chunk loop then asks the CDN millions of times — bounded now at the fetch,
+ * in `openMeteo.ts`, but the file should never produce the shape);
+ * `gasWindowLabel` formats it with date-fns, which THROWS
+ * `RangeError: Invalid time value` on a timestamp past the Date range, so
+ * rendering the gas panel with such a bill crashes to the error boundary;
+ * and the bill list shows a date that is not one.
+ *
+ * Judged exactly like the duration: where the period is known, before the
+ * block's money, volume or lines are read, fatal to the import — keeping the
+ * block while dropping its start would render a bill whose window disagrees
+ * with every figure it states. `energy.ts` calls it beside
+ * {@link assertBillPeriodSeconds}.
+ */
+export function assertBillPeriodStart(seconds: number): void {
+  if (seconds <= MAX_BILL_PERIOD_START_S) return;
+  const refusal = dimRefusal('billPeriodStart', seconds, MAX_BILL_PERIOD_START_S);
+  throw new GreenButtonRefusal({
+    code: 'budget',
+    dim: refusal.dim,
+    measured: refusal.measured,
+    limit: refusal.limit,
+    headline: refusal.headline,
+    detail: refusal.detail,
+    hints: refusal.hints,
+  });
+}
+
 /* ==========================================================================
  * The numeric bounds — bills, their quantities, and the feed's clock
  * ========================================================================== */
@@ -524,6 +579,47 @@ export const MAX_CLOCK_OFFSET_S = 24 * 3600;
  * hour by hour (see `gasTempBands.ts`).
  */
 export const MAX_BILL_PERIOD_SECONDS = 100 * 365 * 24 * 3600;
+
+/**
+ * The latest instant a billing period may START at: 2100-01-01T00:00:00Z.
+ *
+ * WHY IT IS A BOUND AT ALL. `<billingPeriod><start>` is the other half of
+ * the period and had none: `billNum` accepted any finite number, so a
+ * `<start>` of 1e15 s (year 33 657 588) became a bill whose `startDate` and
+ * `endDate` read "NaN-NaN-NaN", whose two edges set an eon-wide span for the
+ * gas temperature fetch (`openMeteo.ts`, MAX_TEMP_CHUNKS), and whose window
+ * caption `gasWindowLabel` hands to date-fns — which THROWS `RangeError:
+ * Invalid time value` on a timestamp past the Date range, so the gas panel
+ * rendered with such a bill crashes to the error boundary. Measured on this
+ * branch (t_43c716ad): the bill parses, `gasTempSource` reports `billed`,
+ * `gasTempSpanRows` returns the two eon edges, and the render throws.
+ *
+ * WHY 2100-01-01 AND NOT THE "now + 1 DAY" THE FINDING PROPOSED. A
+ * `now`-based ceiling refuses this repo's OWN fixtures the day the clock
+ * passes them — `enbridge-gas-twoyear-synthetic.xml` states a period
+ * starting 2026-12-25 with an end of 2027-01-24, i.e. future-dated bills
+ * relative to today (2026-11-14) — and it makes parsing depend on the wall
+ * clock. 2100-01-01 is time-independent, is a date the reader recognises,
+ * and is the exact instant `series.ts` already bounds every
+ * `IntervalReading` `<start>` to (`MAX_INTERVAL_START_S`, t_e33fc656): one
+ * defensible window for every timestamp this parser accepts, pinned equal in
+ * `limits.test.ts` so the two cannot drift apart. It still refuses every
+ * figure the finding measured — 1e15 s is year 33 657 588, 1e14 s is year
+ * 3 116 095 — while leaving every real bill (earliest in this repo's
+ * fixtures: 2000-01-01) untouched. It does NOT bound the SPAN on its own:
+ * with no floor (below), a far-past start plus a legal 100-year duration can
+ * still be eons wide, which is why the fetch-side bound
+ * (`openMeteo.ts`, MAX_TEMP_CHUNKS) stays the backstop that refuses such a
+ * span before a single request is made.
+ *
+ * WHY NO FLOOR, same as the reading bound: a start before any plausible era
+ * is still a real, renderable instant (1970-01-01 formats fine), and the
+ * hand-made fixtures this parser must keep accepting legitimately use tiny
+ * epochs (`start: 1`) that an era floor would silently drop. The span a
+ * far-past start can widen to is bounded where it costs something — at the
+ * fetch, not at the parse.
+ */
+export const MAX_BILL_PERIOD_START_S = 4_102_444_800; // 2100-01-01T00:00:00Z
 
 /** The copy a refused bill figure is shown with. */
 function billCopy(detail: string): RefusalCopy {
