@@ -11,6 +11,7 @@ import {
   assertBillDollars,
   assertBillLinesPerPeriod,
   assertBillMeasurement,
+  assertBillPeriodSeconds,
   assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
@@ -2348,6 +2349,14 @@ export function parseUsageSummaryNodes(parsed: unknown): UsageSummary[] {
     const start = billNum(period?.start);
     const duration = billNum(period?.duration);
     if (start === null || duration === null || duration <= 0) continue;
+    // The span half of the bill budget (limits.ts): any finite `duration > 0`
+    // used to pass here, and one `<espi:duration>` then set the size of every
+    // duration-driven pass downstream — the gas temperature bands walked one
+    // step per HOUR of it, so 1e15 s (~31.7 million years) was ~29 minutes of
+    // main thread (t_3bfd4c3e, F1). Judged here, where the period is known and
+    // before any of its money, volume or lines are read; refused whole, the
+    // same way an over-budget line count is.
+    assertBillPeriodSeconds(duration);
     const rawLines = asArray<Record<string, unknown>>(
       node.costAdditionalDetailLastPeriod as Record<string, unknown> | undefined,
     );

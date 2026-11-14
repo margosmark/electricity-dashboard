@@ -20,6 +20,7 @@ import {
   gasTempSource,
   gasTempSpanRows,
 } from './gasTempBands';
+import { TEMP_BANDS, bandIndexOf } from './tempBands';
 
 const DAY = 86_400;
 const HOUR = 3_600;
@@ -331,5 +332,228 @@ describe('honesty pins', () => {
     );
     expect(r.totalIntervals).toBe(1);
     expect(r.matchedIntervals).toBe(1);
+  });
+});
+
+/* ==========================================================================
+ * Hostile durations — one build inside a fixed budget (t_edef78d7, F1)
+ * ==========================================================================
+ * A candidate's span is the FILE's word: an interval reading is capped at
+ * 366 d upstream (`MAX_INTERVAL_SECONDS`), a billing period was capped
+ * nowhere at all. The report used to walk one step per HOUR of both, so
+ * `duration_s / 3600` WAS the cost of a build. Measured here, one
+ * `buildGasTempBandReport` call, this file's fixtures, before → after:
+ *
+ *   1 bill × 1e10 s  …    62 ms  →    3 ms
+ *   1 bill × 1e11 s  …   431 ms  →  0.2 ms
+ *   1 bill × 1e12 s  … 4 449 ms  →  0.1 ms
+ *   1 bill × 1e13 s  …59 524 ms  →  0.1 ms
+ *   200 000 × 366 d, no series  …29 159 ms → 63 ms
+ *   200 000 × 366 d, covering  …32 842 ms → 94 ms
+ *
+ * (The gate's own harness measured the same shapes at 1 327 / 17 299 ms and
+ * 8 302 ms — this box was ~3× slower; the growth is LINEAR in duration, which
+ * is why the two 1e15 s cases are only ever run against the fix: 1e13 alone
+ * took 59.5 s here, so 1e15 s is ~100× that and was never run unfixed.)
+ * The caps that let the second shape in at all: MAX_ENTRIES 200 000,
+ * MAX_READINGS 500 000, 32 MB. Budget 2 000 ms ⇒ ≥21× above the worst fixed
+ * number (94 ms) and 14.6× below the cheapest unfixed TEST case (29 159 ms).
+ *
+ * The pin is a wall-clock budget on ONE build with fixture construction
+ * outside the clock, paired with a straight re-walk of the same hours as the
+ * ground truth — the budget says the walk is gone, the re-walk says nothing
+ * changed while removing it (it passes against BOTH implementations, and
+ * failed against a prefix array whose slot 0 was left a hole).
+ */
+
+describe('hostile durations — one build stays inside a fixed budget', () => {
+  /** Wall-clock ceiling for a single report build (fixture build excluded). */
+  const BUILD_BUDGET_MS = 2_000;
+
+  const timed = (
+    points: readonly GasPoint[],
+    bills: readonly UsageSummary[],
+    temps: HourlyTemps | null,
+  ): { r: ReturnType<typeof buildGasTempBandReport>; ms: number } => {
+    const t0 = performance.now();
+    const r = buildGasTempBandReport(points, bills, temps);
+    return { r, ms: performance.now() - t0 };
+  };
+
+  /** `isoDay` without the RangeError an out-of-range instant would throw. */
+  const isoDayOrEmpty = (epoch: number): string => {
+    const d = new Date(epoch * 1000);
+    return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  };
+
+  /** A bill whose period is whatever we say — no `days × DAY` round trip. */
+  const billWithDuration = (start: number, duration_s: number, volumeM3: number): UsageSummary => ({
+    source: 'UsageSummary',
+    start,
+    duration: duration_s,
+    startDate: isoDayOrEmpty(start),
+    endDate: isoDayOrEmpty(start + duration_s),
+    days: Math.round((duration_s / DAY) * 10) / 10,
+    billLastPeriod: null,
+    billToDate: null,
+    costAdditionalLastPeriod: null,
+    currency: 124,
+    consumption: null,
+    volume: { scaled: volumeM3, value: volumeM3, powerOfTenMultiplier: 0, uom: 42 },
+    items: [],
+  });
+
+  it('a 1e15-second billing period builds in bounded time, and its span is still reported', () => {
+    const duration = 1e15;
+    const { r, ms } = timed([], [billWithDuration(JAN1, duration, 600)], null);
+    expect(ms, `build took ${ms.toFixed(1)} ms (budget ${BUILD_BUDGET_MS})`).toBeLessThan(
+      BUILD_BUDGET_MS,
+    );
+
+    expect(r.source).toBe('billed');
+    expect(r.totalIntervals).toBe(1);
+    expect(r.volumelessBills).toBe(0);
+    // NOT clipped and NOT dropped: the denominator is the period the file
+    // claimed, ~11.57 billion days' worth of hours (±2 h of alignment).
+    expect(r.totalHours).toBeGreaterThan(duration / HOUR - 2);
+    expect(r.totalHours).toBeLessThan(duration / HOUR + 2);
+    expect(r.totalHours).toBeGreaterThan(1e11);
+    expect(r.matchedHours).toBe(0);
+    expect(r.matchedIntervals).toBe(0);
+    expect(r.coverage).toBe(0);
+    expect(gasTempBandEmpty(r)).toBe(true);
+  });
+
+  it('the same bill with a real 30-day series bands only the hours that series covers', () => {
+    const duration = 1e15;
+    const bills = [billWithDuration(JAN1, duration, 600)];
+    const temps = seriesFor([{ start: JAN1, duration_s: 30 * DAY, temp: -5 }]);
+    const { r, ms } = timed([], bills, temps);
+    expect(ms, `build took ${ms.toFixed(1)} ms (budget ${BUILD_BUDGET_MS})`).toBeLessThan(
+      BUILD_BUDGET_MS,
+    );
+
+    // The 720 hours the series has are banded; the rest of the claimed span
+    // counts towards coverage and claims nothing — nothing is averaged away.
+    expect(r.matchedIntervals).toBe(1);
+    expect(r.matchedHours).toBe(30 * 24);
+    expect(r.totalHours).toBeGreaterThan(1e11);
+    expect(r.coverage).toBeLessThan(1e-5);
+    const cold = rowOf(r, '-10..5');
+    expect(cold.intervals).toBe(1);
+    expect(cold.hours).toBe(30 * 24);
+    expect(cold.meanTempC).toBeCloseTo(-5, 9);
+    expect(cold.m3).toBeCloseTo(600, 9);
+    // The bill's OWN days, not the 30 the series happened to cover.
+    expect(cold.days).toBeCloseTo(duration / DAY, 9);
+    expect(cold.meanM3PerDay).toBeCloseTo(600 / (duration / DAY), 9);
+  });
+
+  it('200 000 × 366-day readings — the document caps’ own worst case — build in bounded time', () => {
+    const count = 200_000;
+    const long = 366 * DAY;
+    const points = Array.from({ length: count }, () => point(JAN5, 1, long));
+    const { r, ms } = timed(points, [], null);
+    expect(ms, `build took ${ms.toFixed(1)} ms (budget ${BUILD_BUDGET_MS})`).toBeLessThan(
+      BUILD_BUDGET_MS,
+    );
+
+    expect(r.source).toBe('interval');
+    expect(r.totalIntervals).toBe(count);
+    expect(r.skippedReadings).toBe(0);
+    expect(r.matchedIntervals).toBe(0);
+    expect(r.totalHours).toBe(count * 366 * 24);
+    expect(r.coverage).toBe(0);
+  });
+
+  it('the same 200 000 readings WITH a covering series band in bounded time too', () => {
+    const count = 200_000;
+    const long = 366 * DAY;
+    const points = Array.from({ length: count }, () => point(JAN5, 1, long));
+    const temps = seriesFor([{ start: JAN5, duration_s: long, temp: -5 }]);
+    const { r, ms } = timed(points, [], temps);
+    expect(ms, `build took ${ms.toFixed(1)} ms (budget ${BUILD_BUDGET_MS})`).toBeLessThan(
+      BUILD_BUDGET_MS,
+    );
+
+    expect(r.matchedIntervals).toBe(count);
+    expect(r.matchedHours).toBe(count * 366 * 24);
+    expect(r.totalHours).toBe(count * 366 * 24);
+    expect(r.coverage).toBe(1);
+    const cold = rowOf(r, '-10..5');
+    expect(cold.intervals).toBe(count);
+    expect(cold.hours).toBe(count * 366 * 24);
+    expect(cold.m3).toBeCloseTo(count, 9);
+    expect(cold.meanTempC).toBeCloseTo(-5, 9);
+  });
+
+  it('every figure equals a straight per-hour walk of the same hours (the algorithm it replaced)', () => {
+    // Ground truth = the walk: two intervals, one series with HOLES, one
+    // interval the series does not touch at all. If the prefix-sum lookup
+    // ever drifts from what the walk accumulated, this fails first.
+    const points = [point(JAN5, 10, 33 * DAY), point(JAN5 + 40 * DAY, 5, 10 * DAY)];
+    const temps = partialSeries(JAN5, 60 * DAY, -4, 400); // 400 h covered, then holes
+    const r = buildGasTempBandReport(points, [], temps);
+
+    const bandOf = (mean: number) => {
+      const i = bandIndexOf(mean);
+      if (i === null) throw new Error(`no band for ${mean}`);
+      return i;
+    };
+    const expected = TEMP_BANDS.map(() => ({ intervals: 0, hours: 0, days: 0, m3: 0, tempHourSum: 0 }));
+    let totalHours = 0;
+    let matchedHours = 0;
+    let matchedIntervals = 0;
+    let totalM3 = 0;
+    for (const p of points) {
+      const firstHour = Math.floor(p.timestamp / HOUR);
+      const lastHour = Math.floor((p.timestamp + (p.duration_s as number) - 1) / HOUR);
+      let hours = 0;
+      let covered = 0;
+      let sum = 0;
+      for (let h = firstHour; h <= lastHour; h += 1) {
+        hours += 1;
+        const i = h - temps.startHour;
+        const v = i >= 0 && i < temps.values.length ? temps.values[i] : null;
+        if (v !== null) {
+          covered += 1;
+          sum += v;
+        }
+      }
+      totalHours += hours;
+      if (covered === 0) continue;
+      const mean = sum / covered;
+      const band = expected[bandOf(mean)];
+      matchedIntervals += 1;
+      matchedHours += covered;
+      totalM3 += p.volume_m3;
+      band.intervals += 1;
+      band.hours += covered;
+      band.days += (p.duration_s as number) / DAY;
+      band.m3 += p.volume_m3;
+      band.tempHourSum += mean * covered;
+    }
+
+    expect(r.totalHours).toBe(totalHours);
+    expect(r.matchedHours).toBe(matchedHours);
+    expect(r.matchedIntervals).toBe(matchedIntervals);
+    expect(r.totalM3).toBeCloseTo(totalM3, 9);
+    expect(r.coverage).toBeCloseTo(matchedHours / totalHours, 12);
+    for (let i = 0; i < TEMP_BANDS.length; i += 1) {
+      const row = r.rows[i];
+      const want = expected[i];
+      expect(row.intervals, row.band.id).toBe(want.intervals);
+      expect(row.hours, row.band.id).toBe(want.hours);
+      expect(row.m3, row.band.id).toBeCloseTo(want.m3, 9);
+      expect(row.days, row.band.id).toBeCloseTo(want.days, 9);
+      expect(row.meanTempC, row.band.id).toBeCloseTo(
+        want.hours > 0 ? want.tempHourSum / want.hours : 0,
+        9,
+      );
+      expect(row.meanM3PerDay, row.band.id).toBeCloseTo(
+        want.days > 0 ? want.m3 / want.days : 0,
+        9,
+      );
+    }
   });
 });

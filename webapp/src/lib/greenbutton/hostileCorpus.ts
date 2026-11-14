@@ -240,6 +240,18 @@ const NAMED: CorpusCase[] = [
     ),
   },
   {
+    id: 'bill-duration-hostile',
+    family: 'numeric',
+    expect: 'refuse',
+    note: 'a billing period of 1e15 s (31.7 million years): one <espi:duration> used to set the gas temperature bands’ per-hour loop — t_edef78d7',
+    xml: FEED(
+      READING +
+        '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>1704067200</espi:start>' +
+        '<espi:duration>1000000000000000</espi:duration></espi:billingPeriod>' +
+        '<espi:billLastPeriod>1365030000</espi:billLastPeriod></espi:UsageSummary></content></entry>',
+    ),
+  },
+  {
     id: 'clock-poison',
     family: 'numeric',
     expect: 'import',

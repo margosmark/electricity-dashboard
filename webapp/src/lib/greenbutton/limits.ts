@@ -57,6 +57,11 @@
  *  - {@link MAX_BILL_DOLLARS}    1e6  … one billing period cannot hold it.
  *  - {@link MAX_UNIT_PRICE_DOLLARS} 1e3 … a dollar-per-unit price is ~0.03–0.40.
  *  - {@link MAX_BILL_MEASUREMENT} 1e12 … a bill's own quantity or a meter read.
+ *  - {@link MAX_BILL_PERIOD_SECONDS} 100 y … one billing period's own SPAN.
+ *    The figure that sets how much work every duration-driven pass does: the
+ *    gas temperature bands walk one step per HOUR of it, so a single
+ *    `<espi:duration>` used to price the whole report (1e12 s → 1 327 ms,
+ *    1e13 s → 17 299 ms, 1e15 s → ~29 min of main thread; t_3bfd4c3e F1).
  *  - {@link MAX_CLOCK_OFFSET_S}   86 400 … no UTC offset is a day long; a
  *    LocalTimeParameters block outside it is not a clock (see energy.ts).
  * Negative figures are legal on purpose: a bill can be a credit (the fixture
@@ -125,11 +130,12 @@ export type DocumentStats = {
 
 /**
  * A dimension a refusal can name. The first six are measured by
- * {@link measureDocument}; `billLinesPerPeriod` is judged after the parse,
- * where one period's own line count is known, and is named the same way so
- * every budget refusal renders through one copy path.
+ * {@link measureDocument}; `billLinesPerPeriod` (one period's own line count)
+ * and `billPeriodSeconds` (one period's own span) are judged after the parse,
+ * where that period is known, and are named the same way so every budget
+ * refusal renders through one copy path.
  */
-export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod';
+export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod' | 'billPeriodSeconds';
 
 /** The three sentences a refusal is shown with. One source of copy. */
 export type RefusalCopy = {
@@ -342,6 +348,13 @@ function dimRefusal(dim: BudgetDim, measured: number, limit: number): BudgetRefu
     detail = t('parse.refuseBillPeriods', { measured, limit });
   } else if (dim === 'billLinesPerPeriod') {
     detail = t('parse.refuseBillLinesPerPeriod', { measured, limit });
+  } else if (dim === 'billPeriodSeconds') {
+    // Days, not seconds: a period is read in days, and the figure that
+    // refuses it should be the one the reader can recognise as absurd.
+    detail = t('parse.refuseBillPeriod', {
+      measured: fmtNumberAuto(Math.round(measured / 86_400)),
+      limit: fmtNumberAuto(Math.round(limit / 86_400)),
+    });
   } else {
     detail = t('parse.refuseBillLines', { measured, limit });
   }
@@ -439,6 +452,33 @@ export function assertBillLinesPerPeriod(measured: number): void {
   });
 }
 
+/**
+ * The span half of the same per-bill budget: a billing period longer than
+ * {@link MAX_BILL_PERIOD_SECONDS} is refused, whole, before it becomes a
+ * `UsageSummary`.
+ *
+ * Judged where the period is known, exactly like the line count above — the
+ * flat pre-parse scan counts `UsageSummary` blocks but cannot read the
+ * `duration` inside one without parsing the document first. Fatal to the
+ * import by design: a period no meter could have covered is not a bill, and
+ * keeping the block while dropping its span would render a bill whose window
+ * disagrees with every figure it states. `energy.ts` calls this the moment
+ * `duration` is a number, before the block's money, volume or lines are read.
+ */
+export function assertBillPeriodSeconds(seconds: number): void {
+  if (seconds <= MAX_BILL_PERIOD_SECONDS) return;
+  const refusal = dimRefusal('billPeriodSeconds', seconds, MAX_BILL_PERIOD_SECONDS);
+  throw new GreenButtonRefusal({
+    code: 'budget',
+    dim: refusal.dim,
+    measured: refusal.measured,
+    limit: refusal.limit,
+    headline: refusal.headline,
+    detail: refusal.detail,
+    hints: refusal.hints,
+  });
+}
+
 /* ==========================================================================
  * The numeric bounds — bills, their quantities, and the feed's clock
  * ========================================================================== */
@@ -454,6 +494,36 @@ export const MAX_BILL_MEASUREMENT = 1e12;
 
 /** Seconds of UTC offset a LocalTimeParameters block may state (± 24 h). */
 export const MAX_CLOCK_OFFSET_S = 24 * 3600;
+
+/**
+ * Seconds ONE billing period may span: 100 years.
+ *
+ * WHY IT IS A BOUND AT ALL. `<billingPeriod><duration>` is a per-bill figure
+ * with no limit of its own — `energy.ts` accepted any finite `> 0` — and
+ * duration-driven passes price it: `lib/gasTempBands.ts` walked one step per
+ * HOUR of it while binning the usage-vs-temperature report, so one
+ * `<espi:duration>` element set the report's cost. Measured on this tree
+ * (t_3bfd4c3e, F1): 1e12 s → 1 327 ms, 1e13 s → 17 299 ms, 1e15 s → ~1 730 s
+ * projected (~29 min of main thread before anything paints), with no upper
+ * bound anywhere upstream — re-measured on this branch at 4 449 ms and
+ * 59 524 ms for the same two figures (this box runs ~3× slower). Interval
+ * readings already carry their own, much tighter ceiling
+ * ({@link MAX_INTERVAL_SECONDS}, 366 d); this is the bill's.
+ *
+ * WHY 100 YEARS, NOT THE 400 DAYS FIRST PROPOSED. A 400-day ceiling refused
+ * a REAL document: `tests/fixtures/utility-espi-prefixed-standin.xml` states
+ * `<duration>721958400</duration>` — 22.9 years, a cumulative
+ * "since 2000-01-01" usage summary that a Green Button Connect utility
+ * actually emits — so a 400-day ceiling turned 5 test files / 10 tests red
+ * on this branch (usageSummary, billMoneyScale, utilitySamples,
+ * parseDiagnostic, limits itself; refusal: "spans 8 356 days, beyond the 400
+ * days a single bill may cover"). 100 years is 4.4× above the largest
+ * billing period this repo has ever parsed and still refuses every figure the finding measured:
+ * 1e12 s is 31 709 years, 1e15 s is 31.7 million. Anything below the ceiling
+ * costs nothing downstream either: the gas report no longer walks a period
+ * hour by hour (see `gasTempBands.ts`).
+ */
+export const MAX_BILL_PERIOD_SECONDS = 100 * 365 * 24 * 3600;
 
 /** The copy a refused bill figure is shown with. */
 function billCopy(detail: string): RefusalCopy {

@@ -45,12 +45,23 @@
  * in the report is volume (m³), days, hours or °C: there is no money field
  * and no energy field anywhere in this module (source-scanned in
  * `GasTempBandCard.test.tsx`).
+ *
+ * WHAT A HOSTILE FILE MAY COST (t_edef78d7): a candidate's span is the file's
+ * own word, so the report never walks it hour by hour — `hours` is counted in
+ * closed form and the temperature series is indexed once into prefix sums,
+ * making a build O(intervals + series hours) instead of O(Σ duration hours).
+ * 1e15 s of billing period and 200 000 × 366-day readings both build inside
+ * the fixed budget the tests pin, and NOTHING is dropped to buy that: no
+ * interval is skipped, subsampled or averaged away, so the drop counters keep
+ * meaning exactly what they meant (a refusal at import time — a bill period
+ * past `MAX_BILL_PERIOD_SECONDS` — is `greenbutton/limits.ts`'s, before any
+ * of this runs).
  */
 
 import type { GasPoint } from './storage';
 import type { UsageSummary } from './energy';
 import { gasVolume, isGasSummary } from './gasBillUi';
-import { tempAtC, type HourlyTemps } from './openMeteo';
+import type { HourlyTemps } from './openMeteo';
 import { TEMP_BANDS, bandIndexOf, type TempBandDef } from './tempBands';
 
 const SECONDS_PER_DAY = 86_400;
@@ -214,25 +225,85 @@ function candidatesFor(
   return { candidates, skippedReadings, volumelessBills };
 }
 
-/** Mean °C over the hours `[start, start+duration)` that the series covers. */
+/**
+ * The temperature series as prefix sums, so one interval's covered hours and
+ * covered °C are an O(1) subtraction instead of a walk of its own hours.
+ *
+ * WHY (t_edef78d7, F1 of t_3bfd4c3e). `intervalMeanTempC` used to run one
+ * iteration per HOUR of every candidate, and a candidate's hours are whatever
+ * the file said: 1e12 s of billing period measured 1 327 ms, 1e13 s 17 299 ms,
+ * 1e15 s projected to ~29 minutes of main thread — and the document caps still
+ * let 200 000 × 366-day readings through at 8 302 ms, because the caps bound
+ * COUNTS, never the span each count carries. The walk is gone: a report now
+ * costs O(series hours + intervals), and both counts are already bounded (the
+ * series is what was fetched, the intervals by `MAX_ENTRIES`/`MAX_READINGS`).
+ *
+ * WHAT IS UNCHANGED. Every number the walk produced: `counts`/`sums` are the
+ * walk's own running totals sliced at the interval's first and last covered
+ * hour, and `hours` is the walk's iteration count in closed form. The one
+ * difference is float rounding — two nearby large sums subtract — which lands
+ * an order of magnitude below the `toBeCloseTo(..., 9)` the band means are
+ * pinned at, and `gasTempBands.test.ts` checks the whole report against a
+ * straight re-walk of the same hours to keep it honest.
+ */
+type TempIndex = {
+  /** Hour index of `values[0]` — the series' own `startHour`. */
+  startHour: number;
+  /** `counts[i]` = hours in `[0, i)` that carry a temperature. */
+  counts: number[];
+  /** `sums[i]` = Σ of the °C in `[0, i)` that carry one. */
+  sums: number[];
+};
+
+/** Prefix sums over the series, or null when there is no series to index. */
+function tempIndexOf(temps: HourlyTemps | null | undefined): TempIndex | null {
+  if (!temps || temps.values.length === 0) return null;
+  const n = temps.values.length;
+  // `fill(0)`, not a bare `new Array(n + 1)`: index 0 is the empty prefix and
+  // must READ as 0. Left as a hole it reads `undefined`, and `x - undefined`
+  // is NaN — which silently means "no temperature" for every interval that
+  // starts at the series' first hour (the common case), i.e. a report that
+  // bands nothing while claiming coverage 0. Caught by the existing suite the
+  // moment it ran; the prefix is only correct if every slot is written.
+  const counts = new Array<number>(n + 1).fill(0);
+  const sums = new Array<number>(n + 1).fill(0);
+  let covered = 0;
+  let sum = 0;
+  for (let i = 0; i < n; i += 1) {
+    const v = temps.values[i];
+    // `!== null`, exactly the test the walk applied per hour: a hole is a hole.
+    if (v !== null) {
+      covered += 1;
+      sum += v;
+    }
+    counts[i + 1] = covered;
+    sums[i + 1] = sum;
+  }
+  return { startHour: temps.startHour, counts, sums };
+}
+
+/** Mean °C over the hours `[start, start+duration)` the series covers. */
 function intervalMeanTempC(
-  temps: HourlyTemps | null | undefined,
+  index: TempIndex | null,
   start: number,
   duration_s: number,
 ): { mean: number | null; hours: number; covered: number } {
   const firstHour = Math.floor(start / SECONDS_PER_HOUR);
   const lastHour = Math.floor((start + duration_s - 1) / SECONDS_PER_HOUR);
-  let hours = 0;
-  let covered = 0;
-  let sum = 0;
-  for (let h = firstHour; h <= lastHour; h += 1) {
-    hours += 1;
-    const v = tempAtC(temps, h * SECONDS_PER_HOUR);
-    if (v !== null) {
-      covered += 1;
-      sum += v;
-    }
-  }
+  // The walk's own iteration count, in closed form. `duration_s > 0` for every
+  // candidate, so lastHour >= firstHour holds for anything finite — and a
+  // sub-second duration, where the old loop ran zero times, still reads 0 here.
+  const hours = lastHour >= firstHour ? lastHour - firstHour + 1 : 0;
+  // Nothing to look up: no series (offline, blocked, failed fetch — the same
+  // state as zero coverage, never 0 °C), or no hour of this interval inside it.
+  if (index === null || hours === 0) return { mean: null, hours, covered: 0 };
+  const lo = Math.max(firstHour, index.startHour);
+  const hi = Math.min(lastHour, index.startHour + index.counts.length - 2);
+  if (hi < lo) return { mean: null, hours, covered: 0 };
+  const from = lo - index.startHour;
+  const to = hi - index.startHour + 1;
+  const covered = index.counts[to] - index.counts[from];
+  const sum = index.sums[to] - index.sums[from];
   return { mean: covered > 0 ? sum / covered : null, hours, covered };
 }
 
@@ -252,6 +323,11 @@ export function buildGasTempBandReport(
 ): GasTempBandReport {
   const source = gasTempSource(points, summaries);
   const { candidates, skippedReadings, volumelessBills } = candidatesFor(points, summaries, source);
+  // Built ONCE for the whole report: every candidate reads it, and the series
+  // is the only thing here whose size is not already a document count. Named
+  // `tempIndex`, never `index` — the loop below binds its own `index` (the band
+  // a mean falls in), and shadowing it here would read that binding's TDZ.
+  const tempIndex = tempIndexOf(temps);
 
   const acc = TEMP_BANDS.map(() => ({
     intervals: 0,
@@ -266,7 +342,7 @@ export function buildGasTempBandReport(
   let totalM3 = 0;
 
   for (const c of candidates) {
-    const { mean, hours, covered } = intervalMeanTempC(temps, c.start, c.duration_s);
+    const { mean, hours, covered } = intervalMeanTempC(tempIndex, c.start, c.duration_s);
     totalHours += hours;
     if (mean === null) continue;
     const index = bandIndexOf(mean);
