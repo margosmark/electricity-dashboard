@@ -24,6 +24,24 @@ export function isDayKey(value: unknown): value is string {
 }
 
 /**
+ * The local date a `yyyy-MM-dd` day key names, or null when it names none.
+ *
+ * A row whose instant is undateable formats its day key as `NaN-NaN-NaN`
+ * (t_bcc1b9c6) — truthy, but no date — and handing that to a formatter
+ * throws `RangeError: Invalid time value`. Every stored-key → Date path
+ * asks here first and degrades to its own fallback instead of parsing
+ * blind; same guard shape as `daysBetweenDayKeys` above and
+ * `dataFreshness` in lib/freshness.ts.
+ */
+export function dayKeyDate(key: string | null | undefined): Date | null {
+  if (typeof key !== 'string') return null;
+  const m = DAY_KEY.exec(key);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Inclusive day count between two `yyyy-MM-dd` keys: the 1st to the 1st is
  * 1 day, the 1st to the 31st is 31. Always ≥ 1, so it is safe to divide by.
  */

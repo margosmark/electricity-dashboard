@@ -26,7 +26,7 @@ import { EFFICIENCY_SUBTITLE_KEY, type EfficiencyReport } from '@/lib/statistics
 import BestChoiceBanner from '@/components/classic/BestChoiceBanner';
 import BillProjectionBanner from '@/components/classic/BillProjectionBanner';
 import EfficiencyCard from '@/components/classic/EfficiencyCard';
-import { daysBetweenDayKeys } from '@/lib/dateSpan';
+import { daysBetweenDayKeys, dayKeyDate } from '@/lib/dateSpan';
 
 export type OverviewPanelProps = {
   /** Per-plan cost of the window on screen — the banner's raw material. */
@@ -74,6 +74,12 @@ export default function OverviewPanel({
     return fmtMoney(costMode === 'yr' ? perDay * 365.25 : perDay);
   };
   const freshness = totals ? dataFreshness(totals.lastDate, new Date()) : null;
+  // F2 (t_bcc1b9c6): an undateable instant formats its day key as
+  // `NaN-NaN-NaN` — truthy, but no date. Resolve each once; the sites below
+  // degrade to the panel's own `—` instead of handing date-fns an Invalid
+  // Date (RangeError).
+  const firstDate = totals ? dayKeyDate(totals.firstDate) : null;
+  const lastDate = totals ? dayKeyDate(totals.lastDate) : null;
 
   /**
    * The period unit beside every money chip, never the "$/yr" toggle label:
@@ -93,7 +99,7 @@ export default function OverviewPanel({
       {totals && (
         <div className="relative z-[100] bg-card p-4 md:p-6 rounded-xl md:rounded-[2rem] shadow-xl border-4 border-edge flex flex-wrap gap-4 md:gap-6 items-center text-ink" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
           <div className="bg-inv text-inv-ink px-4 md:px-6 py-3 rounded-xl md:rounded-2xl border-4 border-edge">
-            <div className="text-[8px] md:text-[10px] text-accent-yellow">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+            <div className="text-[8px] md:text-[10px] text-accent-yellow">{t('overview.since', { date: firstDate ? fmtDateLong(firstDate) : '—' })}</div>
             <div className="text-xl md:text-3xl italic font-black">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
@@ -271,7 +277,7 @@ export default function OverviewPanel({
             }
           >
             <div className="text-[8px] md:text-[10px] uppercase font-black">
-              {t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
+              {t('overview.dataAsOf', { date: lastDate ? fmtDateLong(lastDate) : '—' })}
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
@@ -286,8 +292,8 @@ export default function OverviewPanel({
 
           <div className="text-[8px] md:text-[10px] text-ink-3 max-w-[240px] md:max-w-none">
             {t('overview.wholeDataset', {
-              start: fmtDay(totals.firstDate),
-              end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')),
+              start: firstDate ? fmtDay(totals.firstDate) : '—',
+              end: lastDate ? fmtDateLong(lastDate) : '—',
             })}
             <span data-testid="cost-reframe" className="block mt-1 text-ink font-black normal-case">
               {reframe}

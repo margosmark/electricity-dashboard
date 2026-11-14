@@ -23,6 +23,7 @@
 /* Wave U — storage failures are surfaced in the UI, so they translate. */
 import { t } from '@/i18n';
 import type { DataPoint, LocalTimeParams, UsageSummary } from './energy';
+import { MAX_INTERVAL_START_S } from './greenbutton/series';
 
 export const SCHEMA_VERSION = 2;
 export const ENERGY_KEY_V2 = 'energy_data_v2';
@@ -130,12 +131,32 @@ function isQuotaError(err: unknown): boolean {
 
 // --- Validation ------------------------------------------------------------
 
+/**
+ * The window the ESPI parser already enforces on every reading it accepts
+ * (`greenbutton/series.ts` MAX_INTERVAL_START_S — same `<= 0 || >= MAX`
+ * rule, same rationale): a timestamp outside it is not an instant any
+ * consumer can format. `new Date(ts * 1000)` is Invalid for it, date-fns
+ * `format()` then throws `RangeError`, and a day loop keyed on it never
+ * terminates (`isAfter(Invalid, Invalid)` is false).
+ *
+ * Refusing here means an undateable instant never becomes a row — on save,
+ * through a readings-only JSON import, on read of a payload an older build
+ * persisted (it reads corrupt and init says so instead of hanging), and
+ * through a backup restore, which re-enters via `saveEnergyData` (F1–F4 of
+ * t_bcc1b9c6). The floor is EXCLUSIVE 0, mirroring the parser: hand-made
+ * fixtures carry tiny epochs (`start: 1`) and must keep passing, while 0
+ * means "no time stated" and is refused (series.ts:843).
+ */
+function isInInstantWindow(ts: number): boolean {
+  return Number.isFinite(ts) && ts > 0 && ts < MAX_INTERVAL_START_S;
+}
+
 export function isDataPoint(value: unknown): value is DataPoint {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const point = value as Record<string, unknown>;
   return (
     typeof point.timestamp === 'number' &&
-    Number.isFinite(point.timestamp) &&
+    isInInstantWindow(point.timestamp) &&
     typeof point.usage_kwh === 'number' &&
     Number.isFinite(point.usage_kwh)
   );
@@ -175,7 +196,7 @@ export function buildPayload(
 export function isGasPoint(value: unknown): value is GasPoint {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const point = value as Record<string, unknown>;
-  if (typeof point.timestamp !== 'number' || !Number.isFinite(point.timestamp)) return false;
+  if (typeof point.timestamp !== 'number' || !isInInstantWindow(point.timestamp)) return false;
   if (typeof point.volume_m3 !== 'number' || !Number.isFinite(point.volume_m3)) return false;
   if (point.volume_m3 < 0) return false;
   return point.duration_s === null || (typeof point.duration_s === 'number' && Number.isFinite(point.duration_s));
