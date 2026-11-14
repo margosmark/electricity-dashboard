@@ -51,7 +51,7 @@ import { useThemeBootstrap } from '@/lib/theme';
 import { useRefreshNotices } from '@/hooks/useRefreshNotices';
 import TabNav from '@/components/TabNav';
 import CommodityTabs from '@/components/CommodityTabs';
-import { GasOverviewPanel, GasAnalyticsNote, GasEmptyState } from '@/components/GasSection';
+import { GasOverviewPanel, GasAnalyticsPanel, GasEmptyState } from '@/components/GasSection';
 import { ActualBillPanel } from '@/components/ActualBillPanel';
 import ClassicTabNav, { type ClassicTabId } from '@/components/ClassicTabNav';
 import BestChoiceChip from '@/components/BestChoiceChip';
@@ -935,7 +935,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           the deliberate way in (and, with no data loaded, the specific
           "add data" explanation the calm Overview cannot carry). */}
       {activeTab === 'analytics' && gasSelected && !gasEmpty && (
-        <GasAnalyticsNote intervalCount={gasData.length} />
+        <GasAnalyticsPanel points={gasData} />
       )}
 
       {activeTab === 'analytics' && gasSelected && gasEmpty && (
@@ -967,7 +967,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
       )}
 
       {variant === 'classic' && activeTab === 'usage' && gasSelected && !gasEmpty && (
-        <GasAnalyticsNote intervalCount={gasData.length} />
+        <GasAnalyticsPanel points={gasData} />
       )}
 
       {variant === 'classic' && activeTab === 'usage' && gasSelected && gasEmpty && (
