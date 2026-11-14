@@ -29,6 +29,7 @@ import {
   MAX_BILL_LINES_PER_PERIOD,
   MAX_BILL_MEASUREMENT,
   MAX_BILL_PERIODS,
+  MAX_BILL_PERIOD_SECONDS,
   MAX_CLOCK_OFFSET_S,
   MAX_DOCUMENT_BYTES,
   MAX_DOCUMENT_DEPTH,
@@ -38,6 +39,7 @@ import {
   assertBillDollars,
   assertBillLinesPerPeriod,
   assertBillMeasurement,
+  assertBillPeriodSeconds,
   assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
@@ -48,7 +50,12 @@ import {
   measureDocument,
   type DocumentStats,
 } from './limits';
-import { BILL_AMOUNT_SCALE, parseGreenButtonFeed, parseGreenButtonUsagePoints } from '@/lib/energy';
+import {
+  BILL_AMOUNT_SCALE,
+  parseGreenButtonFeed,
+  parseGreenButtonUsagePoints,
+  parseUsageSummaries,
+} from '@/lib/energy';
 import { diagnoseGreenButtonDocument } from '@/lib/parseDiagnostic';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -540,4 +547,87 @@ describe('the scale the file declares — a figure contradicted by its own power
     ).not.toThrow();
     expect(() => assertDeclaredBillScale('billLastPeriod', 1e303, null, 1e303)).not.toThrow();
   });
+});
+
+/* ==========================================================================
+ * The span one billing period may state (t_edef78d7, F1 of t_3bfd4c3e)
+ * ==========================================================================
+ * `<billingPeriod><duration>` had no bound of its own: any finite figure
+ * above zero became a `UsageSummary`, and every duration-driven pass then
+ * priced it — the gas temperature bands walked one step per HOUR of it, so
+ * one `<espi:duration>` was 4 449 ms at 1e12 s and 59 524 ms at 1e13 s of
+ * main thread on this branch (the growth is linear; see gasTempBands.test.ts
+ * for the ladder). This is the document-level half of the fix: refuse the
+ * period at parse time, so it never becomes a bill, never reaches
+ * localStorage, and never feeds a duration-driven loop anywhere downstream.
+ *
+ * The ceiling is 100 years, NOT the 400 days first proposed: the largest
+ * billing period this repo parses is real — the Green Button Connect stand-in
+ * states 721 958 400 s (22.9 y, cumulative since 2000-01-01) — and a 400-day
+ * ceiling refused that whole document (measured on this branch: 5 files /
+ * 10 tests red under it — usageSummary, billMoneyScale, utilitySamples,
+ * parseDiagnostic and this file's own fixture control). 100 y sits 4.4x
+ * above the real figure and still refuses every one the finding measured
+ * (1e12 s = 31 709 y).
+ */
+
+describe('the span one billing period may state', () => {
+  const READING =
+    '<entry><content><espi:IntervalReading><espi:timePeriod><espi:start>1704067200</espi:start></espi:timePeriod><espi:value>1500</espi:value></espi:IntervalReading></content></entry>';
+
+  const SUMMARY_WITH_DURATION = (duration: number | string) =>
+    '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>1704067200</espi:start>' +
+    `<espi:duration>${duration}</espi:duration></espi:billingPeriod>` +
+    '<espi:billLastPeriod>1365030000</espi:billLastPeriod></espi:UsageSummary></content></entry>';
+
+  it('refuses a 1e15-second billing period through the app\'s own funnel', () => {
+    const xml = FEED(READING + SUMMARY_WITH_DURATION('1000000000000000'));
+    // Nothing about the document is past any PRE-parse budget — the span is
+    // the only thing wrong with it, and the flat scan cannot see inside one
+    // block, which is exactly why this is judged where the period is known.
+    expect(inspectDocument(xml).refusal).toBeNull();
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billPeriodSeconds');
+    expect(refusal?.measured).toBe(1e15);
+    expect(refusal?.limit).toBe(MAX_BILL_PERIOD_SECONDS);
+    // The sentence names the span in DAYS (11 574 074 074 of them) and the
+    // ceiling it broke (36 500), then says what happened to the file.
+    expect(refusal?.detail).toMatch(/spans \d[\d, ]* days/);
+    expect(refusal?.detail).toMatch(/Nothing from this file was imported/);
+    expect(refusal?.headline).toBeTruthy();
+    expect(refusal?.hints.length).toBeGreaterThan(0);
+    // Fatal to the import, not just to this block: nothing is persisted.
+    expect(() => parseGreenButtonFeed(xml)).toThrow(/Nothing from this file was imported/);
+  }, 60_000);
+
+  it('keeps a period AT the ceiling, and refuses one past it', () => {
+    expect(() => assertBillPeriodSeconds(1)).not.toThrow();
+    expect(() => assertBillPeriodSeconds(721_958_400)).not.toThrow(); // the real 22.9 y
+    expect(() => assertBillPeriodSeconds(MAX_BILL_PERIOD_SECONDS)).not.toThrow();
+    expect(() => assertBillPeriodSeconds(MAX_BILL_PERIOD_SECONDS - 1)).not.toThrow();
+
+    expect(() => assertBillPeriodSeconds(MAX_BILL_PERIOD_SECONDS + 1)).toThrow(
+      /Nothing from this file was imported/,
+    );
+    // The measured hostile figures — every one of them past the ceiling.
+    for (const bad of [1e12, 1e13, 1e15, Number.POSITIVE_INFINITY, Number.NaN]) {
+      expect(() => assertBillPeriodSeconds(bad), `seconds=${bad}`).toThrow(
+        /Nothing from this file was imported/,
+      );
+    }
+  });
+
+  it('keeps the largest real billing period this repo parses — the 22.9-year cumulative summary', () => {
+    const xml = readFileSync(
+      join(__dirname, '../../../tests/fixtures/utility-espi-prefixed-standin.xml'),
+      'utf8',
+    );
+    const summaries = parseUsageSummaries(xml);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0].duration).toBe(721_958_400);
+    expect(summaries[0].duration).toBeLessThanOrEqual(MAX_BILL_PERIOD_SECONDS);
+    expect(() => parseGreenButtonFeed(xml)).not.toThrow();
+  }, 60_000);
 });

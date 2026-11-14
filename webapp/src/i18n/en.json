@@ -1034,6 +1034,7 @@
   "parse.refuseBillLines": "This file carries {measured} bill line items, beyond the {limit} this app reads in one pass. Nothing from this file was imported.",
   "parse.refuseBillLinesPerPeriod": "One billing period in this file carries {measured} line items, beyond the {limit} a single bill may hold. Nothing from this file was imported.",
   "parse.refuseBillMeasurement": "This file's <{what}> scales to {value}, which no meter can have read — the ceiling is {limit}. Nothing from this file was imported.",
+  "parse.refuseBillPeriod": "One billing period in this file spans {measured} days, beyond the {limit} days a single bill may cover. Nothing from this file was imported.",
   "parse.refuseBillPeriods": "This file carries {measured} billing-period blocks, beyond the {limit} this app reads in one pass. Nothing from this file was imported.",
   "parse.refuseBillScale": "This file's <{what}> says {value}, but the scale its own measurement declares (10^{power}) means {expected} — a figure kept at the wrong power of ten. Nothing from this file was imported.",
   "parse.refuseBytes": "This file is {measured} characters of XML, beyond the {limit} MB this app parses in one pass. Nothing from this file was imported.",
