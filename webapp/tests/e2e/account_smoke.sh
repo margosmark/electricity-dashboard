@@ -7,9 +7,14 @@
 #   account_smoke.sh <base_url> --expect-registration-closed
 #
 # The registration-closed mode deliberately does not create accounts or claim
-# delivery: it proves enumeration-safe pending responses and route behavior.
-# Authenticated registration/login/sync lifecycle behavior is covered by
-# ephemeral fixtures in src/lib/account/account.test.ts and route-matrix.test.ts.
+# delivery: it proves the signed-out session, the route×method contract, and
+# that the mailbox surface stays invisible while ACCT_EMAIL_VERIFICATION_ENABLED
+# is off — how every environment this gate runs in boots it (the topology
+# account leg, CI's ON container, docker-compose's defaults). Authenticated
+# registration/login/sync lifecycle behavior, including the flag-ON pending
+# response contract, is covered by ephemeral fixtures in
+# src/lib/account/account.test.ts, route-matrix.test.ts and
+# email-registration.test.ts.
 
 set -euo pipefail
 
@@ -129,47 +134,87 @@ forged_token() { printf '%s%s' "$(date +%s%N)" "$$" | sha256sum | cut -c1-48; }
 # ONE list, used by the guard, the disabled method sweep and the enabled,
 # registration-closed signed-out route sweep — so a path can never be probed in
 # one mode and forgotten.
+#
+# The list is DERIVED from the route files on disk whenever a checkout sits
+# next to this script — the same source route-matrix.test.ts reads — so an
+# #121-style addition can never drift out of the gate again. #120 added three
+# routes without touching a hand-maintained list; the guard below went red on
+# main, and because the guard runs BEFORE either mode, the entire sweep behind
+# it stopped executing while the gate kept reporting a single anonymous
+# failure (t_76234081). MATRIX_PATHS_STATIC is only the fallback for a run
+# against a deployment with no checkout next to it — it cannot be verified
+# against disk there, but it keeps the sweep probing every known route.
 # `/account/internal/*` is excluded ON PURPOSE: it is denied at the edge with
 # 403 and never reaches an app container (the containerised topology gate owns
 # that leg).
 # ---------------------------------------------------------------------------
-MATRIX_PATHS="/account/login /account/notify /account/recover /account/register
+MATRIX_PATHS_STATIC="/account/login /account/notify /account/recover /account/register
               /account/session /account/sync /account/push/preferences
-              /account/push/subscribe /account/logout"
+              /account/push/subscribe /account/logout
+              /account/verify /account/recover/verify /account/smtp-events"
+MATRIX_PATHS="$MATRIX_PATHS_STATIC"
 
-# The paths this script probes and the route files on disk must be the SAME
-# set. A new `/account/*` route that nobody adds here would otherwise ship
-# outside the gate — the whole reason this guard exists. Skipped (with a note)
-# when the script is run from outside a checkout, e.g. against a deployment.
+# Derive the surface from the route files, then require a DECLARED EXPECTATION
+# for every path × verb before a single request is made. A new route whose
+# contract nobody wrote fails HERE, by name — instead of surfacing later as a
+# wall of `want UNKNOWN` cells that say nothing about the cause. This is the
+# same contract route-matrix.test.ts enforces in-process ("a new route must
+# declare its cells").
 surface_guard() {
-  local dir="$SCRIPT_DIR/../../src/app/account"
-  if [ ! -d "$dir" ]; then
-    echo "  note  route surface not checked (no checkout next to this script)"
-    return 0
+  local dir="$SCRIPT_DIR/../../src/app/account" derived
+  if [ -d "$dir" ]; then
+    derived=$(cd "$dir" && find . -name route.ts \
+      | sed -e 's#^\./##' -e 's#/route\.ts$##' -e 's#^#/account/#' \
+      | grep -v '^/account/internal/' | sort) || true
+    if [ -z "$derived" ]; then
+      echo "FAIL: no /account route.ts files found under $dir" >&2
+      exit 1
+    fi
+    MATRIX_PATHS="$derived"
+  else
+    echo "  note  route surface not derived (no checkout next to this script): probing the built-in list"
   fi
-  local on_disk declared
-  on_disk=$(cd "$dir" && find . -name route.ts \
-    | sed -e 's#^\./##' -e 's#/route\.ts$##' -e 's#^#/account/#' \
-    | grep -v '^/account/internal/' | sort)
-  declared=$(printf '%s\n' $MATRIX_PATHS | sort)
-  if [ "$on_disk" != "$declared" ]; then
-    echo "FAIL: the route files and this gate's path list disagree" >&2
-    diff <(printf '%s\n' "$on_disk") <(printf '%s\n' "$declared") >&2 || true
-    exit 1
-  fi
-  echo "  note  surface guard: $(printf '%s\n' "$declared" | wc -l) app-owned /account routes, all probed"
+  local path method
+  for path in $MATRIX_PATHS; do
+    for method in GET POST PUT PATCH DELETE HEAD OPTIONS; do
+      if [ "$(matrix_expect "$path" "$method")" = "UNKNOWN" ]; then
+        echo "FAIL: matrix_expect declares no expectation for ${method} ${path} — a new route must declare its cells (see src/lib/account/route-matrix.test.ts)" >&2
+        exit 1
+      fi
+    done
+  done
+  echo "  note  surface guard: $(printf '%s' "$MATRIX_PATHS" | tr -s '[:space:]' '\n' | grep -c '^/') app-owned /account routes, every path×verb declared"
 }
 
 # ---------------------------------------------------------------------------
-# The expected answer for one enabled-but-registration-closed, signed-out route cell.
-# `HEAD` is answered by the route's `GET`; every verb a route does not export is
-# the shared `wrongMethod` stub (405, naming the method). Session-gated routes
-# answer 401 in this signed-out sweep.
+# The expected answer for one enabled, signed-out route cell — in the flag
+# state every environment this gate runs in boots (ACCT_ENABLED=true,
+# ACCT_EMAIL_VERIFICATION_ENABLED=false: the topology account leg, CI's ON
+# container, docker-compose's default).
+# `HEAD` is answered by the route's `GET`; every verb a route does not export
+# is the shared `wrongMethod` stub (405, naming the method) — except on the
+# mailbox-verification routes, whose `wrongEmailMethod` stubs gate on the flag
+# and therefore answer 404 (see below). Session-gated routes answer 401 in
+# this signed-out sweep.
 # ---------------------------------------------------------------------------
 matrix_expect() { # matrix_expect <path> <method>
   local path="$1" method="$2" verbs eff
+  # The mailbox-verification surface — register, recover, verify,
+  # recover/verify, smtp-events — hangs off ACCT_EMAIL_VERIFICATION_ENABLED
+  # (#120), which is OFF in every environment this gate runs in. Every verb
+  # on these routes therefore answers the SAME bare 404: the real handlers
+  # gate on the flag before touching anything, and their `wrongEmailMethod`
+  # stubs do the same. Invisible, not broken — and no Allow header leaks,
+  # because a real handler answers rather than Next's router. The flag-ON
+  # contract (generic 202 pending, 200 verify pages, 401 unsigned
+  # smtp-events) is asserted in-process by route-matrix.test.ts, which boots
+  # with the flag ON.
   case "$path" in
-    /account/register|/account/login|/account/logout|/account/notify|/account/recover) verbs="POST" ;;
+    /account/register|/account/recover|/account/verify|/account/recover/verify|/account/smtp-events)
+      echo 404; return ;;
+  esac
+  case "$path" in
+    /account/login|/account/logout|/account/notify) verbs="POST" ;;
     /account/session) verbs="GET" ;;
     /account/sync|/account/push/preferences) verbs="GET PUT" ;;
     /account/push/subscribe) verbs="POST DELETE" ;;
@@ -182,7 +227,7 @@ matrix_expect() { # matrix_expect <path> <method>
     *) echo 405; return ;;
   esac
   case "$path $eff" in
-    "/account/register POST"|"/account/login POST"|"/account/recover POST") echo 400 ;;
+    "/account/login POST") echo 400 ;;
     "/account/logout POST") echo 200 ;;
     "/account/session GET") echo 200 ;;
     "/account/sync GET"|"/account/push/preferences GET"|"/account/push/preferences PUT"|\
@@ -264,11 +309,20 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
     $([ "$(grep -i '^x-gb-process:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] \
       && [ "$(grep -i '^x-edge-location:' "$HDR" | tr -d '\r' | awk '{print $2}')" = "account" ] && echo 0 || echo 1)
 
+  # Registration under the flag state this gate runs in: ACCT_ENABLED=true
+  # but ACCT_EMAIL_VERIFICATION_ENABLED=false, so POST /account/register
+  # never reaches its body — the flag guard answers before it reads anything.
+  # The endpoint must therefore be INVISIBLE (404 not_found, no cookie, no
+  # echo of the password it was sent), and a known and an unknown address
+  # must be indistinguishable: same status, byte-identical body. That
+  # identity IS the no-enumeration property in this flag state; the flag-ON
+  # contract (generic 202 verification_pending, byte-identical too) is
+  # asserted in-process by email-registration.test.ts.
   attacker='attacker-owned-password'
   code=$(req - POST /account/register "{\"email\":\"known@example.com\",\"password\":\"$attacker\"}")
   known_body=$(cat "$BODY")
-  check "registration returns generic 202 verification_pending" \
-    $([ "$code" = "202" ] && [ "$(jget '.status')" = "verification_pending" ] && echo 0 || echo 1)
+  check "register is invisible while mailbox verification is off (404 not_found)" \
+    $([ "$code" = "404" ] && [ "$(jget '.error')" = "not_found" ] && echo 0 || echo 1)
   check "registration creates no session cookie" \
     $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
   check "response never echoes password or claims email was sent" \
@@ -276,7 +330,7 @@ if [ "$MODE" = "--expect-registration-closed" ]; then
 
   code=$(req - POST /account/register '{"email":"unknown@example.com"}')
   check "unknown address gets identical status and body (no enumeration)" \
-    $([ "$code" = "202" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
+    $([ "$code" = "404" ] && [ "$(cat "$BODY")" = "$known_body" ] && echo 0 || echo 1)
   check "unknown address also creates no session cookie" \
     $(grep -qi '^set-cookie: acct_session=' "$HDR" && echo 1 || echo 0)
 

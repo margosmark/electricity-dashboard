@@ -402,8 +402,20 @@ curl -sS --max-time 5 -o /dev/null \
   "$BASE/account/$LOG_TAG?probe=$QUERY_CANARY" || true
 sleep 1
 ACCOUNT_LOG="$(docker logs gb-topo-router 2>&1)"
+# Presence is asserted on the PATH FIELD ONLY — the quoted `"$uri"` exactly as
+# gb_noquery writes it (`$remote_addr [$time_local] "$uri" $status`) — and that
+# is the deliberate choice for two reasons. (1) The account location logs
+# gb_noquery since #120/F3, a format with NO request method: expecting
+# `GET /account/…` (the acct_safe-era check this replaces) can never match
+# what ships, which is how this cell went red and stayed red (t_76234081).
+# (2) Quoting the needle keeps it honest anyway: it matches only the logged
+# URI field, not some stray mention of the path, and never the query string —
+# the method-bearing acct_safe was dropped for /account precisely because
+# gb_noquery also drops the query/referer. The query/IP/cookie canaries below
+# are untouched and remain the redaction proof; this cell only proves the
+# request WAS logged, so those absence checks are not vacuous.
 case "$ACCOUNT_LOG" in
-  *"GET /account/$LOG_TAG"*) check "unique account canary request itself is present in router log" 0 ;;
+  *"\"/account/$LOG_TAG\""*) check "unique account canary request itself is present in router log" 0 ;;
   *) check "unique account canary request itself is present in router log" 1 ;;
 esac
 for CANARY in "$QUERY_CANARY" "$IP_CANARY" "$COOKIE_CANARY"; do
