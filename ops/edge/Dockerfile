@@ -36,6 +36,6 @@
 # split exercised in a throwaway topology compose, `nginx -V` module
 # parity. Bump DELIBERATELY, in its own commit, with a comment naming the
 # reason — never by loosening it back to a floating tag.
-FROM nginx:1.30.6-alpine
+FROM nginx:1.31.7-alpine
 
 COPY default.conf.template /etc/nginx/templates/default.conf.template
