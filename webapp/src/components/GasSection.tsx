@@ -101,13 +101,31 @@ export function GasOverviewPanel({
  * there is nothing to ask about. Same caption rule as the electricity
  * UsagePanel's `windowLabel`: locale is a real input, so the caller's memo
  * lists it.
+ *
+ * A row whose instant is not a DATE is skipped, not formatted (t_7ce07989).
+ * `Number.isFinite` is not enough: a stored bill's `<start>` can be a finite
+ * number whose `new Date(ts * 1000)` is Invalid — past ±8.64e15 ms, or `* 1000`
+ * overflowing to Infinity — and date-fns `format()` THROWS
+ * `RangeError: Invalid time value` on an Invalid Date. The rows come from
+ * `readStoredBillFeed`, which only checks that `start` is a number, so a bill
+ * persisted before the parse bound existed (or a negative-direction start,
+ * which `assertBillPeriodStart`'s ceiling alone does not refuse) reaches this
+ * caption on every load. Skipping mirrors `UsagePointPicker`'s own input
+ * bound: an unrenderable instant degrades to the caller's
+ * `spanLabel ?? loadingSpan` fallback instead of taking the panel to the
+ * AppErrorBoundary. When SOME rows are renderable the caption still spans
+ * them — only the unrenderable edges drop out.
  */
-function gasWindowLabel(rows: readonly { timestamp: number }[], locale: string): string | null {
+export function gasWindowLabel(rows: readonly { timestamp: number }[], locale: string): string | null {
   if (rows.length === 0) return null;
   let lo = Infinity;
   let hi = -Infinity;
   for (const r of rows) {
     if (!Number.isFinite(r.timestamp)) continue;
+    // `new Date(ts * 1000)` is Invalid for a finite ts outside the Date
+    // range — checked on the DATE, so both the eon and the overflow shapes
+    // are caught by one predicate.
+    if (!Number.isFinite(new Date(r.timestamp * 1000).getTime())) continue;
     if (r.timestamp < lo) lo = r.timestamp;
     if (r.timestamp > hi) hi = r.timestamp;
   }
