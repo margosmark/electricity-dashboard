@@ -30,6 +30,7 @@ import {
   MAX_BILL_MEASUREMENT,
   MAX_BILL_PERIODS,
   MAX_BILL_PERIOD_SECONDS,
+  MAX_BILL_PERIOD_START_S,
   MAX_CLOCK_OFFSET_S,
   MAX_DOCUMENT_BYTES,
   MAX_DOCUMENT_DEPTH,
@@ -40,6 +41,7 @@ import {
   assertBillLinesPerPeriod,
   assertBillMeasurement,
   assertBillPeriodSeconds,
+  assertBillPeriodStart,
   assertDeclaredBillScale,
   assertDocumentBudget,
   assertUnitPrice,
@@ -50,6 +52,7 @@ import {
   measureDocument,
   type DocumentStats,
 } from './limits';
+import { MAX_INTERVAL_START_S } from './series';
 import {
   BILL_AMOUNT_SCALE,
   parseGreenButtonFeed,
@@ -57,7 +60,7 @@ import {
   parseUsageSummaries,
 } from '@/lib/energy';
 import { diagnoseGreenButtonDocument } from '@/lib/parseDiagnostic';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 function stats(o: Partial<DocumentStats>): DocumentStats {
@@ -630,4 +633,106 @@ describe('the span one billing period may state', () => {
     expect(summaries[0].duration).toBeLessThanOrEqual(MAX_BILL_PERIOD_SECONDS);
     expect(() => parseGreenButtonFeed(xml)).not.toThrow();
   }, 60_000);
+});
+
+/* ==========================================================================
+ * The instant one billing period may START at (t_43c716ad)
+ * ==========================================================================
+ * `duration` has been bounded since t_edef78d7; `<start>` is the other half
+ * of the same element and had none — `billNum` accepts any finite number, so
+ * a bill could begin in year 33 657 588. Three measured costs ride on that
+ * start (see limits.ts): `startDate`/`endDate` reading "NaN-NaN-NaN", an
+ * eon-wide span for the temperature fetch, and a window caption date-fns
+ * REFUSES to format (`RangeError: Invalid time value`, which crashes the gas
+ * panel's render — measured on this branch). The bound is the same instant
+ * every `IntervalReading` start is already bounded to, for the same reason:
+ * it is the edge of the Date range a renderer survives, not a guess about
+ * the calendar — hence an upper bound only, with no floor.
+ */
+
+describe('the instant one billing period may start at', () => {
+  const SUMMARY_WITH_START = (start: number | string, duration = '2678400') =>
+    '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>' +
+    `${start}</espi:start><espi:duration>${duration}</espi:duration></espi:billingPeriod>` +
+    '<espi:billLastPeriod>1365030000</espi:billLastPeriod></espi:UsageSummary></content></entry>';
+
+  it('refuses a start in year 33 657 588 through the app’s own funnel', () => {
+    const xml = FEED(SUMMARY_WITH_START('1000000000000000'));
+    // Nothing the PRE-parse scan can see is wrong with this document — the
+    // start lives inside one block, which is exactly why it is judged here,
+    // beside the duration, before any of the block's money is read.
+    expect(inspectDocument(xml).refusal).toBeNull();
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billPeriodStart');
+    expect(refusal?.measured).toBe(1e15);
+    expect(refusal?.limit).toBe(MAX_BILL_PERIOD_START_S);
+    // The sentence names the offset from the epoch and the ceiling in the
+    // same breath (the ISO date anchors the reader to 2100-01-01).
+    expect(refusal?.detail).toMatch(/seconds after 1970-01-01/);
+    expect(refusal?.detail).toMatch(/2100-01-01/);
+    expect(refusal?.detail).toMatch(/Nothing from this file was imported/);
+    expect(refusal?.headline).toBeTruthy();
+    expect(refusal?.hints.length).toBeGreaterThan(0);
+    // Fatal to the import, not just to this block: nothing is persisted.
+    expect(() => parseGreenButtonFeed(xml)).toThrow(/Nothing from this file was imported/);
+  }, 60_000);
+
+  it('keeps a start AT the ceiling, and refuses one past it', () => {
+    expect(() => assertBillPeriodStart(0)).not.toThrow(); // the epoch: a real instant
+    expect(() => assertBillPeriodStart(-86_400)).not.toThrow(); // pre-epoch, still renderable
+    expect(() => assertBillPeriodStart(946_706_400)).not.toThrow(); // the real 2000-01-01
+    expect(() => assertBillPeriodStart(1_798_156_800)).not.toThrow(); // the fixture's 2026-12-25
+    expect(() => assertBillPeriodStart(MAX_BILL_PERIOD_START_S)).not.toThrow();
+    expect(() => assertBillPeriodStart(MAX_BILL_PERIOD_START_S - 1)).not.toThrow();
+
+    expect(() => assertBillPeriodStart(MAX_BILL_PERIOD_START_S + 1)).toThrow(
+      /Nothing from this file was imported/,
+    );
+    // The measured hostile figures — every one of them past the ceiling:
+    // year 3 116 095 (the UsagePointPicker gate's reproducer), one second
+    // past the Date range, and year 33 657 588 (this card's).
+    for (const bad of [
+      4_102_444_801,
+      8_640_000_000_001,
+      99_999_999_999_999,
+      1e15,
+      Number.POSITIVE_INFINITY,
+      Number.NaN,
+    ]) {
+      expect(() => assertBillPeriodStart(bad), `start=${bad}`).toThrow(
+        /Nothing from this file was imported/,
+      );
+    }
+  });
+
+  it('is the very instant every IntervalReading start is already bounded to', () => {
+    // One window for every timestamp this parser accepts: if either side is
+    // ever moved, this line fails instead of the two drifting apart.
+    expect(MAX_BILL_PERIOD_START_S).toBe(MAX_INTERVAL_START_S);
+    expect(MAX_BILL_PERIOD_START_S).toBe(4_102_444_800); // 2100-01-01T00:00:00Z
+  });
+
+  it('keeps every billingPeriod start this repo’s fixtures carry', () => {
+    const dir = join(__dirname, '../../../tests/fixtures');
+    let seen = 0;
+    const files = readdirSync(dir).filter((f) => f.endsWith('.xml'));
+    for (const file of files) {
+      const xml = readFileSync(join(dir, file), 'utf8');
+      const blocks = xml.matchAll(/<(?:\w+:)?billingPeriod>([\s\S]*?)<\/(?:\w+:)?billingPeriod>/g);
+      for (const block of blocks) {
+        const start = /<(?:\w+:)?start>(\d+)<\/(?:\w+:)?start>/.exec(block[1]);
+        if (!start) continue;
+        seen += 1;
+        expect(Number(start[1]), `${file} billingPeriod start`).toBeLessThanOrEqual(
+          MAX_BILL_PERIOD_START_S,
+        );
+      }
+    }
+    // 55 billing periods across the nine fixtures that carry one (measured
+    // 2026-11-14): earliest 2000-01-01, latest start 2026-12-25 — all inside
+    // the window, so no real document this repo holds is refused by it.
+    expect(seen).toBeGreaterThanOrEqual(50);
+  });
 });

@@ -1037,6 +1037,7 @@
   "parse.refuseBillPeriod": "Une période de facturation de ce fichier couvre {measured} jours, au-delà des {limit} jours qu’une seule facture peut couvrir. Rien de ce fichier n’a été importé.",
   "parse.refuseBillPeriods": "Ce fichier contient {measured} blocs de périodes de facturation, au-delà des {limit} que cette application lit en une seule passe. Rien de ce fichier n’a été importé.",
   "parse.refuseBillScale": "L’élément <{what}> de ce fichier indique {value}, alors que l’échelle déclarée par sa propre mesure (10^{power}) donne {expected} — un montant conservé avec la mauvaise puissance de dix. Rien de ce fichier n’a été importé.",
+  "parse.refuseBillStart": "Une période de facturation de ce fichier commence {measured} secondes après 1970-01-01, au-delà des {limit} secondes (2100-01-01) auxquelles une facture peut commencer. Rien de ce fichier n’a été importé.",
   "parse.refuseBytes": "Ce fichier fait {measured} caractères de XML, au-delà des {limit} Mo que cette application analyse en une seule passe. Rien de ce fichier n’a été importé.",
   "parse.refuseDepth": "Ce fichier imbrique les éléments XML sur {measured} niveaux, au-delà des {limit} niveaux que cette application parcourt. Rien de ce fichier n’a été importé.",
   "parse.refuseEntries": "Ce fichier contient {measured} éléments Atom <entry>, au-delà des {limit} que cette application indexe en une passe. Rien de ce fichier n’a été importé.",

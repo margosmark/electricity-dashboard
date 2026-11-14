@@ -252,6 +252,18 @@ const NAMED: CorpusCase[] = [
     ),
   },
   {
+    id: 'bill-start-hostile',
+    family: 'numeric',
+    expect: 'refuse',
+    note: 'a billing period starting 1e15 s after the epoch (year 33 657 588), duration perfectly legal: its two edges set an eon-wide span for the temperature fetch and its window caption is a date date-fns refuses to format — t_43c716ad',
+    xml: FEED(
+      READING +
+        '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>1000000000000000</espi:start>' +
+        '<espi:duration>2678400</espi:duration></espi:billingPeriod>' +
+        '<espi:billLastPeriod>1365030000</espi:billLastPeriod></espi:UsageSummary></content></entry>',
+    ),
+  },
+  {
     id: 'clock-poison',
     family: 'numeric',
     expect: 'import',

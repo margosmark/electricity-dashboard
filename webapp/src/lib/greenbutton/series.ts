@@ -691,7 +691,7 @@ function seriesDetail(meta: SeriesMetadata): string {
  * The bound is applied where the reading is accepted, so nothing downstream
  * has to defend itself against a timestamp that is not a date.
  */
-const MAX_INTERVAL_START_S = 4_102_444_800; // 2100-01-01T00:00:00Z
+export const MAX_INTERVAL_START_S = 4_102_444_800; // 2100-01-01T00:00:00Z
 
 /**
  * Interval length for one reading, in the order ESPI states it.
