@@ -1,0 +1,1750 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:espi="http://naesb.org/espi"
+      xsi:schemaLocation="http://www.w3.org/2005/Atom https://greenbuttondata.org/xsd/3_3/atom.xsd http://naesb.org/espi https://www.naesb.org/espi.xsd">
+  <id>urn:uuid:volwall-feed-0001</id>
+  <title>Energy Usage</title>
+  <updated>2026-06-01T04:37:20Z</updated>
+  <link rel="related" href="https://cert.greenbuttonalliance.org/certificate/volume-wall-synthetic" type="text/html" />
+  <entry>
+    <id>urn:uuid:volwall-up-0001</id>
+    <title>Usage Point</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/UsagePoint" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001" />
+    <link rel="up" type="espi-feed/UsagePoint" href="https://api.example.test/espi/1_1/resource/UsagePoint" />
+    <link rel="related" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <content>
+      <espi:UsagePoint>
+        <espi:ServiceCategory>
+          <espi:kind>1</espi:kind>
+        </espi:ServiceCategory>
+      </espi:UsagePoint>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0001</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0001" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0001</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0001" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0001/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0001" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0001</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0001/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0001/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0001" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1776902400</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1776902400</espi:start>
+          </espi:timePeriod>
+          <espi:value>401000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1776988800</espi:start>
+          </espi:timePeriod>
+          <espi:value>401000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777075200</espi:start>
+          </espi:timePeriod>
+          <espi:value>401000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777161600</espi:start>
+          </espi:timePeriod>
+          <espi:value>401000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0002</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0002" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0002</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0002" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0002/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0002" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0002</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0002/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0002/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0002" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1777248000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777248000</espi:start>
+          </espi:timePeriod>
+          <espi:value>402000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777334400</espi:start>
+          </espi:timePeriod>
+          <espi:value>402000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777420800</espi:start>
+          </espi:timePeriod>
+          <espi:value>402000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777507200</espi:start>
+          </espi:timePeriod>
+          <espi:value>402000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0003</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0003" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0003</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0003" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0003/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0003" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0003</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0003/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0003/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0003" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1777593600</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777593600</espi:start>
+          </espi:timePeriod>
+          <espi:value>403000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777680000</espi:start>
+          </espi:timePeriod>
+          <espi:value>403000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777766400</espi:start>
+          </espi:timePeriod>
+          <espi:value>403000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777852800</espi:start>
+          </espi:timePeriod>
+          <espi:value>403000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0004</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0004" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0004</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0004" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0004/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0004" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0004</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0004/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0004/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0004" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1777939200</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1777939200</espi:start>
+          </espi:timePeriod>
+          <espi:value>404000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778025600</espi:start>
+          </espi:timePeriod>
+          <espi:value>404000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778112000</espi:start>
+          </espi:timePeriod>
+          <espi:value>404000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778198400</espi:start>
+          </espi:timePeriod>
+          <espi:value>404000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0005</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0005" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0005</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0005" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0005/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0005" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0005</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0005/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0005/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0005" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1778284800</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778284800</espi:start>
+          </espi:timePeriod>
+          <espi:value>405000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778371200</espi:start>
+          </espi:timePeriod>
+          <espi:value>405000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778457600</espi:start>
+          </espi:timePeriod>
+          <espi:value>405000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778544000</espi:start>
+          </espi:timePeriod>
+          <espi:value>405000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0006</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0006" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0006</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0006" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0006/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0006" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0006</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0006/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0006/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0006" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1778630400</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778630400</espi:start>
+          </espi:timePeriod>
+          <espi:value>406000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778716800</espi:start>
+          </espi:timePeriod>
+          <espi:value>406000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778803200</espi:start>
+          </espi:timePeriod>
+          <espi:value>406000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778889600</espi:start>
+          </espi:timePeriod>
+          <espi:value>406000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0007</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0007" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0007</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0007" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0007/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0007" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0007</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0007/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0007/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0007" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1778976000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1778976000</espi:start>
+          </espi:timePeriod>
+          <espi:value>407000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779062400</espi:start>
+          </espi:timePeriod>
+          <espi:value>407000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779148800</espi:start>
+          </espi:timePeriod>
+          <espi:value>407000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779235200</espi:start>
+          </espi:timePeriod>
+          <espi:value>407000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0008</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0008" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0008</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0008" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0008/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0008" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0008</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0008/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0008/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0008" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1779321600</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779321600</espi:start>
+          </espi:timePeriod>
+          <espi:value>408000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779408000</espi:start>
+          </espi:timePeriod>
+          <espi:value>408000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779494400</espi:start>
+          </espi:timePeriod>
+          <espi:value>408000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779580800</espi:start>
+          </espi:timePeriod>
+          <espi:value>408000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0009</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0009" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0009</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0009" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0009/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0009" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0009</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0009/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0009/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0009" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1779667200</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779667200</espi:start>
+          </espi:timePeriod>
+          <espi:value>409000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779753600</espi:start>
+          </espi:timePeriod>
+          <espi:value>409000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779840000</espi:start>
+          </espi:timePeriod>
+          <espi:value>409000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1779926400</espi:start>
+          </espi:timePeriod>
+          <espi:value>409000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0010</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0010" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0010</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0010" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0010/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0010" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0010</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0010/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0010/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0010" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1780012800</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780012800</espi:start>
+          </espi:timePeriod>
+          <espi:value>410000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780099200</espi:start>
+          </espi:timePeriod>
+          <espi:value>410000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780185600</espi:start>
+          </espi:timePeriod>
+          <espi:value>410000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780272000</espi:start>
+          </espi:timePeriod>
+          <espi:value>410000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0011</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0011" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0011</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0011" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0011/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0011" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0011</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0011/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0011/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0011" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1780358400</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780358400</espi:start>
+          </espi:timePeriod>
+          <espi:value>411000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780444800</espi:start>
+          </espi:timePeriod>
+          <espi:value>411000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780531200</espi:start>
+          </espi:timePeriod>
+          <espi:value>411000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780617600</espi:start>
+          </espi:timePeriod>
+          <espi:value>411000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0012</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0012" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0012</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0012" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0012/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0012" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0012</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0012/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0012/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0012" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1780704000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780704000</espi:start>
+          </espi:timePeriod>
+          <espi:value>412000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780790400</espi:start>
+          </espi:timePeriod>
+          <espi:value>412000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780876800</espi:start>
+          </espi:timePeriod>
+          <espi:value>412000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1780963200</espi:start>
+          </espi:timePeriod>
+          <espi:value>412000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0013</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0013" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0013</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0013" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0013/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0013" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0013</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0013/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0013/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0013" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1781049600</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781049600</espi:start>
+          </espi:timePeriod>
+          <espi:value>413000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781136000</espi:start>
+          </espi:timePeriod>
+          <espi:value>413000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781222400</espi:start>
+          </espi:timePeriod>
+          <espi:value>413000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781308800</espi:start>
+          </espi:timePeriod>
+          <espi:value>413000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0014</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0014" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0014</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0014" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0014/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0014" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0014</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0014/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0014/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0014" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1781395200</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781395200</espi:start>
+          </espi:timePeriod>
+          <espi:value>414000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781481600</espi:start>
+          </espi:timePeriod>
+          <espi:value>414000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781568000</espi:start>
+          </espi:timePeriod>
+          <espi:value>414000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781654400</espi:start>
+          </espi:timePeriod>
+          <espi:value>414000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0015</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0015" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0015</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0015" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0015/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0015" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0015</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0015/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0015/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0015" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1781740800</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781740800</espi:start>
+          </espi:timePeriod>
+          <espi:value>415000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781827200</espi:start>
+          </espi:timePeriod>
+          <espi:value>415000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1781913600</espi:start>
+          </espi:timePeriod>
+          <espi:value>415000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782000000</espi:start>
+          </espi:timePeriod>
+          <espi:value>415000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0016</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0016" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0016</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0016" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0016/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0016" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0016</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0016/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0016/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0016" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1782086400</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782086400</espi:start>
+          </espi:timePeriod>
+          <espi:value>416000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782172800</espi:start>
+          </espi:timePeriod>
+          <espi:value>416000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782259200</espi:start>
+          </espi:timePeriod>
+          <espi:value>416000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782345600</espi:start>
+          </espi:timePeriod>
+          <espi:value>416000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0017</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0017" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0017</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0017" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0017/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0017" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0017</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0017/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0017/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0017" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1782432000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782432000</espi:start>
+          </espi:timePeriod>
+          <espi:value>417000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782518400</espi:start>
+          </espi:timePeriod>
+          <espi:value>417000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782604800</espi:start>
+          </espi:timePeriod>
+          <espi:value>417000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782691200</espi:start>
+          </espi:timePeriod>
+          <espi:value>417000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0018</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0018" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0018</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0018" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0018/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0018" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0018</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0018/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0018/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0018" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1782777600</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782777600</espi:start>
+          </espi:timePeriod>
+          <espi:value>418000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782864000</espi:start>
+          </espi:timePeriod>
+          <espi:value>418000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1782950400</espi:start>
+          </espi:timePeriod>
+          <espi:value>418000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783036800</espi:start>
+          </espi:timePeriod>
+          <espi:value>418000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0019</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0019" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0019</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0019" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0019/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0019" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0019</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0019/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0019/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0019" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1783123200</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783123200</espi:start>
+          </espi:timePeriod>
+          <espi:value>419000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783209600</espi:start>
+          </espi:timePeriod>
+          <espi:value>419000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783296000</espi:start>
+          </espi:timePeriod>
+          <espi:value>419000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783382400</espi:start>
+          </espi:timePeriod>
+          <espi:value>419000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0020</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0020" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0020</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0020" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0020/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0020" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0020</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0020/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0020/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0020" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1783468800</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783468800</espi:start>
+          </espi:timePeriod>
+          <espi:value>420000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783555200</espi:start>
+          </espi:timePeriod>
+          <espi:value>420000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783641600</espi:start>
+          </espi:timePeriod>
+          <espi:value>420000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783728000</espi:start>
+          </espi:timePeriod>
+          <espi:value>420000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0021</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0021" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0021</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0021" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0021/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0021" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0021</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0021/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0021/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0021" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1783814400</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783814400</espi:start>
+          </espi:timePeriod>
+          <espi:value>421000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783900800</espi:start>
+          </espi:timePeriod>
+          <espi:value>421000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1783987200</espi:start>
+          </espi:timePeriod>
+          <espi:value>421000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784073600</espi:start>
+          </espi:timePeriod>
+          <espi:value>421000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0022</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0022" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0022</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0022" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0022/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0022" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0022</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0022/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0022/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0022" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1784160000</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784160000</espi:start>
+          </espi:timePeriod>
+          <espi:value>422000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784246400</espi:start>
+          </espi:timePeriod>
+          <espi:value>422000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784332800</espi:start>
+          </espi:timePeriod>
+          <espi:value>422000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784419200</espi:start>
+          </espi:timePeriod>
+          <espi:value>422000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-rt-0023</id>
+    <title>Reading Type</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0023" />
+    <link rel="up" type="espi-feed/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType" />
+    <content>
+      <espi:ReadingType>
+        <espi:accumulationBehaviour>4</espi:accumulationBehaviour>
+        <espi:commodity>7</espi:commodity>
+        <espi:currency>124</espi:currency>
+        <espi:flowDirection>1</espi:flowDirection>
+        <espi:intervalLength>86400</espi:intervalLength>
+        <espi:kind>58</espi:kind>
+        <espi:powerOfTenMultiplier>-3</espi:powerOfTenMultiplier>
+        <espi:uom>42</espi:uom>
+      </espi:ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-mr-0023</id>
+    <title>Meter Reading</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0023" />
+    <link rel="up" type="espi-feed/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading" />
+    <link rel="related" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0023/IntervalBlock" />
+    <link rel="related" type="espi-entry/ReadingType" href="https://api.example.test/espi/1_1/resource/ReadingType/RTYP0023" />
+    <content>
+      <espi:MeterReading />
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:volwall-ib-0023</id>
+    <title>Interval Block</title>
+    <updated>2026-06-01T04:37:20Z</updated>
+    <link rel="self" type="espi-entry/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0023/IntervalBlock/ib" />
+    <link rel="up" type="espi-feed/IntervalBlock" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0023/IntervalBlock" />
+    <link rel="related" type="espi-entry/MeterReading" href="https://api.example.test/espi/1_1/resource/UsagePoint/FEED0001/MeterReading/READ0023" />
+    <content>
+      <espi:IntervalBlock>
+        <espi:interval>
+          <espi:duration>345600</espi:duration>
+          <espi:start>1784505600</espi:start>
+        </espi:interval>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784505600</espi:start>
+          </espi:timePeriod>
+          <espi:value>423000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784592000</espi:start>
+          </espi:timePeriod>
+          <espi:value>423000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784678400</espi:start>
+          </espi:timePeriod>
+          <espi:value>423000</espi:value>
+        </espi:IntervalReading>
+        <espi:IntervalReading>
+          <espi:timePeriod>
+            <espi:duration>86400</espi:duration>
+            <espi:start>1784764800</espi:start>
+          </espi:timePeriod>
+          <espi:value>423000</espi:value>
+        </espi:IntervalReading>
+      </espi:IntervalBlock>
+    </content>
+  </entry>
+</feed>
