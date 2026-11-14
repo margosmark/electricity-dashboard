@@ -122,6 +122,7 @@ describe('feed scope: each chart is fed by its own key only', () => {
       'GasMonthlyPanel.tsx',
       'GasYearOverYearPanel.tsx',
       'GasMoneyTable.tsx',
+      'GasTempBandCard.tsx',
     ]) {
       const src = read(f);
       expect(src, `${f} must not mention the electric storage key`).not.toMatch(
@@ -146,7 +147,12 @@ describe('feed scope: each chart is fed by its own key only', () => {
     // `${` is not a price. (The monthly table prints the bills' OWN stated
     // dollars through fmtMoney at runtime; the source still carries no
     // literal price and never a rate × m³ expression.)
-    for (const f of ['GasChartPanel.tsx', 'GasMonthlyPanel.tsx', 'GasYearOverYearPanel.tsx']) {
+    for (const f of [
+      'GasChartPanel.tsx',
+      'GasMonthlyPanel.tsx',
+      'GasYearOverYearPanel.tsx',
+      'GasTempBandCard.tsx',
+    ]) {
       const src = read(f);
       expect(src, `${f} must not offer a kWh conversion or a price`).not.toMatch(
         /kWh|\$\s*\d|¢|price/i,

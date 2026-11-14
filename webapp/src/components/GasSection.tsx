@@ -17,9 +17,12 @@
  *    carry no volume series; below it the MONTHLY overview (bars + table per
  *    calendar month, both m³ figures side by side with each bill's stated
  *    Amount Due) and the YEAR-OVER-YEAR panel (monthly m³ per year, delta row,
- *    full-year totals) — t_a2343a2f's electricity-parity charts. None is
- *    priced or converted (no m³ → kWh anywhere); electricity analytics live
- *    in the Electricity tab.
+ *    full-year totals) — t_a2343a2f's electricity-parity charts — and the
+ *    USAGE VS OUTDOOR TEMPERATURE card (t_909aa5fa): the gas twin of the
+ *    electricity TempBandCard, the same seven temperature bins over the same
+ *    Open-Meteo series, in m³ per day. None is priced or converted
+ *    (no m³ → kWh anywhere); electricity analytics live in the Electricity
+ *    tab.
  *  - `GasEmptyState` — no gas data in this browser at all: an upload CTA,
  *    never a zeroed chart that looks like an import that produced nothing.
  *
@@ -35,7 +38,9 @@ import { FileDown, Fuel } from 'lucide-react';
 import type { GasPoint } from '@/lib/storage';
 import type { UsageSummary } from '@/lib/energy';
 import { buildGasMonthly, buildGasYearOverYear } from '@/lib/gasMonthly';
-import { useTranslation } from '@/i18n';
+import { buildGasTempBandReport, gasTempSpanRows } from '@/lib/gasTempBands';
+import { useHourlyTemps } from '@/hooks/useHourlyTemps';
+import { fmtDate, useTranslation } from '@/i18n';
 
 // The charts load on demand like ChartView → BarChartPanel: recharts stays
 // off the main chunk until a gas tab with interval data actually renders.
@@ -52,6 +57,12 @@ const GasYearOverYearPanel = dynamic(
   () => import('@/components/GasYearOverYearPanel'),
   { ssr: false, loading: () => null },
 );
+// Hand-drawn SVG (no recharts), but loaded on demand like its siblings so
+// GasSection's synchronous import graph stays exactly what it was.
+const GasTempBandCard = dynamic(() => import('@/components/GasTempBandCard'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export function GasOverviewPanel({
   intervalCount,
@@ -85,6 +96,29 @@ export function GasOverviewPanel({
 }
 
 /**
+ * `Oct 6, 2024 – Oct 6, 2026` for the INSTANTS the gas temperature fetch is
+ * limited to (the chosen source's interval starts and ends), or null when
+ * there is nothing to ask about. Same caption rule as the electricity
+ * UsagePanel's `windowLabel`: locale is a real input, so the caller's memo
+ * lists it.
+ */
+function gasWindowLabel(rows: readonly { timestamp: number }[], locale: string): string | null {
+  if (rows.length === 0) return null;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of rows) {
+    if (!Number.isFinite(r.timestamp)) continue;
+    if (r.timestamp < lo) lo = r.timestamp;
+    if (r.timestamp > hi) hi = r.timestamp;
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+  const pattern = locale === 'fr' ? 'd MMM yyyy' : 'MMM d, yyyy';
+  const first = fmtDate(new Date(lo * 1000), pattern);
+  const last = fmtDate(new Date(hi * 1000), pattern);
+  return first === last ? first : `${first} – ${last}`;
+}
+
+/**
  * Analytics tab (gas): the m³ interval chart — one bar per stored reading,
  * unit on the axis, tooltip and sr-only table (a11y), zero conversions —
  * then the monthly overview and the year-over-year panel (t_a2343a2f).
@@ -111,6 +145,18 @@ export function GasAnalyticsPanel({
 }) {
   const { t, locale } = useTranslation();
   const hasData = points.length > 0;
+  // Usage vs outdoor temperature (t_909aa5fa): the SAME Open-Meteo hook and
+  // cache the electricity side uses, fetched over the GAS data's own span —
+  // both edges of every chosen interval, so the last bill's period is not
+  // clipped to its first hour. The report is pure (`lib/gasTempBands.ts`).
+  const tempRows = useMemo(() => gasTempSpanRows(points, summaries), [points, summaries]);
+  const temps = useHourlyTemps(tempRows);
+  const bandReport = useMemo(
+    () => buildGasTempBandReport(points, summaries, temps.temps),
+    [points, summaries, temps.temps],
+  );
+  // `locale` on the label memo: the caption recomputes on a language toggle.
+  const spanLabel = useMemo(() => gasWindowLabel(tempRows, locale), [tempRows, locale]);
   // `locale` on the yoy memo: buildGasYearOverYear composes its month
   // labels and empty-state copy through the module `t()`/monthLabelsFor,
   // which read the language at call time — the language is a real input.
@@ -151,6 +197,16 @@ export function GasAnalyticsPanel({
           </p>
         )}
       </div>
+
+      {/* Usage vs outdoor temperature — the gas twin of the electricity
+          TempBandCard: same seven bins, same weather source, m³ per day. */}
+      <GasTempBandCard
+        report={bandReport}
+        status={temps.status}
+        loading={temps.loading}
+        source={temps.source}
+        spanLabel={spanLabel}
+      />
 
       <GasMonthlyPanel monthly={monthly} />
       <GasYearOverYearPanel yoy={yoy} />
