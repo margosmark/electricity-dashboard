@@ -13,15 +13,22 @@
  * of 23 near-identical lines that buried anything else in the row. The fix is
  * aggregation WITHOUT concealment:
  *
+ *   - notes that say the same thing about DIFFERENT series (the sentence's
+ *     only difference is its {label} — the shape of Mark's 23 lines) print
+ *     once as ONE line that states the count in words, via the catalog's
+ *     aggregate sentence (`seriesNoteAggregateText`), with a ×N count;
  *   - identical RENDERED sentences print once with a ×N count (the sentence
  *     itself stays fully visible — nothing an error says is shortened);
  *   - every distinct sentence always prints on its own line;
  *   - a `<details>` disclosure lists every note individually, in feed order,
  *     so the raw record is one click away and never lost.
  *
- * Grouping is by the RENDERED text (via `seriesNoteText`), not by `code` or
- * `seriesKey`: two notes with the same code can word different things, and
- * two codes can word the same sentence — the reader sees sentences.
+ * Grouping is by `seriesNoteGroupKey` — the note's catalog sentence plus its
+ * non-label params, or the rendered text (via `seriesNoteText`) when the
+ * catalog cannot word that group as an "N series" line. Two notes with the
+ * same code can word different things (a different uom or refusal status is a
+ * different line), and two codes can word the same sentence — the reader sees
+ * sentences.
  *
  * Presentation only: it prints each note through `seriesNoteText()` — the
  * same sentences the picker and the diagnostics panels show, in the reader's
@@ -34,20 +41,20 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type { SeriesNote } from '@/lib/greenbutton/series';
 import { useTranslation } from '@/i18n';
-import { seriesNoteText } from '@/i18n/seriesNote';
+import { seriesNoteAggregateText, seriesNoteGroupKey, seriesNoteText } from '@/i18n/seriesNote';
 
-/** One rendered sentence with the notes that produced it, in feed order. */
-type NoteGroup = { text: string; notes: SeriesNote[] };
+/** One line on the notice, with the notes that produced it, in feed order. */
+type NoteGroup = { notes: SeriesNote[] };
 
-function groupByText(notes: readonly SeriesNote[], text: (n: SeriesNote) => string): NoteGroup[] {
+function groupByKey(notes: readonly SeriesNote[], keyOf: (n: SeriesNote) => string): NoteGroup[] {
   const groups: NoteGroup[] = [];
-  const byText = new Map<string, NoteGroup>();
+  const byKey = new Map<string, NoteGroup>();
   for (const note of notes) {
-    const rendered = text(note);
-    let group = byText.get(rendered);
+    const key = keyOf(note);
+    let group = byKey.get(key);
     if (!group) {
-      group = { text: rendered, notes: [] };
-      byText.set(rendered, group);
+      group = { notes: [] };
+      byKey.set(key, group);
       groups.push(group);
     }
     group.notes.push(note);
@@ -67,7 +74,7 @@ export function SeriesNotesNotice({
   // Nothing refused ⇒ nothing to say (never an empty frame).
   if (notes.length === 0) return null;
 
-  const groups = groupByText(notes, (n) => seriesNoteText(n, t));
+  const groups = groupByKey(notes, (n) => seriesNoteGroupKey(n, t));
   const hasRepeats = groups.some((g) => g.notes.length > 1);
 
   return (
@@ -84,25 +91,30 @@ export function SeriesNotesNotice({
         >
           {t('gbseries.notice.heading')}
         </div>
-        {/* One <li> per DISTINCT sentence: a refusal the feed repeated N times
-            reads once, with its count — every distinct reason stays visible. */}
+        {/* One <li> per GROUP: a refusal the feed repeated N times reads once,
+            with its count — every distinct reason stays visible. A group that
+            spans DIFFERENT series prints the catalog's "N series" sentence
+            (nobody's label is dropped in silence); anything else prints the
+            sentence the notes actually share. */}
         <ul
           data-testid="series-notes-list"
           className="list-disc pl-5 space-y-1 text-[10px] md:text-xs font-bold normal-case text-ink-2"
         >
-          {groups.map((group, i) => (
-            <li key={`${group.text}-${i}`} data-testid="series-note-detail">
-              {group.text}
-              {group.notes.length > 1 && (
-                <span
-                  data-testid="series-note-count"
-                  className="ml-1 font-black text-ink"
-                >
-                  {t('gbseries.notice.repeatCount', { count: group.notes.length })}
-                </span>
-              )}
-            </li>
-          ))}
+          {groups.map((group, i) => {
+            const count = group.notes.length;
+            const aggregate = count > 1 ? seriesNoteAggregateText(group.notes[0], count, t) : null;
+            const text = aggregate ?? seriesNoteText(group.notes[0], t);
+            return (
+              <li key={`${text}-${i}`} data-testid="series-note-detail">
+                {text}
+                {count > 1 && (
+                  <span data-testid="series-note-count" className="ml-1 font-black text-ink">
+                    {t('gbseries.notice.repeatCount', { count })}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
         {/* The raw record, unaggregated: every note in feed order, one click
             away. Disclosure only — nothing is withheld from the reader. */}
