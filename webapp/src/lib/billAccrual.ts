@@ -256,9 +256,22 @@ export function buildAccrualCurve({
 }: AccrualInput): AccrualCurve {
   if (!period || period.end <= period.start) return EMPTY_ACCRUAL;
 
-  const startDay = format(new Date(period.start * 1000), 'yyyy-MM-dd');
+  // An instant outside the Date range is not a period a chart can draw:
+  // date-fns `format()` throws `RangeError: Invalid time value` on it, and
+  // a NEGATIVE start slips the ordering guard above (the end is larger).
+  // `MoneyPanel` derives this period from the billing axis, whose bill
+  // starts are only ceiling-bounded upstream — so degrade to the empty
+  // curve, the caller's existing "no data" state, instead of taking the
+  // Money tab down (F5, t_bcc1b9c6).
+  const startMs = period.start * 1000;
+  const endMs = (period.end - 1) * 1000;
+  if (Number.isNaN(new Date(startMs).getTime()) || Number.isNaN(new Date(endMs).getTime())) {
+    return EMPTY_ACCRUAL;
+  }
+
+  const startDay = format(new Date(startMs), 'yyyy-MM-dd');
   // `period.end` is exclusive: the last day it accounts for is end − 1s.
-  const endDay = format(new Date((period.end - 1) * 1000), 'yyyy-MM-dd');
+  const endDay = format(new Date(endMs), 'yyyy-MM-dd');
   const startDate = parseISO(startDay);
   // Calendar days, not instant arithmetic: a window that spans a DST
   // transition is 29d23h or 30d1h of instants but always 30 days of chart.
@@ -271,7 +284,13 @@ export function buildAccrualCurve({
   // to the expected read date when the caller has one — but only when that
   // date is genuinely past the data. A file that already runs beyond its own
   // cadence (a late bill) still draws every day it holds, and stops there.
-  const runwayDay = billDate ? format(new Date(billDate.at * 1000), 'yyyy-MM-dd') : '';
+  // A read date that is not a DATE (undateable instant) has nowhere to
+  // land: no runway, same as a caller that supplied none (F5, t_bcc1b9c6).
+  const runwayMs = billDate ? billDate.at * 1000 : Number.NaN;
+  const runwayDay =
+    billDate && !Number.isNaN(new Date(runwayMs).getTime())
+      ? format(new Date(runwayMs), 'yyyy-MM-dd')
+      : '';
   const hasRunway = runwayDay > endDay;
   const billDay = hasRunway ? runwayDay : endDay;
   const billDateSource: AccrualBillDateSource = hasRunway

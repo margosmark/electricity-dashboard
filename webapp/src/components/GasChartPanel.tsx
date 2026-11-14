@@ -57,11 +57,11 @@ export type GasChartRow = {
  * category axis cannot collapse the two bars onto one x. A non-finite point
  * is dropped rather than crashing the tab — `isGasPoint` already rejects
  * those on load, this is belt-and-braces. The SAME drop covers a finite
- * timestamp whose instant is not a DATE (t_7ce07989): `isGasPoint` accepts
- * any finite number, so a payload written before the parser's interval bound
- * existed can carry one, and `fmtDay` on it THROWS `RangeError: Invalid time
- * value` — a bar with no day to sit on goes the way of the non-finite one
- * instead of taking the panel to the error boundary.
+ * timestamp whose instant is not a DATE (t_7ce07989): `isGasPoint` bounded
+ * its timestamp to the parser's window in t_bcc1b9c6, but a row that reaches
+ * this builder from anywhere else would still make `fmtDay` THROW
+ * `RangeError: Invalid time value` — a bar with no day to sit on goes the way
+ * of the non-finite one instead of taking the panel to the error boundary.
  */
 export function buildGasChartRows(points: readonly GasPoint[]): GasChartRow[] {
   const seen = new Map<number, number>();

@@ -1412,9 +1412,23 @@ export function selectInitialWindow(
 ): InitialWindow | null {
   if (rawData.length === 0) return null;
 
-  let minTs = rawData[0].timestamp;
-  let maxTs = rawData[0].timestamp;
-  for (const d of rawData) {
+  // An instant outside the Date range formats to no date at all, and it
+  // cannot anchor this window: `startOfDay`/`isAfter` propagate the Invalid
+  // Date, so the coverage loop below would spin forever on Invalid
+  // endpoints (`isAfter(Invalid, Invalid)` is false, `!isAfter` never
+  // flips) — a synchronous freeze of the whole tab, on init, with the
+  // payload already persisted (F1, t_bcc1b9c6). Window selection therefore
+  // runs on the rows that ARE dates: a dataset holding some real rows
+  // still opens on them, and one holding none has no window to pick —
+  // exactly like an empty dataset, which already returns null.
+  const dateable = rawData.filter(
+    (d) => !Number.isNaN(new Date(d.timestamp * 1000).getTime()),
+  );
+  if (dateable.length === 0) return null;
+
+  let minTs = dateable[0].timestamp;
+  let maxTs = dateable[0].timestamp;
+  for (const d of dateable) {
     if (d.timestamp < minTs) minTs = d.timestamp;
     if (d.timestamp > maxTs) maxTs = d.timestamp;
   }
@@ -1425,9 +1439,13 @@ export function selectInitialWindow(
   const anchor = isAfter(lastDay, today) ? startOfDay(today) : lastDay;
 
   const daysWithReadings = new Set(
-    rawData.map((d) => fmtDay(new Date(d.timestamp * 1000))),
+    dateable.map((d) => fmtDay(new Date(d.timestamp * 1000))),
   );
   const coverage = (s: Date, e: Date): number => {
+    // Belt: an endpoint that is not a date would never satisfy `isAfter`
+    // and loop forever — no coverage beats no tab, even if a regression
+    // lets an undateable instant back into the rows above (t_bcc1b9c6).
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
     const total = differenceInCalendarDays(e, s) + 1;
     if (total <= 0) return 0;
     let withData = 0;
@@ -1766,6 +1784,13 @@ export function buildHeatmapData(
   );
   let maxAvg = 0;
   filteredData.forEach((d) => {
+    // A row whose instant is not a date has no weekday/hour to bin into:
+    // `grid[NaN]` is undefined and the next line throws. Not reachable
+    // through Dashboard today (it feeds `filterByDateRange(...)`, which
+    // drops these rows first) — the skip is the defensive half, so a caller
+    // that forgets the filter gets a grid instead of a crash (F4,
+    // t_bcc1b9c6).
+    if (Number.isNaN(d.dateObj.getTime())) return;
     const day = d.dateObj.getDay();
     const hour = d.dateObj.getHours();
     grid[day][hour].sum += d.usage_kwh;
@@ -3274,6 +3299,13 @@ export type DerivedCharges = {
 export function billPeriodLabel(ts: number, duration: number): string {
   const start = new Date(ts * 1000);
   const end = new Date((ts + duration) * 1000);
+  // An instant outside the Date range has no month to name: the parts below
+  // would read `undefined`/`NaN` and compose "undefined NaN, NaN" at every
+  // surface that captions a bill (the axis, the money stacks, the plan
+  // timeline). A period with no date to draw gets the app's own unknown
+  // marker instead — the same degrade-to-fallback rule the render-site
+  // guards use (F3, t_bcc1b9c6).
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—';
   // French ranges put the day first and drop the comma ("26 août – 24 sept").
   const fr = getLocale() === 'fr';
   const a = fr

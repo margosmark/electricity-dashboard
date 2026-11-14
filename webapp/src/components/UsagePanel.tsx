@@ -81,14 +81,15 @@ export type UsagePanelProps = ChartViewProps & {
  * Wave U — `locale` is taken as a parameter (and used to pick the pattern)
  * so the memo's dependency is real: the caption recomputes on a toggle.
  *
- * A row whose instant is not a DATE is skipped (t_7ce07989): these rows come
- * from `loadEnergyData`, whose `isDataPoint` checks only `Number.isFinite` —
- * a stored timestamp past ±8.64e15 ms is finite but makes
- * `new Date(ts * 1000)` Invalid, and date-fns `format()` then THROWS
- * `RangeError: Invalid time value`. Same rule as `gasWindowLabel` and
- * `UsagePointPicker`'s own bound: an unrenderable instant degrades to null
- * (the caller's fallback) rather than taking the panel down. Returns null
- * when NO row is renderable.
+ * A row whose instant is not a DATE is skipped (t_7ce07989): a stored
+ * timestamp past ±8.64e15 ms is finite but makes `new Date(ts * 1000)`
+ * Invalid, and date-fns `format()` then THROWS `RangeError: Invalid time
+ * value`. `isDataPoint` now refuses such rows at the door too — the
+ * parser's own `0 < ts < MAX_INTERVAL_START_S` window (t_bcc1b9c6) — so
+ * this stays as belt for a row that reaches the panel from anywhere else.
+ * Same rule as `gasWindowLabel` and `UsagePointPicker`'s own bound: an
+ * unrenderable instant degrades to null (the caller's fallback) rather
+ * than taking the panel down. Returns null when NO row is renderable.
  */
 
 function windowLabel(rows: ProcessedPoint[], locale: string): string | null {

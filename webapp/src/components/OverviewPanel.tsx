@@ -27,7 +27,7 @@ import { buildVerdict } from '@/lib/verdict';
 import RateByMonth from '@/components/RateByMonth';
 import BillProjectionBanner from '@/components/BillProjectionBanner';
 import EfficiencyCard from '@/components/EfficiencyCard';
-import { daysBetweenDayKeys } from '@/lib/dateSpan';
+import { daysBetweenDayKeys, dayKeyDate } from '@/lib/dateSpan';
 import UsagePanel, { type UsagePanelProps } from '@/components/UsagePanel';
 import type { AxisPeriod } from '@/lib/billingAxis';
 import type { StalenessResult } from '@/hooks/useRateStaleness';
@@ -115,7 +115,19 @@ export default function OverviewPanel({
    */
   const unit = moneyPeriodUnit(costMode);
   const verdict = buildVerdict(comparison, userPlan, days);
-  const headingDate = latestPeriod?.endDate ?? totals?.lastDate ?? null;
+  /**
+   * Every date the header paints comes from a stored day key, and an
+   * undateable instant formats one as `NaN-NaN-NaN` — truthy, but no date
+   * (F2/F3, t_bcc1b9c6). Resolve each once through `dayKeyDate`: null when
+   * the key names none, so the sites below degrade to the panel's own `—`
+   * instead of handing date-fns an Invalid Date (RangeError). The axis's
+   * end day wins when it IS a date; a hostile one falls through to the
+   * dataset's own last day.
+   */
+  const headingDate =
+    dayKeyDate(latestPeriod?.endDate ?? null) ?? dayKeyDate(totals?.lastDate ?? null);
+  const firstDate = totals ? dayKeyDate(totals.firstDate) : null;
+  const lastDate = totals ? dayKeyDate(totals.lastDate) : null;
   const observedAverageRate = React.useMemo(() => {
     let kwh = 0;
     let cost = 0;
@@ -157,17 +169,17 @@ export default function OverviewPanel({
       {totals && (
         <header className="border-b border-edge-muted pb-3" data-testid="overview-period-heading">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight normal-case">
-            {headingDate ? fmtDate(new Date(headingDate + 'T00:00:00'), 'MMMM yyyy') : fmtDateLong(new Date(totals.lastDate + 'T00:00:00'))}
+            {headingDate ? fmtDate(headingDate, 'MMMM yyyy') : lastDate ? fmtDateLong(lastDate) : '—'}
           </h1>
           <p className="quiet-overview-period-meta mt-1">
             {latestPeriod
               ? t('overview.billingPeriod', { period: latestPeriod.label })
-              : t('overview.wholeDataset', { start: fmtDay(totals.firstDate), end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
+              : t('overview.wholeDataset', { start: firstDate ? fmtDay(totals.firstDate) : '—', end: lastDate ? fmtDateLong(lastDate) : '—' })}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="overview-context-pills">
             <span className="quiet-context-pill">{t('overview.planPill', { plan: planLabel(userPlan) })}</span>
             {floor && <span className="quiet-context-pill">{t('overview.floorPill', { cost: fmtMoney0(floor.annualCost) })}</span>}
-            <span className="quiet-context-pill">{t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}</span>
+            <span className="quiet-context-pill">{t('overview.dataAsOf', { date: lastDate ? fmtDateLong(lastDate) : '—' })}</span>
             {latestPeriod?.estimated && <span className="quiet-context-pill">{t('overview.provisional')}</span>}
             {fileStatus}
           </div>
@@ -279,7 +291,7 @@ export default function OverviewPanel({
       {totals && (
         <div className="quiet-dataset-summary p-4 md:p-5 flex flex-wrap gap-4 md:gap-5 items-center" data-testid="totals-strip" data-best-plan={totals.bestPlan}>
           <div className="quiet-data-stat px-4 py-3">
-            <div className="quiet-overview-label">{t('overview.since', { date: fmtDateLong(new Date(totals.firstDate + 'T00:00:00')) })}</div>
+            <div className="quiet-overview-label">{t('overview.since', { date: firstDate ? fmtDateLong(firstDate) : '—' })}</div>
             <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">{fmtKwh(totals.totalKwh, 0)}</div>
           </div>
 
@@ -452,7 +464,7 @@ export default function OverviewPanel({
             }
           >
             <div className="text-[8px] md:text-[10px] uppercase font-black">
-              {t('overview.dataAsOf', { date: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')) })}
+              {t('overview.dataAsOf', { date: lastDate ? fmtDateLong(lastDate) : '—' })}
             </div>
             <div
               className={`text-[9px] md:text-[11px] font-black normal-case ${
@@ -467,8 +479,8 @@ export default function OverviewPanel({
 
           <div className="text-[8px] md:text-[10px] text-ink-3 max-w-[240px] md:max-w-none">
             {t('overview.wholeDataset', {
-              start: fmtDay(totals.firstDate),
-              end: fmtDateLong(new Date(totals.lastDate + 'T00:00:00')),
+              start: firstDate ? fmtDay(totals.firstDate) : '—',
+              end: lastDate ? fmtDateLong(lastDate) : '—',
             })}
             <span data-testid="cost-reframe" className="block mt-1 text-ink font-black normal-case">
               {reframe}
