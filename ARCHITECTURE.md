@@ -72,8 +72,9 @@ asserted over the **whole surface** rather than route by route:
 and drives every path × every method × {no cookie, live session, forged,
 expired, stale} × both flag states, so a new route or a new verb fails the
 gate until it is declared; `webapp/tests/e2e/account_smoke.sh` proves the
-routing half over real HTTP in both states and refuses to run if the route
-files and its path list disagree.
+routing half over real HTTP in both states — deriving its path list from the
+same route files and refusing to run while any path × verb cell is
+undeclared.
 
 1. **Parse** — `parseGreenButtonXML` walks the feed object stack, pulls every
    `IntervalReading` (`timePeriod.start` unix seconds + `value` in Wh → kWh).

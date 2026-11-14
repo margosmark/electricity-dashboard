@@ -313,6 +313,12 @@ echo "== the closed-registration account surface through the REAL router =="
 # an account or issue a session before verified mailbox ownership. Authenticated
 # database/sync behavior is covered by ephemeral fixtures in
 # src/lib/account/account.test.ts and route-matrix.test.ts.
+# Accept a user-local jq from ~/.local/bin when the system one is absent —
+# devbox has no sudo and no jq on its default PATH (t_76234081), and this
+# gate is now the standing pre-edge-deploy checkpoint.
+if ! command -v jq >/dev/null 2>&1 && [ -x "${HOME:-}/.local/bin/jq" ]; then
+  PATH="$HOME/.local/bin:$PATH"
+fi
 if ! command -v jq >/dev/null 2>&1; then
   echo "ERROR: jq is required for registration-closed account route checks" >&2
   FAIL=$((FAIL + 1))

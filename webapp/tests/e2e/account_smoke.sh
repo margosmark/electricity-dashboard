@@ -18,6 +18,14 @@
 
 set -euo pipefail
 
+# jq is a documented prerequisite of this gate (CI runners ship it). Accept a
+# user-local install from ~/.local/bin — off the default non-interactive PATH
+# on devbox, where there is no sudo to install system-wide (t_76234081), so
+# the standing topology checkpoint runs unmodified.
+if ! command -v jq >/dev/null 2>&1 && [ -x "${HOME:-}/.local/bin/jq" ]; then
+  PATH="$HOME/.local/bin:$PATH"
+fi
+
 BASE="${1:?usage: account_smoke.sh <base_url> [--expect-disabled]}"
 MODE="${2:---expect-registration-closed}"
 MAX_WAIT="${SMOKE_WAIT_SECS:-30}"
