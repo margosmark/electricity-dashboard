@@ -98,12 +98,28 @@ describe('per-period line disclosure', () => {
     expect(toggles).toHaveLength(10);
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByTestId('gas-money-lines')).toBeNull();
+    // Closed, nothing renders the target, so nothing may point at it: an
+    // aria-controls naming an id that is not in the document is the dangling
+    // reference axe dings as `aria-valid-attr-value` (t_d5cc9a2d; the rule
+    // TabNav.tsx documents, and GasBillPeriodCard follows by carrying no
+    // aria-controls at all).
+    toggles.forEach((t) => expect(t).not.toHaveAttribute('aria-controls'));
 
     fireEvent.click(toggles[0]);
 
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'true');
     const region = screen.getByTestId('gas-money-lines');
     expect(region).toHaveAttribute('data-period-start', '2025-12-25');
+    // Open, the reference resolves: aria-controls names an id that IS in the
+    // document, and it is the region this row just painted. Only the open
+    // row carries one — the other nine still render no region at all.
+    const controls = toggles[0].getAttribute('aria-controls');
+    expect(controls).toBeTruthy();
+    const target = controls ? document.getElementById(controls) : null;
+    expect(target).not.toBeNull();
+    expect(target?.getAttribute('role')).toBe('region');
+    expect(region.contains(target)).toBe(true);
+    toggles.slice(1).forEach((t) => expect(t).not.toHaveAttribute('aria-controls'));
     // The bill's own line items, greppable by the utility's wording.
     expect(region.textContent).toContain('Charges, as the file reports them');
     expect(region.querySelectorAll('[data-bill-note]').length).toBeGreaterThan(0);
@@ -117,6 +133,8 @@ describe('per-period line disclosure', () => {
     fireEvent.click(toggles[0]);
     expect(screen.queryByTestId('gas-money-lines')).toBeNull();
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
+    // …and takes the reference back out of the DOM with the region.
+    expect(toggles[0]).not.toHaveAttribute('aria-controls');
   });
 
   it('the all-zero lines stay reachable behind their own toggle, never dropped', () => {
