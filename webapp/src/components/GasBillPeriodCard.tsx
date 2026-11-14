@@ -56,7 +56,10 @@ const dollars = (n: number) =>
 const rateNumber = (n: number): string =>
   n < 0 ? `−${fmtNumber(Math.abs(n), 4)}` : fmtNumber(n, 4);
 
-const CLASS_STYLE: Record<BillLineClass, string> = {
+/** Exported for the money table's per-period line disclosure (t_a2343a2f):
+ *  the same class-colored left border the bill card's line list wears, so a
+ *  charge reads identically on Overview and on the Money tab. */
+export const CLASS_STYLE: Record<BillLineClass, string> = {
   commodity: 'border-l-8 border-info-edge',
   delivery: 'border-l-8 border-ulo',
   regulatory: 'border-l-8 border-ulo',

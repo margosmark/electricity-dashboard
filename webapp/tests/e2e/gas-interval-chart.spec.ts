@@ -65,8 +65,12 @@ test.describe('gas interval chart', () => {
     // The m³ unit sits ON the Y axis (the card's hard requirement).
     await expect(chart.locator('text', { hasText: 'Gas volume (m³)' })).toBeVisible();
 
-    // One bar per stored reading: 4 series × 6 daily readings.
-    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(24);
+    // One bar per stored reading: 4 series × 6 daily readings. Scoped to
+    // THIS chart since t_a2343a2f added the monthly overview + year-over-
+    // year charts to the same tab (their bars are counted by their own
+    // testids in gas-monthly-yoy.spec.ts) — the count is unchanged, only
+    // the container narrowed.
+    await expect(chart.locator('.recharts-bar-rectangle')).toHaveCount(24);
 
     // The sr-only table reaches every reading, each cell with its unit.
     const table = page.getByTestId('gas-chart-data-table');
@@ -74,8 +78,9 @@ test.describe('gas interval chart', () => {
     await expect(table.locator('tbody tr').first()).toContainText('m³');
     await expect(table.locator('tbody tr').first()).toContainText('8.4');
 
-    // Hover a bar → the tooltip states the value in m³.
-    await page.locator('.recharts-bar-rectangle').first().hover();
+    // Hover a bar → the tooltip states the value in m³ (interval chart's
+    // own first bar — the monthly chart also renders bars below it).
+    await chart.locator('.recharts-bar-rectangle').first().hover();
     await expect(page.getByTestId('gas-chart-tooltip')).toBeVisible();
     await expect(page.getByTestId('gas-chart-tooltip')).toContainText('m³');
     await expect(page.getByTestId('gas-chart-tooltip')).toContainText('8.4');
@@ -101,10 +106,13 @@ test.describe('gas interval chart', () => {
     await expect(page.getByTestId('gas-chart-empty')).toContainText(
       'billing periods but no interval readings for gas',
     );
-    // No chart frame, no table, and no fabricated zero-height bars.
+    // No chart frame, no table, and no fabricated zero-height bars — the
+    // INTERVAL chart paints none. (The monthly overview below may chart
+    // this file's stated billed volumes; that is a different claim and is
+    // asserted in gas-monthly-yoy.spec.ts.)
     await expect(page.getByTestId('gas-chart')).toHaveCount(0);
     await expect(page.getByTestId('gas-chart-data-table')).toHaveCount(0);
-    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(0);
+    await expect(page.getByTestId('gas-chart').locator('.recharts-bar-rectangle')).toHaveCount(0);
   });
 
   test('reduced motion: chart flagged and painted in its final state', async ({ page }) => {
@@ -118,6 +126,6 @@ test.describe('gas interval chart', () => {
     await expect(chart).toBeVisible({ timeout: 15_000 });
     await expect(chart).toHaveAttribute('data-reduced-motion', 'true');
     // Final geometry present: every bar painted, not waiting on a grow-in.
-    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(24);
+    await expect(chart.locator('.recharts-bar-rectangle')).toHaveCount(24);
   });
 });

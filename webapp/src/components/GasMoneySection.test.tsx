@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 import MoneySection from './MoneySection';
 import { enrichGasSummaries } from '@/lib/gasBillUi';
@@ -81,5 +81,71 @@ describe('Money tab on gas — feed-only table, no electric machinery', () => {
     // P1 delta: fmtMoney in fr-CA = "13,87 $" (comma, NBSP, trailing $).
     expect(document.body.textContent).toContain('13,87');
     expect(document.body.textContent).not.toMatch(/\$13\.87/);
+  });
+});
+
+/* ================================================================== *
+ * Per-period line disclosure (t_a2343a2f) — what you actually paid,
+ * itemised: the bill's own lines behind each row, feed-stated only.
+ * ================================================================== */
+
+describe('per-period line disclosure', () => {
+  it('opens the bill’s own lines with aria wiring and keeps the row count', () => {
+    renderMoney();
+    const rows = screen.getAllByTestId('gas-money-row');
+    expect(rows).toHaveLength(10);
+    const toggles = screen.getAllByTestId('gas-money-lines-toggle');
+    expect(toggles).toHaveLength(10);
+    expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('gas-money-lines')).toBeNull();
+
+    fireEvent.click(toggles[0]);
+
+    expect(toggles[0]).toHaveAttribute('aria-expanded', 'true');
+    const region = screen.getByTestId('gas-money-lines');
+    expect(region).toHaveAttribute('data-period-start', '2025-12-25');
+    // The bill's own line items, greppable by the utility's wording.
+    expect(region.textContent).toContain('Charges, as the file reports them');
+    expect(region.querySelectorAll('[data-bill-note]').length).toBeGreaterThan(0);
+    // The detail row is NOT a money row — the ten-row contract is intact
+    // (the journey e2e counts these rows and parses cells 1 and 2).
+    expect(screen.getAllByTestId('gas-money-row')).toHaveLength(10);
+    // The toggle flips its label so the reader knows what a second click does.
+    expect(toggles[0].textContent).toContain('Hide bill lines');
+
+    // Closing restores the rest state.
+    fireEvent.click(toggles[0]);
+    expect(screen.queryByTestId('gas-money-lines')).toBeNull();
+    expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('the all-zero lines stay reachable behind their own toggle, never dropped', () => {
+    renderMoney();
+    fireEvent.click(screen.getAllByTestId('gas-money-lines-toggle')[0]);
+    const zero = screen.getByTestId('gas-money-zero-lines');
+    const count = Number(zero.getAttribute('data-count'));
+    expect(count).toBeGreaterThan(0);
+    const notesAtRest = screen
+      .getByTestId('gas-money-lines')
+      .querySelectorAll('[data-bill-note]').length;
+    fireEvent.click(zero.querySelector('button')!);
+    const notesOpen = screen
+      .getByTestId('gas-money-lines')
+      .querySelectorAll('[data-bill-note]').length;
+    expect(notesOpen).toBeGreaterThan(notesAtRest);
+    expect(notesOpen - notesAtRest).toBe(count);
+  });
+
+  it('a period with no stated Amount Due says "not in this import"', () => {
+    const stripped = summaries.map((s, i) =>
+      i === 0 ? { ...s, items: s.items.filter((it) => !/amount due/i.test(it.note)) } : s,
+    );
+    render(<MoneySection summaries={stripped} allData={[]} plan="TOU" />);
+    const first = screen.getAllByTestId('gas-money-row')[0];
+    expect(first.textContent).toContain('not in this import');
+    // The total the file DOES state is still printed beside it.
+    expect(first.textContent).toContain('$161.89');
+    // Later periods are untouched.
+    expect(screen.getAllByTestId('gas-money-row')).toHaveLength(10);
   });
 });
