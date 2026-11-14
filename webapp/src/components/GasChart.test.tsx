@@ -113,7 +113,16 @@ describe('feed scope: each chart is fed by its own key only', () => {
       .replace(/\/\/.*$/gm, '');
 
   it('the gas chart files never contain the electric key (nor localStorage)', () => {
-    for (const f of ['GasChartPanel.tsx', 'GasSection.tsx']) {
+    // t_a2343a2f added the monthly + year-over-year panels and the money
+    // table's line disclosure — every file that renders gas figures joins
+    // the scan, so isolation is source-asserted for the whole section.
+    for (const f of [
+      'GasChartPanel.tsx',
+      'GasSection.tsx',
+      'GasMonthlyPanel.tsx',
+      'GasYearOverYearPanel.tsx',
+      'GasMoneyTable.tsx',
+    ]) {
       const src = read(f);
       expect(src, `${f} must not mention the electric storage key`).not.toMatch(
         /energy_data_v2|ENERGY_KEY_V2/,
@@ -132,10 +141,17 @@ describe('feed scope: each chart is fed by its own key only', () => {
   });
 
   it('the gas chart source never offers a kWh conversion or a price', () => {
-    const src = read('GasChartPanel.tsx');
-    // kWh (any casing), a currency symbol before a value, the cent sign, or
-    // the word itself — template interpolation `${` is not a price.
-    expect(src).not.toMatch(/kWh|\$\s*\d|¢|price/i);
+    // Every gas CHART source: kWh (any casing), a currency symbol before a
+    // value, the cent sign, or the word itself — template interpolation
+    // `${` is not a price. (The monthly table prints the bills' OWN stated
+    // dollars through fmtMoney at runtime; the source still carries no
+    // literal price and never a rate × m³ expression.)
+    for (const f of ['GasChartPanel.tsx', 'GasMonthlyPanel.tsx', 'GasYearOverYearPanel.tsx']) {
+      const src = read(f);
+      expect(src, `${f} must not offer a kWh conversion or a price`).not.toMatch(
+        /kWh|\$\s*\d|¢|price/i,
+      );
+    }
   });
 });
 
@@ -259,7 +275,7 @@ describe('GasBarChart (explicit dimensions — jsdom has no layout)', () => {
 
 describe('GasAnalyticsPanel states', () => {
   it('data state: title, footnote with the count, and the live chart', async () => {
-    render(<GasAnalyticsPanel points={GAS_POINTS} />);
+    render(<GasAnalyticsPanel points={GAS_POINTS} summaries={MULTISERIES.summaries} />);
     expect(screen.getByText('Gas volume by interval')).toBeInTheDocument();
     expect(screen.getByText(/24 interval readings stored/)).toBeInTheDocument();
     // The chart is a dynamic chunk — wait for it (WaveH pattern).
@@ -270,7 +286,7 @@ describe('GasAnalyticsPanel states', () => {
   }, 15_000);
 
   it('empty state: bills but no volume series says so — no chart, no zero baseline', () => {
-    render(<GasAnalyticsPanel points={[]} />);
+    render(<GasAnalyticsPanel points={[]} summaries={MULTISERIES.summaries} />);
     expect(screen.getByText('No interval data in this import')).toBeInTheDocument();
     expect(screen.getByTestId('gas-chart-empty')).toHaveTextContent(
       /billing periods but no interval readings for gas/,
@@ -349,7 +365,7 @@ describe('a browser holding both commodities', () => {
 describe('French render', () => {
   it('panel + axis carry the FR strings', async () => {
     setLocale('fr');
-    render(<GasAnalyticsPanel points={GAS_POINTS} />);
+    render(<GasAnalyticsPanel points={GAS_POINTS} summaries={MULTISERIES.summaries} />);
     expect(screen.getByText('Volume de gaz par intervalle')).toBeInTheDocument();
     expect(screen.getByText(/jamais convertis, jamais tarifiés/)).toBeInTheDocument();
     await screen.findByTestId('gas-chart', undefined, { timeout: 8000 });
@@ -382,7 +398,7 @@ describe('prefers-reduced-motion', () => {
       removeListener: () => {},
       dispatchEvent: () => false,
     }));
-    render(<GasAnalyticsPanel points={GAS_POINTS} />);
+    render(<GasAnalyticsPanel points={GAS_POINTS} summaries={MULTISERIES.summaries} />);
     const chart = await screen.findByTestId('gas-chart', undefined, { timeout: 8000 });
     expect(chart.getAttribute('data-reduced-motion')).toBe('true');
     // Final-state geometry is present regardless (bars come from the
@@ -391,7 +407,7 @@ describe('prefers-reduced-motion', () => {
   }, 15_000);
 
   it('is false when the media query does not match', async () => {
-    render(<GasAnalyticsPanel points={GAS_POINTS} />);
+    render(<GasAnalyticsPanel points={GAS_POINTS} summaries={MULTISERIES.summaries} />);
     const chart = await screen.findByTestId('gas-chart', undefined, { timeout: 8000 });
     expect(chart.getAttribute('data-reduced-motion')).toBe('false');
   }, 15_000);

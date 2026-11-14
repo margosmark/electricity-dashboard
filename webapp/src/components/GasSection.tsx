@@ -14,8 +14,12 @@
  *  - `GasAnalyticsPanel` — the m³ interval chart (one bar per stored reading,
  *    unit on the axis/tooltip/sr-only table, zero conversions), with the
  *    honest "No interval data in this import" state for bill-only files that
- *    carry no volume series. None is priced or converted (no m³ → kWh
- *    anywhere); electricity analytics live in the Electricity tab.
+ *    carry no volume series; below it the MONTHLY overview (bars + table per
+ *    calendar month, both m³ figures side by side with each bill's stated
+ *    Amount Due) and the YEAR-OVER-YEAR panel (monthly m³ per year, delta row,
+ *    full-year totals) — t_a2343a2f's electricity-parity charts. None is
+ *    priced or converted (no m³ → kWh anywhere); electricity analytics live
+ *    in the Electricity tab.
  *  - `GasEmptyState` — no gas data in this browser at all: an upload CTA,
  *    never a zeroed chart that looks like an import that produced nothing.
  *
@@ -25,19 +29,29 @@
 
 "use client";
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { FileDown, Fuel } from 'lucide-react';
 import type { GasPoint } from '@/lib/storage';
+import type { UsageSummary } from '@/lib/energy';
+import { buildGasMonthly, buildGasYearOverYear } from '@/lib/gasMonthly';
 import { useTranslation } from '@/i18n';
 
-// The chart loads on demand like ChartView → BarChartPanel: recharts stays
+// The charts load on demand like ChartView → BarChartPanel: recharts stays
 // off the main chunk until a gas tab with interval data actually renders.
 // The card chrome (title, footnote, empty state) is static and paints first.
 const GasChartPanel = dynamic(() => import('@/components/GasChartPanel'), {
   ssr: false,
   loading: () => null,
 });
+const GasMonthlyPanel = dynamic(() => import('@/components/GasMonthlyPanel'), {
+  ssr: false,
+  loading: () => null,
+});
+const GasYearOverYearPanel = dynamic(
+  () => import('@/components/GasYearOverYearPanel'),
+  { ssr: false, loading: () => null },
+);
 
 export function GasOverviewPanel({
   intervalCount,
@@ -72,22 +86,42 @@ export function GasOverviewPanel({
 
 /**
  * Analytics tab (gas): the m³ interval chart — one bar per stored reading,
- * unit on the axis, tooltip and sr-only table (a11y), zero conversions.
+ * unit on the axis, tooltip and sr-only table (a11y), zero conversions —
+ * then the monthly overview and the year-over-year panel (t_a2343a2f).
  *
- * Feed scope: `points` arrives as a prop from the dashboard's gas bucket
- * (storage key `energy_gas_v2`, read by `useDashboard`). This component and
- * the chart it renders never read a storage key themselves, so neither chart
- * can be fed the other commodity's numbers (source-asserted in
- * `GasChart.test.tsx`).
+ * Feed scope: `points` and `summaries` arrive as props from the dashboard's
+ * gas bucket (storage keys `energy_gas_v2` / `gas_usage_summaries`, read by
+ * `useDashboard`). This component and the charts it renders never read a
+ * storage key themselves, so neither can be fed the other commodity's
+ * numbers (source-asserted in `GasChart.test.tsx`).
  *
- * Honest empty state: an Enbridge export with billing periods but no volume
- * series (bill-only files are common) says so — "No interval data in this
- * import" — instead of painting a chart-less frame or a zero baseline that
- * would read as measured silence.
+ * Honest empty states: an Enbridge export with billing periods but no
+ * volume series (bill-only files are common) says so — "No interval data in
+ * this import" — instead of painting a chart-less frame or a zero baseline
+ * that would read as measured silence; the monthly and year-over-year
+ * panels below carry their own honest empties (no rows / no chartable
+ * volume / fewer than 13 months of span).
  */
-export function GasAnalyticsPanel({ points }: { points: readonly GasPoint[] }) {
-  const { t } = useTranslation();
+export function GasAnalyticsPanel({
+  points,
+  summaries,
+}: {
+  points: readonly GasPoint[];
+  summaries: readonly UsageSummary[];
+}) {
+  const { t, locale } = useTranslation();
   const hasData = points.length > 0;
+  // `locale` on the yoy memo: buildGasYearOverYear composes its month
+  // labels and empty-state copy through the module `t()`/monthLabelsFor,
+  // which read the language at call time — the language is a real input.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const monthly = useMemo(() => buildGasMonthly(points, summaries), [
+    points,
+    summaries,
+    locale,
+  ]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  const yoy = useMemo(() => buildGasYearOverYear(monthly), [monthly, locale]);
   return (
     <div
       id="panel-analytics"
@@ -117,6 +151,9 @@ export function GasAnalyticsPanel({ points }: { points: readonly GasPoint[] }) {
           </p>
         )}
       </div>
+
+      <GasMonthlyPanel monthly={monthly} />
+      <GasYearOverYearPanel yoy={yoy} />
     </div>
   );
 }

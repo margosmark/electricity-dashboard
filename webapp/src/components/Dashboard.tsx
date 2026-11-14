@@ -935,7 +935,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
           the deliberate way in (and, with no data loaded, the specific
           "add data" explanation the calm Overview cannot carry). */}
       {activeTab === 'analytics' && gasSelected && !gasEmpty && (
-        <GasAnalyticsPanel points={gasData} />
+        <GasAnalyticsPanel points={gasData} summaries={activeFeed.summaries} />
       )}
 
       {activeTab === 'analytics' && gasSelected && gasEmpty && (
@@ -967,7 +967,7 @@ export default function Dashboard({ variant = 'quiet' }: DashboardProps) {
       )}
 
       {variant === 'classic' && activeTab === 'usage' && gasSelected && !gasEmpty && (
-        <GasAnalyticsPanel points={gasData} />
+        <GasAnalyticsPanel points={gasData} summaries={activeFeed.summaries} />
       )}
 
       {variant === 'classic' && activeTab === 'usage' && gasSelected && gasEmpty && (

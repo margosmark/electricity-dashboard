@@ -880,7 +880,7 @@ export default function Dashboard() {
       )}
 
       {tab === 'usage' && gasSelected && !gasEmpty && (
-        <GasAnalyticsPanel points={gasData} />
+        <GasAnalyticsPanel points={gasData} summaries={activeFeed.summaries} />
       )}
 
       {tab === 'usage' && gasSelected && gasEmpty && (
