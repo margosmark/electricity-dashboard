@@ -63,13 +63,33 @@ export type UsagePanelProps = ChartViewProps & {
  * `Oct 6, 2024 – Oct 6, 2026` for the rows on screen, or null when empty.
  * Wave U — `locale` is taken as a parameter (and used to pick the pattern)
  * so the memo's dependency is real: the caption recomputes on a toggle.
+ *
+ * A row whose instant is not a DATE is skipped (t_7ce07989): these rows come
+ * from `loadEnergyData`, whose `isDataPoint` checks only `Number.isFinite` —
+ * a stored timestamp past ±8.64e15 ms is finite but makes
+ * `new Date(ts * 1000)` Invalid, and date-fns `format()` then THROWS
+ * `RangeError: Invalid time value`. Same rule as `gasWindowLabel` and
+ * `UsagePointPicker`'s own bound: an unrenderable instant degrades to null
+ * (the caller's fallback) rather than taking the panel down. Returns null
+ * when NO row is renderable.
  */
+
 function windowLabel(rows: ProcessedPoint[], locale: string): string | null {
   if (rows.length === 0) return null;
   const pattern = locale === 'fr' ? 'd MMM yyyy' : 'MMM d, yyyy';
-  const first = fmtDate(new Date(rows[0].timestamp * 1000), pattern);
-  const last = fmtDate(new Date(rows[rows.length - 1].timestamp * 1000), pattern);
-  return first === last ? first : `${first} – ${last}`;
+  // First/last RENDERABLE row: the array is ordered, so scanning from each
+  // end keeps the real caption byte-identical when every row is a date.
+  let first: ProcessedPoint | undefined;
+  let last: ProcessedPoint | undefined;
+  for (const r of rows) {
+    if (!Number.isFinite(new Date(r.timestamp * 1000).getTime())) continue;
+    first ??= r;
+    last = r;
+  }
+  if (!first || !last) return null;
+  const a = fmtDate(new Date(first.timestamp * 1000), pattern);
+  const b = fmtDate(new Date(last.timestamp * 1000), pattern);
+  return a === b ? a : `${a} – ${b}`;
 }
 
 export default function UsagePanel({
