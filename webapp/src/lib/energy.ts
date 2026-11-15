@@ -1716,15 +1716,6 @@ export function detectAnomalies(
 ): Anomaly[] {
   const dayStats = Array.from({ length: 7 }, () => ({ sum: 0, days: new Set<string>() }));
   processedData.forEach((d) => {
-    // A row whose instant is not a date has no weekday to bin into:
-    // `dayStats[NaN]` is undefined and the next line throws
-    // `TypeError: Cannot read properties of undefined (reading 'sum')`.
-    // Unlike the heatmap's caller, this loop takes UNFILTERED processedData
-    // from BOTH dashboards, so nothing upstream drops such a row (F-QA2,
-    // t_b7d99f51 — the F4 pattern, t_bcc1b9c6). Unreachable while the
-    // ingest bound holds (`isInInstantWindow`), defensive for any caller
-    // that bypasses it: the dateable rows still get judged.
-    if (Number.isNaN(d.dateObj.getTime())) return;
     const dOW = d.dateObj.getDay();
     dayStats[dOW].sum += d.usage_kwh;
     dayStats[dOW].days.add(d.dayStr);
