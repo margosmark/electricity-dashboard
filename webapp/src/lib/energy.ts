@@ -1716,6 +1716,14 @@ export function detectAnomalies(
 ): Anomaly[] {
   const dayStats = Array.from({ length: 7 }, () => ({ sum: 0, days: new Set<string>() }));
   processedData.forEach((d) => {
+    // A row whose instant is not a date has no weekday to bin into:
+    // `dayStats[NaN]` is undefined and the next line throws. Unlike
+    // `buildHeatmapData` (F4), this argument is the UNFILTERED
+    // `processedData` at both dashboards (Dashboard.tsx:319,
+    // classic/Dashboard.tsx:299), so nothing upstream drops the row — the
+    // ingest bound makes it unreachable today, the skip is the defensive
+    // half for the caller that regresses it (F-QA2, t_ab279a1b).
+    if (Number.isNaN(d.dateObj.getTime())) return;
     const dOW = d.dateObj.getDay();
     dayStats[dOW].sum += d.usage_kwh;
     dayStats[dOW].days.add(d.dayStr);
@@ -1724,6 +1732,15 @@ export function detectAnomalies(
 
   const dailyTotals = new Map<string, { dateObj: Date; usage: number; rows: ProcessedPoint[] }>();
   filteredData.forEach((d) => {
+    // Same rule on the daily side: a row with no calendar day has no day to
+    // bucket — its `dayStr` is the string "NaN-NaN-NaN". This loop cannot
+    // throw on it (the key is a string) and today cannot spike on it either,
+    // because `expectedAvgs[NaN]` is `undefined` and `undefined > 0` is
+    // false. That safety is incidental, not an invariant: a spike carrying
+    // an Invalid Date throws `RangeError: Invalid time value` downstream
+    // (`AccountTriggers.tsx:63`, `worst.date.toISOString()`), which both
+    // dashboards mount on init.
+    if (Number.isNaN(d.dateObj.getTime())) return;
     const existing = dailyTotals.get(d.dayStr);
     if (!existing) {
       dailyTotals.set(d.dayStr, { dateObj: d.dateObj, usage: 0, rows: [] });
