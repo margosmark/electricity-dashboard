@@ -3302,10 +3302,13 @@ export function billPeriodLabel(ts: number, duration: number): string {
   // An instant outside the Date range has no month to name: the parts below
   // would read `undefined`/`NaN` and compose "undefined NaN, NaN" at every
   // surface that captions a bill (the axis, the money stacks, the plan
-  // timeline). A period with no date to draw gets the app's own unknown
-  // marker instead — the same degrade-to-fallback rule the render-site
-  // guards use (F3, t_bcc1b9c6).
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—';
+  // timeline). A period with no date to draw gets the app's own visible,
+  // LOCALIZED marker instead of a bare dash — the user must see WHY the
+  // period looks odd, and in their own language (PM ruling t_2a09ca9d). Same
+  // degrade-to-fallback rule the render-site guards use (F3, t_bcc1b9c6).
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return t('axis.unavailableDate');
+  }
   // French ranges put the day first and drop the comma ("26 août – 24 sept").
   const fr = getLocale() === 'fr';
   const a = fr

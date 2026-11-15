@@ -105,7 +105,10 @@ export function TrueBillEstimate({
   // carried no bill (or one with no charges) — then nothing changes at all.
   const derived = useMemo(
     () => (summaries.length > 0 ? deriveExtraCharges(summaries, allData) : null),
-    [summaries, allData],
+    // `deriveExtraCharges` captions each period with `billPeriodLabel`, which
+    // is translated (axis.unavailableDate) — the language is a real input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [summaries, allData, t],
   );
 
   /**

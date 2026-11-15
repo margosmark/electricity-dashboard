@@ -13,8 +13,25 @@
  * then count days".
  */
 
+import { t } from '@/i18n';
+
 /** ms in a day. Named here so the literals stop multiplying across files. */
 export const MS_PER_DAY = 86_400_000;
+
+/**
+ * What a `yyyy-MM-dd` day key READS as, when it names a day.
+ *
+ * A row or a bill stamped by an undateable instant formats its day key as
+ * `NaN-NaN-NaN` (see `dayKeyDate` below): truthy, structural, and useful —
+ * it keeps two hostile periods from colliding on one string as React keys —
+ * but garbage the moment it is PRINTED. Display sites route through here so
+ * the user sees the app's own localized `axis.unavailableDate` marker instead,
+ * while every structural consumer (keys, testids, `dateWindowOf`, sorting)
+ * keeps reading the raw value. A well-formed key comes back byte-identical.
+ */
+export function dayKeyLabel(key: string | null | undefined): string {
+  return dayKeyDate(key) ? (key as string) : t('axis.unavailableDate');
+}
 
 /** True for a well-formed `yyyy-MM-dd` key. */
 const DAY_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;

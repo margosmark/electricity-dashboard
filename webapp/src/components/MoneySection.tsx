@@ -67,7 +67,10 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
   const charges = useMemo(() => {
     if (hasExtraCharges(storedCharges)) return storedCharges;
     return deriveExtraCharges(summaries, allData)?.charges ?? null;
-  }, [storedCharges, summaries, allData]);
+    // `deriveExtraCharges` captions each period with `billPeriodLabel`, which
+    // is translated (axis.unavailableDate) — the language is a real input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  }, [storedCharges, summaries, allData, t]);
 
   // The timeline itself: the file's OWN billing periods (de-duped across
   // exports, holes between them kept visible) plus the open tail past the
@@ -81,7 +84,13 @@ export default function MoneySection({ summaries, allData, plan }: MoneySectionP
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
     [summaries, allData, t],
   );
-  const stacks = useMemo(() => buildAxisStacks(axis, allData, plan), [axis, allData, plan]);
+  const stacks = useMemo(
+    () => buildAxisStacks(axis, allData, plan),
+    // `buildAxisStacks` labels every period through `billPeriodLabel`, which
+    // is translated (axis.unavailableDate).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+    [axis, allData, plan, t],
+  );
   const openStack = useMemo(
     () => stacks.find((s) => s.kind === 'open') ?? null,
     [stacks],

@@ -36,6 +36,7 @@
  */
 
 import { billPeriodLabel, billWindow, getBillingPeriod, type UsageSummary } from './energy';
+import { dayKeyLabel } from './dateSpan';
 // Wave U — the axis's captions come from the locale catalog at call time.
 import { getLocale, t } from '@/i18n';
 
@@ -295,8 +296,10 @@ function derivedPeriods(rows: AxisRow[], billingDay: number): AxisPeriod[] {
         null,
         rows,
         {
-          label: `${startDate} – ${endDate} (your billing day, no bill in this file)`,
-          shortLabel: startDate,
+          // Display strings only: the raw `startDate`/`endDate` fields below
+          // stay as stamped — they are data (dateWindowOf, keys, sorting).
+          label: `${dayKeyLabel(startDate)} – ${dayKeyLabel(endDate)} (your billing day, no bill in this file)`,
+          shortLabel: dayKeyLabel(startDate),
           startDate,
           endDate,
         },
@@ -339,7 +342,7 @@ function openPeriod(anchors: AxisPeriod[], rows: AxisRow[]): AxisPeriod | null {
       // `end - start - 1` so the label's own end day is the LAST DAY HELD,
       // not the exclusive boundary one day past the newest reading.
       label: t('axis.openLabel', { label: billPeriodLabel(start, end - start - 1) }),
-      shortLabel: t('axis.openShort', { date: startDate }),
+      shortLabel: t('axis.openShort', { date: dayKeyLabel(startDate) }),
       startDate,
       endDate,
     },
@@ -412,8 +415,11 @@ export function buildBillingAxis(options: BillingAxisOptions): BillingAxis {
           null,
           rows,
           {
-            label: t('axis.gapLabel', { start: startDate, end: endDate }),
-            shortLabel: startDate,
+            label: t('axis.gapLabel', {
+              start: dayKeyLabel(startDate),
+              end: dayKeyLabel(endDate),
+            }),
+            shortLabel: dayKeyLabel(startDate),
             startDate,
             endDate,
           },

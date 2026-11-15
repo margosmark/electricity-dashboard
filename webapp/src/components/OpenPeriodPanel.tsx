@@ -21,6 +21,7 @@ import {
 // Wave U — the local money/kwh helpers were hard-wired to en-CA; the shared
 // formatters switch with the toggle.
 import { fmtCents, fmtKwh, fmtMoney, fmtPercent, useTranslation } from '@/i18n';
+import { dayKeyLabel } from '@/lib/dateSpan';
 
 const money = (n: number) => (n < 0 ? `−${fmtMoney(Math.abs(n))}` : fmtMoney(n));
 
@@ -87,7 +88,7 @@ export default function OpenPeriodPanel({
               {t('openPeriod.billedThrough')}
             </div>
             <div className="text-2xl md:text-4xl italic" data-testid="billed-through-date">
-              {billedThrough.date}
+              {dayKeyLabel(billedThrough.date)}
             </div>
             <div className="text-base md:text-xl" data-testid="billed-through-amount">
               {t('openPeriod.actual', { amount: money(billedThrough.amount) })}
@@ -107,7 +108,7 @@ export default function OpenPeriodPanel({
               {t('openPeriod.unbilledSince')}
             </div>
             <div className="text-2xl md:text-4xl italic" data-testid="unbilled-since-date">
-              {open.startDate}
+              {dayKeyLabel(open.startDate)}
             </div>
             <div className="text-base md:text-xl" data-testid="unbilled-since-amount">
               {t('openPeriod.estimatedCommodity', { amount: money(estimate) })}

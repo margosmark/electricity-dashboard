@@ -22,6 +22,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 import { billWaterfall, type WaterfallKind, type WaterfallStep } from '@/lib/moneyViz';
 import type { UsageSummary } from '@/lib/energy';
 import { fmtMoney, fmtMoney0, useTranslation } from '@/i18n';
+import { dayKeyLabel } from '@/lib/dateSpan';
 
 // Signed money through the locale formatter: en-CA prints `$12.34` / `−$12.34`
 // exactly as the hand-rolled version did, fr-CA prints `12,34 $` / `−12,34 $`.
@@ -127,7 +128,7 @@ export default function BillWaterfall({ summaries }: { summaries: UsageSummary[]
                 s.startDate === (summary?.startDate ?? '') ? 'bg-accent text-accent-ink' : 'bg-inset'
               }`}
             >
-              {s.startDate}
+              {dayKeyLabel(s.startDate)}
             </button>
           ))}
         </div>

@@ -31,6 +31,7 @@ import {
   type PlanId,
 } from '@/lib/estimateLedger';
 import type { UsageSummary } from '@/lib/energy';
+import { useTranslation } from '@/i18n';
 
 /** What the open period claims, or null when there is no open period. */
 export type OpenClaim = {
@@ -57,6 +58,11 @@ export function useEstimateLedger(
 ): EstimateLedger {
   // What this browser has recorded so far (the file on disk, first render).
   const [stored, setStored] = useState<EstimateLedger>(load);
+  // `closeEstimates` captions a settled window with `billPeriodLabel`, which
+  // is translated (axis.unavailableDate): the language is a real input, so
+  // this hook both SUBSCRIBES (a toggle re-renders) and lists `t` (the memo
+  // re-runs) — otherwise a French reader keeps the English caption.
+  const { t } = useTranslation();
 
   // Settling and recording are PURE derivations of (stored, claim, bills) —
   // no clock, no storage, no writes — so they belong in render: a new export
@@ -67,7 +73,8 @@ export function useEstimateLedger(
     if (summaries.length > 0) next = closeEstimates(next, summaries);
     if (claim && claim.estimated > 0) next = recordOpenEstimate(next, claim);
     return next;
-  }, [stored, claim, summaries]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the language is a real input
+  }, [stored, claim, summaries, t]);
 
   // React's own "adjust state while rendering" pattern: fold the derivation
   // back into its own base, so the NEXT claim upserts into what was actually
