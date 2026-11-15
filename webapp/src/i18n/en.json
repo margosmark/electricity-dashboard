@@ -190,6 +190,7 @@
   "axis.openLabel": "{label} (not billed yet)",
   "axis.openNote": "{days} days since the last bill are shown as one open, estimated period.",
   "axis.openShort": "Open · {date}",
+  "axis.unavailableDate": "date unavailable",
   "axis.weekOf": "Week of {date}",
   "backup.aria": "Backup and restore",
   "backup.closeAria": "Close backup drawer",
