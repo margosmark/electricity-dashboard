@@ -39,7 +39,7 @@
 #                     the process environment). Values are never echoed.
 #   --host HOST       deploy host for the ssh steps (default: $GB_REPOINT_HOST,
 #                     else none — host steps are then reported BLOCKED)
-#   --repo PATH       repo path on that host (default /home/hermes/electricity-dashboard)
+#   --repo PATH       repo path on that host (default $HOME/electricity-dashboard)
 #   --origin URL      public origin under test (default https://electricity.markarslan.ca)
 #   --loop-gate       also run scripts/e2e-greenbutton-loop.sh (real/external)
 #   --with-topology   also run scripts/e2e-greenbutton-topology.sh (needs docker)
@@ -70,7 +70,7 @@ REPO_LOCAL="$(cd "$WEBAPP/.." && pwd)"
 MODE="check"
 ENV_FILE="${GB_REPOINT_ENV:-}"
 HOST="${GB_REPOINT_HOST:-}"
-HOST_REPO="${GB_REPOINT_REPO:-/home/hermes/electricity-dashboard}"
+HOST_REPO="${GB_REPOINT_REPO:-$HOME/electricity-dashboard}"
 ORIGIN="${GB_REPOINT_ORIGIN:-https://electricity.markarslan.ca}"
 QA_GATE_DIR=""
 COMPOSE_REF="${GB_REPOINT_COMPOSE_REF:-}"
@@ -81,9 +81,10 @@ NOTIFY_PROBE=0
 
 PROD_AUTHORIZE="https://greenbutton.oakvillehydro.com/oauth/authorize"
 PROD_TOKEN="https://greenbutton.oakvillehydro.com/oauth/token"
-# The token the registration form already records. Re-generating it breaks the
-# notification URI Oakville has on file (GREENBUTTON-CMD.md §6).
-REGISTERED_NOTIFY_TOKEN="96a1eb36f68816b9606848aa7c628a71"
+# The registered notification-URI token is a SECRET. It lives in the untracked
+# `.env` next to docker-compose.yml (GB_NOTIFY_TOKEN) or the operator's secret
+# store as GB_REGISTERED_NOTIFY_TOKEN — never in this repository.
+REGISTERED_NOTIFY_TOKEN="${GB_REGISTERED_NOTIFY_TOKEN:-}"
 
 WORK="$(mktemp -d)"
 chmod 700 "$WORK"
@@ -211,8 +212,10 @@ else
   set_input GB_AUTHORIZE_URL "$PROD_AUTHORIZE"
   set_input GB_TOKEN_URL "$PROD_TOKEN"
   set_input GB_PKCE "false"
-  # PINNED, never derived: the form already records this token, and deriving a
-  # new one would leave Oakville POSTing to a URL we 404 (GREENBUTTON-CMD.md §6).
+  # PINNED, never derived: the registered notification URI records this token,
+  # and deriving a new one would leave the custodian POSTing to a URL we 404.
+  # The registered value is supplied from the untracked `.env` / the operator's
+  # secret store as GB_REGISTERED_NOTIFY_TOKEN — never from this repository.
   set_input GB_NOTIFY_TOKEN "$REGISTERED_NOTIFY_TOKEN"
 
   for pair in "GB_CLIENT_ID:$GB_CLIENT_ID" "GB_CLIENT_SECRET:$GB_CLIENT_SECRET"; do
@@ -227,15 +230,21 @@ else
     name="${pair%%:*}"; value="${pair#*:}"
     if is_placeholder "$value"; then blocked "$name is empty"; else ok "$name=$value"; fi
   done
-  if [ "$GB_NOTIFY_TOKEN" != "$REGISTERED_NOTIFY_TOKEN" ]; then
+  if [ -z "$REGISTERED_NOTIFY_TOKEN" ]; then
     if [ "$MODE" = "check" ]; then
-      warn "GB_NOTIFY_TOKEN differs from the token the registration form recorded ($REGISTERED_NOTIFY_TOKEN)"
-      warn "  → confirm Oakville has the NEW URI on file before this webhook matters"
+      blocked "GB_REGISTERED_NOTIFY_TOKEN is not set — supply the registered notification token from the untracked .env or your secret store (no value ships in this repo)"
     else
-      bad "GB_NOTIFY_TOKEN differs from the registered token — --apply would register a 404 for Oakville"
+      bad "GB_REGISTERED_NOTIFY_TOKEN is not set — --apply/--rehearse need the registered notification token from the untracked .env or your secret store"
+    fi
+  elif [ "$GB_NOTIFY_TOKEN" != "$REGISTERED_NOTIFY_TOKEN" ]; then
+    if [ "$MODE" = "check" ]; then
+      warn "GB_NOTIFY_TOKEN differs from the registered notification URI token ($(fingerprint "$REGISTERED_NOTIFY_TOKEN"))"
+      warn "  → confirm the custodian has the NEW URI on file before this webhook matters"
+    else
+      bad "GB_NOTIFY_TOKEN differs from the registered token — --apply would register a 404 for the webhook"
     fi
   else
-    ok "GB_NOTIFY_TOKEN still the registered one ($REGISTERED_NOTIFY_TOKEN)"
+    ok "GB_NOTIFY_TOKEN matches the registered one ($(fingerprint "$REGISTERED_NOTIFY_TOKEN"))"
   fi
 fi
 

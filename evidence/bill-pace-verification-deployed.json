@@ -1,7 +1,7 @@
 {
   "wave": "bill-pace",
   "slice": 7,
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "fixture": "usage-summary-open-tail.xml",
   "fixtureSha256": "324a0297c84daba813a12d80d8104188a0dc37ecfc22f0f98daa67c0dc70e49d",
   "at": "2026-10-10T03:55:35.996Z",

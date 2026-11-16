@@ -130,7 +130,7 @@ between:
 WAVE_S_SPLIT_XML=/path/to/export.xml TZ=America/Toronto \
   node evidence/wave-s-split-hygiene-verify.cjs
 → evidence/wave-s-split-hygiene-verification.json   37/37 checks passed
-     base http://10.10.11.110:3939/  deploy 58202db  at 14:26:08Z
+     base http://dashboard.example.internal:3939/  deploy 58202db  at 14:26:08Z
   + wave-s-split-hygiene-desktop.png, -efficiency-card.png
 ```
 

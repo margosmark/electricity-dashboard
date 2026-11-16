@@ -1,7 +1,7 @@
 {
   "wave": "U",
   "generatedAt": "2026-10-10T23:13:02.443Z",
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "deployedCommit": "5de8229",
   "fixture": {
     "sha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",

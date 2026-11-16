@@ -26,7 +26,7 @@ Two supporting rules, both test-pinned:
 ## The numbers a reviewer should check
 
 From `tier-split-verification.json` — **38/38** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy **fd40595**) against Mark's real 2-year
+(`http://dashboard.example.internal:3939`, deploy **fd40595**) against Mark's real 2-year
 export (sha256 `e292de50a560f56e…`, printed by the script before it drives
 anything; the file itself is never committed). The same **38/38** locally at
 `http://127.0.0.1:3100` → `tier-split-verification-local.json`.

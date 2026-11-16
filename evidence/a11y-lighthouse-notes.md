@@ -9,9 +9,9 @@ below was measured, not inferred — commands at the bottom.
 | Config | Run | performance | **accessibility** | CLS | LCP | TBT |
 | --- | --- | --- | --- | --- | --- | --- |
 | desktop 1350×940 | pre-fix, local build of `d9e9f2b` components on `:3101` | 1.00 | **0.87** | 0 | 0.72 s | 0 ms |
-| desktop 1350×940 | post-fix, deployed `3cc2932` at `http://10.10.11.110:3939/` | 1.00 | **1.00** | 0 | 0.72 s | 0 ms |
+| desktop 1350×940 | post-fix, deployed `3cc2932` at `http://dashboard.example.internal:3939/` | 1.00 | **1.00** | 0 | 0.72 s | 0 ms |
 | mobile 390×844 @3× | pre-fix, local build of `d9e9f2b` components on `:3101` | 0.91 | **0.87** | 0 | 3.1 s | ~190 ms |
-| mobile 390×844 @3× | post-fix, deployed `3cc2932` at `http://10.10.11.110:3939/` | 0.91 | **1.00** | 0 | 3.0 s | 197 ms |
+| mobile 390×844 @3× | post-fix, deployed `3cc2932` at `http://dashboard.example.internal:3939/` | 0.91 | **1.00** | 0 | 3.0 s | 197 ms |
 
 Performance and CLS are unchanged in both configs (the pre-fix desktop
 baseline was re-measured in the same environment, so the comparison is
@@ -66,9 +66,9 @@ Two evidence scripts looked the switcher up by its old aria-label
 ## Regression net, re-run against the deployed build
 
 ```
-WAVE_R_BASE_URL=http://10.10.11.110:3939/ NODE_PATH=$PWD/webapp/node_modules \
+WAVE_R_BASE_URL=http://dashboard.example.internal:3939/ NODE_PATH=$PWD/webapp/node_modules \
   node evidence/wave-r-verify.cjs      → 72/72
-TOOLBAR_BASE_URL=http://10.10.11.110:3939/ NODE_PATH=$PWD/webapp/node_modules \
+TOOLBAR_BASE_URL=http://dashboard.example.internal:3939/ NODE_PATH=$PWD/webapp/node_modules \
   node evidence/toolbar-verify.cjs     → 24/24
 ```
 

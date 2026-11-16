@@ -134,7 +134,7 @@ local runs and the deployed run.
 | `npm run test` | **1052/1052** (61 files) |
 | `npm run build` | 11 routes, 0 errors (sw.js VERSION restored to `oeo-v1-local`) |
 | `bill-pace-verify.cjs` local | **53/53** @ 1440 + 390, ×3 runs |
-| `bill-pace-verify.cjs` deployed | **53/53** @ `10.10.11.110:3939`, commit `8fdc1ec` |
+| `bill-pace-verify.cjs` deployed | **53/53** @ `dashboard.example.internal:3939`, commit `8fdc1ec` |
 | CI | billing-dead — "recent account payments have failed"; every job on every main push dies in 2–4s since 2026-10-07, before this change too. Gates run locally instead. |
 
 Screenshots: `bill-pace-desktop-money.png`, `bill-pace-desktop-tiered.png`,

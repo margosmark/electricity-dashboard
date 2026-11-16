@@ -1,7 +1,7 @@
 {
   "wave": "S",
   "generatedAt": "2026-10-10T04:15:35.832Z",
-  "baseUrl": "http://10.10.11.110:3939/",
+  "baseUrl": "http://dashboard.example.internal:3939/",
   "deployedCommit": "8fdc1ec",
   "fixtureSha256": "e292de50a560f56e117dc1bdb12a6c7f3d2b650525e421e437281853677b2f37",
   "fixtureBytes": 6424909,

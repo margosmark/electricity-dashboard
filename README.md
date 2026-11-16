@@ -63,9 +63,6 @@ and [`GREENBUTTON-CMD.md`](GREENBUTTON-CMD.md) §3.
   prototype → Next.js webapp) fit together, and the client-side pipeline
 - [`OPERATIONS.md`](OPERATIONS.md) — run it, update it, refresh Ontario rates
 - [`DECISIONS.md`](DECISIONS.md) — why it's built this way, and what was rejected
-- [`REGISTRATION-OAKVILLE.md`](REGISTRATION-OAKVILLE.md) — Mark's step-by-step
-  for Oakville Hydro's third-party registration form (every field value,
-  copy-paste ready)
 - [`GREENBUTTON-REPOINT.md`](GREENBUTTON-REPOINT.md) — the one command that
   switches the shim from unconfigured to a real custodian, the checks it runs
   before it writes anything, and how to roll it back
@@ -111,3 +108,28 @@ viewports, 90 checks, see `DECISIONS.md` — plus both Lighthouse budgets,
 cannot fire on push/PR — leave it disabled until Actions minutes are
 topped up; the three jobs above stay runnable by hand the moment billing
 returns.
+
+## License
+
+[MIT](LICENSE) — © 2026 Mark Arslan.
+
+Third-party material kept in this repository retains its own terms:
+
+- **Standards snapshots** — `docs/greenbutton/*.xsd` and
+  `docs/greenbutton/function-block-catalog.java.txt` are unmodified NAESB /
+  Green Button Alliance publications reproduced under the **Apache License
+  2.0**: see [`docs/greenbutton/LICENSE-APACHE-2.0.txt`](docs/greenbutton/LICENSE-APACHE-2.0.txt)
+  and [`docs/greenbutton/NOTICE.md`](docs/greenbutton/NOTICE.md), which also
+  records the source boundaries (no normative Model Business Practices
+  document is reproduced, and the snapshots are mirror bytes, not a claim of
+  equivalence to the latest gated publisher release).
+- **Fixture provenance** — per-file origins are recorded in
+  [`webapp/tests/fixtures/README.md`](webapp/tests/fixtures/README.md) (every
+  parser fixture is a publicly published sample or generated in-repo; the
+  root `.gitignore` keeps real user meter exports out) and
+  [`docs/greenbutton/fixture-manifest.json`](docs/greenbutton/fixture-manifest.json)
+  (public/synthetic references only — no user XML, account/meter identifiers
+  or credential values), with SHA-256 retrieval receipts for each mutable
+  source page in
+  [`docs/greenbutton/source-receipts.json`](docs/greenbutton/source-receipts.json).
+- **Application dependencies** (npm, pip) keep their own upstream licenses.

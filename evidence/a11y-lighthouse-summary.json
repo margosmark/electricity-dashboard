@@ -1,7 +1,7 @@
 {
   "task": "t_d5cc9a2d \u2014 Lighthouse accessibility 0.87 \u2192 1.0 (four pre-existing a11y audits)",
   "commit": "3cc2932",
-  "how_measured": "CHROME_PATH=/usr/bin/chromium npx lhci autorun --config=<desktop|lighthouserc.mobile.json> in webapp/; pre-fix = same worktree with the six component files reverted to d9e9f2b and re-built on :3101; post-fix = the deployed container at http://10.10.11.110:3939/",
+  "how_measured": "CHROME_PATH=/usr/bin/chromium npx lhci autorun --config=<desktop|lighthouserc.mobile.json> in webapp/; pre-fix = same worktree with the six component files reverted to d9e9f2b and re-built on :3101; post-fix = the deployed container at http://dashboard.example.internal:3939/",
   "pre_fix_local_desktop": {
     "source_report": "127_0_0_1--2026_10_09_23_08_57.report.json",
     "url": "http://127.0.0.1:3101/#tab=overview",
@@ -74,7 +74,7 @@
   },
   "post_fix_deployed_desktop": {
     "source_report": "10_10_11_110--2026_10_09_23_02_41.report.json",
-    "url": "http://10.10.11.110:3939/#tab=overview",
+    "url": "http://dashboard.example.internal:3939/#tab=overview",
     "fetched_at": "2026-10-09T23:02:41.672Z",
     "lighthouse_version": "12.6.1",
     "categories": {
@@ -109,7 +109,7 @@
   },
   "post_fix_deployed_mobile": {
     "source_report": "10_10_11_110--2026_10_09_23_03_04.report.json",
-    "url": "http://10.10.11.110:3939/#tab=overview",
+    "url": "http://dashboard.example.internal:3939/#tab=overview",
     "fetched_at": "2026-10-09T23:03:04.541Z",
     "lighthouse_version": "12.6.1",
     "categories": {

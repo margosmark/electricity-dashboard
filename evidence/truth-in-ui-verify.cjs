@@ -30,7 +30,7 @@
  *
  * Run:  TUI_XML=… (defaults to the committed fixture) TZ=America/Toronto \
  *         node evidence/truth-in-ui-verify.cjs
- * Env:  TUI_BASE_URL (default http://10.10.11.110:3939/ — deployed),
+ * Env:  TUI_BASE_URL (default http://dashboard.example.internal:3939/ — deployed),
  *       TUI_CHROMIUM (default /usr/bin/chromium),
  *       TUI_XML (the file to import; defaults to the committed fixture),
  *       TUI_SHA (the commit the stack under test is serving),
@@ -53,7 +53,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.TUI_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.TUI_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.TUI_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.TUI_SUFFIX || '';
 const SHA = process.env.TUI_SHA || '';

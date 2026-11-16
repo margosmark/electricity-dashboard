@@ -15,7 +15,7 @@ localStorage cache, chunked to the data's own dates) and
 ## The numbers a reviewer should check
 
 From `wave-t-verification.json` — **41/41** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy `58202db`, recorded as `deployedCommit`)
+(`http://dashboard.example.internal:3939`, deploy `58202db`, recorded as `deployedCommit`)
 against Mark's real 2-year export (sha256 `e292de50a560f56e…`, 6,424,909
 bytes — never committed; pass `WAVE_T_XML` yourself to re-run). Every figure is
 asserted against `wave-t-audit.py`, a **second parser** (Python ElementTree)

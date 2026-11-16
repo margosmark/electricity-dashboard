@@ -1,6 +1,6 @@
 {
   "wave": "toolbar",
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "fixture": "green-button-alliance-sample.xml",
   "at": "2026-10-09T03:16:57.930Z",
   "total": 24,

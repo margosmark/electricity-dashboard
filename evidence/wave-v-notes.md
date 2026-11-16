@@ -90,9 +90,9 @@ Screenshots (not tracked — see `ASSETS.md`): `wave-v-{desktop,mobile}-{long,sh
 (full page), `-panel.png` (the panel), `-headline.png` (the headline figure).
 
 `evidence/wave-v-verification.json` is the **DEPLOYED** record: the same harness
-run against `http://10.10.11.110:3939/`, `120/120`, `failed: 0`,
+run against `http://dashboard.example.internal:3939/`, `120/120`, `failed: 0`,
 `ranAt 2026-10-12T22:12:06.825Z`, and it carries the two pins that make it
-attributable — `"base": "http://10.10.11.110:3939/"` and
+attributable — `"base": "http://dashboard.example.internal:3939/"` and
 `"deployedCommit": "fe7a5ff91bcb1b97660d6687df8495dd86c73d56"` (this is the
 t_97f4c904 fix; the pre-fix `112/112` record for `054d60f` is superseded). The
 local-build record is `evidence/wave-v-verification-local.json`. The
@@ -136,7 +136,7 @@ WAVE_V_XML_SHORT=/path/to/3-month-export.xml TZ=America/Toronto \
 
 # the deployed stack (no WAVE_V_SUFFIX: it writes the -unsuffixed deployed record):
 WAVE_V_XML_LONG=… WAVE_V_XML_SHORT=… TZ=America/Toronto \
-  WAVE_V_DEPLOY=$(curl -s http://10.10.11.110:3939/api/version | grep -o '[0-9a-f]\{40\}') \
+  WAVE_V_DEPLOY=$(curl -s http://dashboard.example.internal:3939/api/version | grep -o '[0-9a-f]\{40\}') \
   node evidence/wave-v-verify.cjs
 ```
 
@@ -151,7 +151,7 @@ deployed.
 | --- | --- |
 | merged commit = deployed SHA | `054d60fb335e63b0d7d29b081d30f16ec0e29760` |
 | deploy | `ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'` → `DEPLOY_OK at 054d60f`, `DEPLOY_SHA=054d60f…` |
-| served identity | `GET http://10.10.11.110:3939/api/version` → `{"sha":"054d60fb335e63b0d7d29b081d30f16ec0e29760","buildId":"BvEgAjcF6a2v9XfLgSZkp"}` |
+| served identity | `GET http://dashboard.example.internal:3939/api/version` → `{"sha":"054d60fb335e63b0d7d29b081d30f16ec0e29760","buildId":"BvEgAjcF6a2v9XfLgSZkp"}` |
 | deployed browser re-run | `WAVE_V_XML_LONG=… WAVE_V_XML_SHORT=… TZ=America/Toronto node evidence/wave-v-verify.cjs` → **112/112**, 0 failures, both exports at 1440 px and 390 px |
 | builder pruned after the build | `ssh hermescomputer 'docker builder prune -af'` → 1.441 GB reclaimed (the vfs store keeps every layer) |
 | export copies | copied from the `pm` document cache to a scratch dir, used, **deleted**; sha256 verified against the pins before use (`e292de50…` long, `6a3f0e14…` short); neither ever entered the repo |
@@ -225,7 +225,7 @@ merged commit is that tree: PR #101 → squash `fe7a5ff`.
 | --- | --- |
 | merged commit = deployed SHA | `fe7a5ff91bcb1b97660d6687df8495dd86c73d56` |
 | deploy | `ssh hermescomputer '~/bin/deploy-energy-dashboard.sh'` → `DEPLOY_OK at fe7a5ff`, `DEPLOY_SHA=fe7a5ff…` |
-| served identity | `GET http://10.10.11.110:3939/api/version` → `{"sha":"fe7a5ff91bcb1b97660d6687df8495dd86c73d56","buildId":"8zXl19S9MYhSMqeey27kr"}` |
+| served identity | `GET http://dashboard.example.internal:3939/api/version` → `{"sha":"fe7a5ff91bcb1b97660d6687df8495dd86c73d56","buildId":"8zXl19S9MYhSMqeey27kr"}` |
 | deployed browser re-run | `120/120`, `failed: 0`, both exports at 1440 px and 390 px (`evidence/wave-v-verification.json`) |
 | builder pruned after the build | `ssh hermescomputer 'docker builder prune -af'` → 1.441 GB reclaimed (the vfs store keeps every layer) |
 | export copies | taken from the `pm` document cache (the two `oakvillehydro_…60_Minute…xml` files the Wave S/T/U write-ups pin), sha256-verified before use (`e292de50…` long, `6a3f0e14…` short), used, **deleted**; neither ever entered the repo |

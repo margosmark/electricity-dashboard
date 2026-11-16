@@ -1,5 +1,5 @@
 {
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "fixture": "usage-summary-open-tail.xml",
   "locales": {
     "en": {

@@ -101,7 +101,7 @@ services:
       GB_PKCE: ${GB_PKCE:-false}
     volumes:
       # Host path is a DEPLOY decision, pinned in the untracked `.env`
-      # (GB_TOKEN_DIR=/home/hermes/.greenbutton-shim on .110) so the token
+      # (GB_TOKEN_DIR=<home>/.greenbutton-shim on .110) so the token
       # file never lands inside the git worktree. The default below is the
       # local-dev path only.
       - ${GB_TOKEN_DIR:-./.greenbutton}:/var/lib/greenbutton
@@ -164,7 +164,7 @@ services:
       # sync and reports pushConfigured:false instead of failing to boot.
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:mark@markarslan.ca}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:ops@markarslan.ca}
     volumes:
       # accounts.db is user data (ciphertext, but still theirs) — see the
       # backup story in OPERATIONS.md.

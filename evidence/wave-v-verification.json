@@ -1,5 +1,5 @@
 {
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "deployedCommit": "fe7a5ff91bcb1b97660d6687df8495dd86c73d56",
   "long": {
     "path": "LONG.xml",

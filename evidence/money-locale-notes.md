@@ -60,7 +60,7 @@ the unit duplication is locale-independent.
 ## The numbers a reviewer should check
 
 `evidence/money-locale-verify.cjs` — **17/17** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy **dd28c61**, the squash of PR #80) and
+(`http://dashboard.example.internal:3939`, deploy **dd28c61**, the squash of PR #80) and
 **17/17** locally at `http://127.0.0.1:3100` → `money-locale-verification.json`
 and `money-locale-verification-local.json`. Both runs, read off the rendered DOM:
 

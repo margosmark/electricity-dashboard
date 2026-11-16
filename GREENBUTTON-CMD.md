@@ -25,8 +25,8 @@ they agree on what a merge means.
 | Shim built, OAuth loop closes, feed pipes into localStorage | **DONE — verified** (609 unit/integration tests + `webapp/scripts/e2e-greenbutton-loop.sh`, 29/29 checks against a live `next start` + mock custodian) |
 | Shim deployed as its **own container** under `/greenbutton/*` | **DONE — verified** (four containers behind `:3939`; `webapp/scripts/e2e-greenbutton-topology.sh` runs the whole loop through the router — including a recreate of all three upstreams under a running router, plus Wave N's `/account` leg in both flag states: 102/102 on `.110` 2026-10-12; see §5) |
 | Edge routes `/greenbutton/*` to this host | **DONE — verified empirically** (the edge forwards *every* path to `:3939`, so the split is made on-box; see §5) |
-| Oakville Hydro third-party registration | **BLOCKED on Mark** — needs his name + signature on their form (§6) |
-| Production loop with Mark's real account | **BLOCKED on §6** |
+| Third-party registration with the utility | handled **privately** — the registration runbook lives outside this repo (§6) |
+| Production loop with a real account | **BLOCKED on issued credentials** (§6) |
 | Merge semantics shared with Wave J's `/import` | **DONE** — both write through `importPlan.mergeForWrite` (union, incoming wins) |
 | Revocation detection from Oakville's own UI | Code + tests done; needs a live account to observe for real |
 | Browser connect flow (button → authorize → callback → localStorage) | **DONE — verified in a real browser** (`webapp/scripts/e2e-greenbutton-browser.sh`: the whole Playwright suite — 22/22 — against a *configured* shim, incl. an assertion that no token material is left in browser storage and that `/import` still works with the feature switched on) |
@@ -122,9 +122,9 @@ sync, tokens, session, http) and `webapp/src/app/greenbutton/`.
 **Exactly one place:** a JSON file on .110, outside the container, mode `0600`.
 
 ```
-host:        /home/hermes/.greenbutton-shim/tokens.json
+host:        ~/.greenbutton-shim/tokens.json
 in container: /var/lib/greenbutton/tokens.json   (bind mount, GB_TOKEN_FILE)
-inspect:     sudo ls -l /home/hermes/.greenbutton-shim
+inspect:     sudo ls -l ~/.greenbutton-shim
 ```
 
 The host path is `GB_TOKEN_DIR`, pinned in the **untracked `.env`** — never
@@ -202,7 +202,7 @@ $ ssh hermescomputer 'curl -sS http://localhost:3939/api/rates' | md5sum
 
 Every path under `electricity.markarslan.ca` is forwarded to **this host's
 port 3939** — including `/greenbutton/*` — and the edge sits on a box we
-cannot reach (origin VPS 96.44.170.134, port 22 filtered). So a second
+cannot reach (origin VPS 192.0.2.1, port 22 filtered). So a second
 container could only be reached by making the split *on this host*:
 
 | Container | Role | Secrets |
@@ -267,77 +267,32 @@ Registered URLs are unchanged by any of this:
 
 ---
 
-## 6. Registering with Oakville Hydro — MARK'S STEP
+## 6. Registering with the utility — private runbook
 
-Form: <https://www.oakvillehydro.com/green-button-third-party-registration-form>
-(Drupal webform, self-serve, POST to `/green-button-third-party-registration-form`).
+Third-party registration with the data custodian — the legal agreement, the
+form fields, personal contact details and the step-by-step sequence — is a
+**private runbook** kept outside this repository; it is not reproduced here.
+Only the generic mechanics the rest of this document depends on are kept:
 
-**This requires Mark**: it is a legal agreement — a checkbox accepting the
-[Green Button Connect My Data Platform Agreement for Registering 3rd
-Parties](https://oakvillehydro.com/sites/oakvillehydro/files/2024-08/Green%20Button%20sharing%20Third%20Party%20agreement%20-%20Oakville%20Hydro.pdf)
-plus a "power to enter your company into an agreement" Yes/No. The agent will
-not accept Terms on his behalf.
-
-### Fields, ready to paste
-
-| Form field | Value |
-| --- | --- |
-| Legal Company Name | *Mark's name* (individual — the open-green-button precedent registers an individual, not an entity) |
-| Third Party Application Name | `Ontario Energy Optimizer` |
-| Description/Purpose of Application | `Personal energy-usage analysis for the customer's own household: it imports Green Button interval data into a local dashboard that runs in the customer's own browser. No data leaves the customer's machine; nothing is stored on any server we operate.` |
-| First Name / Last Name / Email / Phone | *Mark's details* (email: `me@markarslan.ca`) |
-| Third Party Application Description (≤255 chars) | `A privacy-first Ontario energy dashboard. Interval usage is read once through Connect My Data and analysed entirely in your own browser — readings are never stored on our servers.` |
-| Application Logo or Icon | `webapp/public/icons/icon-512.png` |
-| Type of application | **Web App** |
-| Application/Portal Login Page URL | `https://electricity.markarslan.ca/` |
-| Third Party Green Button oAuth2 redirect URL | `https://electricity.markarslan.ca/greenbutton/callback` |
-| Notification URI | `https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71` — already pinned in `docker-compose.yml` as `GB_NOTIFY_TOKEN`. **Do not regenerate it**: the form records this URL before Oakville issues the client secret, so it must not be derived from a secret that does not exist yet (verify with `grep -n GB_NOTIFY_TOKEN docker-compose.yml`; `/greenbutton/status` deliberately does **not** publish it — the path token is the only gate on the webhook, M1) |
-| Data scope checkboxes | **Usage Information only** (data minimisation — agreement §1: use the data "only to perform its services to the Customer") |
-| Power to enter your company into an agreement | **Yes** (Mark) |
-| Terms & Conditions checkbox | ticked by Mark |
-
-Scope string we request at authorize time: `FB=1_3_4_5`
-(FB_1 Common Data Custodian, FB_3 Core Connect My Data, FB_4 Interval Metering,
-FB_5 Interval Electricity Metering). If the platform rejects a scope that
-narrow, fall back to the known-good Oakville string used by open-green-button:
-
-```
-FB=1_3_4_5_13_15_16_28_31_37_39_51_53_54_55_56_57_58_59_60_61_64_65_69
-```
-
-…by setting `GB_SCOPE` in `docker-compose.yml` (no rebuild needed for the env
-value, only a `docker compose up -d`).
-
-### After registration
-
-1. Oakville issues `client_id` / `client_secret` → run the re-point ceremony
-   once, from the dev clone:
-
-   ```bash
-   GB_CONFIRM_GO_LIVE=yes webapp/scripts/greenbutton-repoint.sh --apply \
-       --host hermescomputer --env-file ~/.oakville-creds.env --loop-gate
-   ```
-
-   It validates the pair against Oakville's token endpoint, proves the
-   credentials reach `greenbutton-shim` and **not** the dashboard container,
-   writes the untracked `.env`, recreates the containers and re-verifies the
-   split and the notify gate. Full checklist, flags and rollback:
-   **[GREENBUTTON-REPOINT.md](GREENBUTTON-REPOINT.md)**. (The untracked `.env`
-   next to `docker-compose.yml` works too — `docker compose up -d`, no rebuild
-   — but then none of the checks run and a key typo looks exactly like
-   "Oakville has not issued them yet".)
-2. Connectivity Testing must be completed **within 90 days** of acceptance
-   (agreement §2). That is the production loop: connect a real Oakville
-   account, confirm readings land in localStorage, revoke in Oakville's UI,
-   confirm the shim reports `grant_revoked` and wipes its token file.
-   `webapp/scripts/e2e-greenbutton-loop.sh` is the smoke test to rerun after
-   any change; point `GB_AUTHORIZE_URL` / `GB_TOKEN_URL` at the real endpoints
-   for a live variant, or set `GB_E2E_TARGET=real` for the whole contract.
-3. If Oakville asks for a sandbox first, use the same flow with their sandbox
-   URLs — `GB_AUTHORIZE_URL`/`GB_TOKEN_URL` in the untracked `.env`, then
-   `docker compose up -d`. Those two keys are named in `docker-compose.yml`
-   precisely so the ceremony can verify which custodian the container is
-   actually pointed at.
+- **Scope** requested at authorize time: `FB=1_3_4_5` (FB_1 Common Data
+  Custodian, FB_3 Core Connect My Data, FB_4 Interval Metering, FB_5
+  Interval Electricity Metering). If the platform rejects a scope that
+  narrow, fall back to the known-good 24-block string
+  `FB=1_3_4_5_13_15_16_28_31_37_39_51_53_54_55_56_57_58_59_60_61_64_65_69`
+  — set `GB_SCOPE` in `docker-compose.yml` (an env value; `docker compose
+  up -d`, no rebuild).
+- **Notification URI**: `https://electricity.markarslan.ca/greenbutton/notify/<GB_NOTIFY_TOKEN>`.
+  The path token is a **secret** pinned in the untracked `.env`
+  (`GB_NOTIFY_TOKEN`) — never derived from the client secret (the registered
+  URL predates the secret), never published (`/greenbutton/status` does not
+  expose it), and never stored in this repository.
+- **When credentials arrive**: run the re-point ceremony once —
+  [GREENBUTTON-REPOINT.md](GREENBUTTON-REPOINT.md) is the checklist, driven by
+  `webapp/scripts/greenbutton-repoint.sh` (start with `--check`; it reads the
+  registered token from `GB_REGISTERED_NOTIFY_TOKEN`, supplied from the
+  operator's secret store).
+- Data scope at authorize time is **Usage Information only** — data
+  minimisation: use the data only to perform its services to the customer.
 
 ---
 
@@ -357,7 +312,7 @@ Obligations that do apply, and how this implementation meets them:
 | §2(a) | make no representations on behalf of Oakville Hydro | the UI says "authorise on Oakville Hydro's own page" and never implies endorsement |
 | §2(b)(e) | comply with law, industry-standard DoS controls | narrow scope, rate-limited by the single-user design, no credential sharing |
 | §3 | notify Oakville immediately of a security incident | runbook note added to OPERATIONS.md |
-| §6 | complete Connectivity Testing within 90 days or be terminated | §6 step 2 above |
+| §6 | complete Connectivity Testing within 90 days or be terminated | private runbook (§6) — the 90-day clock is tracked outside this repo |
 
 ---
 
@@ -422,7 +377,8 @@ Manual probe of the deployed (still unconfigured) surface:
 curl -s https://electricity.markarslan.ca/greenbutton/status | jq
 # → {"configured": false, "unconfiguredReason": "GB_CLIENT_ID / GB_CLIENT_SECRET are not set…"}
 # No `notificationUri` field: the notify path token must never be published
-# (finding M1). Read the pinned value from docker-compose.yml instead.
+# (finding M1). Read the pinned value from the untracked `.env`
+# (`GB_NOTIFY_TOKEN`) instead — it is never in the repo.
 curl -s https://electricity.markarslan.ca/greenbutton/status | jq -e 'has("notificationUri") | not'
 # → true
 curl -s -o /dev/null -w '%{http_code}\n' https://electricity.markarslan.ca/greenbutton/usage

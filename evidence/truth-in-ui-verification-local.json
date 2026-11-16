@@ -85,8 +85,8 @@
         "peakBlocks": 1
       },
       "moneyTabZeroHits": [],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-en-local.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-en-local.png"
+      "shot": "~/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-en-local.png",
+      "evShot": "~/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-en-local.png"
     },
     "fr": {
       "locale": "fr",
@@ -168,8 +168,8 @@
         "peakBlocks": 1
       },
       "moneyTabZeroHits": [],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-fr-local.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-fr-local.png"
+      "shot": "~/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-plans-fr-local.png",
+      "evShot": "~/.hermes/kanban/boards/electricity/workspaces/t_f915a15c/wt/evidence/truth-in-ui-ev-fr-local.png"
     }
   },
   "checks": [

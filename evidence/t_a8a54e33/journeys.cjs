@@ -14,7 +14,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('/home/hermes/.npm/_npx/705bc6b22212b352/node_modules/playwright');
+const { chromium } = require(`${process.env.HOME}/.npm/_npx/705bc6b22212b352/node_modules/playwright`);
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:3111';
 const EV = __dirname;

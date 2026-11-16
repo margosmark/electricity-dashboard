@@ -20,7 +20,7 @@
  *
  * Run:  WAVE_P_XML=/path/to/export.xml TZ=America/Toronto \
  *         node evidence/wave-p-verify.cjs
- * Env:  WAVE_P_BASE_URL (default http://10.10.11.110:3939/), WAVE_P_CHROMIUM
+ * Env:  WAVE_P_BASE_URL (default http://dashboard.example.internal:3939/), WAVE_P_CHROMIUM
  *
  * Writes evidence/wave-p-verification.json + wave-p-*.png
  */
@@ -32,7 +32,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 
-const BASE = process.env.WAVE_P_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_P_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_P_CHROMIUM || '/usr/bin/chromium';
 const XML = process.env.WAVE_P_XML;
 const OUT = __dirname;

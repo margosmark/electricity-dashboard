@@ -1,5 +1,5 @@
 {
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "files": [
     "file-a.xml",
     "file-b.xml"

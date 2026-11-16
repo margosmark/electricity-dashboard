@@ -15,7 +15,7 @@ CHROME_PATH=/usr/bin/chromium npx lhci autorun --config=lighthouserc.mobile.json
 
 # deployed stack (ssh hermescomputer '~/bin/deploy-energy-dashboard.sh' first)
 cd .. && NODE_PATH=$PWD/webapp/node_modules \
-  WAVE_EV_BASE_URL=http://10.10.11.110:3939/ \
+  WAVE_EV_BASE_URL=http://dashboard.example.internal:3939/ \
   WAVE_EV_XML=/path/to/your-oakville-export.xml \
   TZ=America/Toronto node evidence/wave-ev-verify.cjs
 ```
@@ -126,7 +126,7 @@ measured.
 
 ## 5. Browser verification — 24/24 on the deployed stack
 
-`evidence/wave-ev-verification.json` (base `http://10.10.11.110:3939/`, the
+`evidence/wave-ev-verification.json` (base `http://dashboard.example.internal:3939/`, the
 deployed `edge-router`) — screenshots `wave-ev-winter-7pm-desktop.png`,
 `wave-ev-winter-7pm-mobile.png`, `wave-ev-oakville-7pm.png`.
 

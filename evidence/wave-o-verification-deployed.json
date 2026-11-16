@@ -1,6 +1,6 @@
 {
   "wave": "O",
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "xml": "doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
   "at": "2026-10-08T04:10:18.322Z",
   "total": 33,
