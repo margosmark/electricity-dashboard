@@ -75,7 +75,7 @@ describe("x-gb-process proxy", () => {
     // Everything else gets the policy WITHOUT the directive: the LAN surface
     // this shipped broken, localhost, and a bare no-request call.
     for (const url of [
-      "http://10.10.11.110:3939/",
+      "http://dashboard.example.internal:3939/",
       "http://localhost:3939/",
       "http://127.0.0.1:3939/",
     ]) {
@@ -92,11 +92,11 @@ describe("x-gb-process proxy", () => {
     // cannot distinguish a request forwarded from the public TLS edge from a
     // direct plaintext LAN hit — so a plaintext visitor received
     // `upgrade-insecure-requests`, the browser rewrote all 15 subresources to
-    // https://10.10.11.110:3939/ (nothing listens there), and the app rendered
+    // https://dashboard.example.internal:3939/ (nothing listens there), and the app rendered
     // ZERO interactive elements with hydration never running. An
     // uninventoried host must therefore stay upgrade-free EVEN when the URL
     // says https, which is exactly the shape the outage arrived in.
-    const httpsShapedLanHit = new NextRequest("https://10.10.11.110:3939/");
+    const httpsShapedLanHit = new NextRequest("https://dashboard.example.internal:3939/");
     expect(proxy(httpsShapedLanHit).headers.get("Content-Security-Policy")).not.toContain(
       "upgrade-insecure-requests",
     );

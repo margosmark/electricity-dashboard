@@ -1,6 +1,6 @@
 {
   "wave": "H",
-  "base": "http://10.10.11.110:3939",
+  "base": "http://dashboard.example.internal:3939",
   "at": "2026-10-04T06:20:55.634Z",
   "total": 43,
   "passed": 43,

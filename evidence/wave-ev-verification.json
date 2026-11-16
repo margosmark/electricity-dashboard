@@ -2,7 +2,7 @@
   "wave": "EV-2 (hour anchor + counterfactual bill)",
   "started": "2026-10-08T03:41:43.111Z",
   "finished": "2026-10-08T03:41:54.934Z",
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "summary": {
     "total": 24,
     "passed": 24,

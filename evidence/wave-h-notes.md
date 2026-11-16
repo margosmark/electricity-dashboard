@@ -2,10 +2,10 @@
 
 Deployed: `3ab52f5` on `origin/main`, container rebuilt by
 `~/bin/deploy-energy-dashboard.sh` on .110 (`DEPLOY_OK at 3ab52f5`).
-Verification base: **`http://10.10.11.110:3939`** — the deployed container on
+Verification base: **`http://dashboard.example.internal:3939`** — the deployed container on
 the LAN. The public endpoint `https://electricity.markarslan.ca/` was serving
 fine through most of this wave (an earlier run passed 37/41 against it) but
-its gateway host `96.44.170.134` stopped accepting TCP from both .108 and
+its gateway host `192.0.2.1` stopped accepting TCP from both .108 and
 .110 partway through and has been unreachable since — every check below was
 re-run against the same deployed image, just one hop closer.
 
@@ -113,6 +113,6 @@ CHROME_PATH=/usr/bin/chromium npx lhci autorun
 
 # deployed-stack verification
 TZ=America/Toronto NODE_PATH=webapp/node_modules \
-  WAVE_H_BASE_URL=http://10.10.11.110:3939 WAVE_H_CHROMIUM=/usr/bin/chromium \
+  WAVE_H_BASE_URL=http://dashboard.example.internal:3939 WAVE_H_CHROMIUM=/usr/bin/chromium \
   node evidence/wave-h-verify.cjs
 ```

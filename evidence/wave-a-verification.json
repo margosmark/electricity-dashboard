@@ -4,7 +4,7 @@
   "commit": "8ddde24200f87aa3e82ee8b3b78245c1717b6250",
   "verified_on": "2026-10-02T14:15:47Z",
   "deployed_stack": {
-    "url": "http://10.10.11.110:3939",
+    "url": "http://dashboard.example.internal:3939",
     "container": "energy-dashboard",
     "note": "image built from 8ddde24; git diff 8ddde24..origin/main -- webapp/ is empty, so the deployed app code equals main"
   },

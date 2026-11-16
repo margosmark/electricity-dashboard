@@ -21,7 +21,7 @@ sniffing, no RTL**.
 ## The numbers a reviewer should check
 
 From `wave-u-verification.json` — **82/82** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy `5de8229`, recorded as
+(`http://dashboard.example.internal:3939`, deploy `5de8229`, recorded as
 `deployedCommit`) against Mark's real 2-year export (sha256
 `e292de50a560f56e…`, 6,424,909 bytes — never committed; pass
 `WAVE_U_XML` yourself to re-run). The same script ran **82/82** on the
@@ -118,7 +118,7 @@ companion (translated at the render layer) or not prose at all.
 ```bash
 # the deployed stack (what wave-u-verification.json is from):
 WAVE_U_XML=/path/to/2-year-export.xml TZ=America/Toronto \
-  WAVE_U_BASE_URL=http://10.10.11.110:3939/ node evidence/wave-u-verify.cjs
+  WAVE_U_BASE_URL=http://dashboard.example.internal:3939/ node evidence/wave-u-verify.cjs
 
 # the local build:
 WAVE_U_XML=… WAVE_U_BASE_URL=http://127.0.0.1:3939/ WAVE_U_SUFFIX=-local \

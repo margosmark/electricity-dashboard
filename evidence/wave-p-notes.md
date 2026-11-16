@@ -13,7 +13,7 @@
 ## The numbers a reviewer should check
 
 From `wave-p-verification.json` — **48/48** on the deployed stack
-(`http://10.10.11.110:3939`, deploy `dc83ed9`) with Mark's real
+(`http://dashboard.example.internal:3939`, deploy `dc83ed9`) with Mark's real
 **24-period export** (sha256 `e292de50…`, pinned by the script before it
 runs anything; the file itself is never committed):
 
@@ -45,7 +45,7 @@ reading `Time-of-Use / Tiered` in the same order) — rendered on both the
 dollar and share views, desktop and the 390px phone, no overflow.
 
 Rerun:
-`NODE_PATH=$PWD/webapp/node_modules WAVE_P_XML=/path/to/export.xml WAVE_P_BASE_URL=http://10.10.11.110:3939/ node evidence/wave-p-verify.cjs` → 48/48.
+`NODE_PATH=$PWD/webapp/node_modules WAVE_P_XML=/path/to/export.xml WAVE_P_BASE_URL=http://dashboard.example.internal:3939/ node evidence/wave-p-verify.cjs` → 48/48.
 
 Screens: `wave-p-timeline-desktop.png`, `wave-p-track-record-desktop.png`,
 `wave-p-desktop-full.png`, `wave-p-timeline-mobile.png`,

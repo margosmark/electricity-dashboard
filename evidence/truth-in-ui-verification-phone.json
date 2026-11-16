@@ -1,5 +1,5 @@
 {
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "serving": "2c822ac",
   "viewport": "390x844",
   "fixture": "green-button-alliance-sample.xml",
@@ -90,8 +90,8 @@
           "context": "BILLING PERIOD PERIOD PLAN YOU PAID EST. TOTAL ESTIMATE DATA COVERAGE JAN 1, 2014 UNKNOWN $0.00 — 32% PERIOD OVER PERIOD WHAT CHAN"
         }
       ],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-en-phone.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-en-phone.png"
+      "shot": "~/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-en-phone.png",
+      "evShot": "~/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-en-phone.png"
     },
     "fr": {
       "locale": "fr",
@@ -178,8 +178,8 @@
           "context": " FORFAIT VOUS AVEZ PAYÉ TOTAL EST. ESTIMATION COUVERTURE DES DONNÉES 1 JANV. 2014 UNKNOWN $0.00 — 32% D’UNE PÉRIODE À L’AUTRE CE Q"
         }
       ],
-      "shot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-fr-phone.png",
-      "evShot": "/home/hermes/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-fr-phone.png"
+      "shot": "~/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-plans-fr-phone.png",
+      "evShot": "~/.hermes/kanban/boards/electricity/workspaces/t_b7fae6a3/wt/evidence/truth-in-ui-ev-fr-phone.png"
     }
   },
   "checks": [

@@ -18,7 +18,7 @@ const os = require('os');
 
 const BASE = process.env.WAVE_F_BASE_URL || 'https://electricity.markarslan.ca/';
 const CHROMIUM = process.env.WAVE_F_CHROMIUM || '/usr/bin/chromium';
-const DOCS = '/home/hermes/.hermes/profiles/pm/cache/documents';
+const DOCS = `${process.env.HOME}/.hermes/profiles/pm/cache/documents`;
 const OAK1 = path.join(
   DOCS,
   'doc_936968b747af_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml',

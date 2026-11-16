@@ -1,6 +1,6 @@
 # Edge router — the single listener this host exposes for the domain.
 #
-# The upstream edge (origin VPS 96.44.170.134) forwards EVERY path of
+# The upstream edge (origin VPS 192.0.2.1) forwards EVERY path of
 # electricity.markarslan.ca to this box on host port 3939, so the
 # "/greenbutton/* lives on its own container" requirement is implemented
 # here instead of in an edge config we cannot reach:

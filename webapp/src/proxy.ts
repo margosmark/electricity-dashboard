@@ -149,9 +149,9 @@ function buildCsp(upgradeInsecureRequests: boolean): string {
  *
  * The directive rewrites EVERY subresource request to https. On a surface that
  * serves no TLS that is not a hardening, it is a total outage: measured
- * 2026-10-12 on `http://10.10.11.110:3939` — the documented local surface
+ * 2026-10-12 on `http://dashboard.example.internal:3939` — the documented local surface
  * (OPERATIONS.md: "localhost health checks still work at :3939") — the browser
- * upgraded all 15 subresources to `https://10.10.11.110:3939/`, where nothing
+ * upgraded all 15 subresources to `https://dashboard.example.internal:3939/`, where nothing
  * listens (`curl https://…:3939` = 000; `http` = 200). The page then rendered
  * as HTML with ZERO interactive elements, hydration never ran, and the UI sat
  * on "PREPARING OPTIMIZER…" permanently. CSP took the whole app down.
@@ -160,12 +160,12 @@ function buildCsp(upgradeInsecureRequests: boolean): string {
  * the first implementation did exactly that and shipped the outage. nginx
  * (`edge-router`, host `:3939`) sets `X-Forwarded-Proto: https` for the whole
  * deployment — it cannot distinguish a request forwarded from the public TLS
- * edge (10.10.11.100) from a direct plaintext LAN hit — so Next resolves
+ * edge (edge.example.internal) from a direct plaintext LAN hit — so Next resolves
  * `request.url` to `https://` in both cases. Verified from this box: a
  * plaintext request to :3939 that ALSO carried `X-Forwarded-Proto: http` came
  * back `https://`-shaped, so the scheme check always chose the upgrade. The
  * Host header is the one signal that survives the chain: the public name
- * arrives as `electricity.markarslan.ca`, a LAN hit as `10.10.11.110:3939`.
+ * arrives as `electricity.markarslan.ca`, a LAN hit as `dashboard.example.internal:3939`.
  *
  * Default is OFF. An unknown host means "no TLS inventory", which is the safe
  * direction — a surface nobody has inventoried simply does not get the

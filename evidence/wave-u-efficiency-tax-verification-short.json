@@ -1,7 +1,7 @@
 {
   "wave": "U-efficiency-tax",
   "scope": "¢/kWh numerator honesty — subtitle, excl/incl pair, tax footnote",
-  "base": "http://10.10.11.110:3939/",
+  "base": "http://dashboard.example.internal:3939/",
   "deploy": "da0a7dc",
   "fixture": "doc_0d82612a6e96_oakvillehydro_Electricity_60_Minute_01-07-2026_02-10-2026.xml",
   "fixtureSha256": "6a3f0e14040d825ee4123f6d3e7b134e7eb99831e26196a582fea676de4d6e28",

@@ -34,7 +34,7 @@
  *
  * Run:  WAVE_U_XML=/path/to/export.xml TZ=America/Toronto \
  *         node evidence/wave-u-efficiency-tax-verify.cjs
- * Env:  WAVE_U_BASE_URL (default http://10.10.11.110:3939/ — deployed),
+ * Env:  WAVE_U_BASE_URL (default http://dashboard.example.internal:3939/ — deployed),
  *       WAVE_U_CHROMIUM (default /usr/bin/chromium),
  *       WAVE_U_XML (REQUIRED — Mark's export never enters the repo; only
  *                   its sha256 lands in the JSON),
@@ -59,7 +59,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.WAVE_U_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_U_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_U_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.WAVE_U_SUFFIX || '';
 const FIXTURE = process.env.WAVE_U_XML;

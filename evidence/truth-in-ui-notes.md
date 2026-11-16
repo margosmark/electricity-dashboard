@@ -32,7 +32,7 @@ passes against the same commit:
 
 | Pass | Base | Viewport | Result |
 | --- | --- | --- | --- |
-| deployed | `http://10.10.11.110:3939/` | 1440×900 | **58/58** (`truth-in-ui-verification.json`) |
+| deployed | `http://dashboard.example.internal:3939/` | 1440×900 | **58/58** (`truth-in-ui-verification.json`) |
 | deployed | same | 390×844 | **58/58** (`truth-in-ui-verification-phone.json`) |
 | local production build | `http://127.0.0.1:3111/` (`next start` on the merged tree) | 1440×900 | **58/58** (`truth-in-ui-verification-local.json`) |
 
@@ -109,7 +109,7 @@ re-prove the check bites.
 ## Re-running
 
 ```
-TUI_SHA=<serving commit> TUI_BASE_URL=http://10.10.11.110:3939/ \
+TUI_SHA=<serving commit> TUI_BASE_URL=http://dashboard.example.internal:3939/ \
   TZ=America/Toronto node evidence/truth-in-ui-verify.cjs            # deployed
 TUI_SUFFIX=-phone TUI_VIEWPORT=390x844 …                             # phone
 TUI_SUFFIX=-local TUI_BASE_URL=http://127.0.0.1:3111/ …              # local build

@@ -20,7 +20,7 @@
  * data. Playwright records every request the page makes and asserts on them.
  *
  * Run:  WAVE_T_XML=/path/to/export.xml TZ=America/Toronto node evidence/wave-t-verify.cjs
- * Env:  WAVE_T_BASE_URL (default http://10.10.11.110:3939/ — the deployed
+ * Env:  WAVE_T_BASE_URL (default http://dashboard.example.internal:3939/ — the deployed
  *         stack), WAVE_T_CHROMIUM, WAVE_T_XML (defaults to the committed
  *         Green Button Alliance sample), WAVE_T_SUFFIX ('-local' writes
  *         wave-t-verification-local.json), WAVE_T_DEPLOY (the commit the
@@ -43,7 +43,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.WAVE_T_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_T_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_T_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.WAVE_T_SUFFIX || '';
 const FIXTURE =

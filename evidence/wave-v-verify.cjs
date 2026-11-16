@@ -33,7 +33,7 @@
  *
  * Run:  WAVE_V_XML_LONG=/path/to/2-year.xml WAVE_V_XML_SHORT=/path/to/3-month.xml \
  *         TZ=America/Toronto node evidence/wave-v-verify.cjs
- * Env:  WAVE_V_BASE_URL   (default http://10.10.11.110:3939/ — the deployed stack)
+ * Env:  WAVE_V_BASE_URL   (default http://dashboard.example.internal:3939/ — the deployed stack)
  *       WAVE_V_CHROMIUM   (default /usr/bin/chromium)
  *       WAVE_V_DEPLOY     (commit the stack serves — recorded, not asserted)
  *       WAVE_V_SUFFIX     ('-local' writes wave-v-verification-local.json)
@@ -55,7 +55,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.WAVE_V_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_V_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_V_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.WAVE_V_SUFFIX || '';
 const PREFIX = process.env.WAVE_V_PREFIX || 'wave-v';

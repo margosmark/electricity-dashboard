@@ -28,7 +28,7 @@
  *
  * Run:  WAVE_S_XML=/path/to/export.xml TZ=America/Toronto \
  *         node evidence/wave-s-verify.cjs
- * Env:  WAVE_S_BASE_URL (default http://10.10.11.110:3939/ — the deployed
+ * Env:  WAVE_S_BASE_URL (default http://dashboard.example.internal:3939/ — the deployed
  *         stack), WAVE_S_CHROMIUM, WAVE_S_XML (defaults to the committed
  *         Green Button Alliance sample; Mark's real export is never
  *         committed and its path never lands in the evidence), WAVE_S_SUFFIX
@@ -51,7 +51,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.WAVE_S_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_S_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_S_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.WAVE_S_SUFFIX || '';
 const FIXTURE =

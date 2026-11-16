@@ -276,21 +276,21 @@ describe("config", () => {
   });
 
   it("lets a PINNED notify token win over the derived fallback", () => {
-    // The registration form records the notification URI before Oakville
+    // The registration records the notification URI before the custodian
     // issues the client secret, so the pinned value must not move when the
-    // secret finally arrives.
+    // secret finally arrives. (Synthetic token — no live value lives here.)
     process.env.GB_CLIENT_ID = "cid";
     process.env.GB_CLIENT_SECRET = "super-secret";
-    process.env.GB_NOTIFY_TOKEN = "96a1eb36f68816b9606848aa7c628a71";
+    process.env.GB_NOTIFY_TOKEN = "pinned-notify-token-example-not-a-secret";
     resetConfigCache();
-    expect(getNotifyToken()).toBe("96a1eb36f68816b9606848aa7c628a71");
+    expect(getNotifyToken()).toBe("pinned-notify-token-example-not-a-secret");
     expect(getConfig().notificationUri).toBe(
-      "https://electricity.markarslan.ca/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71",
+      "https://electricity.markarslan.ca/greenbutton/notify/pinned-notify-token-example-not-a-secret",
     );
     // …and it is identical whether or not the secret exists yet.
     process.env.GB_CLIENT_SECRET = "";
     resetConfigCache();
-    expect(getConfig().notificationUri).toContain("96a1eb36f68816b9606848aa7c628a71");
+    expect(getConfig().notificationUri).toContain("pinned-notify-token-example-not-a-secret");
   });
 
   it("keeps PKCE OFF unless GB_PKCE is explicitly truthy", () => {

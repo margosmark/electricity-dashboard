@@ -14,7 +14,7 @@
 ## The numbers a reviewer should check
 
 From `wave-s-verification.json` — **40/40** on the **deployed** stack
-(`http://10.10.11.110:3939`, deploy `8fdc1ec`, recorded as `deployedCommit`
+(`http://dashboard.example.internal:3939`, deploy `8fdc1ec`, recorded as `deployedCommit`
 in the JSON; identical 40/40 runs landed earlier that day on `0881614` and
 `cc69444` as the stack moved under me) against Mark's
 real 2-year export (sha256 `e292de50a560f56e…`, 6,424,909 bytes — never committed; pass

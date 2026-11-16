@@ -235,7 +235,7 @@ Green Button export to repeat the pass.
 `~/bin/deploy-energy-dashboard.sh` on .110 rebuilt the container from `main` and
 reported `DEPLOY_OK at 24f6026`. Everything below was then run against the
 **public origin a real phone installs from** — `https://electricity.markarslan.ca`
-(200), with the LAN container `http://10.10.11.110:3939` as a second check.
+(200), with the LAN container `http://dashboard.example.internal:3939` as a second check.
 
 | Check | Result |
 |---|---|

@@ -27,7 +27,7 @@
  *
  * Run:  WAVE_S_SPLIT_XML=/path/to/export.xml TZ=America/Toronto \
  *         node evidence/wave-s-split-hygiene-verify.cjs
- * Env:  WAVE_S_SPLIT_BASE_URL (default http://10.10.11.110:3939/ — deployed),
+ * Env:  WAVE_S_SPLIT_BASE_URL (default http://dashboard.example.internal:3939/ — deployed),
  *       WAVE_S_SPLIT_CHROMIUM, WAVE_S_SPLIT_XML (REQUIRED — Mark's export is
  *       never committed, only its sha256 lands in the JSON),
  *       WAVE_S_SPLIT_SHA (the commit the deployed stack is serving),
@@ -51,7 +51,7 @@ try {
   ({ chromium } = require(path.resolve(__dirname, '../webapp/node_modules/@playwright/test')));
 }
 
-const BASE = process.env.WAVE_S_SPLIT_BASE_URL || 'http://10.10.11.110:3939/';
+const BASE = process.env.WAVE_S_SPLIT_BASE_URL || 'http://dashboard.example.internal:3939/';
 const CHROMIUM = process.env.WAVE_S_SPLIT_CHROMIUM || '/usr/bin/chromium';
 const SUFFIX = process.env.WAVE_S_SPLIT_SUFFIX || '';
 const FIXTURE = process.env.WAVE_S_SPLIT_XML;

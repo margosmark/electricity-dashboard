@@ -17,7 +17,7 @@
  * `GB_TOKEN_FILE` is the container-side path (default
  * `./.greenbutton/tokens.json` for local dev); the HOST side of the bind
  * mount is `GB_TOKEN_DIR`, pinned in the untracked `.env` — on .110 that is
- * `/home/hermes/.greenbutton-shim`, deliberately outside the git worktree so
+ * `~/.greenbutton-shim`, deliberately outside the git worktree so
  * no clone, clean, or `git add -A` can ever touch it (see OPERATIONS.md).
  * If the path is not writable the store degrades to memory-only and says so
  * via `persistence()`, so a bad mount costs a re-authorisation on restart

@@ -144,12 +144,12 @@ model, registration payload and the terms-of-service check all live in
 **[GREENBUTTON-CMD.md](GREENBUTTON-CMD.md)**; this section is the operational
 part.
 
-**Where the refresh token lives:** `/home/hermes/.greenbutton-shim/tokens.json`
+**Where the refresh token lives:** `~/.greenbutton-shim/tokens.json`
 on .110 (mounted **only** into `greenbutton-shim` at
 `/var/lib/greenbutton/tokens.json`), mode `0600`, owner uid 1001. It holds
 *only* the OAuth token set — never readings. The host path comes from
 `GB_TOKEN_DIR` in the **untracked `.env`**, deliberately outside the git
-worktree. Inspect with `sudo ls -l /home/hermes/.greenbutton-shim`; wipe with
+worktree. Inspect with `sudo ls -l ~/.greenbutton-shim`; wipe with
 the UI's **Disconnect** button or by deleting the file and restarting that
 container (`docker compose restart greenbutton-shim`).
 
@@ -368,7 +368,7 @@ names its own build at `GET /api/version` (`{"sha": …, "buildId": …}`, with
 `"unknown"` for a local build):
 
 ```bash
-curl -s http://10.10.11.110:3939/api/version   # → {"sha":"<the deployed commit>",…}
+curl -s http://dashboard.example.internal:3939/api/version   # → {"sha":"<the deployed commit>",…}
 ```
 
 The SHA is **compiled into the bundle**, not read at runtime: `GIT_SHA` reaches

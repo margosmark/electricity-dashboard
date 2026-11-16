@@ -49,10 +49,12 @@ wrong order. Every one of them is a check in the script:
 Everything else is already done and pinned:
 
 - the **notification URI** is registered as
-  `…/greenbutton/notify/96a1eb36f68816b9606848aa7c628a71`. `GB_NOTIFY_TOKEN`
-  is **pinned in the untracked `.env`**, never derived — the form recorded the
-  URL *before* the secret existed, and a secret-derived token would change the
-  moment credentials arrive (step 1 refuses a mismatch that would 404 Oakville).
+  `…/greenbutton/notify/<GB_NOTIFY_TOKEN>`. `GB_NOTIFY_TOKEN` is **pinned in
+  the untracked `.env`**, never derived — the registered URL predates the
+  client secret, so a secret-derived token would change the moment credentials
+  arrive (step 1 refuses a mismatch; it compares against the registered value
+  supplied as `GB_REGISTERED_NOTIFY_TOKEN`, which lives in the operator's
+  secret store — no token value ships in this repository).
 - the redirect URI is registered as
   `https://electricity.markarslan.ca/greenbutton/callback`.
 

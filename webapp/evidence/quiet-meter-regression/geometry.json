@@ -7,10 +7,10 @@
   },
   "gitHead": "unknown",
   "screenshots": [
-    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-light.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-dark.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-light.png",
-    "/home/hermes/electricity-dashboard/.worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-dark.png"
+    ".worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-light.png",
+    ".worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-1440-dark.png",
+    ".worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-light.png",
+    ".worktrees/t_6dce45c7/webapp/evidence/quiet-meter-regression/overview-390-dark.png"
   ],
   "geometry": {
     "1440x900-light": {
