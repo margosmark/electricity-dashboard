@@ -70,7 +70,7 @@
     {
       "name": "the HST line keeps its account number as the file wrote it",
       "ok": true,
-      "detail": "H.S.T. # 86917797213"
+      "detail": "H.S.T. # <redacted>"
     },
     {
       "name": "exactly one period is comparable (full coverage)",

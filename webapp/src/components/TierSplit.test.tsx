@@ -103,7 +103,7 @@ const TOU_PERIOD = bill('2025-08-26', 30, [
   line('On Peak-Summer', 55.29),
   line('Delivery', 55.1),
   line('Regulatory Charges', 5.9, null),
-  line('H.S.T. # 869177972', 30.4),
+  line('H.S.T. # 999999999', 30.4),
 ]);
 
 /* Sep 25 – Oct 27 2025, billed tiered: both blocks. */
@@ -112,7 +112,7 @@ const TIERED_PERIOD = bill('2025-09-25', 32, [
   line('BLOCK 2 - Summer', 91.14, 828.6),
   line('Delivery', 60.06),
   line('Regulatory Charges', 9.35),
-  line('H.S.T. # 869177972', 30.46),
+  line('H.S.T. # 999999999', 30.46),
 ]);
 
 const summaries = [TOU_PERIOD, TIERED_PERIOD];
