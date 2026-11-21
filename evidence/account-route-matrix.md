@@ -60,7 +60,7 @@ gets to emit its own auto-`OPTIONS` `204`/`Allow` pair.
 | --- | --- | --- |
 | Remove `wrongMethod` stubs from `/account/login` (the `2c8ca8d` defect) | OFF gate + matrix | OFF HTTP gate **7 failed** (6 wrong-method cells on `/account/login` + the forged-cookie sweep), all naming that route; vitest **12 failed / 18 passed**. Router measured directly: `GET/HEAD/PUT → 405`, `OPTIONS → 204` + `Allow: OPTIONS, POST` |
 | `wrongMethod` blanket-`404` (drop the honest `405`) | ON gate + matrix | ON HTTP gate **144 failed / 270 passed** (every stub cell × 3 auth states); vitest **10 failed / 20 passed** |
-| Add an 11th route file (`/account/device/route.ts`) | both surface guards | Shell guard: `FAIL: the route files and this gate's path list disagree` + `< /account/device`, exit 1; vitest **5 failed / 27 passed** (`/account/device has no module in this test's map`) |
+| Add an 11th route file (`/account/device/route.ts`) | both surface guards | Shell guard: `FAIL: the route files and this gate's path list disagree` + `< /account/device`, exit 1; vitest **5 failed / 27 passed** (`/account/device has no module in this test's map`). *Measured then — since t_76234081 the shell guard derives the list from disk and fails naming the route instead: `FAIL: matrix_expect declares no expectation for GET /account/device`, exit 1.* |
 
 Note on the first flip: `next build` **refuses** the reverted-stub tree at the
 type-check step (`account.test.ts(174,24): Property 'GET' does not exist on
