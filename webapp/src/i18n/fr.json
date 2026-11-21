@@ -190,6 +190,7 @@
   "axis.openLabel": "{label} (pas encore facturée)",
   "axis.openNote": "Les {days} jours depuis la dernière facture sont affichés comme une période ouverte, estimée.",
   "axis.openShort": "Ouverte · {date}",
+  "axis.unavailableDate": "date indisponible",
   "axis.weekOf": "Semaine du {date}",
   "backup.aria": "Sauvegarde et restauration",
   "backup.closeAria": "Fermer le tiroir de sauvegarde",
