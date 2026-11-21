@@ -1039,6 +1039,7 @@
   "parse.refuseBillPeriods": "This file carries {measured} billing-period blocks, beyond the {limit} this app reads in one pass. Nothing from this file was imported.",
   "parse.refuseBillScale": "This file's <{what}> says {value}, but the scale its own measurement declares (10^{power}) means {expected} — a figure kept at the wrong power of ten. Nothing from this file was imported.",
   "parse.refuseBillStart": "One billing period in this file starts {measured} seconds after 1970-01-01, beyond the {limit} seconds (2100-01-01) any bill may start at. Nothing from this file was imported.",
+  "parse.refuseBillStartFloor": "One billing period in this file starts {measured} seconds after 1970-01-01 — earlier than {limit} seconds (-271821-04-20), the oldest date this app can render. Nothing from this file was imported.",
   "parse.refuseBytes": "This file is {measured} characters of XML, beyond the {limit} MB this app parses in one pass. Nothing from this file was imported.",
   "parse.refuseDepth": "This file nests XML elements {measured} deep, beyond the {limit} levels this app traverses. Nothing from this file was imported.",
   "parse.refuseEntries": "This file carries {measured} Atom <entry> elements, beyond the {limit} this app indexes in one pass. Nothing from this file was imported.",

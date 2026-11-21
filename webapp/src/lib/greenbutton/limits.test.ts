@@ -37,6 +37,7 @@ import {
   MAX_ENTRIES,
   MAX_READINGS,
   MAX_UNIT_PRICE_DOLLARS,
+  MIN_BILL_PERIOD_START_S,
   assertBillDollars,
   assertBillLinesPerPeriod,
   assertBillMeasurement,
@@ -647,7 +648,15 @@ describe('the span one billing period may state', () => {
  * panel's render — measured on this branch). The bound is the same instant
  * every `IntervalReading` start is already bounded to, for the same reason:
  * it is the edge of the Date range a renderer survives, not a guess about
- * the calendar — hence an upper bound only, with no floor.
+ * the calendar — a ceiling at 2100-01-01 (t_43c716ad) and, since
+ * t_cdbce470, a FLOOR at the Date range's own lower edge: below
+ * -8 640 000 000 000 s `new Date(start * 1000)` is not a Date at all, so
+ * `utcDayKey` stamps "NaN-NaN-NaN" into the billing axis and the open-period
+ * and waterfall panels print that literal text — no throw anywhere, which
+ * is why no render guard caught it (the residual security traced at
+ * 2100995). The floor is the Date range, not an era guess: a pre-epoch start
+ * INSIDE the range (1969-12-31) and the fixtures' tiny epochs stay
+ * accepted, and both signs are pinned below.
  */
 
 describe('the instant one billing period may start at', () => {
@@ -706,6 +715,58 @@ describe('the instant one billing period may start at', () => {
       );
     }
   });
+
+  it('refuses a start BELOW the Date range — the undateable class (t_cdbce470)', () => {
+    // The floor is the Date range's own edge: `new Date(ts * 1000)` is
+    // finite down to -8.64e15 ms, so a bill starting earlier has NO date to
+    // render — `utcDayKey` stamps "NaN-NaN-NaN" into `startDate`/`endDate`
+    // on the billing axis, OpenPeriodPanel/BillWaterfall print that literal
+    // text, `filterByDateRange` empties the view and `navigatePeriod`
+    // returns null (traced at 2100995: no throw anywhere, so no render
+    // guard could catch it — the parse is the place that can).
+    expect(() => assertBillPeriodStart(-1e15), 'the measured hostile start').toThrow(
+      /Nothing from this file was imported/,
+    );
+    expect(() => assertBillPeriodStart(MIN_BILL_PERIOD_START_S - 1), 'one second past the edge').toThrow(
+      /Nothing from this file was imported/,
+    );
+    expect(() => assertBillPeriodStart(Number.NEGATIVE_INFINITY), '-Infinity').toThrow(
+      /Nothing from this file was imported/,
+    );
+
+    // Both sides of the line, pinned so it cannot drift: the edge ITSELF is
+    // still a real Date (-271821-04-20T00:00:00.000Z), and every pre-epoch
+    // start inside the range stays renderable. Above, the accepted set is
+    // pinned too — the epoch, 1969-12-31, the fixtures' earliest real bill
+    // (2000-01-01), MAX−1 (see the ceiling test), none touched by the floor.
+    expect(() => assertBillPeriodStart(MIN_BILL_PERIOD_START_S)).not.toThrow();
+    expect(() => assertBillPeriodStart(-86_400)).not.toThrow(); // 1969-12-31, pre-epoch and renderable
+    expect(() => assertBillPeriodStart(0)).not.toThrow(); // the epoch itself
+    expect(() => assertBillPeriodStart(946_706_400)).not.toThrow(); // 2000-01-01, the fixtures' earliest
+  });
+
+  it('refuses a start before the Date range through the app’s own funnel', () => {
+    const xml = FEED(SUMMARY_WITH_START('-1000000000000000'));
+    // Nothing the PRE-parse scan can see is wrong with this document — the
+    // start lives inside one block, judged beside the ceiling, before any
+    // of the block's money is read (same shape as the ceiling case above).
+    expect(inspectDocument(xml).refusal).toBeNull();
+
+    const refusal = refusalOf(xml);
+    expect(refusal?.code).toBe('budget');
+    expect(refusal?.dim).toBe('billPeriodStartFloor');
+    expect(refusal?.measured).toBe(-1e15);
+    expect(refusal?.limit).toBe(MIN_BILL_PERIOD_START_S);
+    // The sentence names the offset from the epoch and anchors it on the
+    // Date range's own edge ISO (-271821-04-20 is `new Date(-8.64e15)`).
+    expect(refusal?.detail).toMatch(/seconds after 1970-01-01/);
+    expect(refusal?.detail).toMatch(/-271821-04-20/);
+    expect(refusal?.detail).toMatch(/Nothing from this file was imported/);
+    expect(refusal?.headline).toBeTruthy();
+    expect(refusal?.hints.length).toBeGreaterThan(0);
+    // Fatal to the import, not just to this block: nothing is persisted.
+    expect(() => parseGreenButtonFeed(xml)).toThrow(/Nothing from this file was imported/);
+  }, 60_000);
 
   it('is the very instant every IntervalReading start is already bounded to', () => {
     // One window for every timestamp this parser accepts: if either side is
