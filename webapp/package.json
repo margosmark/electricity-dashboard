@@ -43,7 +43,7 @@
     "eslint": "^10",
     "eslint-config-next": "16.4.5",
     "husky": "^9.1.7",
-    "jsdom": "^30.1.1",
+    "jsdom": "^31.0.0",
     "lint-staged": "^17.6.0",
     "tailwindcss": "^4",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
