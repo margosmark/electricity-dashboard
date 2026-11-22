@@ -264,6 +264,18 @@ const NAMED: CorpusCase[] = [
     ),
   },
   {
+    id: 'bill-start-undateable',
+    family: 'numeric',
+    expect: 'refuse',
+    note: 'a billing period starting 1e15 s BEFORE the epoch — outside the Date range, so `new Date(start * 1000)` is Invalid and utcDayKey stamps NaN-NaN-NaN into the billing axis (startDate/endDate, the open-period and waterfall panels print it as text) — t_cdbce470',
+    xml: FEED(
+      READING +
+        '<entry><content><espi:UsageSummary><espi:billingPeriod><espi:start>-1000000000000000</espi:start>' +
+        '<espi:duration>2678400</espi:duration></espi:billingPeriod>' +
+        '<espi:billLastPeriod>1365030000</espi:billLastPeriod></espi:UsageSummary></content></entry>',
+    ),
+  },
+  {
     id: 'clock-poison',
     family: 'numeric',
     expect: 'import',

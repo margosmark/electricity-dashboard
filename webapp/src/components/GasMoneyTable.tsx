@@ -124,7 +124,13 @@ export default function GasMoneyTable({ summaries }: { summaries: UsageSummary[]
                         data-testid="gas-money-lines-toggle"
                         data-period-start={s.startDate}
                         aria-expanded={open}
-                        aria-controls={`gas-money-lines-${s.start}`}
+                        // aria-controls only while the region is actually
+                        // rendered: an aria-controls naming an id nothing
+                        // paints is the dangling reference axe dings as
+                        // `aria-valid-attr-value` (the rule TabNav.tsx
+                        // documents and GasBillPeriodCard follows by
+                        // carrying no aria-controls at all).
+                        aria-controls={open ? `gas-money-lines-${s.start}` : undefined}
                         onClick={() => {
                           setOpenKey(open ? null : s.start);
                           setShowZero(false);
@@ -143,6 +149,7 @@ export default function GasMoneyTable({ summaries }: { summaries: UsageSummary[]
                     >
                       <td colSpan={5} className="px-2 pb-3 pt-1">
                         <div
+                          id={`gas-money-lines-${s.start}`}
                           role="region"
                           aria-label={tt('gasBill.linesRegion', { period })}
                           className="bg-inset rounded-lg p-3 space-y-2"

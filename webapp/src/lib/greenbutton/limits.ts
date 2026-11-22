@@ -68,6 +68,10 @@
  *    "NaN-NaN-NaN", whose two edges set an eon-wide span for the temperature
  *    fetch (t_43c716ad), and whose label date-fns refuses to format. The
  *    same instant `series.ts` bounds every `IntervalReading` start to.
+ *  - {@link MIN_BILL_PERIOD_START_S} -271821-04-20 … the oldest — the Date
+ *    range's own lower edge (t_cdbce470): below it the start is not a date
+ *    at all, and the bill's dates read "NaN-NaN-NaN" with no throw anywhere
+ *    for a render guard to catch.
  *  - {@link MAX_CLOCK_OFFSET_S}   86 400 … no UTC offset is a day long; a
  *    LocalTimeParameters block outside it is not a clock (see energy.ts).
  * Negative figures are legal on purpose: a bill can be a credit (the fixture
@@ -136,12 +140,18 @@ export type DocumentStats = {
 
 /**
  * A dimension a refusal can name. The first six are measured by
- * {@link measureDocument}; `billLinesPerPeriod` (one period's own line count)
- * and `billPeriodSeconds` (one period's own span) are judged after the parse,
- * where that period is known, and are named the same way so every budget
- * refusal renders through one copy path.
+ * {@link measureDocument}; `billLinesPerPeriod` (one period's own line count),
+ * `billPeriodSeconds` (one period's own span) and the two `billPeriodStart`
+ * bounds (the instant its window may open at, floor and ceiling) are judged
+ * after the parse, where that period is known, and are named the same way so
+ * every budget refusal renders through one copy path.
  */
-export type BudgetDim = keyof DocumentStats | 'billLinesPerPeriod' | 'billPeriodSeconds' | 'billPeriodStart';
+export type BudgetDim =
+  | keyof DocumentStats
+  | 'billLinesPerPeriod'
+  | 'billPeriodSeconds'
+  | 'billPeriodStart'
+  | 'billPeriodStartFloor';
 
 /** The three sentences a refusal is shown with. One source of copy. */
 export type RefusalCopy = {
@@ -372,6 +382,16 @@ function dimRefusal(dim: BudgetDim, measured: number, limit: number): BudgetRefu
       measured: fmtNumberAuto(Math.round(measured)),
       limit: fmtNumberAuto(Math.round(limit)),
     });
+  } else if (dim === 'billPeriodStartFloor') {
+    // The floor half of the same sentence (t_cdbce470): the measured figure
+    // is a NEGATIVE offset below the Date range's own edge, so the anchor is
+    // `new Date(-8.64e15)`'s ISO (-271821-04-20) exactly as 2100-01-01
+    // anchors the ceiling. Same raw-offset exactness at the boundary
+    // (-8 640 000 000 001 vs -8 640 000 000 000).
+    detail = t('parse.refuseBillStartFloor', {
+      measured: fmtNumberAuto(Math.round(measured)),
+      limit: fmtNumberAuto(Math.round(limit)),
+    });
   } else {
     detail = t('parse.refuseBillLines', { measured, limit });
   }
@@ -498,8 +518,8 @@ export function assertBillPeriodSeconds(seconds: number): void {
 
 /**
  * The START half of the same per-bill budget: a billing period that starts
- * past {@link MAX_BILL_PERIOD_START_S} is refused, whole, before it becomes
- * a `UsageSummary`.
+ * outside {@link MIN_BILL_PERIOD_START_S}…{@link MAX_BILL_PERIOD_START_S}
+ * is refused, whole, before it becomes a `UsageSummary`.
  *
  * WHY THE START NEEDS ITS OWN BOUND (t_43c716ad). `duration` had one since
  * t_edef78d7, but `<start>` is what places the period in time, and `billNum`
@@ -514,6 +534,18 @@ export function assertBillPeriodSeconds(seconds: number): void {
  * rendering the gas panel with such a bill crashes to the error boundary;
  * and the bill list shows a date that is not one.
  *
+ * WHY THE FLOOR (t_cdbce470). The ceiling alone left the negative eon open:
+ * a bill at `<start>-1000000000000000</start>` parses clean (nothing the
+ * pre-parse scan can see is wrong with it), and every consumer of it then
+ * degrades WITHOUT throwing — `utcDayKey` stamps "NaN-NaN-NaN" into
+ * `startDate`/`endDate` on the billing axis, `OpenPeriodPanel` and
+ * `BillWaterfall` print that literal text, `filterByDateRange` empties the
+ * view and `navigatePeriod` returns null (traced consumer by consumer at
+ * 2100995: no `Date()`/`format()` call anywhere on the path, so no render
+ * guard could ever catch it). The parse is the one place that can. The floor
+ * is the Date range's own lower edge — see {@link MIN_BILL_PERIOD_START_S}
+ * for why it is that line and not an era guess or the readings' 0.
+ *
  * Judged exactly like the duration: where the period is known, before the
  * block's money, volume or lines are read, fatal to the import — keeping the
  * block while dropping its start would render a bill whose window disagrees
@@ -521,6 +553,21 @@ export function assertBillPeriodSeconds(seconds: number): void {
  * {@link assertBillPeriodSeconds}.
  */
 export function assertBillPeriodStart(seconds: number): void {
+  // Floor first. `NaN` falls through both comparisons and dies on the
+  // ceiling check below, exactly as before — only a finite start below the
+  // Date range takes this branch.
+  if (seconds < MIN_BILL_PERIOD_START_S) {
+    const refusal = dimRefusal('billPeriodStartFloor', seconds, MIN_BILL_PERIOD_START_S);
+    throw new GreenButtonRefusal({
+      code: 'budget',
+      dim: refusal.dim,
+      measured: refusal.measured,
+      limit: refusal.limit,
+      headline: refusal.headline,
+      detail: refusal.detail,
+      hints: refusal.hints,
+    });
+  }
   if (seconds <= MAX_BILL_PERIOD_START_S) return;
   const refusal = dimRefusal('billPeriodStart', seconds, MAX_BILL_PERIOD_START_S);
   throw new GreenButtonRefusal({
@@ -607,19 +654,53 @@ export const MAX_BILL_PERIOD_SECONDS = 100 * 365 * 24 * 3600;
  * figure the finding measured — 1e15 s is year 33 657 588, 1e14 s is year
  * 3 116 095 — while leaving every real bill (earliest in this repo's
  * fixtures: 2000-01-01) untouched. It does NOT bound the SPAN on its own:
- * with no floor (below), a far-past start plus a legal 100-year duration can
- * still be eons wide, which is why the fetch-side bound
- * (`openMeteo.ts`, MAX_TEMP_CHUNKS) stays the backstop that refuses such a
- * span before a single request is made.
+ * even with the floor below, a start at the Date range's edge plus a legal
+ * 100-year duration is a century-wide window, which is why the fetch-side
+ * bound (`openMeteo.ts`, MAX_TEMP_CHUNKS) stays the backstop that refuses
+ * such a span before a single request is made.
  *
- * WHY NO FLOOR, same as the reading bound: a start before any plausible era
- * is still a real, renderable instant (1970-01-01 formats fine), and the
- * hand-made fixtures this parser must keep accepting legitimately use tiny
- * epochs (`start: 1`) that an era floor would silently drop. The span a
- * far-past start can widen to is bounded where it costs something — at the
- * fetch, not at the parse.
+ * WHY THE FLOOR IS THE DATE RANGE (t_cdbce470), NOT AN ERA GUESS AND NOT
+ * THE READINGS' 0. The ceiling alone left the negative eon open, and the
+ * consumer trace at 2100995 showed what that costs: a bill at -1e15 parses
+ * clean (nothing the pre-parse scan can see is wrong with it) and every
+ * downstream site DEGRADES without throwing — `utcDayKey` stamps
+ * "NaN-NaN-NaN" into the billing axis, the open-period and waterfall panels
+ * print that literal text where a date belongs, `filterByDateRange` empties
+ * the view and `navigatePeriod` returns null. A defect that never throws
+ * has no render guard to catch it, so the bound belongs at the parse.
+ * -8 640 000 000 000 s is the Date range's own lower edge: below it
+ * `new Date(start * 1000)` is not a Date at all (the ISO anchor the refusal
+ * sentence prints, `-271821-04-20`, is `new Date(-8.64e15)`). That is the
+ * SAME line the ceiling rests on — "the edge of the Date range a renderer
+ * survives, not a guess about the calendar" — mirrored, so both bounds
+ * answer one question (is this start a date?) rather than two.
+ *
+ * WHY NOT THE READINGS' EXCLUSIVE-0 FLOOR (`isInInstantWindow`). 0 there
+ * means "no time stated", a readings concept: a bill's `<start>` is a
+ * stated time, and this repo's own pin keeps `assertBillPeriodStart(-86_400)`
+ * (1969-12-31) accepted because a pre-epoch bill is absurd but RENDERABLE.
+ * The fixtures' earliest real bill (2000-01-01) and the tiny epochs
+ * (`start: 1`, a readings-fixture shape) sit far above the line either way;
+ * the floor refuses only what no Date can express. The span a far-past but
+ * dateable start can widen to stays bounded where it costs something — at
+ * the fetch, not at the parse.
  */
 export const MAX_BILL_PERIOD_START_S = 4_102_444_800; // 2100-01-01T00:00:00Z
+
+/**
+ * The OLDEST instant a billing period may start at: the Date range's own
+ * lower edge — -8 640 000 000 000 s is -8.64e15 ms, whose ISO is
+ * -271821-04-20T00:00:00.000Z, the earliest finite Date JavaScript holds.
+ *
+ * The check refuses strictly BELOW it: at the edge the Date is still real
+ * (`Number.isFinite(new Date(MIN_BILL_PERIOD_START_S * 1000).getTime())`),
+ * one second further and `new Date(seconds * 1000)` is Invalid — which is
+ * the undateable class every consumer of a bill start then trips over
+ * (consumer-by-consumer trace at 2100995; see {@link assertBillPeriodStart}).
+ * Pinned both signs in `limits.test.ts` and carried by the hostile corpus
+ * as `bill-start-undateable`, so reverting the floor turns both red.
+ */
+export const MIN_BILL_PERIOD_START_S = -8_640_000_000_000;
 
 /** The copy a refused bill figure is shown with. */
 function billCopy(detail: string): RefusalCopy {

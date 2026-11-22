@@ -293,13 +293,28 @@ export function efficiencyPeriods(
       }
     }
 
+    // Parse the start day exactly as `fmtDate` would — once — so the
+    // validity check IS the throw condition: an undateable start
+    // (`NaN-NaN-NaN` stamped from an out-of-range `<billingPeriod><start>`,
+    // or a payload with no `startDate` at all) parses to an Invalid Date,
+    // and date-fns `format()` THROWS RangeError on it. This runs inside
+    // Dashboard's `buildEfficiency` useMemo on every render, so one such
+    // stored bill fell the whole dashboard to the AppErrorBoundary
+    // (t_b9fe7438 — `readStoredBillFeed` validates only that `start` is a
+    // number, never the day key). The label degrades to the app's marker
+    // and the season to the same default `seasonForDay` picks for an
+    // unreadable month; the period and its ¢/kWh are untouched — keep +
+    // degrade, dropping the bill is refused (t_2a09ca9d).
+    const startAt = new Date(`${summary.startDate}T00:00:00`);
+    const dateable = !Number.isNaN(startAt.getTime());
+
     out.push({
       start: summary.start,
       startDate: summary.startDate,
       endDate: summary.endDate,
       // `fmtDate`, not date-fns' bare `format`: the axis label is read by a
       // person, so it follows the toggle ("May 2026" / "mai 2026").
-      label: fmtDate(`${summary.startDate}T00:00:00`, 'MMM yyyy'),
+      label: dateable ? fmtDate(startAt, 'MMM yyyy') : t('axis.unavailableDate'),
       kwh,
       cost,
       tax,
@@ -309,7 +324,12 @@ export function efficiencyPeriods(
       deliveryCents,
       rateCents,
       unmappedKwh,
-      season: seasonForDay(summary.startDate),
+      // Same guard as the label: an absent/non-string start would be a
+      // `.slice` TypeError one line later. `''` routes through
+      // seasonForDay's own unreadable-month default (→ winter), and for a
+      // dateable start `String()` is the identity, so healthy bills are
+      // byte-identical to before.
+      season: seasonForDay(dateable ? String(summary.startDate) : ''),
     });
   }
 

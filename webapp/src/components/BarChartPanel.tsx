@@ -38,6 +38,21 @@ export function AccessibleBar({
 }: AccessibleBarProps) {
   const { t } = useTranslation();
   const activate = () => onActivate?.(payload ? { key: payload.key } : null);
+  /* The 44px tap-target floor, in GEOMETRY: `globals.css` floors every
+     `[role="button"]` box at 44×44 with min-width/min-height, but those are
+     CSS box properties and an SVG <g> has no box — the painted mark IS the
+     whole measured target, so a short bar fails the budget (measured:
+     quiet-meter-regression:677, `390 light: targets under 44px`, one
+     100×42 bar at origin/main). Height encodes the reading and is never
+     inflated, so the group carries a second, INVISIBLE rect that floors both
+     axes at 44px: it grows UP from the bar's top (bars rise from the
+     baseline; the space above a short bar is empty plot) and symmetrically
+     sideways, and it keeps the bar's baseline exactly where the data put it.
+     The painted mark, its label and the activation contract are untouched. */
+  const hitWidth = Math.max(width, 44);
+  const hitHeight = Math.max(height, 44);
+  const hitX = x - (hitWidth - width) / 2;
+  const hitY = y - (hitHeight - height);
   return (
     <g
       tabIndex={0}
@@ -50,6 +65,18 @@ export function AccessibleBar({
         activate();
       }}
     >
+      {/* Bottom layer: the expanded hit area sits UNDER the mark, so the
+          painted bar keeps the top of the stack (cursor, hover, active state)
+          while the group's box — and its hit area — grows to the floor. */}
+      <rect
+        x={hitX}
+        y={hitY}
+        width={hitWidth}
+        height={hitHeight}
+        fill="transparent"
+        pointerEvents="all"
+        style={{ cursor: 'pointer' }}
+      />
       <rect x={x} y={y} width={width} height={height} fill={fill} />
     </g>
   );

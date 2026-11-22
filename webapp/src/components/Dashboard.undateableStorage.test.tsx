@@ -10,11 +10,14 @@
  * corrupt: init says so (storage notice) and opens the upload prompt — the
  * recovery path the hang used to make unreachable.
  *
- * RED control (measured): revert the ingest bound ALONE and this file
- * fails as an ASSERTION — the payload loads and boots with data, so no
- * corrupt notice appears (selectInitialWindow's dateable-row filter, item
- * 2, catches the regression and init does not hang). Revert the ingest
- * bound AND that filter together and init reaches the coverage loop: this
+ * RED control (measured at QA gate t_b7d99f51): revert the ingest bound
+ * ALONE and this file fails as an ASSERTION — the payload loads and boots
+ * with data, so no corrupt notice appears (selectInitialWindow's
+ * dateable-row filter, item 2, catches the regression and init does not
+ * hang). Revert the bound + the filter while the `coverage()` belt stays
+ * intact: 5 failed / 1 passed, rc=1, 7.2 s, NO hang — the belt catches.
+ * Only reverting the bound + ALL of item 2 (filter AND belt), i.e. the full
+ * `selectInitialWindow` hunk, lets init reach the coverage loop and this
  * file HANGS — run it as
  * `timeout 90 npx vitest run src/components/Dashboard.undateableStorage.test.tsx`
  * and assert the killed exit (124) rather than letting the suite spin.
